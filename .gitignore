@@ -1,0 +1,43 @@
+# Node modules
+**/node_modules/
+**/dist/
+**/.turbo/
+
+# Build output (Angular + Electron)
+lorekit-frontend/.angular/cache/
+lorekit-frontend/dist/
+lorekit-backend/build/
+
+# Prisma generated client
+lorekit-backend/prisma/dev.db-journal
+lorekit-backend/prisma/.DS_Store
+lorekit-backend/node_modules/
+lorekit-backend/.prisma/
+
+# SQLite DB file (opcional: ignore se for ambiente local apenas)
+lorekit-backend/lorekit.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+**/.env
+**/.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE configs
+.vscode/
+.idea/
+*.sw?
+*.swo
+
+# Electron cache
+*.asar
+*.tsbuildinfo
