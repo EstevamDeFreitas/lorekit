@@ -1,9 +1,13 @@
 import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { RouterOutlet, RouterLink } from '@angular/router';
+import {ButtonModule} from 'primeng/button';
+import { CardModule } from 'primeng/card';
+import { PaginatorModule } from 'primeng/paginator';
 
 @Component({
+  standalone: true,
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, ButtonModule, CardModule, PaginatorModule, RouterLink],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })

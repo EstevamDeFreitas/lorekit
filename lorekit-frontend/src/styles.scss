@@ -1,1 +1,17 @@
 /* You can add global styles to this file, and also import other style files */
+/* Exemplo para a versão Itálica da sua fonte (se você tiver um arquivo separado para o itálico) */
+@font-face {
+  font-family: 'Inter'; /* Mesmo nome de família, mas estilo diferente */
+  src: url('assets/fonts/Inter-VariableFont_opsz\,wght.ttf') format('truetype');
+  font-weight: normal;
+  font-style: italic; /* Para a versão itálica */
+  font-display: swap;
+}
+
+body {
+  font-family: 'Inter', sans-serif; /* Use o nome que você definiu acima */
+  margin: 0;
+  padding: 0;
+  line-height: 1.6; /* Boa prática para legibilidade */
+  color: #333; /* Cor padrão para o texto */
+}
