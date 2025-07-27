@@ -1,4 +1,6 @@
 /* You can add global styles to this file, and also import other style files */
+@import "tailwindcss";
+
 /* Exemplo para a versão Itálica da sua fonte (se você tiver um arquivo separado para o itálico) */
 @font-face {
   font-family: 'Inter'; /* Mesmo nome de família, mas estilo diferente */
@@ -14,4 +16,17 @@ body {
   padding: 0;
   line-height: 1.6; /* Boa prática para legibilidade */
   color: #333; /* Cor padrão para o texto */
+}
+
+.auth-container{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Ocupa toda a altura da viewport */
+
+  .auth-card{
+    width: 400px; /* Largura fixa para o card */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Sombra suave */
+
+  }
 }
