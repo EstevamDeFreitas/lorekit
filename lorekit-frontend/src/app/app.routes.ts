@@ -3,12 +3,19 @@ import { WorldEditComponent } from './pages/world/world-edit/world-edit.componen
 import { AuthGuard } from './guards/auth.guard';
 import { LoginComponent } from './pages/auth/login/login.component';
 import { WorldListComponent } from './pages/world/world-list/world-list.component';
+import { MainUiComponent } from './pages/shared/main-ui/main-ui.component';
+import { WorldInfoComponent } from './pages/world/world-info/world-info.component';
 
 export const routes: Routes = [
   {path: '', redirectTo: 'login', pathMatch: 'full'},
   {path:'login', component: LoginComponent},
-  {path: 'world', canActivate: [AuthGuard], children:[
-    {path: '', component: WorldListComponent},
-    {path: 'edit', component: WorldEditComponent},
-  ]}
+  {path: 'app', canActivate: [AuthGuard], component: MainUiComponent, children: [
+      {path: 'world', children:[
+        {path: '', component: WorldListComponent},
+        {path: 'info', component: WorldInfoComponent},
+        {path: 'edit', component: WorldEditComponent},
+      ]}
+    ]
+  }
+
 ];

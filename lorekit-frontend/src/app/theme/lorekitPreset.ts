@@ -15,7 +15,8 @@ const LorekitPreset = definePreset(Aura, {
             800: '{indigo.800}',
             900: '{indigo.900}',
             950: '{indigo.950}'
-        }
+        },
+
     }
 });
 

@@ -18,7 +18,10 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([tokenInterceptor])),
     providePrimeNG({
       theme: {
-        preset:LorekitPreset
+        preset:LorekitPreset,
+        options: {
+            darkModeSelector: '.my-app-dark'
+        }
       }
     })
   ]

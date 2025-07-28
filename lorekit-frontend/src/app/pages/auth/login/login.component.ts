@@ -52,7 +52,7 @@ export class LoginComponent {
 
     this.auth.login(this.email.value, this.password.value).subscribe({
       next: () => {
-        this.router.navigate(['/world']);
+        this.router.navigate(['/app/world']);
       },
       error: (err) => {
         this.messages.set([]);

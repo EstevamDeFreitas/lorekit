@@ -1,5 +1,6 @@
 /* You can add global styles to this file, and also import other style files */
 @import "tailwindcss";
+@import "primeicons/primeicons.css";
 
 /* Exemplo para a versão Itálica da sua fonte (se você tiver um arquivo separado para o itálico) */
 @font-face {
@@ -14,8 +15,7 @@ body {
   font-family: 'Inter', sans-serif; /* Use o nome que você definiu acima */
   margin: 0;
   padding: 0;
-  line-height: 1.6; /* Boa prática para legibilidade */
-  color: #333; /* Cor padrão para o texto */
+  font-size: 0.8rem;
 }
 
 .auth-container{
@@ -28,5 +28,15 @@ body {
     width: 400px; /* Largura fixa para o card */
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Sombra suave */
 
+  }
+}
+
+.selectable-jump {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); // opcional, só pra dar destaque
   }
 }
