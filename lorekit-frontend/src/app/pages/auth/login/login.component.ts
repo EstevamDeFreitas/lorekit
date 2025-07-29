@@ -18,11 +18,11 @@ import { Message } from 'primeng/message';
             <p-message [severity]="message.severity" [life]="3000" [text]="message.content" />
         }
         <br>
-        <p-floatlabel>
+        <p-floatlabel class="mb-8">
           <input pInputText type="email" id="email" class="w-full" [formControl]="email" autocomplete="off" />
           <label for="email">Email</label>
         </p-floatlabel>
-        <br>
+
         <p-floatlabel>
           <input pInputText id="password" type="password" class="w-full" [formControl]="password" autocomplete="off" />
           <label for="password">Password</label>
