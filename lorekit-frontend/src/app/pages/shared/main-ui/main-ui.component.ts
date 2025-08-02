@@ -1,23 +1,25 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { NgClass } from '@angular/common';
-import { RouterOutlet, RouterLink } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
+import { RouterOutlet, RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { World } from '../../../models/world.model';
 import { WorldStateService } from '../../../services/world-state.service';
 import { delay } from 'rxjs';
+import { WorldService } from '../../../services/world.service';
 
 @Component({
   selector: 'app-main-ui',
-  imports: [RouterOutlet, ButtonModule, NgClass, RouterLink],
+  imports: [RouterOutlet, NgClass, RouterLink],
   template: `
-  <div class="p-4">
-    <div class="flex mb-4" [ngClass]="{ 'justify-between': currentWorld != null, 'justify-end': currentWorld == null }">
+  <div class="h-screen">
+    <div class="flex mb-4 p-4" [ngClass]="{ 'justify-between': currentWorld != null, 'justify-end': currentWorld == null }">
       @if (currentWorld != null){
-        <button pButton icon="pi pi-globe" routerLink="/app/world" severity="secondary" size="small">{{currentWorld.name}}</button>
+        <button routerLink="/app/world" severity="secondary" size="small">{{currentWorld.name}}</button>
       }
-      <p-button icon="pi pi-user" size="small" />
+      <i ></i>
     </div>
-    <router-outlet />
+    <div class="p-4 h-auto">
+      <router-outlet />
+    </div>
   </div>
   `,
   styleUrl: './main-ui.component.css',
@@ -26,12 +28,30 @@ import { delay } from 'rxjs';
 export class MainUiComponent {
   currentWorld : null | World  = null;
 
-  constructor(private worldStateService: WorldStateService) {
+  constructor(private worldStateService: WorldStateService, private route: ActivatedRoute, private worldService: WorldService, private router:Router) {
+
   }
 
   ngOnInit() {
     this.worldStateService.currentWorld$.pipe(delay(0)).subscribe(world => {
       this.currentWorld = world;
+
+      if(this.currentWorld == null) {
+        this.route.queryParams.subscribe(params => {
+          const worldId = params['worldId'];
+          if (worldId) {
+            this.worldService.getWorldById(worldId).subscribe({
+              next: (world) => {
+                this.currentWorld = world;
+                this.worldStateService.setWorld(world);
+              },
+              error: (err) => {
+                console.error(err);
+              }
+            });
+          }
+        });
+      }
     });
   }
 

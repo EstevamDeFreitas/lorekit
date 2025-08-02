@@ -1,43 +1,29 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { CardModule } from 'primeng/card';
-import { InputTextModule } from 'primeng/inputtext';
-import { FloatLabel } from 'primeng/floatlabel';
-import { ButtonModule } from 'primeng/button';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../services/auth.service';
 import { Router } from '@angular/router';
-import { Message } from 'primeng/message';
-
+import { ButtonComponent } from '../../../components/button/button.component';
+import { InputComponent } from '../../../components/button/input/input.component';
 @Component({
   selector: 'app-login',
-  imports: [CardModule, ReactiveFormsModule, InputTextModule, FloatLabel, ButtonModule, Message],
+  imports: [ReactiveFormsModule, ButtonComponent, InputComponent],
   template: `
-    <div class="flex justify-center items-center h-screen">
-      <p-card header="Login" class="h-fit w-96 flex">
-        @for (message of messages(); track message; let first = $first) {
-            <p-message [severity]="message.severity" [life]="3000" [text]="message.content" />
-        }
-        <br>
-        <p-floatlabel class="mb-8">
-          <input pInputText type="email" id="email" class="w-full" [formControl]="email" autocomplete="off" />
-          <label for="email">Email</label>
-        </p-floatlabel>
-
-        <p-floatlabel>
-          <input pInputText id="password" type="password" class="w-full" [formControl]="password" autocomplete="off" />
-          <label for="password">Password</label>
-        </p-floatlabel>
-        <br>
-        <button pButton (click)="onSubmit()">Entrar</button>
-      </p-card>
+  <div class="flex justify-center items-center h-screen">
+    <div class="rounded-lg bg-zinc-900 p-4 flex flex-col gap-4 w-84">
+      <h1 class="text-2xl text-center mt-6 mb-6">Bem vindo!</h1>
+      <app-input label="Email:" type="email" [required]="true" [(value)]="email"></app-input>
+      <app-input label="Senha:" type="password" [required]="false" [(value)]="password"></app-input>
+      <br>
+      <app-button label="Entrar" (click)="onSubmit()"></app-button>
     </div>
+  </div>
   `,
   styleUrl: './login.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent {
-  email = new FormControl('', [Validators.email, Validators.required]);
-  password = new FormControl('', [Validators.required]);
+  email = '';
+  password = '';
 
   messages = signal<any[]>([]);
 
@@ -45,12 +31,7 @@ export class LoginComponent {
 
   public onSubmit() {
 
-    if (this.email.invalid || this.password.invalid) {
-      console.error('Form is invalid');
-      return;
-    }
-
-    this.auth.login(this.email.value, this.password.value).subscribe({
+    this.auth.login(this.email, this.password).subscribe({
       next: () => {
         this.router.navigate(['/app/world']);
       },

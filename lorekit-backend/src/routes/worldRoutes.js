@@ -14,12 +14,13 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
     const { id } = req.params;
+    
     try {
         const world = await worldRepository.getWorldById(id);
         if (!world) return res.status(404).json({ error: 'Mundo não encontrado' });
         res.json(world);
     } catch (error) {
-        res.status(500).json({ error: 'Erro ao buscar mundo' });
+        res.status(500).json({ error: 'Erro ao buscar mundo' + error.message });
     }
 });
 

@@ -12,8 +12,11 @@ export const routes: Routes = [
   {path: 'app', canActivate: [AuthGuard], component: MainUiComponent, children: [
       {path: 'world', children:[
         {path: '', component: WorldListComponent},
-        {path: 'info', component: WorldInfoComponent},
-        {path: 'edit', component: WorldEditComponent},
+        {path: 'info', component: WorldInfoComponent, children: [
+          {path: '', redirectTo: 'edit', pathMatch: 'full'},
+          {path: 'edit', component: WorldEditComponent},
+        ]},
+
       ]}
     ]
   }

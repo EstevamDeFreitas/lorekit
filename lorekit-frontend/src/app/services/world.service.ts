@@ -14,4 +14,8 @@ export class WorldService {
     return this.http.get<World[]>(this.apiUrl);
   }
 
+  getWorldById(id: string) {
+    return this.http.get<World>(`${this.apiUrl}/${id}`);
+  }
+
 }

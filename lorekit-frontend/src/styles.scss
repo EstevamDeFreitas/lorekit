@@ -1,6 +1,5 @@
 /* You can add global styles to this file, and also import other style files */
 @import "tailwindcss";
-@import "primeicons/primeicons.css";
 
 /* Exemplo para a versão Itálica da sua fonte (se você tiver um arquivo separado para o itálico) */
 @font-face {
@@ -9,6 +8,16 @@
   font-weight: normal;
   font-style: italic; /* Para a versão itálica */
   font-display: swap;
+}
+
+@theme {
+  --color-zinc-925: oklch(17.55% 0.0055 285.854);;
+}
+
+html, body, app-root {
+  height: 100%;
+  min-height: 100%;
+  font-family: 'Inter', sans-serif;
 }
 
 body {

@@ -1,34 +1,32 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { ButtonModule } from 'primeng/button';
 import { WorldService } from '../../../services/world.service';
 import { World } from '../../../models/world.model';
-import { CardModule } from 'primeng/card';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { WorldStateService } from '../../../services/world-state.service';
 
 @Component({
   selector: 'app-world-list',
-  imports: [ButtonModule, CardModule, CommonModule, RouterLink],
+  imports: [ CommonModule, RouterLink],
   template: `
   <div>
     <div class="flex justify-between items-center mb-4">
       <h3 class="text-2xl font-bold mb-4">Mundos</h3>
-      <button *ngIf="worlds.length !== 0" pButton label="Criar Mundo" class="p-button-secondary" size="small"></button>
+      <button *ngIf="worlds.length !== 0" label="Criar Mundo" class="p-button-secondary" size="small"></button>
     </div>
 
     <div *ngIf="worlds.length === 0; else worldsList" class="text-center">
       <p>No worlds available. Please create a new world.</p>
-      <button pButton label="Create New World" routerLink="/app/world/edit" class="mt-4"></button>
+      <button label="Create New World" routerLink="/app/world/edit" class="mt-4"></button>
     </div>
 
     <ng-template #worldsList>
       <div class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         @for (world of worlds; track world.id) {
-          <p-card class="cursor-pointer selectable-jump" (click)="onWorldSelected(world.id)">
+          <div class="cursor-pointer selectable-jump" (click)="onWorldSelected(world.id)">
             <ng-template #title>{{world.name}}</ng-template>
             <ng-template #subtitle>{{world.description}}</ng-template>
-          </p-card>
+        </div>
         }
       </div>
     </ng-template>

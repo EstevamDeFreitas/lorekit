@@ -20,7 +20,7 @@ async function getWorlds() {
 }
 
 async function getWorldById(id) {
-    const world = await prisma.world.findUnique({
+    const world = await prisma.world.findFirst({
         include: {
             users: true
         },
