@@ -5,15 +5,16 @@ import { World } from '../../../models/world.model';
 import { WorldStateService } from '../../../services/world-state.service';
 import { delay } from 'rxjs';
 import { WorldService } from '../../../services/world.service';
+import { ButtonComponent } from "../../../components/button/button.component";
 
 @Component({
   selector: 'app-main-ui',
-  imports: [RouterOutlet, NgClass, RouterLink],
+  imports: [RouterOutlet, NgClass, RouterLink, ButtonComponent],
   template: `
   <div class="h-screen">
-    <div class="flex mb-4 p-4" [ngClass]="{ 'justify-between': currentWorld != null, 'justify-end': currentWorld == null }">
+    <div class="flex p-4" [ngClass]="{ 'justify-between': currentWorld != null, 'justify-end': currentWorld == null }">
       @if (currentWorld != null){
-        <button routerLink="/app/world" severity="secondary" size="small">{{currentWorld.name}}</button>
+        <app-button buttonType="white" [label]="currentWorld.name" route="/app/world"></app-button>
       }
       <i ></i>
     </div>

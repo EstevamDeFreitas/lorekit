@@ -13,7 +13,6 @@ export const routes: Routes = [
       {path: 'world', children:[
         {path: '', component: WorldListComponent},
         {path: 'info', component: WorldInfoComponent, children: [
-          {path: '', redirectTo: 'edit', pathMatch: 'full'},
           {path: 'edit', component: WorldEditComponent},
         ]},
 

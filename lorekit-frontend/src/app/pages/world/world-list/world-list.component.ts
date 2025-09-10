@@ -4,32 +4,33 @@ import { World } from '../../../models/world.model';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { WorldStateService } from '../../../services/world-state.service';
+import { ButtonComponent } from "../../../components/button/button.component";
 
 @Component({
   selector: 'app-world-list',
-  imports: [ CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ButtonComponent],
   template: `
   <div>
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-2xl font-bold mb-4">Mundos</h3>
-      <button *ngIf="worlds.length !== 0" label="Criar Mundo" class="p-button-secondary" size="small"></button>
+      <h3 class="text-2xl mb-4">Mundos</h3>
+      <app-button buttonType="white" label="Novo" route="/app/world/info/edit"></app-button>
     </div>
 
-    <div *ngIf="worlds.length === 0; else worldsList" class="text-center">
-      <p>No worlds available. Please create a new world.</p>
-      <button label="Create New World" routerLink="/app/world/edit" class="mt-4"></button>
-    </div>
-
-    <ng-template #worldsList>
+    @if (worlds.length === 0){
+      <div class="text-center">
+        <p>Nenhum mundo disponível.</p>
+        <button label="Criar Novo Mundo" routerLink="/app/world/edit" class="mt-4"></button>
+      </div>
+    } @else{
       <div class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         @for (world of worlds; track world.id) {
-          <div class="cursor-pointer selectable-jump" (click)="onWorldSelected(world.id)">
-            <ng-template #title>{{world.name}}</ng-template>
-            <ng-template #subtitle>{{world.description}}</ng-template>
+          <div class="cursor-pointer selectable-jump bg-zinc-900 p-4 rounded-lg" (click)="onWorldSelected(world.id)">
+            <div class="text-lg">{{world.name}}</div>
         </div>
         }
       </div>
-    </ng-template>
+    }
+
   </div>
 
   `,
@@ -54,6 +55,8 @@ export class WorldListComponent {
   loadWorlds() {
     this.worldService.getWorlds().subscribe({
       next: (worlds) => {
+        console.log(worlds);
+
         this.worlds = worlds;
       },
       error: (err) => {
