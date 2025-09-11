@@ -24,7 +24,7 @@ import { ButtonComponent } from "../../../components/button/button.component";
     } @else{
       <div class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         @for (world of worlds; track world.id) {
-          <div class="cursor-pointer selectable-jump bg-zinc-900 p-4 rounded-lg" (click)="onWorldSelected(world.id)">
+          <div class="cursor-pointer selectable-jump bg-green-700 p-4 rounded-lg" (click)="onWorldSelected(world.id)">
             <div class="text-lg">{{world.name}}</div>
         </div>
         }

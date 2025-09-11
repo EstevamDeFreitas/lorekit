@@ -96,3 +96,10 @@ model Document {
   world       World    @relation(fields: [worldId], references: [id])
   worldId     String
 }
+
+model Personalization {
+  id String @id @default(uuid())
+  entityTable String
+  entityId String
+  contentJson String
+}

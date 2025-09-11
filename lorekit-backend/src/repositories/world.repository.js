@@ -16,7 +16,20 @@ async function getWorlds() {
         }
     });
 
-    return worlds;
+    const worldsWithPersonalization = await Promise.all(worlds.map(async (world) => {
+        const personalization = await prisma.personalization.findFirst({
+            where: {
+                entityTable: 'World',
+                entityId: world.id
+            }
+        });
+        return {
+            ...world,
+            personalization: personalization
+        };
+    }));
+
+    return worldsWithPersonalization;
 }
 
 async function getWorldById(id) {
