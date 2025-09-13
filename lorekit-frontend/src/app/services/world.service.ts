@@ -18,4 +18,16 @@ export class WorldService {
     return this.http.get<World>(`${this.apiUrl}/${id}`);
   }
 
+  createWorld(world: World) {
+    return this.http.post<World>(this.apiUrl, world);
+  }
+
+  updateWorld(id: string, world: World) {
+    return this.http.put<World>(`${this.apiUrl}/${id}`, world);
+  }
+
+  deleteWorld(id: string) {
+    return this.http.delete(`${this.apiUrl}/${id}`);
+  }
+
 }

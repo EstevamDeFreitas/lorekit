@@ -3,7 +3,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../services/auth.service';
 import { Router } from '@angular/router';
 import { ButtonComponent } from '../../../components/button/button.component';
-import { InputComponent } from '../../../components/button/input/input.component';
+import { InputComponent } from '../../../components/input/input.component';
 @Component({
   selector: 'app-login',
   imports: [ReactiveFormsModule, ButtonComponent, InputComponent],

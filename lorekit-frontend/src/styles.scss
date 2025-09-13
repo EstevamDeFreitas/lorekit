@@ -1,5 +1,5 @@
-/* You can add global styles to this file, and also import other style files */
 @import "tailwindcss";
+@import '@angular/cdk/overlay-prebuilt.css';
 
 /* Exemplo para a versão Itálica da sua fonte (se você tiver um arquivo separado para o itálico) */
 @font-face {
@@ -49,3 +49,6 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); // opcional, só pra dar destaque
   }
 }
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

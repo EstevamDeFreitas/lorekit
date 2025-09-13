@@ -47,7 +47,6 @@ model World {
   characters  Character[]
   locations   Location[]
   items       Item[]
-  documents   Document[]
 }
 
 model Character {
@@ -92,14 +91,13 @@ model Document {
   title       String
   content     String
   type        String?
-
-  world       World    @relation(fields: [worldId], references: [id])
-  worldId     String
+  entityTable String
+  entityId    String
 }
 
 model Personalization {
-  id String @id @default(uuid())
-  entityTable String
-  entityId String
-  contentJson String
+  id            String @id @default(uuid())
+  entityTable   String
+  entityId      String
+  contentJson   String
 }

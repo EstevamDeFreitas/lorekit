@@ -33,7 +33,7 @@ export class ButtonComponent {
 
     if(!this.useRouteActive()) {
       const types = {
-          primary: 'bg-amber-600 text-white ',
+          primary: 'bg-emerald-600 text-white ',
           secondary: 'bg-zinc-800 text-white',
           white: 'bg-zinc-50 text-zinc-900',
           danger: 'bg-red-500 text-white'
