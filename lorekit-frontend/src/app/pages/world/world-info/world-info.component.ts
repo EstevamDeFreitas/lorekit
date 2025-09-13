@@ -7,9 +7,10 @@ import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { WorldService } from '../../../services/world.service';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
+import { DocumentEditorComponent } from "../../../components/document-editor/document-editor.component";
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgClass, FormsModule, IconButtonComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgClass, FormsModule, IconButtonComponent, DocumentEditorComponent],
   template: `
     <div class="flex flex-col ">
       <div class="flex flex-row items-center">
@@ -29,7 +30,7 @@ import { IconButtonComponent } from "../../../components/icon-button/icon-button
           <div class="p-4 rounded-lg mt-2 bg-zinc-900">
             @switch (currentTab) {
               @case ('details') {
-                <p>Detalhes do mundo</p>
+                <app-document-editor></app-document-editor>
               }
               @case ('localities') {
                 <p>Localidades</p>

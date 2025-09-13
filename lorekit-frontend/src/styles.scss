@@ -52,3 +52,31 @@ body {
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+/* Tema escuro para EditorJS */
+:host-context(.dark-theme) .codex-editor,
+.dark-theme .codex-editor {
+  color: white;
+}
+
+/* Botão plus */
+.ce-toolbar__plus {
+  color: white !important;
+}
+.ce-toolbar__plus svg {
+  fill: white !important;
+}
+
+/* Botão de configurações */
+.ce-toolbar__settings-btn {
+  color: white !important;
+}
+.ce-toolbar__settings-btn svg {
+  fill: white !important;
+}
+
+
+.ce-popover__item-icon svg,
+.ce-inline-tool svg {
+  fill: white !important;
+}
