@@ -100,9 +100,7 @@ export class WorldListComponent {
 
     this.worldStateService.setWorld(world);
 
-    this.router.navigate(['/app/world/info'], {
-      queryParams: { worldId: world.id }
-    });
+    this.router.navigate(['/app/world/info', worldId]);
   }
 
   getPersonalizationItem(world: World, key: string): string | null {
