@@ -19,6 +19,7 @@ app.use(express.json());
 app.use('/auth', authRoutes);
 
 app.use('/worlds', auth, worldRoutes);
+app.use('/documents', auth, require('./src/routes/documentRoutes'));
 
 app.listen(port, () => {
     console.log(`Servidor rodando em http://localhost:${port}`);

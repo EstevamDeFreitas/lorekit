@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, OnDestroy, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, effect, input, OnDestroy, output, ViewEncapsulation } from '@angular/core';
 
 import EditorJS from '@editorjs/editorjs';
 import List from '@editorjs/list';
@@ -18,14 +18,23 @@ import TailwindItalic from '../../plugins/tailwinditalic.plugin';
 })
 export class DocumentEditorComponent implements AfterViewInit, OnDestroy{
   editor!: EditorJS;
+  private lastSaveTime = 0;
+  private readonly SAVE_DELAY = 5000;
+
+  document = input('');
+  saveDocument = output<any>();
+
+  constructor() {
+  }
 
   ngAfterViewInit() {
-    this.applyEditorStyles();
     this.editor = new EditorJS({
       holder: 'editorjs',
       placeholder: 'Comece a escrever aqui, use "/" para comandos...',
       autofocus: true,
-
+      onChange: () => {
+        this.handleChange();
+      },
       tools: {
         header: {
           class: TailwindHeader,
@@ -48,16 +57,56 @@ export class DocumentEditorComponent implements AfterViewInit, OnDestroy{
           class: TailwindItalic,
           shortcut: 'CMD+I',
         },
-      }
+      },
+      data: this.parseDocument(this.document()),
     });
   }
 
-  private applyEditorStyles() {
+  private async handleChange() {
+    const now = Date.now();
 
+    if (now - this.lastSaveTime >= this.SAVE_DELAY) {
+
+      await this.saveContent();
+    }
+    else{
+    }
   }
 
-  ngOnDestroy() {
-    this.editor.destroy();
+  private parseDocument(document: string) {
+    try {
+      return document ? JSON.parse(document) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  private async loadDocument(documentContent: string) {
+    if (!this.editor) return;
+
+    try {
+      await this.editor.isReady;
+      await this.editor.render(this.parseDocument(documentContent));
+    } catch (error) {
+      console.error('Erro ao carregar documento no editor:', error);
+    }
+  }
+
+  private async saveContent() {
+    try {
+      const savedData = await this.editor.save();
+      this.lastSaveTime = Date.now();
+      this.saveDocument.emit(savedData);
+    } catch (error) {
+      this.lastSaveTime = 0;
+    }
+  }
+
+  async ngOnDestroy() {
+    if (this.editor) {
+      await this.saveContent();
+      this.editor.destroy();
+    }
   }
 
 }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { WorldStateService } from '../../../services/world-state.service';
 import { World } from '../../../models/world.model';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
@@ -28,20 +28,23 @@ import { DocumentEditorComponent } from "../../../components/document-editor/doc
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'objects'" [ngClass]="{'bg-emerald-500/50': currentTab === 'objects'}">Objetos</a>
           </div>
           <div class="p-4 rounded-lg mt-2 flex flex-col">
-            @switch (currentTab) {
-              @case ('details') {
-                <app-document-editor class="w-full"></app-document-editor>
-              }
-              @case ('localities') {
-                <p>Localidades</p>
-              }
-              @case ('characters') {
-                <p>Personagens</p>
-              }
-              @case ('objects') {
-                <p>Objetos</p>
+            @if (!isLoading) {
+              @switch (currentTab) {
+                @case ('details') {
+                  <app-document-editor [document]="currentWorld.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-document-editor>
+                }
+                @case ('localities') {
+                  <p>Localidades</p>
+                }
+                @case ('characters') {
+                  <p>Personagens</p>
+                }
+                @case ('objects') {
+                  <p>Objetos</p>
+                }
               }
             }
+
           </div>
 
         </div>
@@ -63,21 +66,26 @@ export class WorldInfoComponent implements OnInit {
 
   currentTab : string = 'details';
 
-  constructor(private router:Router, private currentRoute : ActivatedRoute, private worldService : WorldService) {
+  isLoading: boolean = false;
+
+  constructor(private router:Router, private currentRoute : ActivatedRoute, private worldService : WorldService, private cdr: ChangeDetectorRef) {
+    this.isLoading = true;
     this.currentRoute.params.subscribe(params => {
       this.currentWorldId = params['worldId'];
-      this.getWorld();
+
     });
   }
 
   ngOnInit() {
-
+    this.getWorld();
   }
 
   getWorld() {
     this.worldService.getWorldById(this.currentWorldId).subscribe({
       next: (world) => {
         this.currentWorld = world;
+        this.isLoading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading world:', err);
@@ -97,5 +105,17 @@ export class WorldInfoComponent implements OnInit {
     });
   }
 
+  onDocumentSave(document: any) {
+    if (!this.currentWorldId) return;
 
+    this.currentWorld.description = JSON.stringify(document);
+
+    this.worldService.updateWorld(this.currentWorldId, this.currentWorld).subscribe({
+      next: (updatedWorld) => {
+      },
+      error: (err) => {
+        console.error('Erro ao salvar documento:', err);
+      }
+    });
+  }
 }
