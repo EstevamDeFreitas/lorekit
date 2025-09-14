@@ -1,12 +1,21 @@
 @import "tailwindcss";
 @import '@angular/cdk/overlay-prebuilt.css';
 
-/* Exemplo para a versão Itálica da sua fonte (se você tiver um arquivo separado para o itálico) */
+
 @font-face {
-  font-family: 'Inter'; /* Mesmo nome de família, mas estilo diferente */
+  font-family: 'Inter';
   src: url('assets/fonts/Inter-VariableFont_opsz\,wght.ttf') format('truetype');
   font-weight: normal;
-  font-style: italic; /* Para a versão itálica */
+  font-style: normal;
+  font-display: swap;
+}
+
+
+@font-face {
+  font-family: 'Inter';
+  src: url('assets/fonts/Inter-Italic-VariableFont_opsz\,wght.ttf') format('truetype');
+  font-weight: normal;
+  font-style: italic;
   font-display: swap;
 }
 
@@ -49,9 +58,6 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); // opcional, só pra dar destaque
   }
 }
-
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
 /* Tema escuro para EditorJS */
 :host-context(.dark-theme) .codex-editor,

@@ -27,10 +27,10 @@ import { DocumentEditorComponent } from "../../../components/document-editor/doc
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'characters'" [ngClass]="{'bg-emerald-500/50': currentTab === 'characters'}">Personagens</a>
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'objects'" [ngClass]="{'bg-emerald-500/50': currentTab === 'objects'}">Objetos</a>
           </div>
-          <div class="p-4 rounded-lg mt-2 bg-zinc-900">
+          <div class="p-4 rounded-lg mt-2 flex flex-col">
             @switch (currentTab) {
               @case ('details') {
-                <app-document-editor></app-document-editor>
+                <app-document-editor class="w-full"></app-document-editor>
               }
               @case ('localities') {
                 <p>Localidades</p>

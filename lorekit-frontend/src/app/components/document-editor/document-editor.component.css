@@ -1,3 +1,137 @@
+@import "tailwindcss";
+
 :host {
   display: block;
+}
+
+:host ::ng-deep .ce-header-no-border.ce-block--selected {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 4px !important;
+}
+
+/* Botões de configuração de cabeçalho */
+:host ::ng-deep .ce-header-settings {
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+}
+
+:host ::ng-deep .header-level-btn {
+  padding: 4px 10px !important;
+  border-radius: 4px !important;
+  background-color: #333 !important;
+  color: white !important;
+  border: 1px solid #444 !important;
+}
+
+:host ::ng-deep .header-level-btn:hover {
+  background-color: #444 !important;
+}
+
+:host ::ng-deep .header-level-btn.ce-settings__button--active {
+  background-color: #0d6efd !important;
+  border-color: #0d6efd !important;
+}
+
+/* Tema escuro para botões e menus */
+:host ::ng-deep .ce-toolbar__plus {
+  color: white !important;
+  background-color: #2a2a2a !important;
+}
+
+:host ::ng-deep .ce-toolbar__plus:hover {
+  background-color: #3a3a3a !important;
+}
+
+:host ::ng-deep .ce-toolbar__plus svg {
+  fill: white !important;
+}
+
+/* Botão de configurações */
+:host ::ng-deep .ce-toolbar__settings-btn {
+  color: white !important;
+  background-color: #2a2a2a !important;
+}
+
+:host ::ng-deep .ce-toolbar__settings-btn:hover {
+  background-color: #3a3a3a !important;
+}
+
+:host ::ng-deep .ce-toolbar__settings-btn svg {
+  fill: white !important;
+}
+
+/* Popups e toolbars */
+:host ::ng-deep .ce-inline-toolbar,
+.ce-conversion-toolbar,
+.ce-popover,
+.ce-settings {
+  background-color: #2a2a2a !important;
+  color: white !important;
+  border-color: #444 !important;
+}
+
+:host ::ng-deep .ce-settings .ce-settings__button {
+  color: white !important;
+}
+
+/* Garantir que o popover e toolbar estão visíveis */
+:host ::ng-deep .ce-popover {
+  z-index: 1000 !important;
+}
+
+:host ::ng-deep .italic {
+  font-style: italic !important;
+}
+
+:host ::ng-deep .tc-table {
+  background-color: #00000000 !important;
+  color: #f1f5f9 !important;
+}
+
+:host ::ng-deep .tc-add-row:hover, :host ::ng-deep .tc-add-column:hover {
+  background-color: var(--color-zinc-900) !important;
+}
+
+:host ::ng-deep .tc-add-row:hover::before{
+  background-color: #00000000 !important;
+}
+
+:host ::ng-deep .tc-table.tc-table--heading .tc-row:first-of-type .tc-cell{
+  background-color: var(--color-zinc-800) !important;
+}
+
+:host ::ng-deep .tc-cell,
+:host ::ng-deep .tc-table,
+:host ::ng-deep .tc-row,
+:host ::ng-deep .tc-add-column,
+:host ::ng-deep .tc-row::after {
+  border-color: var(--color-zinc-700) !important;
+  border-top-color: var(--color-zinc-700) !important;
+  border-left-color: var(--color-zinc-700) !important;
+  border-right-color: var(--color-zinc-700) !important;
+  border-bottom-color: var(--color-zinc-700) !important;
+}
+
+:host ::ng-deep .tc-popover {
+  background-color: var(--color-zinc-800) !important;
+}
+
+:host ::ng-deep .tc-popover__item-icon {
+  color: var(--color-zinc-700) !important;
+}
+
+:host ::ng-deep .tc-cell--selected{
+  background-color: var(--color-zinc-900) !important;
+}
+
+:host ::ng-deep .tc-row--selected, :host ::ng-deep .tc-row--selected::after{
+  background-color: var(--color-zinc-900) !important;
+}
+
+:host ::ng-deep .ce-block--selected .ce-block__content{
+  background-color: var(--color-zinc-800) !important;
 }
