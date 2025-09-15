@@ -9,14 +9,14 @@ import TailwindHeader from '../../plugins/tailwindheader.plugin';
 import TailwindItalic from '../../plugins/tailwinditalic.plugin';
 
 @Component({
-  selector: 'app-document-editor',
+  selector: 'app-editor',
   imports: [],
   template: `<div id="editorjs" class="rounded-lg p-4 dark-theme"></div>`,
-  styleUrl: './document-editor.component.css',
+  styleUrl: './editor.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.Emulated
 })
-export class DocumentEditorComponent implements AfterViewInit, OnDestroy{
+export class EditorComponent implements AfterViewInit, OnDestroy{
   editor!: EditorJS;
   private lastSaveTime = 0;
   private readonly SAVE_DELAY = 5000;

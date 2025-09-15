@@ -7,10 +7,10 @@ import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { WorldService } from '../../../services/world.service';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
-import { DocumentEditorComponent } from "../../../components/document-editor/document-editor.component";
+import { EditorComponent } from "../../../components/editor/editor.component";
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgClass, FormsModule, IconButtonComponent, DocumentEditorComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgClass, FormsModule, IconButtonComponent, EditorComponent],
   template: `
     <div class="flex flex-col ">
       <div class="flex flex-row items-center">
@@ -31,7 +31,7 @@ import { DocumentEditorComponent } from "../../../components/document-editor/doc
             @if (!isLoading) {
               @switch (currentTab) {
                 @case ('details') {
-                  <app-document-editor [document]="currentWorld.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-document-editor>
+                  <app-editor [document]="currentWorld.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
                 }
                 @case ('localities') {
                   <p>Localidades</p>
