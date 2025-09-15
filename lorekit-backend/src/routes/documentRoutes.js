@@ -60,3 +60,5 @@ router.delete('/:id', async (req, res) => {
         res.status(500).json({ error: 'Erro ao excluir documento: ' + error.message });
     }
 });
+
+module.exports = router;

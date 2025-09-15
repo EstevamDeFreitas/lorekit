@@ -39,7 +39,6 @@ model World {
   id          String      @id @default(uuid())
   name        String
   description String
-  coverImage  String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -53,22 +52,20 @@ model Character {
   id           String   @id @default(uuid())
   name         String
   description  String
-  image        String?
   personality  String
 
-  world        World    @relation(fields: [worldId], references: [id])
-  worldId      String
+  world        World?    @relation(fields: [worldId], references: [id])
+  worldId      String?
 }
 
 model Location {
   id              String     @id @default(uuid())
   name            String
   description     String
-  type            String
-  image           String?
+  type            String?
 
-  world           World      @relation(fields: [worldId], references: [id])
-  worldId         String
+  world           World?      @relation(fields: [worldId], references: [id])
+  worldId         String?
 
   parentLocation  Location?  @relation("LocationHierarchy", fields: [parentLocationId], references: [id])
   parentLocationId String?   
@@ -80,10 +77,9 @@ model Item {
   id          String   @id @default(uuid())
   name        String
   description String
-  image       String?
 
-  world       World    @relation(fields: [worldId], references: [id])
-  worldId     String
+  world       World?    @relation(fields: [worldId], references: [id])
+  worldId     String?
 }
 
 model Document {
