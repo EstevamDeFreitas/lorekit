@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { WorldStateService } from '../../../services/world-state.service';
 import { World } from '../../../models/world.model';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
@@ -8,15 +8,18 @@ import { ButtonComponent } from "../../../components/button/button.component";
 import { WorldService } from '../../../services/world.service';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
 import { EditorComponent } from "../../../components/editor/editor.component";
+import { Dialog } from '@angular/cdk/dialog';
+import { PersonalizationComponent } from '../../../components/personalization/personalization.component';
+import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgClass, FormsModule, IconButtonComponent, EditorComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent],
   template: `
     <div class="flex flex-col ">
       <div class="flex flex-row items-center">
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/world"></app-icon-button>
         <input type="text" (blur)="saveWorldName()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="currentWorld.name" />
-        <app-icon-button buttonType="white" icon="fa-solid fa-palette" size="xl" title="Personalizar"></app-icon-button>
+        <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'world'" [size]="'xl'"></app-personalization-button>
         <div class="flex-2"></div>
       </div>
       <div class="flex flex-row gap-4 mt-10">
@@ -118,4 +121,5 @@ export class WorldInfoComponent implements OnInit {
       }
     });
   }
+
 }

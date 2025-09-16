@@ -1,12 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { World } from '../models/world.model';
+import { environment } from '../../enviroments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WorldService {
-  private apiUrl = 'http://localhost:3000/worlds';
+  private apiUrl = `${environment.apiUrl}/worlds`;
 
   constructor(private http : HttpClient) { }
 

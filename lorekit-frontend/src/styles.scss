@@ -23,6 +23,13 @@
   --color-zinc-925: oklch(17.55% 0.0055 285.854);;
 }
 
+:root{
+  --s: 7rem;
+  --c1: var(--color-zinc-600);
+  --c2: var(--color-zinc-700);
+  --c3: var(--color-zinc-800);
+}
+
 html, body, app-root {
   height: 100%;
   min-height: 100%;
@@ -86,3 +93,5 @@ body {
 .ce-inline-tool svg {
   fill: white !important;
 }
+
+

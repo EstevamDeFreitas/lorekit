@@ -11,3 +11,8 @@ export class Personalization {
     this.contentJson = contentJson;
   }
 }
+
+export interface WeakRelationship {
+  entityTable: string;
+  entityId: string;
+}

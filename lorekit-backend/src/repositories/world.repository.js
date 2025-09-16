@@ -19,7 +19,7 @@ async function getWorlds() {
     const worldsWithPersonalization = await Promise.all(worlds.map(async (world) => {
         const personalization = await prisma.personalization.findFirst({
             where: {
-                entityTable: 'World',
+                entityTable: 'world',
                 entityId: world.id
             }
         });

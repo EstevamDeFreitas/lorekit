@@ -60,3 +60,11 @@ async function deleteDocument(id) {
   });
   return { message: 'Documento excluído com sucesso' };
 }
+
+module.exports = {
+  getEntityDocuments,
+  getDocumentById,
+  createDocument,
+  updateDocument,
+  deleteDocument
+};

@@ -20,6 +20,7 @@ app.use('/auth', authRoutes);
 
 app.use('/worlds', auth, worldRoutes);
 app.use('/documents', auth, require('./src/routes/documentRoutes'));
+app.use('/personalizations', auth, require('./src/routes/personalizationRoutes'));
 
 app.listen(port, () => {
     console.log(`Servidor rodando em http://localhost:${port}`);

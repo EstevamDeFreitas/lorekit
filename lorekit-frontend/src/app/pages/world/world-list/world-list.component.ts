@@ -47,7 +47,7 @@ import { InputComponent } from "../../../components/input/input.component";
     } @else{
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         @for (world of worlds; track world.id) {
-          <div class="cursor-pointer flex flex-col gap-2 selectable-jump border border-zinc-700 bg-zinc-900 p-4 rounded-lg" (click)="onWorldSelected(world.id)">
+          <div class="cursor-pointer flex flex-col gap-2 selectable-jump p-4 rounded-lg" [ngClass]="getWorldColor(world)" (click)="onWorldSelected(world.id)">
             <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
             <div class="text-md font-bold">{{world.name}}</div>
         </div>
@@ -108,6 +108,11 @@ export class WorldListComponent {
       return JSON.parse(world.personalization.contentJson)[key] || null;
     }
     return null;
+  }
+
+  getWorldColor(world: World): string {
+    const color = this.getPersonalizationItem(world, 'color');
+    return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
   }
 
   createWorld() {
