@@ -64,6 +64,9 @@ model Location {
   description     String
   type            String?
 
+  categoryId      String?
+  category        LocationCategory? @relation("LocationCategory", fields: [categoryId], references: [id])
+
   world           World?      @relation(fields: [worldId], references: [id])
   worldId         String?
 
@@ -71,6 +74,15 @@ model Location {
   parentLocationId String?   
 
   subLocations     Location[] @relation("LocationHierarchy")
+
+  relationOptions String? 
+}
+
+model LocationCategory {
+  id        String @id @default(uuid())
+  name      String
+
+  locations Location[] @relation("LocationCategory")
 }
 
 model Item {
