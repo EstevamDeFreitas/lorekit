@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit }
 import { WorldStateService } from '../../../services/world-state.service';
 import { World } from '../../../models/world.model';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
-import { NgClass } from '@angular/common';
+import { NgClass, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { WorldService } from '../../../services/world.service';
@@ -11,9 +11,10 @@ import { EditorComponent } from "../../../components/editor/editor.component";
 import { Dialog } from '@angular/cdk/dialog';
 import { PersonalizationComponent } from '../../../components/personalization/personalization.component';
 import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
+import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent],
   template: `
     <div class="flex flex-col ">
       <div class="flex flex-row items-center">
@@ -51,10 +52,12 @@ import { PersonalizationButtonComponent } from "../../../components/personalizat
           </div>
 
         </div>
-        <div class="flex-1 mt-6.5">
-          <div class="p-4 rounded-lg mt-4 bg-zinc-900">
-
-          </div>
+        <div class="flex-1">
+          @if (!isLoading && currentWorldId){
+            <div class="p-4 rounded-lg bg-zinc-900">
+              <app-entity-lateral-menu *ngIf="!isLoading && currentWorldId" entityTable="world" [entityId]="currentWorldId"></app-entity-lateral-menu>
+            </div>
+          }
         </div>
       </div>
     </div>
@@ -65,7 +68,7 @@ import { PersonalizationButtonComponent } from "../../../components/personalizat
 })
 export class WorldInfoComponent implements OnInit {
   currentWorld: World = new World();
-  currentWorldId: string = '';
+  currentWorldId: string | null = null;
 
   currentTab : string = 'details';
 
@@ -75,16 +78,16 @@ export class WorldInfoComponent implements OnInit {
     this.isLoading = true;
     this.currentRoute.params.subscribe(params => {
       this.currentWorldId = params['worldId'];
-
+      this.getWorld();
     });
   }
 
   ngOnInit() {
-    this.getWorld();
+
   }
 
   getWorld() {
-    this.worldService.getWorldById(this.currentWorldId).subscribe({
+    this.worldService.getWorldById(this.currentWorldId!).subscribe({
       next: (world) => {
         this.currentWorld = world;
         this.isLoading = false;

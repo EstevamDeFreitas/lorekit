@@ -5,6 +5,7 @@ import { LoginComponent } from './pages/auth/login/login.component';
 import { WorldListComponent } from './pages/world/world-list/world-list.component';
 import { MainUiComponent } from './pages/shared/main-ui/main-ui.component';
 import { WorldInfoComponent } from './pages/world/world-info/world-info.component';
+import { DocumentEditComponent } from './pages/documents/document-edit/document-edit.component';
 
 export const routes: Routes = [
   {path: '', redirectTo: 'login', pathMatch: 'full'},
@@ -16,6 +17,9 @@ export const routes: Routes = [
           {path: 'edit', component: WorldEditComponent},
         ]},
 
+      ]},
+      {path:'document', children:[
+        {path: 'edit/:documentId', component: DocumentEditComponent},
       ]}
     ]
   }

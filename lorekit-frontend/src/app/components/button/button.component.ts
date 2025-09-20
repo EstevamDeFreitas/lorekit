@@ -8,12 +8,27 @@ import { Params, Router, RouterLink, RouterLinkActive } from '@angular/router';
   imports: [NgClass, RouterLink, RouterLinkActive],
   template: `
     @if (this.route() == null){
-      <button [ngClass]="buttonClasses" [disabled]="disabled()">{{label()}}</button>
+      <button [ngClass]="buttonClasses" [disabled]="disabled()">
+        @if (icon()){
+          <i class="fa-solid" ngClass="{{icon()}}"></i>
+        }
+        <span>{{label()}}</span>
+      </button>
     } @else if (!this.useRouteActive()) {
-      <a [routerLink]="this.route()" [ngClass]="buttonClasses" >{{label()}}</a>
+      <a [routerLink]="this.route()" [ngClass]="buttonClasses" >
+        @if (icon()){
+          <i class="fa-solid" ngClass="{{icon()}}"></i>
+        }
+        <span>{{label()}}</span>
+      </a>
     }
     @else {
-      <a [routerLink]="this.route()" [queryParams]="this.params()" [routerLinkActive]="routeActiveClass" [ngClass]="buttonClasses" >{{label()}}</a>
+      <a [routerLink]="this.route()" [queryParams]="this.params()" [routerLinkActive]="routeActiveClass" [ngClass]="buttonClasses" >
+        @if (icon()){
+          <i class="fa-solid" ngClass="{{icon()}}"></i>
+        }
+        <span>{{label()}}</span>
+      </a>
     }
 
   `,
@@ -27,9 +42,15 @@ export class ButtonComponent {
   route = input<string>();
   params = input<Params>({});
   useRouteActive = input<boolean>(false);
+  icon = input<string>();
+  size = input<string>('md');
 
   get buttonClasses():string {
-    const base = 'px-4 py-2 rounded-lg font-medium focus:outline-none transition flex w-full';
+    let base = `px-4 py-2 rounded-lg font-medium focus:outline-none transition flex w-full text-${this.size()}`;
+
+    if(this.icon()){
+      base += ' flex-row items-center gap-2';
+    }
 
     if(!this.useRouteActive()) {
       const types = {
@@ -48,6 +69,8 @@ export class ButtonComponent {
         white: 'bg-zinc-50 text-zinc-900',
         danger: 'bg-red-500 text-white'
     }
+
+
 
     return `${base} ${this.disabled() ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:brightness-85 hover:' + types[this.buttonType()] + ' active:brightness-70'}`;
   }

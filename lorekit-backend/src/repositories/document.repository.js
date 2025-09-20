@@ -29,7 +29,13 @@ async function createDocument(document) {
   if (!document.entityTable) return { error: 'Tabela da entidade é obrigatória' };
 
   const createdDocument = await prisma.document.create({
-    data: document,
+    data: {
+      title: document.title,
+      content: document.content || '', 
+      entityId: document.entityId,
+      entityTable: document.entityTable,
+      type: document.type,
+    },
   });
   return createdDocument;
 }
@@ -43,7 +49,13 @@ async function updateDocument(id, document) {
 
   const updatedDocument = await prisma.document.update({
     where: { id: id },
-    data: document,
+    data: {
+      title: document.title,
+      content: document.content || '', 
+      entityId: document.entityId,
+      entityTable: document.entityTable,
+      type: document.type,
+    },
   });
   return updatedDocument;
 }

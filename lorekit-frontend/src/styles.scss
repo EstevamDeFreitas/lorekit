@@ -19,15 +19,31 @@
   font-display: swap;
 }
 
+@layer utilities {
+  .scrollbar-dark::-webkit-scrollbar {
+    width: 12px;
+    height: 8px;
+  }
+  .scrollbar-dark::-webkit-scrollbar-thumb {
+    background-color: rgb(63 63 70);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  .scrollbar-dark::-webkit-scrollbar-track {
+    background-color: rgb(24 24 27);
+  }
+}
+
 @theme {
-  --color-zinc-925: oklch(17.55% 0.0055 285.854);;
+  --color-zinc-925: oklch(17.55% 0.0055 285.854);
 }
 
 :root{
   --s: 7rem;
-  --c1: var(--color-zinc-600);
-  --c2: var(--color-zinc-700);
-  --c3: var(--color-zinc-800);
+  --c1: var(--color-emerald-800);
+  --c2: var(--color-emerald-900);
+  --c3: var(--color-emerald-950);
 }
 
 html, body, app-root {
@@ -95,3 +111,18 @@ body {
 }
 
 
+.bg-pattern-cubes {
+
+  background: repeating-conic-gradient(
+      from 30deg,
+      transparent 0 120deg,
+      var(--c3) 0 50%
+    ) calc(var(--s)/2) calc(var(--s) * tan(30deg) / 2),
+    repeating-conic-gradient(
+      from 30deg,
+      var(--c1) 0 60deg,
+      var(--c2) 0 120deg,
+      var(--c3) 0 50%
+    );
+  background-size: var(--s) calc(var(--s) * tan(30deg));
+}
