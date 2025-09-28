@@ -22,6 +22,7 @@ app.use('/worlds', auth, worldRoutes);
 app.use('/documents', auth, require('./src/routes/documentRoutes'));
 app.use('/personalizations', auth, require('./src/routes/personalizationRoutes'));
 app.use('/locations', auth, require('./src/routes/locationRoutes'));
+app.use('/location-categories', auth, require('./src/routes/locationCategoryRoutes'));
 
 app.listen(port, () => {
     console.log(`Servidor rodando em http://localhost:${port}`);

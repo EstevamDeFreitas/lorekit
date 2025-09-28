@@ -1,3 +1,12 @@
 :host {
   display: block;
 }
+
+::ng-deep .cdk-dialog-container {
+  outline: none !important;
+  border: none !important;
+}
+
+::ng-deep .cdk-overlay-pane {
+  outline: none !important;
+}

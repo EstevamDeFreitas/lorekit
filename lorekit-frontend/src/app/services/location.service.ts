@@ -7,7 +7,7 @@ import { Location, LocationCategory } from '../models/location.model';
   providedIn: 'root'
 })
 export class LocationService {
-  private apiUrl = `${environment.apiUrl}/location`;
+  private apiUrl = `${environment.apiUrl}/locations`;
 
   constructor(private http : HttpClient) { }
 
@@ -35,25 +35,5 @@ export class LocationService {
     return this.http.get<Location[]>(`${this.apiUrl}/world/${worldId}`);
   }
 
-  //Location Category
-  getLocationCategories(){
-    return this.http.get<string[]>(`${this.apiUrl}/categories`);
-  }
-
-  saveLocationCategory(category: LocationCategory) {
-    if (category.id) {
-      return this.http.put<LocationCategory>(`${this.apiUrl}/categories/${encodeURIComponent(category.id)}`, category);
-    } else {
-      return this.http.post<LocationCategory>(`${this.apiUrl}/categories`, category);
-    }
-  }
-
-  deleteLocationCategory(category: LocationCategory) {
-    return this.http.delete(`${this.apiUrl}/categories/${encodeURIComponent(category.id)}`);
-  }
-
-  getLocationCategoryById(categoryId: string) {
-    return this.http.get<LocationCategory>(`${this.apiUrl}/categories/${encodeURIComponent(categoryId)}`);
-  }
 
 }

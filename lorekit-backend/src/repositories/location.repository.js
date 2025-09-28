@@ -19,7 +19,7 @@ async function getLocationById(id) {
 
 async function createLocation(data) {
     return await prisma.location.create({
-        data,
+        data: {name: data.name, description: data.description, worldId: data.worldId, categoryId: data.categoryId},
     });
 }
 
@@ -49,7 +49,7 @@ async function getLocationCategoryById(id) {
 
 async function createLocationCategory(data) {
     return await prisma.locationCategory.create({
-        data,
+        data: {name: data.name},
     });
 }
 

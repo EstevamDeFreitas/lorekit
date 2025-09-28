@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { RouterOutlet, RouterLink, ActivatedRoute, Router, RouterLinkActive } from '@angular/router';
 import { World } from '../../../models/world.model';
@@ -6,6 +6,8 @@ import { WorldStateService } from '../../../services/world-state.service';
 import { delay } from 'rxjs';
 import { WorldService } from '../../../services/world.service';
 import { ButtonComponent } from "../../../components/button/button.component";
+import { Dialog } from '@angular/cdk/dialog';
+import { SettingsComponent } from '../../settings/settings/settings.component';
 
 @Component({
   selector: 'app-main-ui',
@@ -18,12 +20,18 @@ import { ButtonComponent } from "../../../components/button/button.component";
           <i class="text-emerald-500 fa-solid fa-map"></i>
           <h2 class=" font-bold">LoreKit</h2>
         </div>
-        <a class="flex flex-col p-2 rounded-md font-bold gap-4 hover:bg-zinc-800" routerLink="/app/world" routerLinkActive="bg-emerald-500 text-zinc-800 hover:!bg-emerald-500">
-          <span class="text-md">Mundos</span>
+        <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/world" routerLinkActive="bg-emerald-500 text-zinc-800 hover:!bg-emerald-500">
+          <i class="fa-solid fa-earth "></i>
+          <span class="">Mundos</span>
         </a>
       </div>
 
-      <div class=""></div>
+      <div class="h-20">
+        <a (click)="openSettings()" class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 cursor-pointer hover:bg-zinc-800">
+          <i class="fa-solid fa-gears "></i>
+          <span class="">Configurações</span>
+        </a>
+      </div>
     </div>
     <div class="p-4 h-auto flex-1">
       <router-outlet />
@@ -35,6 +43,7 @@ import { ButtonComponent } from "../../../components/button/button.component";
 })
 export class MainUiComponent {
   currentWorld: null | World = null;
+  settingsDialog = inject(Dialog);
 
   worlds: World[] = [];
 
@@ -44,6 +53,13 @@ export class MainUiComponent {
 
   ngOnInit() {
 
+  }
+
+  openSettings() {
+    this.settingsDialog.open(SettingsComponent, {
+      autoFocus: false,
+      restoreFocus: false
+    });
   }
 
 }

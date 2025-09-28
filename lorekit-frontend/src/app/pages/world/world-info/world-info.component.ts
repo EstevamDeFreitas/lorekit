@@ -26,10 +26,10 @@ import { EntityLateralMenuComponent } from "../../../components/entity-lateral-m
       <div class="flex flex-row gap-4 mt-10">
         <div class="flex-4 h-auto  flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'bg-emerald-500/50': currentTab === 'details'}">Detalhes do mundo</a>
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'localities'" [ngClass]="{'bg-emerald-500/50': currentTab === 'localities'}">Localidades</a>
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'characters'" [ngClass]="{'bg-emerald-500/50': currentTab === 'characters'}">Personagens</a>
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'objects'" [ngClass]="{'bg-emerald-500/50': currentTab === 'objects'}">Objetos</a>
+            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'details'}">Detalhes do mundo</a>
+            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'localities'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'localities'}">Localidades</a>
+            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'characters'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'characters'}">Personagens</a>
+            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'objects'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'objects'}">Objetos</a>
           </div>
           <div class="p-4 rounded-lg mt-2 flex flex-col">
             @if (!isLoading) {
