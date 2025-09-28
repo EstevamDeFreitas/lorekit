@@ -1,5 +1,5 @@
 import { DialogRef } from '@angular/cdk/dialog';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
@@ -8,10 +8,11 @@ import { LocationCategory } from '../../../models/location.model';
 import { InputComponent } from "../../../components/input/input.component";
 import {OverlayModule} from '@angular/cdk/overlay';
 import { LocationCategoriesService } from '../../../services/location-categories.service';
+import { FormOverlayComponent, FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
 
 @Component({
   selector: 'app-settings',
-  imports: [NgClass, ButtonComponent, IconButtonComponent, InputComponent, OverlayModule],
+  imports: [NgClass, ButtonComponent, IconButtonComponent, InputComponent, FormOverlayDirective, OverlayModule, FormOverlayComponent],
   template: `
   <div class=" rounded-md border border-zinc-800 w-200">
 
@@ -28,35 +29,32 @@ import { LocationCategoriesService } from '../../../services/location-categories
             <div>
               <div class="flex flex-row justify-between items-center mb-4">
                 <h3 class="text-base mb-2">Categorias de Localidade</h3>
-                <app-button label="Adicionar" buttonType="primary" size="xs" icon="fa-solid fa-plus" (click)="creatingCategory = !creatingCategory" cdkOverlayOrigin #trigger="cdkOverlayOrigin"></app-button>
-                <ng-template
-                  cdkConnectedOverlay
-                  [cdkConnectedOverlayOrigin]="trigger"
-                  [cdkConnectedOverlayOpen]="creatingCategory"
-                  [cdkConnectedOverlayPositions]="[
-                    {
-                      originX: 'start',
-                      originY: 'bottom',
-                      overlayX: 'end',
-                      overlayY: 'top'
-                    }
-                  ]"
-                  >
-                  <div class="bg-zinc-800 p-2 rounded-md">
-                    <div class="mb-2 text-bold">Criar Nova Categoria</div>
-                    <div class="flex flex-col gap-2">
-                      <app-input [label]="'Nome da categoria'" (keydown.enter)="createCategory()" [(value)]="newCategoryName"></app-input>
-                      <app-button label="Criar" (click)="createCategory()"></app-button>
-                    </div>
-                  </div>
-                </ng-template>
+                <app-button
+                  label="Adicionar"
+                  buttonType="primary"
+                  size="xs"
+                  icon="fa-solid fa-plus"
+                  appFormOverlay
+                  [title]="'Adicionar Categoria'"
+                  [fields]="categoryFormFields"
+                  (onSave)="createCategory($event)"
+                  ></app-button>
               </div>
               <div class="border border-zinc-700 rounded-md bg-zinc-900">
                 @for (item of locationCategories; track $index) {
                   <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
                     <p>{{item.name}}</p>
                     <div class="flex flex-row gap-2">
-                      <app-icon-button icon="fa-solid fa-pencil" size="sm" buttonType="secondary"></app-icon-button>
+                      <app-icon-button
+                        icon="fa-solid fa-pencil"
+                        size="sm"
+                        buttonType="secondary"
+                        appFormOverlay
+                        [title]="'Editar Categoria'"
+                        [fields]="[{ key: 'name', label: 'Nome da categoria', value: item.name, type: 'text' }]"
+                        [saveLabel]="'Atualizar'"
+                        (onSave)="saveCategory($event, item.id)"
+                        ></app-icon-button>
                       <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" (click)="deleteCategory(item)"></app-icon-button>
                     </div>
                   </div>
@@ -84,7 +82,15 @@ export class SettingsComponent implements OnInit{
 
   locationCategories: LocationCategory[] = [];
   creatingCategory: boolean = false;
-  newCategoryName: string = '';
+
+  categoryFormFields : FormField[] = [
+    {
+      key: 'name',
+      label: 'Nome da categoria',
+      value: '',
+      type: 'text'
+    }
+  ];
 
   constructor(private locationService: LocationCategoriesService) { }
 
@@ -107,20 +113,43 @@ export class SettingsComponent implements OnInit{
     });
   }
 
-  createCategory() {
-    if (this.newCategoryName.trim() === '') {
+  saveCategory(formData: Record<string, string>, categoryId: string) {
+    const categoryName = formData['name'];
+
+    if (categoryName.trim() === '') {
+      return;
+    }
+
+    const categoryToUpdate = this.locationCategories.find(c => c.id === categoryId);
+    if (categoryToUpdate) {
+      categoryToUpdate.name = categoryName.trim();
+      this.locationService.saveLocationCategory(categoryToUpdate).subscribe({
+        next: () => {
+          this.getLocationCategories();
+        },
+        error: (err) => {
+          console.error('Erro ao atualizar categoria:', err);
+        }
+      });
+    }
+  }
+
+
+  createCategory(formData: Record<string, string>) {
+    const categoryName = formData['name'];
+
+    if (categoryName.trim() === '') {
       return;
     }
 
     const newCategory: LocationCategory = {
       id: '',
-      name: this.newCategoryName.trim()
+      name: categoryName.trim()
     };
 
     this.locationService.saveLocationCategory(newCategory).subscribe({
       next: (category) => {
         this.locationCategories.push(category);
-        this.newCategoryName = '';
         this.creatingCategory = false;
       },
       error: (err) => {
