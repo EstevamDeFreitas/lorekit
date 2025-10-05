@@ -44,3 +44,4 @@ Thumbs.db
 
 # copilot files
 .github/
+lorekit-backend/prisma/lorekit.db
