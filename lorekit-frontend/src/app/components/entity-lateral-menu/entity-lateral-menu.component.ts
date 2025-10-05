@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, OnInit } from '@angular/core';
 import { ButtonComponent } from "../button/button.component";
 import { DocumentService } from '../../services/document.service';
 import { Document } from '../../models/document.model';
@@ -7,6 +7,8 @@ import { InputComponent } from "../input/input.component";
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormOverlayDirective, FormField } from '../form-overlay/form-overlay.component';
 import { NgClass } from '@angular/common';
+import { Dialog } from '@angular/cdk/dialog';
+import { DocumentEditComponent } from '../../pages/documents/document-edit/document-edit.component';
 
 @Component({
   selector: 'app-entity-lateral-menu',
@@ -28,10 +30,10 @@ import { NgClass } from '@angular/common';
     </div>
     <div class="flex flex-col gap-2 max-h-50 overflow-y-scroll scrollbar-dark">
       @for (item of documentArray; track $index) {
-        <a class=" cursor-pointer flex flex-row hover:font-bold items-center gap-2" [ngClass]="'text-' + (getPersonalizationItem(item, 'color') || 'zinc') + '-500'" [routerLink]="['/app/document/edit', item.id]" [queryParams]="{ returnUrl: getReturnUrlQuery() }"  >
+        <button (click)="openDocument(item)" class=" cursor-pointer flex flex-row hover:font-bold items-center gap-2" [ngClass]="'text-' + (getPersonalizationItem(item, 'color') || 'zinc') + '-500'" >
           <i class="fa-solid" [ngClass]="getPersonalizationItem(item, 'icon') || 'fa-file'"></i>
           <h2>{{ item.title }}</h2>
-        </a>
+        </button>
       }
       @empty {
         <p class="text-sm text-zinc-500">Nenhum documento encontrado.</p>
@@ -48,13 +50,14 @@ export class EntityLateralMenuComponent implements OnInit {
 
   returnUrl?: string;
 
-  constructor(private documentService: DocumentService, private currentRoute : ActivatedRoute, private router:Router) {
-  }
+  private dialog = inject(Dialog);
+  private documentService = inject(DocumentService);
+  private currentRoute = inject(ActivatedRoute);
+  private router = inject(Router);
 
   ngOnInit() {
     this.loadDocuments();
   }
-
 
   loadDocuments() {
     this.documentService.getDocuments(this.entityTable(), this.entityId()).subscribe(docs => {
@@ -85,6 +88,15 @@ export class EntityLateralMenuComponent implements OnInit {
       return JSON.parse(item.personalization.contentJson)[key] || null;
     }
     return null;
+  }
+
+  openDocument(item: Document) {
+    this.dialog.open(DocumentEditComponent, {
+      data: { id: item.id },
+      panelClass: 'screen-dialog',
+      height: '80vh',
+      width: '80vw',
+    });
   }
 
 }

@@ -11,7 +11,7 @@ import TailwindItalic from '../../plugins/tailwinditalic.plugin';
 @Component({
   selector: 'app-editor',
   imports: [],
-  template: `<div id="editorjs" class="rounded-lg p-4 dark-theme"></div>`,
+  template: `<div [id]="editorId" class="rounded-lg p-4 dark-theme"></div>`,
   styleUrl: './editor.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.Emulated
@@ -24,12 +24,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   document = input('');
   saveDocument = output<any>();
 
+  editorId = 'editorjs' + Math.floor(Math.random() * 1000000);
+
   constructor() {
   }
 
   ngAfterViewInit() {
     this.editor = new EditorJS({
-      holder: 'editorjs',
+      holder: this.editorId,
       placeholder: 'Comece a escrever aqui, use "/" para comandos...',
       autofocus: true,
       onChange: () => {
