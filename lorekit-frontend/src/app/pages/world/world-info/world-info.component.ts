@@ -12,18 +12,19 @@ import { Dialog } from '@angular/cdk/dialog';
 import { PersonalizationComponent } from '../../../components/personalization/personalization.component';
 import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
 import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
+import { LocationListComponent } from "../../locations/location-list/location-list.component";
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent],
   template: `
-    <div class="flex flex-col ">
+    <div class="flex flex-col h-screen">
       <div class="flex flex-row items-center">
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/world"></app-icon-button>
         <input type="text" (blur)="saveWorldName()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="currentWorld.name" />
         <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'world'" [size]="'xl'"></app-personalization-button>
         <div class="flex-2"></div>
       </div>
-      <div class="flex flex-row gap-4 mt-10">
+      <div class="flex flex-row gap-4 h-full mt-10">
         <div class="flex-4 h-auto  flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'details'}">Detalhes do mundo</a>
@@ -31,14 +32,14 @@ import { EntityLateralMenuComponent } from "../../../components/entity-lateral-m
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'characters'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'characters'}">Personagens</a>
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'objects'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'objects'}">Objetos</a>
           </div>
-          <div class="p-4 rounded-lg mt-2 flex flex-col">
+          <div class="p-4 rounded-lg mt-2 flex flex-col h-[calc(100%-8rem)] overflow-y-auto scrollbar-dark">
             @if (!isLoading) {
               @switch (currentTab) {
                 @case ('details') {
                   <app-editor [document]="currentWorld.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
                 }
                 @case ('localities') {
-                  <p>Localidades</p>
+                  <app-location-list [worldId]="currentWorld.id"></app-location-list>
                 }
                 @case ('characters') {
                   <p>Personagens</p>

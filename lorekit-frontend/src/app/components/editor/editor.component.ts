@@ -65,12 +65,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   private async handleChange() {
     const now = Date.now();
 
-    if (now - this.lastSaveTime >= this.SAVE_DELAY) {
-
-      await this.saveContent();
-    }
-    else{
-    }
+    await this.saveContent();
   }
 
   private parseDocument(document: string) {

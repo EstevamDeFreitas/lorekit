@@ -12,6 +12,8 @@ router.get('/', async (req, res) => {
     }
 });
 
+
+
 router.get('/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -59,6 +61,18 @@ router.delete('/:id', async (req, res) => {
         console.error('Error deleting location:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
+});
+
+router.get('/world/:worldId', async (req, res) => {
+    const { worldId } = req.params;
+
+    try {
+        const locations = await locationRepository.getLocationsByWorldId(worldId);
+        res.json(locations);
+    } catch (error) {
+        console.error('Error fetching locations by world ID:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }   
 });
 
 module.exports = router;

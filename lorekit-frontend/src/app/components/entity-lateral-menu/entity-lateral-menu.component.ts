@@ -5,36 +5,25 @@ import { Document } from '../../models/document.model';
 import {OverlayModule} from '@angular/cdk/overlay';
 import { InputComponent } from "../input/input.component";
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { FormOverlayDirective, FormField } from '../form-overlay/form-overlay.component';
 
 @Component({
   selector: 'app-entity-lateral-menu',
-  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule],
+  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective],
   template: `
   <div class="flex flex-col gap-4">
     <div class="flex flex-row justify-between items-center">
-      <h3 class="text-base">Documentos</h3>
-      <app-button label="Novo" size="xs" icon="fa-plus" buttonType="white" (click)="documentCreationOpen = !documentCreationOpen" cdkOverlayOrigin #trigger="cdkOverlayOrigin"></app-button>
-      <ng-template
-        cdkConnectedOverlay
-        [cdkConnectedOverlayOrigin]="trigger"
-        [cdkConnectedOverlayOpen]="documentCreationOpen"
-        [cdkConnectedOverlayPositions]="[
-          {
-            originX: 'start',
-            originY: 'bottom',
-            overlayX: 'end',
-            overlayY: 'top'
-          }
-        ]"
-        >
-        <div class="bg-zinc-800 p-2 rounded-md">
-          <div class="mb-2 text-bold">Criar Novo Documento</div>
-          <div class="flex flex-col gap-2">
-            <app-input [label]="'Título do Documento'" [(value)]="newDocumentTitle"></app-input>
-            <app-button label="Criar" (click)="createDocument()"></app-button>
-          </div>
-        </div>
-      </ng-template>
+      <h3 class="text-sm">Documentos</h3>
+      <app-button
+        label="Novo"
+        size="xs"
+        icon="fa-plus"
+        buttonType="white"
+        appFormOverlay
+        [title]="'Criar Documento'"
+        [fields]="[{ key: 'name', label: 'Título', value: '' }]"
+        (onSave)="createDocument($event)"
+      ></app-button>
     </div>
     <div class="flex flex-col gap-2 max-h-50 overflow-y-scroll scrollbar-dark">
       @for (item of documentArray; track $index) {
@@ -51,10 +40,6 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 })
 export class EntityLateralMenuComponent implements OnInit {
   documentArray:Array<Document> = [];
-
-  documentCreationOpen = false;
-
-  newDocumentTitle = '';
 
   entityTable = input.required<string>();
   entityId = input.required<string>();
@@ -75,17 +60,15 @@ export class EntityLateralMenuComponent implements OnInit {
     });
   }
 
-  createDocument() {
-    if (this.newDocumentTitle.trim() === '') {
+  createDocument(formData: Record<string, string>) {
+    if (formData['name'].trim() === '') {
       return;
     }
 
-    const newDoc = new Document('', this.newDocumentTitle, this.entityTable(), this.entityId());
+    const newDoc = new Document('', formData['name'], this.entityTable(), this.entityId());
 
     this.documentService.saveDocument(newDoc).subscribe(doc => {
       this.documentArray.push(doc);
-      this.newDocumentTitle = '';
-      this.documentCreationOpen = false;
     });
   }
 

@@ -46,7 +46,9 @@ export class ButtonComponent {
   size = input<string>('md');
 
   get buttonClasses():string {
-    let base = `px-4 py-2 rounded-lg font-medium focus:outline-none transition flex w-full text-${this.size()}`;
+    let buttonSize = this.size() == 'xs' ? 'px-3 py-1.5' : 'px-4 py-2';
+
+    let base = `${buttonSize} rounded-lg font-medium focus:outline-none transition flex w-full text-${this.size()}`;
 
     if(this.icon()){
       base += ' flex-row items-center gap-2';

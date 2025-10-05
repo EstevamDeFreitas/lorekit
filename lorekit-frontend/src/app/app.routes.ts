@@ -6,6 +6,8 @@ import { WorldListComponent } from './pages/world/world-list/world-list.componen
 import { MainUiComponent } from './pages/shared/main-ui/main-ui.component';
 import { WorldInfoComponent } from './pages/world/world-info/world-info.component';
 import { DocumentEditComponent } from './pages/documents/document-edit/document-edit.component';
+import { LocationListComponent } from './pages/locations/location-list/location-list.component';
+import { LocationEditComponent } from './pages/locations/location-edit/location-edit.component';
 
 export const routes: Routes = [
   {path: '', redirectTo: 'login', pathMatch: 'full'},
@@ -20,7 +22,12 @@ export const routes: Routes = [
       ]},
       {path:'document', children:[
         {path: 'edit/:documentId', component: DocumentEditComponent},
-      ]}
+      ]},
+      {path:'location', children:[
+        {path: '', redirectTo: 'list', pathMatch: 'full'},
+        {path: 'list', component: LocationListComponent},
+        {path: 'edit/:locationId', component: LocationEditComponent},
+      ]},
     ]
   }
 

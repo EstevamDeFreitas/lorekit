@@ -4,28 +4,44 @@ import { ComponentPortal } from '@angular/cdk/portal';
 import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { InputComponent } from '../input/input.component';
 import { ButtonComponent } from '../button/button.component';
+import { ComboBoxComponent } from "../combo-box/combo-box.component";
 
 export interface FormField {
   key: string;
   label: string;
   value: string;
+  options?: any[];
+  optionCompareProp?: string;
+  optionDisplayProp?: string;
   type?: 'text' | 'email' | 'password';
 }
 
 @Component({
   selector: 'app-form-overlay',
-  imports: [InputComponent, ButtonComponent],
+  imports: [InputComponent, ButtonComponent, ComboBoxComponent],
   template: `
     <div class="bg-zinc-800 p-2 rounded-md min-w-64 shadow-lg border border-zinc-700">
       <div class="mb-3 font-semibold text-white">{{ title() }}</div>
       <div class="flex flex-col gap-3">
         @for (field of fields(); track field.key) {
-          <app-input
-            [label]="field.label"
-            [type]="field.type || 'text'"
-            [(value)]="field.value"
-            (keydown.enter)="handleSave()">
-          </app-input>
+          @if (field.options && field.options.length > 0) {
+            <app-combo-box
+              [label]="field.label"
+              [items]="field.options"
+              [(comboValue)]="field.value"
+              [compareProp]="field.optionCompareProp || ''"
+              [displayProp]="field.optionDisplayProp || ''"
+              >
+            </app-combo-box>
+          }
+          @else {
+            <app-input
+              [label]="field.label"
+              [type]="field.type || 'text'"
+              [(value)]="field.value"
+              >
+            </app-input>
+          }
         }
         <div class="flex gap-2">
           <app-button
