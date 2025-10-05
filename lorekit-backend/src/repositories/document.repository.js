@@ -3,12 +3,27 @@ const { getUserId } = require('../requestContext');
 
 async function getEntityDocuments(entityId, entityTable) {
 
-  return await prisma.document.findMany({
+  var documents = await prisma.document.findMany({
     where: {
       entityId,
       entityTable
     }
   });
+
+  const documentsWithPersonalization = await Promise.all(documents.map(async (doc) => {
+        const personalization = await prisma.personalization.findFirst({
+            where: {
+                entityTable: 'document',
+                entityId: doc.id
+            }
+        });
+        return {
+            ...doc,
+            personalization: personalization
+        };
+    }));
+
+  return documentsWithPersonalization;
 }
 
 async function getDocumentById(id) {
