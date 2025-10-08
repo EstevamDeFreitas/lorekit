@@ -133,11 +133,15 @@ export class LocationListComponent {
       this.router.navigate(['app/location/edit', locationId]);
     }
     else {
-      this.dialog.open(LocationEditComponent, {
+      var dialogRef = this.dialog.open(LocationEditComponent, {
         data: { id: locationId },
         panelClass: 'screen-dialog',
         height: '80vh',
         width: '80vw',
+      });
+
+      dialogRef.closed.subscribe(() => {
+        this.getLocations();
       });
     }
   }

@@ -5,6 +5,8 @@ export class World {
   name: string;
   description?: string;
 
+  concept?: string;
+
   personalization?: Personalization;
 
   constructor(id: string = '', name: string = '', description?: string) {

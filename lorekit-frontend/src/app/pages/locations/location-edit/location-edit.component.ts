@@ -3,12 +3,14 @@ import { NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
-import { Location } from '../../../models/location.model';
+import { Location, LocationCategory } from '../../../models/location.model';
 import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
 import { FormsModule } from '@angular/forms';
 import { LocationService } from '../../../services/location.service';
 import { EditorComponent } from "../../../components/editor/editor.component";
 import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
+import { LocationCategoriesService } from '../../../services/location-categories.service';
+import { FormField } from '../../../components/form-overlay/form-overlay.component';
 
 @Component({
   selector: 'app-location-edit',
@@ -31,10 +33,10 @@ import { EntityLateralMenuComponent } from "../../../components/entity-lateral-m
             }
           </div>
         </div>
-        <div class="flex-1">
+        <div class="w-70">
           @if (!isLoading){
             <div class="p-4 rounded-lg bg-zinc-900">
-              <app-entity-lateral-menu entityTable="world" [entityId]="location.id"></app-entity-lateral-menu>
+              <app-entity-lateral-menu [fields]="getFields()" (onSave)="onDocumentFieldsSave($event)" entityTable="world" [entityId]="location.id"></app-entity-lateral-menu>
             </div>
           }
         </div>
@@ -53,6 +55,7 @@ export class LocationEditComponent implements OnInit {
   private activatedRoute = inject(ActivatedRoute);
   private locationService = inject(LocationService);
   private cdr = inject(ChangeDetectorRef);
+  private locationCategoryService = inject(LocationCategoriesService);
 
   isInDialog = computed(() => !!this.dialogref);
 
@@ -72,8 +75,22 @@ export class LocationEditComponent implements OnInit {
   location : Location = {} as Location;
   isLoading = true;
 
+  locationCategories: LocationCategory[] = [];
+
   ngOnInit(): void {
     this.getLocation();
+    this.getCategories();
+  }
+
+  getCategories() {
+    this.locationCategoryService.getLocationCategories().subscribe({
+      next: (categories) => {
+        this.locationCategories = categories;
+      },
+      error: (error) => {
+        console.error('Erro ao buscar categorias de localidade:', error);
+      }
+    });
   }
 
   getLocation(){
@@ -102,6 +119,19 @@ export class LocationEditComponent implements OnInit {
   onDocumentSave($event: any) {
     this.location.description = JSON.stringify($event);
     this.saveLocation();
+  }
+
+  onDocumentFieldsSave(formData: Record<string, string>) {
+    this.location.concept = formData['concept'];
+    this.location.categoryId = formData['categoryId'];
+    this.saveLocation();
+  }
+
+  getFields() : FormField[] {
+    return [
+      { key: 'concept', label: 'Conceito', value: this.location.concept || '', type: 'text-area' },
+      { key: 'categoryId', label: 'Categoria', value: this.location.categoryId || '', options: this.locationCategories, optionCompareProp: 'id', optionDisplayProp: 'name' }
+    ];
   }
 
 

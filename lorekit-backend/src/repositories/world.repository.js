@@ -78,7 +78,7 @@ async function updateWorld(world) {
 
     const updatedWorld = await prisma.world.update({
         where: { id: world.id },
-        data: { name: world.name, description: world.description },
+        data: { name: world.name, description: world.description, concept: world.concept },
     });
 
     return updatedWorld;

@@ -7,6 +7,8 @@ export class Location{
   parentLocationId?: string;
   relationOptions?: string;
 
+  concept?: string;
+
   constructor(id: string = '', name: string = '', description: string = '', categoryId?: string, worldId?: string, parentLocationId?: string, relationOptions?: string) {
     this.id = id;
     this.name = name;

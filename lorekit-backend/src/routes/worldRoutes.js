@@ -37,9 +37,9 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, description } = req.body;
+    const worldData = req.body;
     try {
-        const updatedWorld = await worldRepository.updateWorld({ id, name, description });
+        const updatedWorld = await worldRepository.updateWorld(worldData);
         res.json(updatedWorld);
     } catch (error) {
         res.status(500).json({ error: 'Erro ao atualizar mundo' });

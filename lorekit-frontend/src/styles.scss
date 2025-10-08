@@ -59,6 +59,17 @@ body {
   font-size: 0.8rem;
 }
 
+textarea:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+
+select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 .auth-container{
   display: flex;
   justify-content: center;

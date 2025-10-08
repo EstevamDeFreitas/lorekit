@@ -11,7 +11,7 @@ import { NgClass } from '@angular/common';
       <select
         [(ngModel)]="comboValue"
         [ngClass]="'text-' + size()"
-        class="rounded-lg px-3 py-2 ring-1 bg-zinc-925 ring-zinc-800 transition focus:outline-none focus:ring-zinc-100 focus:bg-zinc-925  focus:ring-1"
+        class="rounded-lg px-3 py-2 bg-zinc-925 border-zinc-800 border transition focus:outline-none focus:border-zinc-100 focus:bg-zinc-925  focus:border-1"
       >
         <option value="" disabled selected hidden>{{ placeholder() }}</option>
         @for (item of items(); track item){

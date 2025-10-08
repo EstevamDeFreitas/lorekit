@@ -13,6 +13,7 @@ import { PersonalizationComponent } from '../../../components/personalization/pe
 import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
 import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 import { LocationListComponent } from "../../locations/location-list/location-list.component";
+import { FormField } from '../../../components/form-overlay/form-overlay.component';
 
 @Component({
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent],
@@ -53,10 +54,10 @@ import { LocationListComponent } from "../../locations/location-list/location-li
           </div>
 
         </div>
-        <div class="flex-1">
+        <div class="w-70">
           @if (!isLoading && currentWorldId){
-            <div class="p-4 rounded-lg bg-zinc-900">
-              <app-entity-lateral-menu *ngIf="!isLoading && currentWorldId" entityTable="world" [entityId]="currentWorldId"></app-entity-lateral-menu>
+            <div class="p-4 rounded-lg bg-zinc-900 ">
+              <app-entity-lateral-menu *ngIf="!isLoading && currentWorldId" [fields]="getFields()" (onSave)="onWorldSave($event)" entityTable="world" [entityId]="currentWorldId"></app-entity-lateral-menu>
             </div>
           }
         </div>
@@ -100,6 +101,8 @@ export class WorldInfoComponent implements OnInit {
     });
   }
 
+
+
   saveWorldName() {
   if (!this.currentWorld.name || !this.currentWorldId) return;
     this.worldService.updateWorld(this.currentWorld.id, this.currentWorld).subscribe({
@@ -124,6 +127,25 @@ export class WorldInfoComponent implements OnInit {
         console.error('Erro ao salvar documento:', err);
       }
     });
+  }
+
+  onWorldSave(formData: Record<string, string>) {
+    this.currentWorld.concept = formData['concept'];
+
+    this.worldService.updateWorld(this.currentWorld.id, this.currentWorld).subscribe({
+      next: (updatedWorld) => {
+
+      },
+      error: (err) => {
+        console.error('Erro ao salvar conceito do mundo:', err);
+      }
+    });
+  }
+
+  getFields() : FormField[] {
+    return [
+      { key: 'concept', label: 'Conceito', value: this.currentWorld.concept || '', type: 'text-area' },
+    ];
   }
 
 }

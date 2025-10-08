@@ -13,7 +13,7 @@ export interface FormField {
   options?: any[];
   optionCompareProp?: string;
   optionDisplayProp?: string;
-  type?: 'text' | 'email' | 'password';
+  type?: 'text' | 'email' | 'password' | 'number' | 'text-area';
 }
 
 @Component({
