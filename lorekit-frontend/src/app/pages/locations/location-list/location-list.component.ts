@@ -1,4 +1,5 @@
 import { Component, computed, inject, input } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
@@ -10,7 +11,7 @@ import { LocationEditComponent } from '../location-edit/location-edit.component'
 
 @Component({
   selector: 'app-location-list',
-  imports: [ButtonComponent, FormOverlayDirective],
+  imports: [ButtonComponent, FormOverlayDirective, NgClass],
   template: `
     <div>
       <div class="flex flex-row justify-between items-center mb-4">
@@ -35,9 +36,12 @@ import { LocationEditComponent } from '../location-edit/location-edit.component'
             <h3 class="text-lg mb-2">{{ category.name }}:</h3>
             <div class="grid grid-cols-3 gap-4">
               @for (location of locationGroups[category.id]; track location.id) {
-                <div (click)="selectLocation(location.id)" class="rounded-md cursor-pointer selectable-jump border border-zinc-800 p-2 mb-2">
-                  <div class="text-sm">{{ location.name }}</div>
-                  <p></p>
+                <div (click)="selectLocation(location.id)" [ngClass]="getLocationColor(location)" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
+                  <div class="flex flex-row gap-2 items-center">
+                    <i class="fa" [ngClass]="getPersonalizationItem(location, 'icon') || 'fa-location-dot'"></i>
+                    <div class="text-base font-bold">{{ location.name }}</div>
+                  </div>
+                  <div class="text-xs">{{location.concept}}</div>
                 </div>
               }
             </div>
@@ -144,6 +148,18 @@ export class LocationListComponent {
         this.getLocations();
       });
     }
+  }
+
+  getPersonalizationItem(location: Location, key: string): string | null {
+    if (location.personalization && location.personalization.contentJson != null && location.personalization.contentJson != '') {
+      return JSON.parse(location.personalization.contentJson)[key] || null;
+    }
+    return null;
+  }
+
+  getLocationColor(location: Location): string {
+    const color = this.getPersonalizationItem(location, 'color');
+    return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
   }
 
 }

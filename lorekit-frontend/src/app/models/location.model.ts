@@ -1,3 +1,5 @@
+import { Personalization } from "./personalization.model";
+
 export class Location{
   id: string;
   name: string;
@@ -6,6 +8,7 @@ export class Location{
   worldId?: string;
   parentLocationId?: string;
   relationOptions?: string;
+  personalization?: Personalization;
 
   concept?: string;
 

@@ -47,10 +47,13 @@ import { InputComponent } from "../../../components/input/input.component";
     } @else{
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         @for (world of worlds; track world.id) {
-          <div class="cursor-pointer flex flex-col gap-2 selectable-jump p-4 rounded-lg" [ngClass]="getWorldColor(world)" (click)="onWorldSelected(world.id)">
-            <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
-            <div class="text-md font-bold">{{world.name}}</div>
-        </div>
+          <div class="flex flex-col gap-1 cursor-pointer selectable-jump p-4 rounded-lg" [ngClass]="getWorldColor(world)" (click)="onWorldSelected(world.id)">
+            <div class="flex flex-row gap-2 items-center">
+              <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
+              <div class="text-base font-bold">{{world.name}}</div>
+            </div>
+            <div class="text-xs">{{world.concept}}</div>
+          </div>
         }
       </div>
     }

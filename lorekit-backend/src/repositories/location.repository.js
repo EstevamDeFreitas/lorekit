@@ -2,13 +2,37 @@ const prisma = require('../prismaClient');
 const { getUserId } = require('../requestContext');
 
 async function getAllLocations() {
-    return await prisma.location.findMany();
+    var locations = await prisma.location.findMany();
+
+    locations = await Promise.all(locations.map(async (location) => {
+        const personalization = await prisma.personalization.findFirst({
+            where: { 
+                entityTable: 'location',
+                entityId: location.id
+            },
+        });
+        return { ...location, personalization };
+    }));
+
+    return locations;
 }
 
 async function getLocationsByWorldId(worldId) {
-    return await prisma.location.findMany({
+    var locations = await prisma.location.findMany({
         where: { worldId },
     });
+
+    locations = await Promise.all(locations.map(async (location) => {
+        const personalization = await prisma.personalization.findFirst({
+            where: {
+                entityTable: 'location',
+                entityId: location.id
+            },
+        });
+        return { ...location, personalization };
+    }));
+
+    return locations;
 }
 
 async function getLocationById(id) {

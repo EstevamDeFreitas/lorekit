@@ -42,6 +42,7 @@ import { debounceTime, Subject } from 'rxjs';
                 [label]="field.label"
                 [(value)]="field.value"
                 (valueChange)="onFieldValueChange(field)"
+                height="h-24"
                 >
               </app-text-area>
             }
@@ -170,7 +171,7 @@ export class EntityLateralMenuComponent implements OnInit {
   onFieldChange() {
     const formData: Record<string, string> = {};
     this.fieldValues.forEach(field => {
-      formData[field.key] = field.value.trim();
+      formData[field.key] = field.value;
     });
 
     this.onSave.emit(formData);
