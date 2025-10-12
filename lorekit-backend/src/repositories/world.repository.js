@@ -1,20 +1,11 @@
 const prisma = require('../prismaClient');
 const { getUserId } = require('../requestContext');
 
+const { safeDeleteEntity } = require('./safedelete.helper');
+
 async function getWorlds() {
 
-    const worlds = await prisma.world.findMany({
-        include: {
-            users: true
-        },
-        where: {
-            users: {
-                some: {
-                    userId: getUserId()
-                }
-            }
-        }
-    });
+    const worlds = await prisma.world.findMany();
 
     const worldsWithPersonalization = await Promise.all(worlds.map(async (world) => {
         const personalization = await prisma.personalization.findFirst({
@@ -40,11 +31,6 @@ async function getWorldById(id) {
         where: {
             id: {
                 equals: id,
-            },
-            users: {
-                some: {
-                    userId: getUserId()
-                }
             }
         },
     });
@@ -54,18 +40,10 @@ async function getWorldById(id) {
 async function createWorld(world) {
 
     if (!world.name) return res.status(400).json({ error: 'Nome é obrigatório' });
+
     world = await prisma.world.create({
         data: { name: world.name, description: world.description },
     });
-
-    const userWorld = await prisma.userWorld.create({
-        data: {
-            userId: getUserId(),
-            worldId: world.id,
-            accessLevel: 0
-        },
-    });
-
 
     return world;
 }
@@ -84,18 +62,17 @@ async function updateWorld(world) {
     return updatedWorld;
 }
 
-async function deleteWorld(id) {
-    const existingWorld = await getWorldById(world.id);
+async function deleteWorld(id, deleteRelatedItems = false) {
 
-    if (!existingWorld) return res.status(404).json({ error: 'Mundo não encontrado' });
+    await safeDeleteEntity('world', id, deleteRelatedItems);
 
-    const worldUser = existingWorld.users.filter(user => user.id === getUserId() && user.accessLevel === 0);
+    await prisma.userWorld.deleteMany({
+        where: { worldId: id }
+    });
 
-    if(worldUser == null || worldUser.length === 0) {
-        return res.status(403).json({ error: 'Autorização insuficiente' });
-    }
-
-    return true;
+    return await prisma.world.delete({
+        where: { id },
+    });
 }
 
 module.exports = {

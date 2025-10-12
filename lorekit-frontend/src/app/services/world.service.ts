@@ -27,8 +27,8 @@ export class WorldService {
     return this.http.put<World>(`${this.apiUrl}/${id}`, world);
   }
 
-  deleteWorld(id: string) {
-    return this.http.delete(`${this.apiUrl}/${id}`);
+  deleteWorld(id: string, deleteRelatedItems: boolean = false) {
+    return this.http.delete(`${this.apiUrl}/${id}?deleteRelatedItems=${deleteRelatedItems}`);
   }
 
 }

@@ -11,7 +11,7 @@ import { RouterLink } from '@angular/router';
 })
 export class IconButtonComponent {
   buttonType = input<string>('primary');
-  size = input<string>('md');
+  size = input<string>('base');
   icon = input<string>('fa-solid fa-plus');
   title = input<string>('Adicionar');
   disabled = input<boolean>(false);

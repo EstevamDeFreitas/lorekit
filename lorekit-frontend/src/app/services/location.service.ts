@@ -23,8 +23,8 @@ export class LocationService {
     }
   }
 
-  deleteLocation(locationId: string) {
-    return this.http.delete(`${this.apiUrl}/${locationId}`);
+  deleteLocation(locationId: string, deleteRelatedItems: boolean = false) {
+    return this.http.delete(`${this.apiUrl}/${locationId}?deleteRelatedItems=${deleteRelatedItems}`);
   }
 
   getLocationById(locationId: string) {

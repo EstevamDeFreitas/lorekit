@@ -50,8 +50,9 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
+    const { deleteRelatedItems } = req.query;
     try {
-        const result = await documentRepository.deleteDocument(id);
+        const result = await documentRepository.deleteDocument(id, deleteRelatedItems);
         if (result.error) {
             return res.status(404).json({ error: result.error });
         }

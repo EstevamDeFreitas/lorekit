@@ -27,8 +27,8 @@ export class DocumentService {
     }
   }
 
-  deleteDocument(documentId: string) {
-    return this.http.delete(`${this.apiUrl}/${documentId}`);
+  deleteDocument(documentId: string, deleteRelatedItems: boolean = false) {
+    return this.http.delete(`${this.apiUrl}/${documentId}?deleteRelatedItems=${deleteRelatedItems}`);
   }
 
 }

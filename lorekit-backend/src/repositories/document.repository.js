@@ -1,6 +1,8 @@
 const prisma = require('../prismaClient');
 const { getUserId } = require('../requestContext');
 
+const { safeDeleteEntity } = require('./safedelete.helper');
+
 async function getEntityDocuments(entityId, entityTable) {
 
   var documents = await prisma.document.findMany({
@@ -75,16 +77,15 @@ async function updateDocument(id, document) {
   return updatedDocument;
 }
 
-async function deleteDocument(id) {
+async function deleteDocument(id, deleteRelatedItems = false) {
 
-  const existingDocument = await prisma.document.findUnique({
-    where: { id: id },
-  });
-  if (!existingDocument) return { error: 'Documento não encontrado' };
+  await safeDeleteEntity('document', id, deleteRelatedItems);
 
   await prisma.document.delete({
     where: { id: id },
   });
+
+  
   return { message: 'Documento excluído com sucesso' };
 }
 

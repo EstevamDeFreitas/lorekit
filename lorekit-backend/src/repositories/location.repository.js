@@ -1,5 +1,6 @@
 const prisma = require('../prismaClient');
 const { getUserId } = require('../requestContext');
+const { safeDeleteEntity } = require('./safedelete.helper');
 
 async function getAllLocations() {
     var locations = await prisma.location.findMany();
@@ -54,7 +55,10 @@ async function updateLocation(id, data) {
     });
 }
 
-async function deleteLocation(id) {
+async function deleteLocation(id, deleteRelatedItems = false) {
+
+    await safeDeleteEntity('location', id, deleteRelatedItems);
+
     return await prisma.location.delete({
         where: { id },
     });

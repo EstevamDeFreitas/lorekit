@@ -48,8 +48,9 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
+    const { deleteRelatedItems } = req.query;
     try {
-        await worldRepository.deleteWorld(id);
+        await worldRepository.deleteWorld(id, deleteRelatedItems);
         res.json({ message: 'Mundo deletado com sucesso' });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao deletar mundo' });

@@ -54,8 +54,9 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
+    const { deleteRelatedItems } = req.query;
     try {
-        await locationRepository.deleteLocation(id);
+        await locationRepository.deleteLocation(id, deleteRelatedItems);
         res.status(204).send();
     } catch (error) {
         console.error('Error deleting location:', error);

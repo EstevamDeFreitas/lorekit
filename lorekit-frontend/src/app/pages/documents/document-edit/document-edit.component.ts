@@ -10,11 +10,12 @@ import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
 import { NgClass } from '@angular/common';
+import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 
 @Component({
   selector: 'app-document-edit',
   standalone: true,
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, NgClass, FormOverlayDirective, EditorComponent, ButtonComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, NgClass, FormOverlayDirective, EditorComponent, ButtonComponent, SafeDeleteButtonComponent],
   template: `
   <div class="flex flex-col" [ngClass]="{'h-screen': !isInDialog(), 'h-[80vh]': isInDialog()}">
     <div class="flex flex-row items-center">
@@ -22,7 +23,10 @@ import { NgClass } from '@angular/common';
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" [route]="getReturnUrl()"></app-icon-button>
       }
       <input type="text" (blur)="saveDocument()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="document.title" />
-      <app-personalization-button [entityId]="documentId()" [entityTable]="'document'" [size]="'xl'"></app-personalization-button>
+      <div class="flex flex-row gap-2">
+        <app-personalization-button [entityId]="documentId()" [entityTable]="'document'" [size]="'xl'"></app-personalization-button>
+        <app-safe-delete-button [entityName]="document.title" [entityId]="document.id" [entityTable]="'document'" [size]="'xl'"></app-safe-delete-button>
+      </div>
       <div class="flex-2"></div>
     </div>
     <div class="flex flex-row gap-4 mt-10 h-full">

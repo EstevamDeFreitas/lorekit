@@ -11,10 +11,11 @@ import { EditorComponent } from "../../../components/editor/editor.component";
 import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 import { LocationCategoriesService } from '../../../services/location-categories.service';
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
+import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent],
   template: `
     <div class="flex flex-col h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[80vh]': isInDialog()}">
       <div class="flex flex-row items-center">
@@ -22,7 +23,10 @@ import { FormField } from '../../../components/form-overlay/form-overlay.compone
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/location"></app-icon-button>
         }
         <input type="text" (blur)="saveLocation()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="location.name" />
-        <app-personalization-button [entityId]="location.id" [entityTable]="'location'" [size]="'xl'"></app-personalization-button>
+        <div class="flex flex-row gap-2">
+          <app-personalization-button [entityId]="location.id" [entityTable]="'location'" [size]="'xl'"></app-personalization-button>
+          <app-safe-delete-button [entityName]="location.name" [entityId]="location.id" [entityTable]="'location'" [size]="'xl'"></app-safe-delete-button>
+        </div>
         <div class="flex-2"></div>
       </div>
       <div class="flex flex-row gap-4 mt-10 h-full">

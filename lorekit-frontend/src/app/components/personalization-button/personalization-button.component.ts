@@ -17,7 +17,7 @@ export class PersonalizationButtonComponent {
   entityId = input<string>('');
   entityTable = input<string>('');
 
-  size = input<'sm' | 'md' | 'lg' | 'xl' | '2xl'>('md');
+  size = input<'sm' | 'base' | 'lg' | 'xl' | '2xl'>('base');
 
   openPersonalizationDialog() {
     this.personalizationDialog.open(PersonalizationComponent, {

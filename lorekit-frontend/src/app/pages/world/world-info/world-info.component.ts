@@ -14,15 +14,19 @@ import { PersonalizationButtonComponent } from "../../../components/personalizat
 import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 import { LocationListComponent } from "../../locations/location-list/location-list.component";
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
+import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent],
   template: `
     <div class="flex flex-col h-screen">
       <div class="flex flex-row items-center">
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/world"></app-icon-button>
         <input type="text" (blur)="saveWorldName()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="currentWorld.name" />
-        <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'world'" [size]="'xl'"></app-personalization-button>
+        <div class="flex flex-row gap-2">
+          <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'world'" [size]="'xl'"></app-personalization-button>
+          <app-safe-delete-button [entityName]="currentWorld.name" [entityId]="currentWorld.id" [entityTable]="'world'" [size]="'xl'"></app-safe-delete-button>
+        </div>
         <div class="flex-2"></div>
       </div>
       <div class="flex flex-row gap-4 h-full mt-10">
