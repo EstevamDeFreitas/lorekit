@@ -1,10 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Personalization, WeakRelationship } from '../../models/personalization.model';
 import { InputComponent } from "../input/input.component";
 import { PersonalizationService } from '../../services/personalization.service';
 import { ButtonComponent } from "../button/button.component";
 import { PaletteSelectorComponent } from "../palette-selector/palette-selector.component";
+import { ImageService } from '../../services/image.service';
+import { Image } from '../../models/image.model';
+import { ImageUploaderComponent } from '../ImageUploader/image-uploader.component';
 
 
 
@@ -24,6 +27,18 @@ import { PaletteSelectorComponent } from "../palette-selector/palette-selector.c
           <p>Ícone</p>
           <app-input [(value)]="personalizationContent['icon']"></app-input>
         </div>
+        <div class="flex flex-col gap-2 p-2 border-b border-zinc-800">
+          <p>Imagem de Fundo</p>
+          @if(image) {
+            <img (click)="openImageUploader()" class="h-20 w-full object-cover cursor-pointer hover:opacity-50 rounded-md transition" [src]="'http://localhost:3000/' + image?.filePath" alt="">
+          }
+          @else {
+            <div (click)="openImageUploader()" class="h-20 w-full bg-zinc-800 flex items-center justify-center rounded-md cursor-pointer hover:opacity-50">
+              <span class="text-zinc-500">Nenhuma imagem definida</span>
+            </div>
+          }
+        </div>
+
       </div>
       <div class="flex flex-row justify-end gap-2 mt-4">
         <app-button label="Salvar" (click)="savePersonalization()"></app-button>
@@ -41,8 +56,14 @@ export class PersonalizationComponent {
   personalizationData : Personalization = new Personalization();
   personalizationContent : any = {};
 
+  dialog = inject(Dialog);
+
+  private imageService = inject(ImageService);
+  image ?: Image;
+
   constructor(private personalizationService: PersonalizationService) {
     this.loadPersonalization();
+
   }
 
   processPersonalizationContent() {
@@ -54,6 +75,7 @@ export class PersonalizationComponent {
       next: (data) => {
         this.personalizationData = data;
         this.processPersonalizationContent();
+        this.loadImages();
       },
       error: (error) => {
         this.personalizationData = new Personalization();
@@ -74,6 +96,25 @@ export class PersonalizationComponent {
       error: (error) => {
         console.error('Error saving personalization', error);
       }
+    });
+  }
+
+  loadImages() {
+    this.imageService.getImages(this.personalizationData.entityTable, this.personalizationData.entityId, "background").subscribe(images => {
+      this.image = images[0];
+    });
+  }
+
+  openImageUploader() {
+    var dialogRef = this.dialog.open(ImageUploaderComponent, {
+      data: { entityTable: this.personalizationData.entityTable, entityId: this.personalizationData.entityId, usageKey: "background" },
+      panelClass: 'screen-dialog',
+      height: '20rem',
+      width: '30rem',
+    });
+
+    dialogRef.closed.subscribe(() => {
+      this.loadImages();
     });
   }
 

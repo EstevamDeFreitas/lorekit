@@ -24,6 +24,9 @@ app.use('/personalizations', auth, require('./src/routes/personalizationRoutes')
 app.use('/locations', auth, require('./src/routes/locationRoutes'));
 app.use('/location-categories', auth, require('./src/routes/locationCategoryRoutes'));
 
+app.use('/images', auth, require('./src/routes/imageRoutes'));
+app.use('/storage', express.static('./storage/'));
+
 app.listen(port, () => {
     console.log(`Servidor rodando em http://localhost:${port}`);
 });

@@ -15,11 +15,21 @@ import { EntityLateralMenuComponent } from "../../../components/entity-lateral-m
 import { LocationListComponent } from "../../locations/location-list/location-list.component";
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
+import { ImageUploaderComponent } from "../../../components/ImageUploader/image-uploader.component";
+import { Image } from '../../../models/image.model';
+import { ImageService } from '../../../services/image.service';
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, ImageUploaderComponent],
   template: `
     <div class="flex flex-col h-screen">
+      @if(image){
+        <img [src]="'http://localhost:3000/' + image.filePath" class="w-full h-36 object-cover rounded-md">
+      }
+      @else{
+        <div class="w-full h-36 object-cover rounded-md" [ngClass]="getWorldColor(currentWorld)"></div>
+      }
+      <br>
       <div class="flex flex-row items-center">
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/world"></app-icon-button>
         <input type="text" (blur)="saveWorldName()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="currentWorld.name" />
@@ -29,22 +39,26 @@ import { SafeDeleteButtonComponent } from "../../../components/safe-delete-butto
         </div>
         <div class="flex-2"></div>
       </div>
-      <div class="flex flex-row gap-4 h-full mt-10">
-        <div class="flex-4 h-auto  flex flex-col">
+      <div class="flex flex-row gap-4 flex-1 overflow-hidden h-full mt-10">
+        <div class="flex-4 h-auto  flex flex-col overflow-hidden">
           <div class="flex flex-row gap-4 ms-1">
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'details'}">Detalhes do mundo</a>
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'localities'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'localities'}">Localidades</a>
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'characters'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'characters'}">Personagens</a>
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'objects'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'objects'}">Objetos</a>
           </div>
-          <div class="p-4 rounded-lg mt-2 flex flex-col h-[calc(100%-8rem)] overflow-y-auto scrollbar-dark">
+          <div class="p-4 pb-10 rounded-lg mt-2 flex-1 overflow-hidden flex flex-col">
             @if (!isLoading) {
               @switch (currentTab) {
                 @case ('details') {
-                  <app-editor [document]="currentWorld.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
+                  <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
+                    <app-editor [document]="currentWorld.description || ''" (saveDocument)="onDocumentSave($event)"></app-editor>
+                  </div>
                 }
                 @case ('localities') {
-                  <app-location-list [worldId]="currentWorld.id"></app-location-list>
+                  <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
+                    <app-location-list [worldId]="currentWorld.id"></app-location-list>
+                  </div>
                 }
                 @case ('characters') {
                   <p>Personagens</p>
@@ -80,6 +94,9 @@ export class WorldInfoComponent implements OnInit {
 
   isLoading: boolean = false;
 
+  private imageService = inject(ImageService);
+  image ?: Image;
+
   constructor(private router:Router, private currentRoute : ActivatedRoute, private worldService : WorldService, private cdr: ChangeDetectorRef) {
     this.isLoading = true;
     this.currentRoute.params.subscribe(params => {
@@ -97,6 +114,7 @@ export class WorldInfoComponent implements OnInit {
       next: (world) => {
         this.currentWorld = world;
         this.isLoading = false;
+        this.loadImages();
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -150,6 +168,24 @@ export class WorldInfoComponent implements OnInit {
     return [
       { key: 'concept', label: 'Conceito', value: this.currentWorld.concept || '', type: 'text-area' },
     ];
+  }
+
+  loadImages() {
+    this.imageService.getImages("world", this.currentWorld.id, "background").subscribe(images => {
+      this.image = images[0];
+    });
+  }
+
+  getPersonalizationItem(world: World, key: string): string | null {
+    if (world.personalization && world.personalization.contentJson != null && world.personalization.contentJson != '') {
+      return JSON.parse(world.personalization.contentJson)[key] || null;
+    }
+    return null;
+  }
+
+  getWorldColor(world: World): string {
+    const color = this.getPersonalizationItem(world, 'color');
+    return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
   }
 
 }

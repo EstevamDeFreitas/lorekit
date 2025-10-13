@@ -117,3 +117,11 @@ model Personalization {
   entityId      String
   contentJson   String
 }
+
+model Imagem{
+  id            String @id @default(uuid())
+  entityTable   String
+  entityId      String
+  usageKey      String
+  filePath      String
+}

@@ -34,7 +34,19 @@ async function getWorldById(id) {
             }
         },
     });
-    return world;
+
+    //getWorldPersonalization
+    const personalization = await prisma.personalization.findFirst({
+        where: {
+            entityTable: 'world',
+            entityId: id
+        }
+    });
+
+    return {
+        ...world,
+        personalization: personalization
+    };
 }
 
 async function createWorld(world) {

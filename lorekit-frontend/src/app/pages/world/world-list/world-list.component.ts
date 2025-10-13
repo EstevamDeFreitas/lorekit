@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { WorldService } from '../../../services/world.service';
 import { World } from '../../../models/world.model';
 import { CommonModule, NgClass } from '@angular/common';
@@ -7,6 +7,8 @@ import { WorldStateService } from '../../../services/world-state.service';
 import { ButtonComponent } from "../../../components/button/button.component";
 import {OverlayModule} from '@angular/cdk/overlay';
 import { InputComponent } from "../../../components/input/input.component";
+import { ImageService } from '../../../services/image.service';
+import { environment } from '../../../../enviroments/environment';
 
 @Component({
   selector: 'app-world-list',
@@ -47,13 +49,25 @@ import { InputComponent } from "../../../components/input/input.component";
     } @else{
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         @for (world of worlds; track world.id) {
-          <div class="flex flex-col gap-1 cursor-pointer selectable-jump p-4 rounded-lg" [ngClass]="getWorldColor(world)" (click)="onWorldSelected(world.id)">
-            <div class="flex flex-row gap-2 items-center">
-              <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
-              <div class="text-base font-bold">{{world.name}}</div>
+          @if(worldsWithImages[world.id]) {
+            <div class="flex flex-col gap-1  cursor-pointer selectable-jump p-4 rounded-lg" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + worldsWithImages[world.id] + ')', 'background-size': 'cover', 'background-position': 'center'}" (click)="onWorldSelected(world.id)">
+              <div class="flex flex-row gap-2 items-center">
+                <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
+                <div class="text-base font-bold">{{world.name}}</div>
+              </div>
+              <div class="text-xs">{{world.concept}}</div>
             </div>
-            <div class="text-xs">{{world.concept}}</div>
-          </div>
+          }
+          @else{
+            <div class="flex flex-col gap-1  cursor-pointer selectable-jump p-4 rounded-lg" [ngClass]="getWorldColor(world)" (click)="onWorldSelected(world.id)">
+              <div class="flex flex-row gap-2 items-center">
+                <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
+                <div class="text-base font-bold">{{world.name}}</div>
+              </div>
+              <div class="text-xs">{{world.concept}}</div>
+            </div>
+          }
+
         }
       </div>
     }
@@ -69,6 +83,9 @@ export class WorldListComponent {
   newWorldName = '';
 
   worlds: World[] = [];
+
+  private imageService = inject(ImageService);
+  worldsWithImages: { [key: string]: string | undefined } = {};
 
   constructor(private worldService: WorldService, private worldStateService : WorldStateService, private router:Router) { }
 
@@ -87,10 +104,29 @@ export class WorldListComponent {
         console.log(worlds);
 
         this.worlds = worlds;
+
+        this.loadImages();
       },
       error: (err) => {
         console.error('Error loading worlds:', err);
       }
+    });
+  }
+
+  loadImages(){
+    this.worlds.forEach(world => {
+      this.imageService.getImages('world', world.id, "background").subscribe({
+        next: (images) => {
+          if(images.length > 0){
+            this.worldsWithImages[world.id] = environment.apiUrl + "/" + images[0]?.filePath;
+          } else {
+            this.worldsWithImages[world.id] = undefined;
+          }
+        },
+        error: (err) => {
+          console.error('Error loading images for world:', world.id, err);
+        }
+      });
     });
   }
 

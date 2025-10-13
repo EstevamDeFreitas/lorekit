@@ -13,8 +13,8 @@ import { LocationEditComponent } from '../location-edit/location-edit.component'
   selector: 'app-location-list',
   imports: [ButtonComponent, FormOverlayDirective, NgClass],
   template: `
-    <div>
-      <div class="flex flex-row justify-between items-center mb-4">
+    <div clas>
+      <div class="flex flex-row justify-between items-center mb-4 h-full">
         @if (isRouteComponent()){
           <h2 class="text-xl font-bold">Localidades</h2>
         }
