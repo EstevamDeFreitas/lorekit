@@ -10,8 +10,7 @@ import { LocationListComponent } from './pages/locations/location-list/location-
 import { LocationEditComponent } from './pages/locations/location-edit/location-edit.component';
 
 export const routes: Routes = [
-  {path: '', redirectTo: 'login', pathMatch: 'full'},
-  {path:'login', component: LoginComponent},
+  {path: '', redirectTo: 'app', pathMatch: 'full'},
   {path: 'app', canActivate: [AuthGuard], component: MainUiComponent, children: [
       {path: 'world', children:[
         {path: '', component: WorldListComponent},

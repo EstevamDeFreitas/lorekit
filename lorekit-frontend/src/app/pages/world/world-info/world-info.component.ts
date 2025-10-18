@@ -34,8 +34,8 @@ import { ImageService } from '../../../services/image.service';
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/world"></app-icon-button>
         <input type="text" (blur)="saveWorldName()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="currentWorld.name" />
         <div class="flex flex-row gap-2">
-          <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'world'" [size]="'xl'"></app-personalization-button>
-          <app-safe-delete-button [entityName]="currentWorld.name" [entityId]="currentWorld.id" [entityTable]="'world'" [size]="'xl'"></app-safe-delete-button>
+          <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'world'" [size]="'xl'" (onClose)="getWorld()"></app-personalization-button>
+          <app-safe-delete-button [entityName]="currentWorld.name" [entityId]="currentWorld.id" [entityTable]="'world'" [size]="'xl'" ></app-safe-delete-button>
         </div>
         <div class="flex-2"></div>
       </div>
@@ -110,6 +110,9 @@ export class WorldInfoComponent implements OnInit {
   }
 
   getWorld() {
+    this.isLoading = true;
+    console.log("buscando mundo");
+
     this.worldService.getWorldById(this.currentWorldId!).subscribe({
       next: (world) => {
         this.currentWorld = world;
@@ -172,6 +175,7 @@ export class WorldInfoComponent implements OnInit {
 
   loadImages() {
     this.imageService.getImages("world", this.currentWorld.id, "background").subscribe(images => {
+
       this.image = images[0];
     });
   }

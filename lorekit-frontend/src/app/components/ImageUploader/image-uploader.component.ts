@@ -1,7 +1,8 @@
-import { Component, inject, input, OnInit } from '@angular/core';
+import { Component, ElementRef, inject, input, OnInit, ViewChild } from '@angular/core';
 import { ImageService } from '../../services/image.service';
 import { Image } from '../../models/image.model';
-import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { ImageCropDialogComponent } from '../image-crop-dialog/image-crop-dialog.component';
 
 @Component({
   selector: 'app-image-uploader',
@@ -49,6 +50,10 @@ export class ImageUploaderComponent implements OnInit {
   dialogref = inject<DialogRef<any>>(DialogRef<any>);
   data = inject<any>(DIALOG_DATA);
 
+  dialog = inject(Dialog);
+  aspectRatio = 10 / 1;
+
+
   entityTable = "";
   entityId = "";
   usageKey = "";
@@ -78,6 +83,35 @@ export class ImageUploaderComponent implements OnInit {
     const file = input.files?.[0];
     if (!file) return;
 
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const dialogRef = this.dialog.open(ImageCropDialogComponent, {
+        data: {
+          imageSrc: e.target?.result,
+          aspectRatio: this.aspectRatio,
+        },
+        width: '900px',
+        maxHeight: '90vh',
+        panelClass: 'bg-transparent',
+      });
+
+      dialogRef.closed.subscribe((blob: any) => {
+        if (blob) {
+          // Envia o blob para o backend
+          this.uploadCroppedImage(blob);
+        }
+      });
+    };
+
+    reader.readAsDataURL(file);
+
+
+  }
+
+  uploadCroppedImage(blob: Blob) {
+    const file = new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' });
+
     if(this.images.length > 0){
       this.deleteImage(this.images[0].id);
     }
@@ -90,6 +124,7 @@ export class ImageUploaderComponent implements OnInit {
       },
       error: () => (this.isLoading = false)
     });
+
   }
 
   deleteImage(id: string) {

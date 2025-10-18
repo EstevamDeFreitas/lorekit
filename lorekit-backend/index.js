@@ -2,8 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 
-const auth = require('./src/middleware/authMiddleware');
-
 const worldRoutes = require('./src/routes/worldRoutes');
 const authRoutes = require('./src/routes/authRoutes');
 
@@ -18,13 +16,13 @@ app.use(express.json());
 
 app.use('/auth', authRoutes);
 
-app.use('/worlds', auth, worldRoutes);
-app.use('/documents', auth, require('./src/routes/documentRoutes'));
-app.use('/personalizations', auth, require('./src/routes/personalizationRoutes'));
-app.use('/locations', auth, require('./src/routes/locationRoutes'));
-app.use('/location-categories', auth, require('./src/routes/locationCategoryRoutes'));
+app.use('/worlds', worldRoutes);
+app.use('/documents', require('./src/routes/documentRoutes'));
+app.use('/personalizations', require('./src/routes/personalizationRoutes'));
+app.use('/locations', require('./src/routes/locationRoutes'));
+app.use('/location-categories', require('./src/routes/locationCategoryRoutes'));
 
-app.use('/images', auth, require('./src/routes/imageRoutes'));
+app.use('/images', require('./src/routes/imageRoutes'));
 app.use('/storage', express.static('./storage/'));
 
 app.listen(port, () => {
