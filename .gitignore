@@ -16,7 +16,10 @@ lorekit-backend/node_modules/
 lorekit-backend/.prisma/
 
 # SQLite DB file (opcional: ignore se for ambiente local apenas)
-lorekit-backend/lorekit.db
+lorekit-backend/prisma/lorekit.db
+
+# Build output
+dist-electron/
 
 # Logs
 *.log

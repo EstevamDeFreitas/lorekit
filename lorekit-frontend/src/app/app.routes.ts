@@ -11,7 +11,7 @@ import { LocationEditComponent } from './pages/locations/location-edit/location-
 
 export const routes: Routes = [
   {path: '', redirectTo: 'app', pathMatch: 'full'},
-  {path: 'app', canActivate: [AuthGuard], component: MainUiComponent, children: [
+  {path: 'app', component: MainUiComponent, children: [
       {path: 'world', children:[
         {path: '', component: WorldListComponent},
         {path: 'info/:worldId', component: WorldInfoComponent, children: [
