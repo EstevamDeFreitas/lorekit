@@ -1,5 +1,5 @@
 import { Component, computed, inject, input } from '@angular/core';
-import { NgClass } from '@angular/common';
+import { NgClass, NgStyle } from '@angular/common';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
@@ -8,10 +8,12 @@ import { Location, LocationCategory } from '../../../models/location.model';
 import { LocationCategoriesService } from '../../../services/location-categories.service';
 import { Dialog } from '@angular/cdk/dialog';
 import { LocationEditComponent } from '../location-edit/location-edit.component';
+import { ImageService } from '../../../services/image.service';
+import { environment } from '../../../../enviroments/environment';
 
 @Component({
   selector: 'app-location-list',
-  imports: [ButtonComponent, FormOverlayDirective, NgClass],
+  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle],
   template: `
     <div clas>
       <div class="flex flex-row justify-between items-center mb-4 h-full">
@@ -36,13 +38,25 @@ import { LocationEditComponent } from '../location-edit/location-edit.component'
             <h3 class="text-lg mb-2">{{ category.name }}:</h3>
             <div class="grid grid-cols-3 gap-4">
               @for (location of locationGroups[category.id]; track location.id) {
-                <div (click)="selectLocation(location.id)" [ngClass]="getLocationColor(location)" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
-                  <div class="flex flex-row gap-2 items-center">
-                    <i class="fa" [ngClass]="getPersonalizationItem(location, 'icon') || 'fa-location-dot'"></i>
-                    <div class="text-base font-bold">{{ location.name }}</div>
+                @if (location.image){
+                  <div (click)="selectLocation(location.id)" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + apiUrl + '/' + location.image.filePath, 'background-size': 'cover', 'background-position': 'center'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
+                    <div class="flex flex-row gap-2 items-center">
+                      <i class="fa" [ngClass]="getPersonalizationItem(location, 'icon') || 'fa-location-dot'"></i>
+                      <div class="text-base font-bold">{{ location.name }}</div>
+                    </div>
+                    <div class="text-xs">{{location.concept}}</div>
                   </div>
-                  <div class="text-xs">{{location.concept}}</div>
-                </div>
+                }
+                @else {
+                  <div (click)="selectLocation(location.id)" [ngClass]="getLocationColor(location)" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
+                    <div class="flex flex-row gap-2 items-center">
+                      <i class="fa" [ngClass]="getPersonalizationItem(location, 'icon') || 'fa-location-dot'"></i>
+                      <div class="text-base font-bold">{{ location.name }}</div>
+                    </div>
+                    <div class="text-xs">{{location.concept}}</div>
+                  </div>
+                }
+
               }
             </div>
 
@@ -63,6 +77,8 @@ export class LocationListComponent {
   worldId = input<string>();
 
   dialog = inject(Dialog);
+
+  apiUrl = environment.apiUrl;
 
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === LocationListComponent ||

@@ -12,7 +12,16 @@ async function getAllLocations() {
                 entityId: location.id
             },
         });
-        return { ...location, personalization };
+
+        const image = await prisma.imagem.findFirst({
+            where: {
+                entityTable: 'location',
+                entityId: location.id,
+                usageKey: "background"
+            },
+        });
+
+        return { ...location, personalization, image };
     }));
 
     return locations;
@@ -30,16 +39,42 @@ async function getLocationsByWorldId(worldId) {
                 entityId: location.id
             },
         });
-        return { ...location, personalization };
+
+        const image = await prisma.imagem.findFirst({
+            where: {
+                entityTable: 'location',
+                entityId: location.id,
+                usageKey: "background"
+            },
+        });
+
+        return { ...location, personalization, image };
     }));
 
     return locations;
 }
 
 async function getLocationById(id) {
-    return await prisma.location.findUnique({
+    let location = await prisma.location.findUnique({
         where: { id },
     });
+    
+    let image = await prisma.imagem.findFirst({
+        where: {
+            entityTable: 'location',
+            entityId: location.id,
+            usageKey: "background"
+        },
+    });
+
+    let personalization = await prisma.personalization.findFirst({
+        where: { 
+            entityTable: 'location',
+            entityId: location.id
+        },
+    });
+
+    return { ...location, image, personalization };
 }
 
 async function createLocation(data) {

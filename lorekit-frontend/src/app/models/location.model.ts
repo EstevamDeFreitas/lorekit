@@ -1,3 +1,4 @@
+import { Image } from "./image.model";
 import { Personalization } from "./personalization.model";
 
 export class Location{
@@ -11,6 +12,8 @@ export class Location{
   personalization?: Personalization;
 
   concept?: string;
+
+  image?: Image;
 
   constructor(id: string = '', name: string = '', description: string = '', categoryId?: string, worldId?: string, parentLocationId?: string, relationOptions?: string) {
     this.id = id;

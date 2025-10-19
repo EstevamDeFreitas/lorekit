@@ -12,19 +12,27 @@ import { EntityLateralMenuComponent } from "../../../components/entity-lateral-m
 import { LocationCategoriesService } from '../../../services/location-categories.service';
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
+import { environment } from '../../../../enviroments/environment';
 
 @Component({
   selector: 'app-location-edit',
   imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent],
   template: `
     <div class="flex flex-col h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[80vh]': isInDialog()}">
+      @if(location.image){
+        <img [src]="apiUrl + location.image.filePath" class="w-full h-36 object-cover rounded-md">
+      }
+      @else{
+        <div class="w-full h-36 object-cover rounded-md" [ngClass]="getColor(location)"></div>
+      }
+      <br>
       <div class="flex flex-row items-center">
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/location"></app-icon-button>
         }
         <input type="text" (blur)="saveLocation()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="location.name" />
         <div class="flex flex-row gap-2">
-          <app-personalization-button [entityId]="location.id" [entityTable]="'location'" [size]="'xl'"></app-personalization-button>
+          <app-personalization-button [entityId]="location.id" [entityTable]="'location'" [size]="'xl'" (onClose)="getLocation()"></app-personalization-button>
           <app-safe-delete-button [entityName]="location.name" [entityId]="location.id" [entityTable]="'location'" [size]="'xl'"></app-safe-delete-button>
         </div>
         <div class="flex-2"></div>
@@ -54,6 +62,8 @@ export class LocationEditComponent implements OnInit {
 
   dialogref = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
+
+  apiUrl = environment.apiUrl + '/';
 
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
@@ -137,6 +147,18 @@ export class LocationEditComponent implements OnInit {
       { key: 'categoryId', label: 'Categoria', value: this.location.categoryId || '', options: this.locationCategories, optionCompareProp: 'id', optionDisplayProp: 'name' }
     ];
   }
+
+  getPersonalizationItem(item: any, key: string): string | null {
+      if (item.personalization && item.personalization.contentJson != null && item.personalization.contentJson != '') {
+        return JSON.parse(item.personalization.contentJson)[key] || null;
+      }
+      return null;
+    }
+
+    getColor(item: any): string {
+      const color = this.getPersonalizationItem(item, 'color');
+      return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
+    }
 
 
 }

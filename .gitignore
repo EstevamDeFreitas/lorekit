@@ -7,6 +7,7 @@
 lorekit-frontend/.angular/cache/
 lorekit-frontend/dist/
 lorekit-backend/build/
+lorekit-backend/prisma/lorekit.db
 
 # Prisma generated client
 lorekit-backend/prisma/dev.db-journal
@@ -44,4 +45,4 @@ Thumbs.db
 
 # copilot files
 .github/
-/lorekit-backend/prisma/lorekit.db
+
