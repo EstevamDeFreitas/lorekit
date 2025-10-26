@@ -1,35 +1,66 @@
 import { inject, Injectable } from '@angular/core';
-import { environment } from '../../enviroments/environment';
-import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Image } from '../models/image.model';
+import { CrudHelper, ElectronSafeAPI } from '../database/database.helper';
+import { DbProvider } from '../app.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ImageService {
-  private apiUrl = `${environment.apiUrl}/images`;
+  private crud : CrudHelper;
 
-  private http = inject(HttpClient);
-
-  constructor() { }
-
-  uploadImage(file: File, entityTable: string, entityId: string, usageKey: string): Observable<Image> {
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('entityTable', entityTable);
-    formData.append('entityId', entityId);
-    formData.append('usageKey', usageKey);
-
-    return this.http.post<Image>(`${this.apiUrl}/upload`, formData);
+  constructor(private dbProvider : DbProvider) {
+    this.crud = this.dbProvider.getCrudHelper();
   }
 
-  getImages(entityTable: string, entityId: string, usageKey: string): Observable<Image[]> {
-    return this.http.get<Image[]>(`${this.apiUrl}/${entityTable}/${entityId}/${usageKey}`);
+  async uploadImage(file: File, entityTable: string, entityId: string, usageKey: string): Promise<Image> {
+    const imagesDir = await ElectronSafeAPI.electron.getImagePath();
+    const baseImageDir = `${imagesDir}/${entityTable.toLowerCase()}`;
+    await ElectronSafeAPI.electron.writeFile; // garante acesso
+
+    let imageGuid = crypto.randomUUID();
+
+    const ext = file.name.split('.').pop();
+    const filename = `${Date.now()}-${imageGuid}.${ext}`;
+    const fullPath = `${baseImageDir}/${filename}`;
+
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    await ElectronSafeAPI.electron.writeFile(fullPath, uint8Array);
+
+    // salva o registro no banco
+    const image: Image = new Image(imageGuid, usageKey, fullPath);
+
+    this.crud.create('Image', image);
+    this.crud.create('Relationship', {
+      parentTable: entityTable,
+      parentId: entityId,
+      entityTable: 'Image',
+      entityId: image.id
+    });
+    return image;
   }
 
-  deleteImage(id: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/${id}`);
+  getImages(entityTable: string, entityId: string, usageKey: string): Image[] {
+    let entity = this.crud.findById(entityTable, entityId, [{"table": "Image", "firstOnly": false}]);
+    let images: Image[] = entity.Images || [];
+    if (usageKey) {
+      images = images.filter(img => img.usageKey === usageKey);
+    }
+    return images;
+  }
+
+  getImage(entityTable: string, entityId: string, usageKey: string): Image | null {
+    const imgs = this.getImages(entityTable, entityId, usageKey);
+    return imgs.length ? imgs[0] : null;
+  }
+
+  async deleteImage(id: string, deleteRelated: boolean = false) {
+    const img = this.crud.findById('Image', id);
+    if (!img) return;
+    await ElectronSafeAPI.electron.deleteFile(img.filePath);
+    this.crud.delete('Image', id, deleteRelated);
   }
 
 

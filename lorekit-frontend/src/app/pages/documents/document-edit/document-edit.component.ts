@@ -24,8 +24,8 @@ import { SafeDeleteButtonComponent } from "../../../components/safe-delete-butto
       }
       <input type="text" (blur)="saveDocument()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="document.title" />
       <div class="flex flex-row gap-2">
-        <app-personalization-button [entityId]="documentId()" [entityTable]="'document'" [size]="'xl'"></app-personalization-button>
-        <app-safe-delete-button [entityName]="document.title" [entityId]="document.id" [entityTable]="'document'" [size]="'xl'"></app-safe-delete-button>
+        <app-personalization-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-personalization-button>
+        <app-safe-delete-button [entityName]="document.title" [entityId]="document.id" [entityTable]="'Document'" [size]="'xl'"></app-safe-delete-button>
       </div>
       <div class="flex-2"></div>
     </div>
@@ -116,16 +116,12 @@ export class DocumentEditComponent implements OnInit {
   }
 
   loadDocuments() {
-    this.documentService.getDocuments('document', this.documentId()).subscribe(docs => {
-      this.documentArray = docs;
-    });
+    this.documentArray = this.documentService.getDocuments('document', this.documentId());
   }
 
   loadDocument() {
-    this.documentService.getDocument(this.documentId()).subscribe(doc => {
-      this.document = doc;
-      this.isLoading = false;
-    });
+    this.document = this.documentService.getDocument(this.documentId());
+    this.isLoading = false;
   }
 
   saveDocument(content?: string) {
@@ -133,11 +129,7 @@ export class DocumentEditComponent implements OnInit {
       this.document.content = JSON.stringify(content);
     }
 
-    this.documentService.saveDocument(this.document).subscribe(() => {
-      if (this.returnUrl) {
-        this.router.navigateByUrl(this.returnUrl);
-      }
-    });
+    this.documentService.saveDocument(this.document);
   }
 
   getReturnUrl(){
@@ -149,11 +141,10 @@ export class DocumentEditComponent implements OnInit {
       return;
     }
 
-    const newDoc = new Document('', formData['name'], 'document', this.documentId());
+    let newDoc = new Document('', formData['name'], 'document', this.documentId());
 
-    this.documentService.saveDocument(newDoc).subscribe(doc => {
-      this.documentArray.push(doc);
-    });
+    newDoc = this.documentService.saveDocument(newDoc);
+    this.documentArray.push(newDoc);
   }
 
   openDocument(item: Document) {

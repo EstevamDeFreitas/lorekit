@@ -2,33 +2,40 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../enviroments/environment';
 import { Document } from '../models/document.model';
+import { CrudHelper } from '../database/database.helper';
+import { DbProvider } from '../app.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DocumentService {
-  private apiUrl = `${environment.apiUrl}/documents`;
+  private crud : CrudHelper;
 
-  constructor(private http : HttpClient) { }
-
-  getDocuments(entityTable: string, entityId: string) {
-    return this.http.get<Document[]>(`${this.apiUrl}/entity/${entityTable}/${entityId}`);
+  constructor(private dbProvider : DbProvider) {
+    this.crud = this.dbProvider.getCrudHelper();
   }
 
-  getDocument(documentId: string) {
-    return this.http.get<Document>(`${this.apiUrl}/${documentId}`);
+  getDocuments(entityTable: string, entityId: string): Document[] {
+    return this.crud.findAll('Document', {
+      entityTable: entityTable,
+      entityId: entityId
+    });
   }
 
-  saveDocument(document: Document) {
-    if (document.id) {
-      return this.http.put<Document>(`${this.apiUrl}/${document.id}`, document);
+  getDocument(documentId: string) : Document {
+    return this.crud.findById('Document', documentId);
+  }
+
+  saveDocument(document: Document) : Document {
+    if (document.id != '') {
+      return <Document>this.crud.update('Document', document.id, document);
     } else {
-      return this.http.post<Document>(this.apiUrl, document);
+      return <Document>this.crud.create('Document', document);
     }
   }
 
   deleteDocument(documentId: string, deleteRelatedItems: boolean = false) {
-    return this.http.delete(`${this.apiUrl}/${documentId}?deleteRelatedItems=${deleteRelatedItems}`);
+    return this.crud.delete('Document', documentId, deleteRelatedItems);
   }
 
 }

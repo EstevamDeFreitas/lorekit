@@ -1,34 +1,37 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { World } from '../models/world.model';
-import { environment } from '../../enviroments/environment';
+import { DbProvider } from '../app.config';
+import { CrudHelper } from '../database/database.helper';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WorldService {
-  private apiUrl = `${environment.apiUrl}/worlds`;
 
-  constructor(private http : HttpClient) { }
+  private crud : CrudHelper;
 
-  getWorlds() {
-    return this.http.get<World[]>(this.apiUrl);
+  constructor(private dbProvider : DbProvider) {
+    this.crud = this.dbProvider.getCrudHelper();
   }
 
-  getWorldById(id: string) {
-    return this.http.get<World>(`${this.apiUrl}/${id}`);
+  getWorlds() {
+    return this.crud.findAll('World', {}, [{"table": "Personalization", "firstOnly": true}, {"table": "Image", "firstOnly": true}]);
+  }
+
+  getWorldById(id: string) : World {
+    return this.crud.findById('World', id, [{"table": "Personalization", "firstOnly": true}, {"table": "Image", "firstOnly": true}]);
   }
 
   createWorld(world: World) {
-    return this.http.post<World>(this.apiUrl, world);
+    return this.crud.create('World', world);
   }
 
   updateWorld(id: string, world: World) {
-    return this.http.put<World>(`${this.apiUrl}/${id}`, world);
+    return this.crud.update('World', id, world);
   }
 
   deleteWorld(id: string, deleteRelatedItems: boolean = false) {
-    return this.http.delete(`${this.apiUrl}/${id}?deleteRelatedItems=${deleteRelatedItems}`);
+    return this.crud.delete('World', id, deleteRelatedItems);
   }
 
 }

@@ -19,7 +19,7 @@ lorekit-backend/.prisma/
 lorekit-backend/prisma/lorekit.db
 
 # Build output
-dist-electron/
+dist_electron/
 
 # Logs
 *.log

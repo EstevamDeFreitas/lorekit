@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectorRef, Component, computed, inject, input, OnInit } from '@angular/core';
 import { NgClass, NgStyle } from '@angular/common';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { ActivatedRoute, Router } from '@angular/router';
@@ -38,8 +38,8 @@ import { environment } from '../../../../enviroments/environment';
             <h3 class="text-lg mb-2">{{ category.name }}:</h3>
             <div class="grid grid-cols-3 gap-4">
               @for (location of locationGroups[category.id]; track location.id) {
-                @if (location.image){
-                  <div (click)="selectLocation(location.id)" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + apiUrl + '/' + location.image.filePath, 'background-size': 'cover', 'background-position': 'center'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
+                @if (location.Image != null){
+                  <div (click)="selectLocation(location.id!)" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + location.Image.buildImageUrl() + ')', 'background-size': 'cover', 'background-position': 'center'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
                     <div class="flex flex-row gap-2 items-center">
                       <i class="fa" [ngClass]="getPersonalizationItem(location, 'icon') || 'fa-location-dot'"></i>
                       <div class="text-base font-bold">{{ location.name }}</div>
@@ -48,7 +48,7 @@ import { environment } from '../../../../enviroments/environment';
                   </div>
                 }
                 @else {
-                  <div (click)="selectLocation(location.id)" [ngClass]="getLocationColor(location)" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
+                  <div (click)="selectLocation(location.id!)" [ngClass]="getLocationColor(location)" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
                     <div class="flex flex-row gap-2 items-center">
                       <i class="fa" [ngClass]="getPersonalizationItem(location, 'icon') || 'fa-location-dot'"></i>
                       <div class="text-base font-bold">{{ location.name }}</div>
@@ -68,11 +68,12 @@ import { environment } from '../../../../enviroments/environment';
   `,
   styleUrl: './location-list.component.css',
 })
-export class LocationListComponent {
+export class LocationListComponent implements OnInit {
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
   private locationService = inject(LocationService);
   private locationCategoryService = inject(LocationCategoriesService);
+  private cdr = inject(ChangeDetectorRef);
 
   worldId = input<string>();
 
@@ -89,43 +90,31 @@ export class LocationListComponent {
 
   locationGroups: Record<string, Location[]> = {};
 
-  constructor() {
+  locations: Location[] = [];
 
-    this.getCategories();
+  ngOnInit() {
+    this.getLocationCategories();
+    this.getLocations();
   }
 
-  getCategories() {
-    this.locationCategoryService.getLocationCategories().subscribe({
-      next: (categories) => {
-        this.locationCategories = categories;
-        this.getLocations();
-      },
-      error: (error) => {
-        console.error('Erro ao buscar categorias de localidade:', error);
-      }
-    });
+
+  getLocationCategories() {
+    this.locationCategories = this.locationCategoryService.getLocationCategories();
   }
 
   getLocations() {
-    const locationObservable = this.worldId() ? this.locationService.getLocationByWorldId(this.worldId()!) : this.locationService.getLocations();
+    const locations = this.worldId() ? this.locationService.getLocationByWorldId(this.worldId()!) : this.locationService.getLocations();
 
-    locationObservable.subscribe({
-      next: (locations) => {
-        this.locationGroups = locations.reduce((groups: Record<string, Location[]>, location) => {
-          const category = location.categoryId || 'Sem Categoria';
-          if (!groups[category]) {
-            groups[category] = [];
-          }
-          groups[category].push(location);
-          return groups;
-        }, {});
-      },
-      error: (error) => {
-        console.error('Erro ao buscar localidades:', error);
+    this.locationGroups = locations.reduce((groups: Record<string, Location[]>, location) => {
+      const category = location.LocationCategory ? location.LocationCategory.id : '';
+      if (!groups[category]) {
+        groups[category] = [];
       }
-    });
-  }
+      groups[category].push(location);
+      return groups;
+    }, {});
 
+  }
 
   getFormFields(): FormField[] {
     return [
@@ -136,16 +125,11 @@ export class LocationListComponent {
 
   createLocation(formData: Record<string, string>) {
 
-    const newLocation = new Location(undefined, formData['name'], '', formData['type'], this.worldId());
+    let newLocation = new Location('', formData['name'], '');
 
-    this.locationService.saveLocation(newLocation).subscribe({
-      next: (location) => {
-        this.getCategories();
-      },
-      error: (error) => {
-        console.error('Erro ao criar localidade:', error);
-      }
-    });
+    this.locationService.saveLocation(newLocation, formData['type']);
+
+    this.getLocations();
   }
 
   selectLocation(locationId: string) {
@@ -167,8 +151,8 @@ export class LocationListComponent {
   }
 
   getPersonalizationItem(location: Location, key: string): string | null {
-    if (location.personalization && location.personalization.contentJson != null && location.personalization.contentJson != '') {
-      return JSON.parse(location.personalization.contentJson)[key] || null;
+    if (location.Personalization && location.Personalization.contentJson != null && location.Personalization.contentJson != '') {
+      return JSON.parse(location.Personalization.contentJson)[key] || null;
     }
     return null;
   }

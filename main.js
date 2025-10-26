@@ -1,44 +1,56 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
-const { runMigrations } = require('./lorekit-backend/src/db-setup');
+const fs = require('fs');
 
-app.whenReady().then(async () => {
-  await runMigrations();
+let mainWindow;
 
-  // Start backend Node.js API
-  backendProcess = spawn('node', ['lorekit-backend/index.js'], {
-    cwd: __dirname,
-    shell: true,
-    stdio: 'inherit'
+function registerIpc() {
+  ipcMain.handle('get-db-path', () => {
+    return path.join(app.getPath('userData'), 'lorekit.db');
   });
-
-  createWindow();
-
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  ipcMain.handle('get-image-path', () => {
+    return path.join(app.getPath('userData'), 'images');
   });
-});
+  ipcMain.handle('read-file', async (_e, filePath) => {
+    try {
+      if (!fs.existsSync(filePath)) return null;
+      const buf = await fs.promises.readFile(filePath);
+      return new Uint8Array(buf);
+    } catch {
+      return null;
+    }
+  });
+  ipcMain.handle('write-file', async (_e, filePath, data) => {
+    await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.promises.writeFile(filePath, Buffer.from(data));
+    return true;
+  });
+  ipcMain.handle('delete-file', async (_e, filePath) => {
+    if (fs.existsSync(filePath)) {
+      await fs.promises.unlink(filePath);
+    }
+    return true;
+  });
+  }
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: false,
       contextIsolation: true,
+      // sandbox pode ficar true (ou padrão). Não usamos Node no preload.
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
-
-  // Load Angular app (compilado)
   mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');
 }
 
+app.whenReady().then(() => {
+  registerIpc();
+  createWindow();
+});
 
-
-app.on('window-all-closed', function () {
-  if (process.platform !== 'darwin') {
-    if (backendProcess) backendProcess.kill();
-    app.quit();
-  }
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') app.quit();
 });

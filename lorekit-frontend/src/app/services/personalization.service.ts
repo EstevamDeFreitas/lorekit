@@ -2,25 +2,38 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../enviroments/environment';
 import { Personalization } from '../models/personalization.model';
+import { CrudHelper } from '../database/database.helper';
+import { DbProvider } from '../app.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class PersonalizationService {
-  private apiUrl = `${environment.apiUrl}/personalizations`;
+  private crud : CrudHelper;
 
-  constructor(private http : HttpClient) { }
+  constructor(private dbProvider : DbProvider) {
+    this.crud = this.dbProvider.getCrudHelper();
+  }
+  getPersonalization(entityTable: string, entityId: string) : Personalization {
+    let entity = this.crud.findById(entityTable, entityId, [{"table": "Personalization", "firstOnly": true}]);
 
-  getPersonalization(entityTable: string, entityId: string) {
-    return this.http.get<Personalization>(`${this.apiUrl}/entity/${entityTable}/${entityId}`);
+    return entity.Personalization;
   }
 
-  savePersonalization(personalization: Personalization) {
-    if (personalization.id) {
-      return this.http.put<Personalization>(`${this.apiUrl}/${personalization.id}`, personalization);
+  savePersonalization(personalization: Personalization, entityTable?: string, entityId?: string) : Personalization {
+    if (personalization.id != '') {
+      personalization = <Personalization>this.crud.update('Personalization', personalization.id, personalization);
     } else {
-      return this.http.post<Personalization>(this.apiUrl, personalization);
+      personalization = <Personalization>this.crud.create('Personalization', personalization);
+
+      this.crud.create('Relationship', {
+        parentTable: entityTable,
+        parentId: entityId,
+        entityTable: 'Personalization',
+        entityId: personalization.id
+      });
     }
+    return personalization;
   }
 
 

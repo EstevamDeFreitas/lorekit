@@ -49,38 +49,17 @@ export class SafeDeleteComponent {
   onDelete() {
     if (this.namesMatch()) {
       switch (this.dialogData.entityTable) {
-        case 'world':
-          this.worldService.deleteWorld(this.dialogData.entityId, this.removeRelatedItems).subscribe({
-            next: (res) => {
-              this.dialogref.close(true);
-            },
-            error: (err) => {
-              console.error('Error deleting world:', err);
-              this.dialogref.close(false);
-            }
-          });
+        case 'World':
+          this.worldService.deleteWorld(this.dialogData.entityId, this.removeRelatedItems);
+          this.dialogref.close(true);
           break;
-        case 'location':
-          this.locationService.deleteLocation(this.dialogData.entityId, this.removeRelatedItems).subscribe({
-            next: (res) => {
-              this.dialogref.close(true);
-            },
-            error: (err) => {
-              console.error('Error deleting location:', err);
-              this.dialogref.close(false);
-            }
-          });
+        case 'Location':
+          this.locationService.deleteLocation(this.dialogData.entityId, this.removeRelatedItems);
+          this.dialogref.close(true);
           break;
-        case 'document':
-          this.documentService.deleteDocument(this.dialogData.entityId, this.removeRelatedItems).subscribe({
-            next: (res) => {
-              this.dialogref.close(true);
-            },
-            error: (err) => {
-              console.error('Error deleting document:', err);
-              this.dialogref.close(false);
-            }
-          });
+        case 'Document':
+          this.documentService.deleteDocument(this.dialogData.entityId, this.removeRelatedItems);
+          this.dialogref.close(true);
           break;
         default:
           console.error('Unknown entity table:', this.dialogData.entityTable);

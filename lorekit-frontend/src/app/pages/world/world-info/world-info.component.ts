@@ -20,11 +20,11 @@ import { Image } from '../../../models/image.model';
 import { ImageService } from '../../../services/image.service';
 
 @Component({
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ButtonComponent, NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, ImageUploaderComponent],
+  imports: [NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, ImageUploaderComponent],
   template: `
     <div class="flex flex-col h-screen">
-      @if(image){
-        <img [src]="'http://localhost:3000/' + image.filePath" class="w-full h-36 object-cover rounded-md">
+      @if(currentWorld.Image){
+        <img [src]="currentWorld.Image.filePath" class="w-full h-36 object-cover rounded-md">
       }
       @else{
         <div class="w-full h-36 object-cover rounded-md" [ngClass]="getWorldColor(currentWorld)"></div>
@@ -34,8 +34,8 @@ import { ImageService } from '../../../services/image.service';
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/world"></app-icon-button>
         <input type="text" (blur)="saveWorldName()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="currentWorld.name" />
         <div class="flex flex-row gap-2">
-          <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'world'" [size]="'xl'" (onClose)="getWorld()"></app-personalization-button>
-          <app-safe-delete-button [entityName]="currentWorld.name" [entityId]="currentWorld.id" [entityTable]="'world'" [size]="'xl'" ></app-safe-delete-button>
+          <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" (onClose)="getWorld()"></app-personalization-button>
+          <app-safe-delete-button [entityName]="currentWorld.name" [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" ></app-safe-delete-button>
         </div>
         <div class="flex-2"></div>
       </div>
@@ -94,9 +94,6 @@ export class WorldInfoComponent implements OnInit {
 
   isLoading: boolean = false;
 
-  private imageService = inject(ImageService);
-  image ?: Image;
-
   constructor(private router:Router, private currentRoute : ActivatedRoute, private worldService : WorldService, private cdr: ChangeDetectorRef) {
     this.isLoading = true;
     this.currentRoute.params.subscribe(params => {
@@ -110,34 +107,14 @@ export class WorldInfoComponent implements OnInit {
   }
 
   getWorld() {
-    this.isLoading = true;
-    console.log("buscando mundo");
+    this.currentWorld = this.worldService.getWorldById(this.currentWorldId!);
 
-    this.worldService.getWorldById(this.currentWorldId!).subscribe({
-      next: (world) => {
-        this.currentWorld = world;
-        this.isLoading = false;
-        this.loadImages();
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error loading world:', err);
-      }
-    });
+    this.isLoading = false;
   }
-
-
 
   saveWorldName() {
   if (!this.currentWorld.name || !this.currentWorldId) return;
-    this.worldService.updateWorld(this.currentWorld.id, this.currentWorld).subscribe({
-      next: (updatedWorld) => {
-        this.currentWorld = updatedWorld;
-      },
-      error: (err) => {
-        console.error('Erro ao salvar nome do mundo:', err);
-      }
-    });
+    this.worldService.updateWorld(this.currentWorld.id, this.currentWorld);
   }
 
   onDocumentSave(document: any) {
@@ -145,26 +122,13 @@ export class WorldInfoComponent implements OnInit {
 
     this.currentWorld.description = JSON.stringify(document);
 
-    this.worldService.updateWorld(this.currentWorldId, this.currentWorld).subscribe({
-      next: (updatedWorld) => {
-      },
-      error: (err) => {
-        console.error('Erro ao salvar documento:', err);
-      }
-    });
+    this.worldService.updateWorld(this.currentWorldId, this.currentWorld)
   }
 
   onWorldSave(formData: Record<string, string>) {
     this.currentWorld.concept = formData['concept'];
 
-    this.worldService.updateWorld(this.currentWorld.id, this.currentWorld).subscribe({
-      next: (updatedWorld) => {
-
-      },
-      error: (err) => {
-        console.error('Erro ao salvar conceito do mundo:', err);
-      }
-    });
+    this.worldService.updateWorld(this.currentWorld.id, this.currentWorld);
   }
 
   getFields() : FormField[] {
@@ -173,16 +137,9 @@ export class WorldInfoComponent implements OnInit {
     ];
   }
 
-  loadImages() {
-    this.imageService.getImages("world", this.currentWorld.id, "background").subscribe(images => {
-
-      this.image = images[0];
-    });
-  }
-
   getPersonalizationItem(world: World, key: string): string | null {
-    if (world.personalization && world.personalization.contentJson != null && world.personalization.contentJson != '') {
-      return JSON.parse(world.personalization.contentJson)[key] || null;
+    if (world.Personalization && world.Personalization.contentJson != null && world.Personalization.contentJson != '') {
+      return JSON.parse(world.Personalization.contentJson)[key] || null;
     }
     return null;
   }

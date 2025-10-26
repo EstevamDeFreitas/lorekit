@@ -108,9 +108,7 @@ export class SettingsComponent implements OnInit{
   }
 
   getLocationCategories() {
-    this.locationService.getLocationCategories().subscribe(categories => {
-      this.locationCategories = categories;
-    });
+    this.locationCategories = this.locationService.getLocationCategories();
   }
 
   saveCategory(formData: Record<string, string>, categoryId: string) {
@@ -123,14 +121,8 @@ export class SettingsComponent implements OnInit{
     const categoryToUpdate = this.locationCategories.find(c => c.id === categoryId);
     if (categoryToUpdate) {
       categoryToUpdate.name = categoryName.trim();
-      this.locationService.saveLocationCategory(categoryToUpdate).subscribe({
-        next: () => {
-          this.getLocationCategories();
-        },
-        error: (err) => {
-          console.error('Erro ao atualizar categoria:', err);
-        }
-      });
+      this.locationService.saveLocationCategory(categoryToUpdate);
+      this.getLocationCategories();
     }
   }
 
@@ -147,28 +139,17 @@ export class SettingsComponent implements OnInit{
       name: categoryName.trim()
     };
 
-    this.locationService.saveLocationCategory(newCategory).subscribe({
-      next: (category) => {
-        this.locationCategories.push(category);
-        this.creatingCategory = false;
-      },
-      error: (err) => {
-        console.error('Erro ao criar categoria:', err);
-      }
-    });
+    let category = this.locationService.saveLocationCategory(newCategory);
+    this.locationCategories.push(category);
+    this.creatingCategory = false;
+
   }
 
   deleteCategory(category: LocationCategory) {
 
     if(!confirm(`Tem certeza que deseja deletar a categoria ${category.name}?`)) return;
 
-    this.locationService.deleteLocationCategory(category).subscribe({
-      next: () => {
-        this.locationCategories = this.locationCategories.filter(c => c.id !== category.id);
-      },
-      error: (err) => {
-        console.error('Erro ao deletar categoria:', err);
-      }
-    });
+    this.locationService.deleteLocationCategory(category);
+    this.locationCategories = this.locationCategories.filter(c => c.id !== category.id);
   }
 }

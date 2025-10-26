@@ -123,9 +123,7 @@ export class EntityLateralMenuComponent implements OnInit {
   }
 
   loadDocuments() {
-    this.documentService.getDocuments(this.entityTable(), this.entityId()).subscribe(docs => {
-      this.documentArray = docs;
-    });
+    this.documentArray = this.documentService.getDocuments(this.entityTable(), this.entityId());
   }
 
   createDocument(formData: Record<string, string>) {
@@ -133,11 +131,10 @@ export class EntityLateralMenuComponent implements OnInit {
       return;
     }
 
-    const newDoc = new Document('', formData['name'], this.entityTable(), this.entityId());
+    let newDoc = new Document('', formData['name'], this.entityTable(), this.entityId());
 
-    this.documentService.saveDocument(newDoc).subscribe(doc => {
-      this.documentArray.push(doc);
-    });
+    newDoc = this.documentService.saveDocument(newDoc);
+    this.documentArray.push(newDoc);
   }
 
   getReturnUrlQuery() {

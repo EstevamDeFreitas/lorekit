@@ -25,7 +25,7 @@ import { ImageCropDialogComponent } from '../image-crop-dialog/image-crop-dialog
     <div class="grid grid-cols-1 gap-4">
       @for (img of images; track img.id) {
       <div class="relative group rounded-lg overflow-hidden border hover:shadow-lg transition">
-        <img [src]="'http://localhost:3000/' + img.filePath" alt="Imagem" class="w-full h-32 object-cover" />
+        <img [src]="img.filePath" alt="Imagem" class="w-full h-32 object-cover" />
 
         <button
           (click)="deleteImage(img.id)"
@@ -73,9 +73,7 @@ export class ImageUploaderComponent implements OnInit {
   }
 
   loadImages() {
-    this.imageService.getImages(this.entityTable, this.entityId, this.usageKey).subscribe(images => {
-      this.images = images;
-    });
+    this.images = this.imageService.getImages(this.entityTable, this.entityId, this.usageKey);
   }
 
   onFileSelected(event: Event) {
@@ -117,18 +115,15 @@ export class ImageUploaderComponent implements OnInit {
     }
 
     this.isLoading = true;
-    this.imageService.uploadImage(file, this.entityTable, this.entityId, this.usageKey).subscribe({
-      next: image => {
-        this.images.push(image);
-        this.isLoading = false;
-      },
-      error: () => (this.isLoading = false)
+    this.imageService.uploadImage(file, this.entityTable, this.entityId, this.usageKey).then((img) => {
+      this.images.push(img);
+      this.isLoading = false;
     });
 
   }
 
   deleteImage(id: string) {
-    this.imageService.deleteImage(id).subscribe(() => {
+    this.imageService.deleteImage(id).then(() => {
       this.images = this.images.filter(i => i.id !== id);
     });
   }

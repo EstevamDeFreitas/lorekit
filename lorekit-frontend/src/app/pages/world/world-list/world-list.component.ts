@@ -49,8 +49,8 @@ import { environment } from '../../../../enviroments/environment';
     } @else{
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         @for (world of worlds; track world.id) {
-          @if(worldsWithImages[world.id]) {
-            <div class="flex flex-col gap-1  cursor-pointer selectable-jump p-4 rounded-lg" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + worldsWithImages[world.id] + ')', 'background-size': 'cover', 'background-position': 'center'}" (click)="onWorldSelected(world.id)">
+          @if(world.Image) {
+            <div class="flex flex-col gap-1  cursor-pointer selectable-jump p-4 rounded-lg" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + world.Image.buildImageUrl() + ')', 'background-size': 'cover', 'background-position': 'center'}" (click)="onWorldSelected(world.id)">
               <div class="flex flex-row gap-2 items-center">
                 <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
                 <div class="text-base font-bold">{{world.name}}</div>
@@ -99,35 +99,7 @@ export class WorldListComponent {
   }
 
   loadWorlds() {
-    this.worldService.getWorlds().subscribe({
-      next: (worlds) => {
-        console.log(worlds);
-
-        this.worlds = worlds;
-
-        this.loadImages();
-      },
-      error: (err) => {
-        console.error('Error loading worlds:', err);
-      }
-    });
-  }
-
-  loadImages(){
-    this.worlds.forEach(world => {
-      this.imageService.getImages('world', world.id, "background").subscribe({
-        next: (images) => {
-          if(images.length > 0){
-            this.worldsWithImages[world.id] = environment.apiUrl + "/" + images[0]?.filePath;
-          } else {
-            this.worldsWithImages[world.id] = undefined;
-          }
-        },
-        error: (err) => {
-          console.error('Error loading images for world:', world.id, err);
-        }
-      });
-    });
+    this.worlds = this.worldService.getWorlds();
   }
 
   onWorldSelected(worldId : string) {
@@ -143,8 +115,8 @@ export class WorldListComponent {
   }
 
   getPersonalizationItem(world: World, key: string): string | null {
-    if (world.personalization && world.personalization.contentJson != null && world.personalization.contentJson != '') {
-      return JSON.parse(world.personalization.contentJson)[key] || null;
+    if (world.Personalization && world.Personalization.contentJson != null && world.Personalization.contentJson != '') {
+      return JSON.parse(world.Personalization.contentJson)[key] || null;
     }
     return null;
   }
@@ -164,15 +136,11 @@ export class WorldListComponent {
       name: this.newWorldName,
       description: ''
     };
-    this.worldService.createWorld(newWorld).subscribe({
-      next: (createdWorld) => {
-        this.worlds.push(createdWorld);
-        this.newWorldName = '';
-        this.worldCreationOpen = false;
-      },
-      error: (err) => {
-        console.error('Error creating world:', err);
-      }
-    });
+
+    this.worldService.createWorld(newWorld);
+    this.worldCreationOpen = false;
+    this.loadWorlds();
   }
+
+
 }

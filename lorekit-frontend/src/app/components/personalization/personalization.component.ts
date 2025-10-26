@@ -30,7 +30,7 @@ import { ImageUploaderComponent } from '../ImageUploader/image-uploader.componen
         <div class="flex flex-col gap-2 p-2 border-b border-zinc-800">
           <p>Imagem de Fundo</p>
           @if(image) {
-            <img (click)="openImageUploader()" class="h-20 w-full object-cover cursor-pointer hover:opacity-50 rounded-md transition" [src]="'http://localhost:3000/' + image?.filePath" alt="">
+            <img (click)="openImageUploader()" class="h-20 w-full object-cover cursor-pointer hover:opacity-50 rounded-md transition" [src]="image.filePath" alt="">
           }
           @else {
             <div (click)="openImageUploader()" class="h-20 w-full bg-zinc-800 flex items-center justify-center rounded-md cursor-pointer hover:opacity-50">
@@ -59,7 +59,7 @@ export class PersonalizationComponent {
   dialog = inject(Dialog);
 
   private imageService = inject(ImageService);
-  image ?: Image;
+  image : Image | null = null;
 
   constructor(private personalizationService: PersonalizationService) {
     this.loadPersonalization();
@@ -71,43 +71,28 @@ export class PersonalizationComponent {
   }
 
   loadPersonalization() {
-    this.personalizationService.getPersonalization(this.relationshipInfo.entityTable, this.relationshipInfo.entityId).subscribe({
-      next: (data) => {
-        this.personalizationData = data;
-        this.processPersonalizationContent();
-        this.loadImages();
-      },
-      error: (error) => {
-        this.personalizationData = new Personalization();
-        this.personalizationData.entityTable = this.relationshipInfo.entityTable;
-        this.personalizationData.entityId = this.relationshipInfo.entityId;
-        this.personalizationData.contentJson = '{}';
-        this.processPersonalizationContent();
-      }
-    });
+
+    this.personalizationData = this.personalizationService.getPersonalization(this.relationshipInfo.entityTable, this.relationshipInfo.entityId);
+
+    this.personalizationData = this.personalizationData || new Personalization(undefined, '{}');
+
+    this.processPersonalizationContent();
+    this.loadImages();
   }
 
   savePersonalization() {
     this.personalizationData.contentJson = JSON.stringify(this.personalizationContent);
-    this.personalizationService.savePersonalization(this.personalizationData).subscribe({
-      next: (data) => {
-        this.dialogref.close();
-      },
-      error: (error) => {
-        console.error('Error saving personalization', error);
-      }
-    });
+    this.personalizationService.savePersonalization(this.personalizationData, this.relationshipInfo.entityTable, this.relationshipInfo.entityId);
+    this.dialogref.close();
   }
 
   loadImages() {
-    this.imageService.getImages(this.personalizationData.entityTable, this.personalizationData.entityId, "background").subscribe(images => {
-      this.image = images[0];
-    });
+    this.image = this.imageService.getImage(this.relationshipInfo.entityTable, this.relationshipInfo.entityId, "background");
   }
 
   openImageUploader() {
     var dialogRef = this.dialog.open(ImageUploaderComponent, {
-      data: { entityTable: this.personalizationData.entityTable, entityId: this.personalizationData.entityId, usageKey: "background" },
+      data: { entityTable: this.relationshipInfo.entityTable, entityId: this.relationshipInfo.entityId, usageKey: "background" },
       panelClass: 'screen-dialog',
       height: '20rem',
       width: '30rem',

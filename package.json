@@ -4,17 +4,43 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "npm run build:frontend && electron .",
     "build:frontend": "cd lorekit-frontend && npm run build",
-    "start:backend": "node lorekit-backend/index.js",
-    "dev": "concurrently \"cd lorekit-backend && npm run start\" \"cd lorekit-frontend && ng serve\" \" npm run start\"",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dist:win": "npm run build:frontend && electron-builder --win"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "concurrently": "^8.0.0",
     "electron": "^37.2.4",
-    "concurrently": "^8.0.0"
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.estevam.lorekit",
+    "productName": "Lorekit",
+    "asar": true,
+    "directories": {
+      "buildResources": "build",
+      "output": "dist_electron"
+    },
+    "files": [
+      "!**/*",
+      "package.json",
+      "main.js",
+      "preload.js",
+      "lorekit-frontend/dist/lorekit-frontend/browser/**"
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

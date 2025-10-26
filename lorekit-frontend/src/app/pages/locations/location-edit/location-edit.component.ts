@@ -19,8 +19,8 @@ import { environment } from '../../../../enviroments/environment';
   imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent],
   template: `
     <div class="flex flex-col h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[80vh]': isInDialog()}">
-      @if(location.image){
-        <img [src]="apiUrl + location.image.filePath" class="w-full h-36 object-cover rounded-md">
+      @if(location.Image){
+        <img [src]="location.Image.filePath" class="w-full h-36 object-cover rounded-md">
       }
       @else{
         <div class="w-full h-36 object-cover rounded-md" [ngClass]="getColor(location)"></div>
@@ -32,8 +32,8 @@ import { environment } from '../../../../enviroments/environment';
         }
         <input type="text" (blur)="saveLocation()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="location.name" />
         <div class="flex flex-row gap-2">
-          <app-personalization-button [entityId]="location.id" [entityTable]="'location'" [size]="'xl'" (onClose)="getLocation()"></app-personalization-button>
-          <app-safe-delete-button [entityName]="location.name" [entityId]="location.id" [entityTable]="'location'" [size]="'xl'"></app-safe-delete-button>
+          <app-personalization-button [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'" (onClose)="getLocation()"></app-personalization-button>
+          <app-safe-delete-button [entityName]="location.name" [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'"></app-safe-delete-button>
         </div>
         <div class="flex-2"></div>
       </div>
@@ -48,7 +48,7 @@ import { environment } from '../../../../enviroments/environment';
         <div class="w-70">
           @if (!isLoading){
             <div class="p-4 rounded-lg bg-zinc-900">
-              <app-entity-lateral-menu [fields]="getFields()" (onSave)="onDocumentFieldsSave($event)" entityTable="world" [entityId]="location.id"></app-entity-lateral-menu>
+              <app-entity-lateral-menu [fields]="getFields()" (onSave)="onFieldsSave($event)" entityTable="world" [entityId]="location.id"></app-entity-lateral-menu>
             </div>
           }
         </div>
@@ -91,43 +91,26 @@ export class LocationEditComponent implements OnInit {
 
   locationCategories: LocationCategory[] = [];
 
+  selectedCategoryId: string = '';
+
   ngOnInit(): void {
     this.getLocation();
     this.getCategories();
   }
 
   getCategories() {
-    this.locationCategoryService.getLocationCategories().subscribe({
-      next: (categories) => {
-        this.locationCategories = categories;
-      },
-      error: (error) => {
-        console.error('Erro ao buscar categorias de localidade:', error);
-      }
-    });
+    this.locationCategories = this.locationCategoryService.getLocationCategories();
   }
 
   getLocation(){
-    this.locationService.getLocationById(this.locationId()).subscribe({
-      next: (location) => {
-        this.location = location;
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Error loading location:', err);
-      }
-    });
+    this.location = this.locationService.getLocationById(this.locationId());
+    this.selectedCategoryId = this.location.LocationCategory ? this.location.LocationCategory.id : '';
+    this.isLoading = false;
+    this.cdr.detectChanges();
   }
 
   saveLocation() {
-    this.locationService.saveLocation(this.location).subscribe({
-      next: (location) => {
-      },
-      error: (err) => {
-        console.error('Error saving location name:', err);
-      }
-    });
+    this.locationService.saveLocation(this.location, this.selectedCategoryId);
   }
 
   onDocumentSave($event: any) {
@@ -135,22 +118,22 @@ export class LocationEditComponent implements OnInit {
     this.saveLocation();
   }
 
-  onDocumentFieldsSave(formData: Record<string, string>) {
+  onFieldsSave(formData: Record<string, string>) {
     this.location.concept = formData['concept'];
-    this.location.categoryId = formData['categoryId'];
+    this.selectedCategoryId = formData['categoryId'];
     this.saveLocation();
   }
 
   getFields() : FormField[] {
     return [
       { key: 'concept', label: 'Conceito', value: this.location.concept || '', type: 'text-area' },
-      { key: 'categoryId', label: 'Categoria', value: this.location.categoryId || '', options: this.locationCategories, optionCompareProp: 'id', optionDisplayProp: 'name' }
+      { key: 'categoryId', label: 'Categoria', value: this.selectedCategoryId || '', options: this.locationCategories, optionCompareProp: 'id', optionDisplayProp: 'name' }
     ];
   }
 
   getPersonalizationItem(item: any, key: string): string | null {
-      if (item.personalization && item.personalization.contentJson != null && item.personalization.contentJson != '') {
-        return JSON.parse(item.personalization.contentJson)[key] || null;
+      if (item.Personalization && item.Personalization.contentJson != null && item.Personalization.contentJson != '') {
+        return JSON.parse(item.Personalization.contentJson)[key] || null;
       }
       return null;
     }

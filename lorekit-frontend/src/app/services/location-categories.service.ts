@@ -2,34 +2,38 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { LocationCategory } from '../models/location.model';
 import { environment } from '../../enviroments/environment';
+import { CrudHelper } from '../database/database.helper';
+import { DbProvider } from '../app.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LocationCategoriesService {
-  private apiUrl = `${environment.apiUrl}/location-categories`;
+  private crud : CrudHelper;
 
-  constructor(private http : HttpClient) { }
-
-  //Location Category
-  getLocationCategories(){
-    return this.http.get<LocationCategory[]>(`${this.apiUrl}`);
+  constructor(private dbProvider : DbProvider) {
+    this.crud = this.dbProvider.getCrudHelper();
   }
 
-  saveLocationCategory(category: LocationCategory) {
-    if (category.id) {
-      return this.http.put<LocationCategory>(`${this.apiUrl}/${category.id}`, category);
+  //Location Category
+  getLocationCategories() : LocationCategory[] {
+    return this.crud.findAll('LocationCategory');
+  }
+
+  saveLocationCategory(category: LocationCategory) : LocationCategory {
+    if (category.id != '') {
+      return <LocationCategory>this.crud.update('LocationCategory', category.id, category);
     } else {
-      return this.http.post<LocationCategory>(`${this.apiUrl}`, category);
+      return <LocationCategory>this.crud.create('LocationCategory', category);
     }
   }
 
   deleteLocationCategory(category: LocationCategory) {
-    return this.http.delete(`${this.apiUrl}/${category.id}`);
+    return this.crud.delete('LocationCategory', category.id);
   }
 
-  getLocationCategoryById(categoryId: string) {
-    return this.http.get<LocationCategory>(`${this.apiUrl}/${categoryId}`);
+  getLocationCategoryById(categoryId: string) : LocationCategory {
+    return this.crud.findById('LocationCategory', categoryId);
   }
 
 }

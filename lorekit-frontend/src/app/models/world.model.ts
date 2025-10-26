@@ -1,4 +1,5 @@
 import { Personalization } from "./personalization.model";
+import { Image } from "./image.model";
 
 export class World {
   id: string;
@@ -7,11 +8,13 @@ export class World {
 
   concept?: string;
 
-  personalization?: Personalization;
+  Personalization?: Personalization;
+  Image?: Image;
 
   constructor(id: string = '', name: string = '', description?: string) {
     this.id = id;
     this.name = name;
     this.description = description;
+    this.concept = '';
   }
 }
