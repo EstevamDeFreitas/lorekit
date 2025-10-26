@@ -1,16 +1,15 @@
 {
   "name": "lorekitapp",
-  "version": "1.0.0",
+  "version": "0.1.1",
   "description": "",
   "main": "main.js",
   "scripts": {
     "start": "npm run build:frontend && electron .",
     "build:frontend": "cd lorekit-frontend && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dist:win": "npm run build:frontend && electron-builder --win"
+    "dist:win": "npm run build:frontend && npx electron-builder --publish always"
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
   "devDependencies": {
     "concurrently": "^8.0.0",
@@ -21,6 +20,13 @@
     "appId": "com.estevam.lorekit",
     "productName": "Lorekit",
     "asar": true,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "EstevamDeFreitas",
+        "repo": "lorekit"
+      }
+    ],
     "directories": {
       "buildResources": "build",
       "output": "dist_electron"
@@ -30,10 +36,13 @@
       "package.json",
       "main.js",
       "preload.js",
-      "lorekit-frontend/dist/lorekit-frontend/browser/**"
+      "lorekit-frontend/dist/lorekit-frontend/browser/**",
+      "node_modules/**"
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "build/icon.ico",
       "artifactName": "${productName}-${version}-Setup.${ext}"
     },
@@ -42,5 +51,10 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true
     }
+  },
+  "author": "Estevam de Freitas Junior",
+  "dependencies": {
+    "electron-updater": "^6.6.2"
   }
+  
 }

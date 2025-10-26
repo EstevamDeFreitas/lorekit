@@ -59,7 +59,7 @@ export class LocationService {
   }
 
   getLocationByWorldId(worldId: string) : Location[] {
-    return this.crud.findAll('Location', { worldId: worldId }, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": true}, {"table": "Personalization", "firstOnly": true}]);
+    return <Location[]>this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": true}, {"table": "Personalization", "firstOnly": true}], {parentTable: 'World', parentId: worldId});
   }
 
 }

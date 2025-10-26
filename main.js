@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
 
@@ -44,6 +45,15 @@ function createWindow() {
     },
   });
   mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');
+
+  autoUpdater.checkForUpdatesAndNotify();
+
+  autoUpdater.on('update-available', info => {
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    autoUpdater.quitAndInstall();
+  });
 }
 
 app.whenReady().then(() => {

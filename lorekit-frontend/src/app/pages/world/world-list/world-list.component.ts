@@ -9,6 +9,7 @@ import {OverlayModule} from '@angular/cdk/overlay';
 import { InputComponent } from "../../../components/input/input.component";
 import { ImageService } from '../../../services/image.service';
 import { environment } from '../../../../enviroments/environment';
+import { buildImageUrl } from '../../../models/image.model';
 
 @Component({
   selector: 'app-world-list',
@@ -49,8 +50,8 @@ import { environment } from '../../../../enviroments/environment';
     } @else{
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         @for (world of worlds; track world.id) {
-          @if(world.Image) {
-            <div class="flex flex-col gap-1  cursor-pointer selectable-jump p-4 rounded-lg" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + world.Image.buildImageUrl() + ')', 'background-size': 'cover', 'background-position': 'center'}" (click)="onWorldSelected(world.id)">
+          @if(world.Image != null) {
+            <div class="flex flex-col gap-1  cursor-pointer selectable-jump p-4 rounded-lg" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + buildImageUrl(world.Image.filePath) + ')', 'background-size': 'cover', 'background-position': 'center'}" (click)="onWorldSelected(world.id)">
               <div class="flex flex-row gap-2 items-center">
                 <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
                 <div class="text-base font-bold">{{world.name}}</div>
@@ -81,6 +82,8 @@ import { environment } from '../../../../enviroments/environment';
 export class WorldListComponent {
   worldCreationOpen = false;
   newWorldName = '';
+
+  public buildImageUrl = buildImageUrl;
 
   worlds: World[] = [];
 

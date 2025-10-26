@@ -10,6 +10,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { LocationEditComponent } from '../location-edit/location-edit.component';
 import { ImageService } from '../../../services/image.service';
 import { environment } from '../../../../enviroments/environment';
+import { buildImageUrl } from '../../../models/image.model';
 
 @Component({
   selector: 'app-location-list',
@@ -39,7 +40,7 @@ import { environment } from '../../../../enviroments/environment';
             <div class="grid grid-cols-3 gap-4">
               @for (location of locationGroups[category.id]; track location.id) {
                 @if (location.Image != null){
-                  <div (click)="selectLocation(location.id!)" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + location.Image.buildImageUrl() + ')', 'background-size': 'cover', 'background-position': 'center'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
+                  <div (click)="selectLocation(location.id!)" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + buildImageUrl(location.Image.filePath) + ')', 'background-size': 'cover', 'background-position': 'center'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
                     <div class="flex flex-row gap-2 items-center">
                       <i class="fa" [ngClass]="getPersonalizationItem(location, 'icon') || 'fa-location-dot'"></i>
                       <div class="text-base font-bold">{{ location.name }}</div>
@@ -74,6 +75,8 @@ export class LocationListComponent implements OnInit {
   private locationService = inject(LocationService);
   private locationCategoryService = inject(LocationCategoriesService);
   private cdr = inject(ChangeDetectorRef);
+
+  public buildImageUrl = buildImageUrl;
 
   worldId = input<string>();
 
