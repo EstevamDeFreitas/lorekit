@@ -15,9 +15,9 @@ import { buildImageUrl } from '../../../models/image.model';
   selector: 'app-world-list',
   imports: [CommonModule, RouterLink, ButtonComponent, NgClass, OverlayModule, InputComponent],
   template: `
-  <div>
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="text-2xl mb-4">Mundos</h3>
+  <div class="h-screen flex flex-col">
+    <div class="flex flex-row justify-between items-center mb-4">
+      <h3 class="text-xl font-bold">Mundos</h3>
       <app-button buttonType="white" label="Novo" (click)="worldCreationOpen = !worldCreationOpen" cdkOverlayOrigin #trigger="cdkOverlayOrigin"></app-button>
       <ng-template
         cdkConnectedOverlay
@@ -42,36 +42,40 @@ import { buildImageUrl } from '../../../models/image.model';
       </ng-template>
     </div>
 
-    @if (worlds.length === 0){
-      <div class="text-center">
-        <p>Nenhum mundo disponível.</p>
-        <!-- <button label="Criar Novo Mundo" routerLink="/app/world/edit" class="mt-4"></button> -->
-      </div>
-    } @else{
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        @for (world of worlds; track world.id) {
-          @if(world.Image != null) {
-            <div class="flex flex-col gap-1  cursor-pointer selectable-jump p-4 rounded-lg" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + buildImageUrl(world.Image.filePath) + ')', 'background-size': 'cover', 'background-position': 'center'}" (click)="onWorldSelected(world.id)">
-              <div class="flex flex-row gap-2 items-center">
-                <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
-                <div class="text-base font-bold">{{world.name}}</div>
+    <div class="flex-1 overflow-y-auto scrollbar-dark">
+      <br>
+      @if (worlds.length === 0){
+        <div class="text-center">
+          <p>Nenhum mundo disponível.</p>
+          <!-- <button label="Criar Novo Mundo" routerLink="/app/world/edit" class="mt-4"></button> -->
+        </div>
+      } @else{
+        <div class=" grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          @for (world of worlds; track world.id) {
+            @if(world.Image != null) {
+              <div class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + buildImageUrl(world.Image.filePath) + ')', 'background-size': 'cover', 'background-position': 'center'}" (click)="onWorldSelected(world.id)">
+                <div class="flex flex-row gap-2 items-center">
+                  <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
+                  <div class="text-base font-bold">{{world.name}}</div>
+                </div>
+                <div class="text-xs">{{world.concept}}</div>
               </div>
-              <div class="text-xs">{{world.concept}}</div>
-            </div>
-          }
-          @else{
-            <div class="flex flex-col gap-1  cursor-pointer selectable-jump p-4 rounded-lg" [ngClass]="getWorldColor(world)" (click)="onWorldSelected(world.id)">
-              <div class="flex flex-row gap-2 items-center">
-                <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
-                <div class="text-base font-bold">{{world.name}}</div>
+            }
+            @else{
+              <div class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2" [ngClass]="getWorldColor(world)" (click)="onWorldSelected(world.id)">
+                <div class="flex flex-row gap-2 items-center">
+                  <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
+                  <div class="text-base font-bold">{{world.name}}</div>
+                </div>
+                <div class="text-xs">{{world.concept}}</div>
               </div>
-              <div class="text-xs">{{world.concept}}</div>
-            </div>
-          }
+            }
 
-        }
-      </div>
-    }
+          }
+        </div>
+      }
+    </div>
+
 
   </div>
 

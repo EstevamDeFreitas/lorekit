@@ -16,8 +16,8 @@ import { buildImageUrl } from '../../../models/image.model';
   selector: 'app-location-list',
   imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle],
   template: `
-    <div clas>
-      <div class="flex flex-row justify-between items-center mb-4 h-full">
+    <div class="h-screen flex flex-col">
+      <div class="flex flex-row justify-between items-center mb-4">
         @if (isRouteComponent()){
           <h2 class="text-xl font-bold">Localidades</h2>
         }
@@ -33,7 +33,7 @@ import { buildImageUrl } from '../../../models/image.model';
           (onSave)="createLocation($event)"
           ></app-button>
       </div>
-      <div>
+      <div class="flex-1 overflow-y-auto scrollbar-dark">
         @for (category of locationCategories; track category.id) {
           @if (locationGroups[category.id] && locationGroups[category.id].length > 0 ) {
             <h3 class="text-lg mb-2">{{ category.name }}:</h3>
