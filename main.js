@@ -35,6 +35,9 @@ function registerIpc() {
   }
 
 function createWindow() {
+  const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
+  const devUrl = process.env.ELECTRON_RENDERER_URL || 'http://localhost:4401';
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -44,16 +47,25 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
-  mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');
 
-  autoUpdater.checkForUpdatesAndNotify();
+  if(isDev) {
+    mainWindow.loadURL(devUrl);
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
+  }
+  else{
+    mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');
+  }
 
-  autoUpdater.on('update-available', info => {
-  });
+  if(app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify();
 
-  autoUpdater.on('update-downloaded', () => {
-    autoUpdater.quitAndInstall();
-  });
+    autoUpdater.on('update-available', info => {
+    });
+
+    autoUpdater.on('update-downloaded', () => {
+      autoUpdater.quitAndInstall();
+    });
+  }
 }
 
 app.whenReady().then(() => {

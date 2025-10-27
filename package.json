@@ -4,8 +4,9 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "start": "npm run build:frontend && electron .",
+    "start": "concurrently \"npm run run:frontend\" \"electron .\"",
     "build:frontend": "cd lorekit-frontend && npm run build",
+    "run:frontend": "cd lorekit-frontend && ng serve",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dist:win": "npm run build:frontend && npx electron-builder --publish always"
   },

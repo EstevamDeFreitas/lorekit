@@ -164,6 +164,10 @@ function getExistingColumns(db: any, table: string): Set<string> {
   return new Set(cols.values.map((row: any[]) => row[idx]));
 }
 
+function toSqlValue(v: any) {
+  return v === undefined ? null : v;
+}
+
 
 export class CrudHelper {
   private debugging: boolean = true;
@@ -180,7 +184,7 @@ export class CrudHelper {
     const keys = Object.keys(data).filter(k => existing.has(k));
     if (keys.length === 0) return;
 
-    const values = keys.map(k => data[k]);
+    const values = keys.map(k => toSqlValue(data[k]));
     const placeholders = keys.map(() => '?').join(', ');
     const sql = `INSERT INTO "${table}" (${keys.map(k => `"${k}"`).join(', ')}) VALUES (${placeholders})`;
 
@@ -200,7 +204,7 @@ export class CrudHelper {
     if (keys.length === 0) return;
 
     const setClause = keys.map(k => `"${k}" = ?`).join(', ');
-    const values = keys.map(k => data[k]);
+    const values = keys.map(k => toSqlValue(data[k]));
     const sql = `UPDATE "${table}" SET ${setClause} WHERE id = ?`;
 
     if(this.debugging){
@@ -285,7 +289,8 @@ export class CrudHelper {
     if (existsRelation) {
       let rels = this.loadIncludes(existsRelation.parentTable, existsRelation.parentId, [{table: table}]);
 
-      const relIds = new Set((rels[table + 's'] || []).map((r: any) => r.entityId));
+      const relIds = new Set((rels[table + 's'] || []).map((r: any) => r.id));
+
       return rows.filter((r:any) => relIds.has(r.id));
     }
 

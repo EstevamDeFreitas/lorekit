@@ -116,7 +116,7 @@ export class DocumentEditComponent implements OnInit {
   }
 
   loadDocuments() {
-    this.documentArray = this.documentService.getDocuments('document', this.documentId());
+    this.documentArray = this.documentService.getDocuments("Document", this.documentId());
   }
 
   loadDocument() {
@@ -129,7 +129,7 @@ export class DocumentEditComponent implements OnInit {
       this.document.content = JSON.stringify(content);
     }
 
-    this.documentService.saveDocument(this.document);
+    this.documentService.saveDocument(this.document, this.data?.entityTable, this.data?.entityId);
   }
 
   getReturnUrl(){
@@ -141,15 +141,15 @@ export class DocumentEditComponent implements OnInit {
       return;
     }
 
-    let newDoc = new Document('', formData['name'], 'document', this.documentId());
+    let newDoc = new Document('', formData['name'], '');
 
-    newDoc = this.documentService.saveDocument(newDoc);
+    newDoc = this.documentService.saveDocument(newDoc, 'Document', this.documentId());
     this.documentArray.push(newDoc);
   }
 
   openDocument(item: Document) {
     this.dialog.open(DocumentEditComponent, {
-      data: { id: item.id },
+      data: { id: item.id, entityTable: "Document", entityId: this.documentId() },
       panelClass: 'screen-dialog',
       height: '80vh',
       width: '80vw',
@@ -157,8 +157,8 @@ export class DocumentEditComponent implements OnInit {
   }
 
   getPersonalizationItem(item: any, key: string): string | null {
-    if (item.personalization && item.personalization.contentJson != null && item.personalization.contentJson != '') {
-      return JSON.parse(item.personalization.contentJson)[key] || null;
+    if (item.Personalization && item.Personalization.contentJson != null && item.Personalization.contentJson != '') {
+      return JSON.parse(item.Personalization.contentJson)[key] || null;
     }
     return null;
   }

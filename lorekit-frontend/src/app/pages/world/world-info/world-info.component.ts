@@ -75,7 +75,7 @@ import { ImageService } from '../../../services/image.service';
         <div class="w-70">
           @if (!isLoading && currentWorldId){
             <div class="p-4 rounded-lg bg-zinc-900 ">
-              <app-entity-lateral-menu *ngIf="!isLoading && currentWorldId" [fields]="getFields()" (onSave)="onWorldSave($event)" entityTable="world" [entityId]="currentWorldId"></app-entity-lateral-menu>
+              <app-entity-lateral-menu *ngIf="!isLoading && currentWorldId" [fields]="getFields()" (onSave)="onWorldSave($event)" entityTable="World" [entityId]="currentWorldId"></app-entity-lateral-menu>
             </div>
           }
         </div>

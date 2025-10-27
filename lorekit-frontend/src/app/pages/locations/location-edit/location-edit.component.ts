@@ -48,7 +48,7 @@ import { environment } from '../../../../enviroments/environment';
         <div class="w-70">
           @if (!isLoading){
             <div class="p-4 rounded-lg bg-zinc-900">
-              <app-entity-lateral-menu [fields]="getFields()" (onSave)="onFieldsSave($event)" entityTable="world" [entityId]="location.id"></app-entity-lateral-menu>
+              <app-entity-lateral-menu [fields]="getFields()" (onSave)="onFieldsSave($event)" entityTable="Location" [entityId]="location.id"></app-entity-lateral-menu>
             </div>
           }
         </div>

@@ -16,21 +16,28 @@ export class DocumentService {
   }
 
   getDocuments(entityTable: string, entityId: string): Document[] {
-    return this.crud.findAll('Document', {
-      entityTable: entityTable,
-      entityId: entityId
-    });
+    return this.crud.findAll('Document', {}, [], {parentTable: entityTable, parentId: entityId});
   }
 
   getDocument(documentId: string) : Document {
     return this.crud.findById('Document', documentId);
   }
 
-  saveDocument(document: Document) : Document {
+  saveDocument(document: Document, entityTable: string, entityId: string) : Document {
     if (document.id != '') {
       return <Document>this.crud.update('Document', document.id, document);
     } else {
-      return <Document>this.crud.create('Document', document);
+      document = <Document>this.crud.create('Document', document);
+
+      this.crud.create('Relationship', {
+        parentTable: entityTable,
+        parentId: entityId,
+        entityTable: 'Document',
+        entityId: document.id
+      });
+
+      return document;
+
     }
   }
 

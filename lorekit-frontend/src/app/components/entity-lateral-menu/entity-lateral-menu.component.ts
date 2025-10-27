@@ -131,9 +131,9 @@ export class EntityLateralMenuComponent implements OnInit {
       return;
     }
 
-    let newDoc = new Document('', formData['name'], this.entityTable(), this.entityId());
+    let newDoc = new Document('', formData['name'], '');
 
-    newDoc = this.documentService.saveDocument(newDoc);
+    newDoc = this.documentService.saveDocument(newDoc, this.entityTable(), this.entityId());
     this.documentArray.push(newDoc);
   }
 
@@ -144,15 +144,19 @@ export class EntityLateralMenuComponent implements OnInit {
   }
 
   getPersonalizationItem(item: any, key: string): string | null {
-    if (item.personalization && item.personalization.contentJson != null && item.personalization.contentJson != '') {
-      return JSON.parse(item.personalization.contentJson)[key] || null;
+    if (item.Personalization && item.Personalization.contentJson != null && item.Personalization.contentJson != '') {
+      return JSON.parse(item.Personalization.contentJson)[key] || null;
     }
     return null;
   }
 
   openDocument(item: Document) {
     this.dialog.open(DocumentEditComponent, {
-      data: { id: item.id },
+      data: {
+        id: item.id,
+        entityTable: this.entityTable(),
+        entityId: this.entityId()
+       },
       panelClass: 'screen-dialog',
       height: '80vh',
       width: '80vw',
