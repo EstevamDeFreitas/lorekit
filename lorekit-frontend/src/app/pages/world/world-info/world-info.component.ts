@@ -42,10 +42,10 @@ import { ImageService } from '../../../services/image.service';
       <div class="flex flex-row gap-4 flex-1 overflow-hidden h-full mt-10">
         <div class="flex-4 h-auto  flex flex-col overflow-hidden">
           <div class="flex flex-row gap-4 ms-1">
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'details'}">Detalhes do mundo</a>
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'localities'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'localities'}">Localidades</a>
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'characters'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'characters'}">Personagens</a>
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'objects'" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'objects'}">Objetos</a>
+            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'details'}">Detalhes do mundo</a>
+            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'localities'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'localities'}">Localidades</a>
+            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'characters'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'characters'}">Personagens</a>
+            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'objects'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'objects'}">Objetos</a>
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 overflow-hidden flex flex-col">
             @if (!isLoading) {

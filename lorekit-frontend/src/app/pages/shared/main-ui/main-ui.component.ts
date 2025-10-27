@@ -16,16 +16,12 @@ import { SettingsComponent } from '../../settings/settings/settings.component';
   <div class="h-screen w-screen overflow-hidden flex flex-row gap-4 p-4">
     <div class="flex flex-col  justify-between p-4 w-70 bg-zinc-900 rounded-lg top-0" >
       <div>
-        <div class="text-2xl pb-4 border-b border-zinc-800 flex flex-row gap-2 mb-4 items-center">
-          <i class="text-emerald-500 fa-solid fa-map"></i>
-          <h2 class=" font-bold">LoreKit</h2>
-        </div>
         <div class="flex flex-col gap-2 mb-4">
-          <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/world" routerLinkActive="bg-emerald-500 text-zinc-800 hover:!bg-emerald-500">
+          <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/world" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
             <i class="fa-solid fa-earth "></i>
             <span class="">Mundos</span>
           </a>
-          <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/location" routerLinkActive="bg-emerald-500 text-zinc-800 hover:!bg-emerald-500">
+          <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/location" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
             <i class="fa-solid fa-city "></i>
             <span class="">Localidades</span>
           </a>

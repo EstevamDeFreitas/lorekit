@@ -20,7 +20,7 @@ import { FormOverlayComponent, FormOverlayDirective, FormField } from '../../../
       <div class="w-75 p-4 border-e border-zinc-700 bg-zinc-900">
         <h2 class="text-lg mb-4">Configurações</h2>
         <div class="flex flex-col gap-2">
-          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('location_categories')" [ngClass]="{'text-emerald-500 bg-emerald-300/10 font-bold': currentTab === 'location_categories'}">Categorias de Localidade</a>
+          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('location_categories')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'location_categories'}">Categorias de Localidade</a>
         </div>
       </div>
       <div class="flex-1 p-4 bg-zinc-900 ">
