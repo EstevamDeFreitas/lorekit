@@ -4,6 +4,16 @@
   display: block;
 }
 
+:host ::ng-deep .codex-editor::selection {
+  background-color: rgba(255, 255, 255, 0.16) !important; /* menos claro */
+  color: #e5e7eb !important;
+}
+
+:host ::ng-deep .codex-editor::-moz-selection {
+  background-color: rgba(255, 255, 255, 0.16) !important; /* Firefox */
+  color: #e5e7eb !important;
+}
+
 :host ::ng-deep .ce-header-no-border.ce-block--selected {
   outline: none !important;
   border: none !important;
