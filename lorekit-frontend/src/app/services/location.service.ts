@@ -20,7 +20,7 @@ export class LocationService {
     return this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": true}, {"table": "Personalization", "firstOnly": true}]);
   }
 
-  saveLocation(location: Location, locationCategoryId: string) : Location {
+  saveLocation(location: Location, locationCategoryId: string, worldId?: string) : Location {
     if (location.id != '') {
       location = <Location>this.crud.update('Location', location.id, location);
 
@@ -46,6 +46,14 @@ export class LocationService {
         entityTable: 'LocationCategory',
         entityId: locationCategoryId
       });
+      if (worldId) {
+        this.crud.create('Relationship', {
+          parentTable: 'World',
+          parentId: worldId,
+          entityTable: 'Location',
+          entityId: location.id
+        });
+      }
       return location;
     }
   }

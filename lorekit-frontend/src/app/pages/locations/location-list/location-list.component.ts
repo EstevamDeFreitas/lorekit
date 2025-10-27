@@ -130,7 +130,7 @@ export class LocationListComponent implements OnInit {
 
     let newLocation = new Location('', formData['name'], '');
 
-    this.locationService.saveLocation(newLocation, formData['type']);
+    this.locationService.saveLocation(newLocation, formData['type'], this.worldId());
 
     this.getLocations();
   }

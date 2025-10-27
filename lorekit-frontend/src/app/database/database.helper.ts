@@ -284,14 +284,14 @@ export class CrudHelper {
       console.log(sql, Object.values(where));
     }
     const res = this.db.exec(sql, Object.values(where));
-    const rows = mapResult(res);
+    let rows = mapResult(res);
 
     if (existsRelation) {
       let rels = this.loadIncludes(existsRelation.parentTable, existsRelation.parentId, [{table: table}]);
 
       const relIds = new Set((rels[table + 's'] || []).map((r: any) => r.id));
 
-      return rows.filter((r:any) => relIds.has(r.id));
+      rows = rows.filter((r:any) => relIds.has(r.id));
     }
 
     if (include.length) {
