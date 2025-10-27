@@ -43,6 +43,9 @@ export class ImageCropDialogComponent implements OnDestroy {
     responsive: true,
     restore: false,
     autoCropArea: 1, // make the crop box cover 100% of the image area
+    dragMode: 'move',
+    movable: true,
+    zoomable: true
   };
 
   resultImage: any;
