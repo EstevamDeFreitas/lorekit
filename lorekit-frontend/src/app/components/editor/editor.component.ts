@@ -11,7 +11,7 @@ import TailwindItalic from '../../plugins/tailwinditalic.plugin';
 @Component({
   selector: 'app-editor',
   imports: [],
-  template: `<div [id]="editorId" class="rounded-lg p-4 dark-theme"></div>`,
+  template: `<div [id]="editorId" class="rounded-lg p-4 dark-theme" spellcheck="false"></div>`,
   styleUrl: './editor.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.Emulated
@@ -61,6 +61,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
         },
       },
       data: this.parseDocument(this.document()),
+    });
+    this.disableSpellcheck();
+  }
+
+  private disableSpellcheck() {
+    const holder = document.getElementById(this.editorId);
+    if (!holder) return;
+
+    holder.setAttribute('spellcheck', 'false');
+    holder.querySelectorAll('[contenteditable="true"]').forEach((el) => {
+      el.setAttribute('spellcheck', 'false');
     });
   }
 
