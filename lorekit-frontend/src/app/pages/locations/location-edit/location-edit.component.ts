@@ -20,7 +20,7 @@ import { WorldService } from '../../../services/world.service';
   selector: 'app-location-edit',
   imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent],
   template: `
-    <div class="flex flex-col" [ngClass]="{'h-[90vh]': !isInDialog(), 'h-[70vh]': isInDialog()}">
+    <div class="flex flex-col h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[75vh]': isInDialog()}">
       @if(location.Image){
         <img [src]="location.Image.filePath" class="w-full h-36 object-cover rounded-md">
       }
@@ -39,7 +39,7 @@ import { WorldService } from '../../../services/world.service';
         </div>
         <div class="flex-2"></div>
       </div>
-      <div class="flex flex-row gap-4 mt-10 h-full">
+      <div class="flex flex-row gap-4 flex-1 overflow-hidden h-full mt-10">
         <div class="flex-4 h-auto  flex flex-col overflow-hidden">
           <div class="flex flex-row gap-4 ms-1">
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'details'}">Detalhes</a>
