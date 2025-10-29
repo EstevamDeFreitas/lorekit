@@ -20,7 +20,7 @@ import { WorldService } from '../../../services/world.service';
   selector: 'app-location-edit',
   imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent],
   template: `
-    <div class="flex flex-col h-screen">
+    <div class="flex flex-col" [ngClass]="{'h-[90vh]': !isInDialog(), 'h-[70vh]': isInDialog()}">
       @if(location.Image){
         <img [src]="location.Image.filePath" class="w-full h-36 object-cover rounded-md">
       }
