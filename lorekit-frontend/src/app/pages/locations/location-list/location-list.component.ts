@@ -7,7 +7,6 @@ import { LocationService } from '../../../services/location.service';
 import { Location, LocationCategory } from '../../../models/location.model';
 import { LocationCategoriesService } from '../../../services/location-categories.service';
 import { Dialog } from '@angular/cdk/dialog';
-import { LocationEditComponent } from '../location-edit/location-edit.component';
 import { ImageService } from '../../../services/image.service';
 import { environment } from '../../../../enviroments/environment';
 import { buildImageUrl } from '../../../models/image.model';
@@ -15,8 +14,9 @@ import { buildImageUrl } from '../../../models/image.model';
 @Component({
   selector: 'app-location-list',
   imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle],
+  standalone: true,
   template: `
-    <div class="h-screen flex flex-col">
+    <div class="h-full min-h-0 flex flex-col">
       <div class="flex flex-row justify-between items-center mb-4">
         @if (isRouteComponent()){
           <h2 class="text-xl font-bold">Localidades</h2>
@@ -79,6 +79,7 @@ export class LocationListComponent implements OnInit {
   public buildImageUrl = buildImageUrl;
 
   worldId = input<string>();
+  locationId = input<string>();
 
   dialog = inject(Dialog);
 
@@ -106,7 +107,7 @@ export class LocationListComponent implements OnInit {
   }
 
   getLocations() {
-    const locations = this.worldId() ? this.locationService.getLocationByWorldId(this.worldId()!) : this.locationService.getLocations();
+    const locations = this.worldId() && !this.locationId() ? this.locationService.getLocationByWorldId(this.worldId()!) : this.locationService.getLocations(this.locationId());
 
     this.locationGroups = locations.reduce((groups: Record<string, Location[]>, location) => {
       const category = location.LocationCategory ? location.LocationCategory.id : '';
@@ -130,7 +131,7 @@ export class LocationListComponent implements OnInit {
 
     let newLocation = new Location('', formData['name'], '');
 
-    this.locationService.saveLocation(newLocation, formData['type'], this.worldId());
+    this.locationService.saveLocation(newLocation, formData['type'], this.worldId(), this.locationId());
 
     this.getLocations();
   }
@@ -140,15 +141,17 @@ export class LocationListComponent implements OnInit {
       this.router.navigate(['app/location/edit', locationId]);
     }
     else {
-      var dialogRef = this.dialog.open(LocationEditComponent, {
-        data: { id: locationId },
-        panelClass: 'screen-dialog',
-        height: '80vh',
-        width: '80vw',
-      });
+      import('../location-edit/location-edit.component').then(({ LocationEditComponent }) => {
+        const dialogRef = this.dialog.open(LocationEditComponent, {
+          data: { id: locationId },
+          panelClass: 'screen-dialog',
+          height: '80vh',
+          width: '80vw',
+        });
 
-      dialogRef.closed.subscribe(() => {
-        this.getLocations();
+        dialogRef.closed.subscribe(() => {
+          this.getLocations();
+        });
       });
     }
   }

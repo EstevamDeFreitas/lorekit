@@ -13,14 +13,14 @@ import { PersonalizationComponent } from '../../../components/personalization/pe
 import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
 import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 import { LocationListComponent } from "../../locations/location-list/location-list.component";
-import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { ImageUploaderComponent } from "../../../components/ImageUploader/image-uploader.component";
 import { Image } from '../../../models/image.model';
 import { ImageService } from '../../../services/image.service';
 
 @Component({
-  imports: [NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, ImageUploaderComponent],
+  standalone: true,
+  imports: [NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent],
   template: `
     <div class="flex flex-col h-screen">
       @if(currentWorld.Image){
@@ -131,7 +131,7 @@ export class WorldInfoComponent implements OnInit {
     this.worldService.updateWorld(this.currentWorld.id, this.currentWorld);
   }
 
-  getFields() : FormField[] {
+  getFields() : any[] {
     return [
       { key: 'concept', label: 'Conceito', value: this.currentWorld.concept || '', type: 'text-area' },
     ];

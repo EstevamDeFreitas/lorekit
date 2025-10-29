@@ -13,12 +13,13 @@ import { LocationCategoriesService } from '../../../services/location-categories
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { environment } from '../../../../enviroments/environment';
+import { LocationListComponent } from "../location-list/location-list.component";
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent],
   template: `
-    <div class="flex flex-col h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[80vh]': isInDialog()}">
+    <div class="flex flex-col h-screen">
       @if(location.Image){
         <img [src]="location.Image.filePath" class="w-full h-36 object-cover rounded-md">
       }
@@ -38,10 +39,25 @@ import { environment } from '../../../../enviroments/environment';
         <div class="flex-2"></div>
       </div>
       <div class="flex flex-row gap-4 mt-10 h-full">
-        <div class="flex-4 flex flex-col h-[calc(100%-8rem)] overflow-y-auto scrollbar-dark">
-          <div class="p-4 rounded-lg mt-2 flex flex-col">
+        <div class="flex-4 h-auto  flex flex-col overflow-hidden">
+          <div class="flex flex-row gap-4 ms-1">
+            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'details'}">Detalhes</a>
+            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'localities'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'localities'}">Localidades</a>
+          </div>
+          <div class="p-4 pb-10 rounded-lg mt-2 flex-1 overflow-hidden flex flex-col">
             @if (!isLoading) {
-              <app-editor [document]="location.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
+              @switch (currentTab) {
+                @case ('details') {
+                  <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
+                    <app-editor [document]="location.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
+                  </div>
+                }
+                @case ('localities') {
+                  <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
+                    <app-location-list [worldId]="location.World?.id" [locationId]="location.id"></app-location-list>
+                  </div>
+                }
+              }
             }
           </div>
         </div>
@@ -73,6 +89,8 @@ export class LocationEditComponent implements OnInit {
 
   isInDialog = computed(() => !!this.dialogref);
 
+  currentTab : string = 'details';
+
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === LocationEditComponent ||
       this.activatedRoute.component === LocationEditComponent;
@@ -92,6 +110,7 @@ export class LocationEditComponent implements OnInit {
   locationCategories: LocationCategory[] = [];
 
   selectedCategoryId: string = '';
+  selectedParentLocationId: string = '';
 
   ngOnInit(): void {
     this.getLocation();
@@ -110,7 +129,7 @@ export class LocationEditComponent implements OnInit {
   }
 
   saveLocation() {
-    this.locationService.saveLocation(this.location, this.selectedCategoryId);
+    this.locationService.saveLocation(this.location, this.selectedCategoryId, this.location.World ? this.location.World.id : undefined, this.selectedParentLocationId || undefined);
   }
 
   onDocumentSave($event: any) {
@@ -121,13 +140,15 @@ export class LocationEditComponent implements OnInit {
   onFieldsSave(formData: Record<string, string>) {
     this.location.concept = formData['concept'];
     this.selectedCategoryId = formData['categoryId'];
+    this.selectedParentLocationId = formData['parentLocationId'];
     this.saveLocation();
   }
 
   getFields() : FormField[] {
     return [
       { key: 'concept', label: 'Conceito', value: this.location.concept || '', type: 'text-area' },
-      { key: 'categoryId', label: 'Categoria', value: this.selectedCategoryId || '', options: this.locationCategories, optionCompareProp: 'id', optionDisplayProp: 'name' }
+      { key: 'categoryId', label: 'Categoria', value: this.selectedCategoryId || '', options: this.locationCategories, optionCompareProp: 'id', optionDisplayProp: 'name' },
+      { key: 'parentLocationId', label: 'Localidade Pai', value: this.location.ParentLocation ? this.location.ParentLocation.id : '', options: this.locationService.getLocations(), optionCompareProp: 'id', optionDisplayProp: 'name' },
     ];
   }
 

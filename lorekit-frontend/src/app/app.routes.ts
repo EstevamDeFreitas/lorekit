@@ -6,17 +6,15 @@ import { WorldListComponent } from './pages/world/world-list/world-list.componen
 import { MainUiComponent } from './pages/shared/main-ui/main-ui.component';
 import { WorldInfoComponent } from './pages/world/world-info/world-info.component';
 import { DocumentEditComponent } from './pages/documents/document-edit/document-edit.component';
-import { LocationListComponent } from './pages/locations/location-list/location-list.component';
-import { LocationEditComponent } from './pages/locations/location-edit/location-edit.component';
 
 export const routes: Routes = [
   {path: '', redirectTo: 'app', pathMatch: 'full'},
   {path: 'app', component: MainUiComponent, children: [
       {path: 'world', children:[
         {path: '', component: WorldListComponent},
-        {path: 'info/:worldId', component: WorldInfoComponent, children: [
-          {path: 'edit', component: WorldEditComponent},
-        ]},
+        {path: 'info/:worldId', loadComponent: () =>
+      import('./pages/world/world-info/world-info.component')
+        .then(m => m.WorldInfoComponent)},
 
       ]},
       {path:'document', children:[
@@ -24,8 +22,18 @@ export const routes: Routes = [
       ]},
       {path:'location', children:[
         {path: '', redirectTo: 'list', pathMatch: 'full'},
-        {path: 'list', component: LocationListComponent},
-        {path: 'edit/:locationId', component: LocationEditComponent},
+        {
+            path: 'list',
+            loadComponent: () =>
+              import('./pages/locations/location-list/location-list.component')
+                .then(m => m.LocationListComponent),
+          },
+          {
+            path: 'edit/:locationId',
+            loadComponent: () =>
+              import('./pages/locations/location-edit/location-edit.component')
+                .then(m => m.LocationEditComponent),
+          },
       ]},
     ]
   }

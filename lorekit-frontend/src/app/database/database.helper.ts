@@ -8,7 +8,7 @@ type TableDef = {
   indexes?: string[];
 };
 
-type IncludeDef = {table:string, firstOnly?: boolean};
+type IncludeDef = {table:string, firstOnly?: boolean, isParent?: boolean};
 
 declare const window: any;
 
@@ -283,6 +283,7 @@ export class CrudHelper {
     if(this.debugging){
       console.log(sql, Object.values(where));
     }
+
     const res = this.db.exec(sql, Object.values(where));
     let rows = mapResult(res);
 
@@ -311,31 +312,63 @@ export class CrudHelper {
   private loadIncludes(table: string, id: string, include: IncludeDef[]) {
     const results: Record<string, any[]> = {};
     for (const relTable of include) {
-      const relSql = `
-        SELECT entityTable, entityId
-        FROM "Relationship"
-        WHERE parentTable = ? AND parentId = ? AND entityTable = ?
-      `;
-      if(this.debugging){
-        console.log(relSql, [table, id, relTable.table]);
-      }
-      const relRes = this.db.exec(relSql, [table, id, relTable.table]);
-      const relRows = mapResult(relRes);
-
-
-      const entities = [];
-      for (const r of relRows) {
-        const dataSql = `SELECT * FROM "${r.entityTable}" WHERE id = ?`;
-        if(this.debugging){
-          console.log(dataSql, [r.entityId]);
+      // Normal flow: current (table,id) is the parent; fetch its children in relTable.table
+      if (!relTable.isParent) {
+        const relSql = `
+          SELECT entityTable, entityId
+          FROM "Relationship"
+          WHERE parentTable = ? AND parentId = ? AND entityTable = ?
+        `;
+        if (this.debugging) {
+          console.log(relSql, [table, id, relTable.table]);
         }
-        const dataRes = this.db.exec(dataSql, [r.entityId]);
-        entities.push(...mapResult(dataRes));
-      }
-      if (relTable.firstOnly) {
-        results[relTable.table] = entities[0] || null;
+        const relRes = this.db.exec(relSql, [table, id, relTable.table]);
+        const relRows = mapResult(relRes);
+
+        const entities: any[] = [];
+        for (const r of relRows) {
+          const dataSql = `SELECT * FROM "${r.entityTable}" WHERE id = ?`;
+          if (this.debugging) {
+            console.log(dataSql, [r.entityId]);
+          }
+          const dataRes = this.db.exec(dataSql, [r.entityId]);
+          entities.push(...mapResult(dataRes));
+        }
+        if (relTable.firstOnly) {
+          // Keep existing shape: singular key returns single object (or null)
+          results[relTable.table] = entities[0] || null;
+        } else {
+          results[relTable.table + 's'] = entities;
+        }
       } else {
-        results[relTable.table + 's'] = entities;
+        // Reverse flow: current (table,id) is the child; fetch its PARENT(s) from relTable.table
+        const revSql = `
+          SELECT parentTable, parentId
+          FROM "Relationship"
+          WHERE entityTable = ? AND entityId = ? AND parentTable = ?
+        `;
+        if (this.debugging) {
+          console.log(revSql, [table, id, relTable.table]);
+        }
+        const revRes = this.db.exec(revSql, [table, id, relTable.table]);
+        const revRows = mapResult(revRes);
+
+        const parents: any[] = [];
+        for (const r of revRows) {
+          const parentSql = `SELECT * FROM "${r.parentTable}" WHERE id = ?`;
+          if (this.debugging) {
+            console.log(parentSql, [r.parentId]);
+          }
+          const parentRes = this.db.exec(parentSql, [r.parentId]);
+          parents.push(...mapResult(parentRes));
+        }
+
+        const parentKeyBase = 'Parent' + relTable.table;
+        if (relTable.firstOnly) {
+          (results as any)[parentKeyBase] = parents[0] || null;
+        } else {
+          (results as any)[parentKeyBase + 's'] = parents;
+        }
       }
     }
     return results;

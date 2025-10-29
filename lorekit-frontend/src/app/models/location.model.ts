@@ -1,5 +1,6 @@
 import { Image } from "./image.model";
 import { Personalization } from "./personalization.model";
+import { World } from "./world.model";
 
 export class Location{
   id: string;
@@ -11,6 +12,8 @@ export class Location{
   Personalization?: Personalization;
   Image?: Image;
   LocationCategory?: LocationCategory;
+  World?: World;
+  ParentLocation?: Location;
 
   constructor(id: string = '', name: string = '', description: string = '') {
     this.id = id;
