@@ -38,11 +38,7 @@ export class ComboBoxComponent implements OnInit {
   size = input<string>('md');
 
   ngOnInit() {
-    if (this.comboValue() === '' && this.items()?.length > 0) {
-      setTimeout(() => {
-        this.comboValue.set(this.items()[0]);
-      });
-    }
+
   }
 
   isObject(item: any): boolean {

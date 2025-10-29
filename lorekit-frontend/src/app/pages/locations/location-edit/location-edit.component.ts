@@ -14,6 +14,7 @@ import { FormField } from '../../../components/form-overlay/form-overlay.compone
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { environment } from '../../../../enviroments/environment';
 import { LocationListComponent } from "../location-list/location-list.component";
+import { WorldService } from '../../../services/world.service';
 
 @Component({
   selector: 'app-location-edit',
@@ -54,7 +55,7 @@ import { LocationListComponent } from "../location-list/location-list.component"
                 }
                 @case ('localities') {
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-location-list [worldId]="location.World?.id" [locationId]="location.id"></app-location-list>
+                    <app-location-list [worldId]="location.ParentWorld?.id" [locationId]="location.id"></app-location-list>
                   </div>
                 }
               }
@@ -64,7 +65,7 @@ import { LocationListComponent } from "../location-list/location-list.component"
         <div class="w-70">
           @if (!isLoading){
             <div class="p-4 rounded-lg bg-zinc-900">
-              <app-entity-lateral-menu [fields]="getFields()" (onSave)="onFieldsSave($event)" entityTable="Location" [entityId]="location.id"></app-entity-lateral-menu>
+              <app-entity-lateral-menu [fields]="fields" (onSave)="onFieldsSave($event)" entityTable="Location" [entityId]="location.id"></app-entity-lateral-menu>
             </div>
           }
         </div>
@@ -84,6 +85,7 @@ export class LocationEditComponent implements OnInit {
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
   private locationService = inject(LocationService);
+  private worldService = inject(WorldService);
   private cdr = inject(ChangeDetectorRef);
   private locationCategoryService = inject(LocationCategoriesService);
 
@@ -110,7 +112,11 @@ export class LocationEditComponent implements OnInit {
   locationCategories: LocationCategory[] = [];
 
   selectedCategoryId: string = '';
-  selectedParentLocationId: string = '';
+  selectedParentLocationId?: string;
+  selectedWorldId?: string;
+
+  // Cache fields to avoid recreating a new array each change detection cycle
+  fields: FormField[] = [];
 
   ngOnInit(): void {
     this.getLocation();
@@ -119,17 +125,19 @@ export class LocationEditComponent implements OnInit {
 
   getCategories() {
     this.locationCategories = this.locationCategoryService.getLocationCategories();
+    this.buildFields();
   }
 
   getLocation(){
     this.location = this.locationService.getLocationById(this.locationId());
     this.selectedCategoryId = this.location.LocationCategory ? this.location.LocationCategory.id : '';
     this.isLoading = false;
-    this.cdr.detectChanges();
+
+    this.buildFields();
   }
 
   saveLocation() {
-    this.locationService.saveLocation(this.location, this.selectedCategoryId, this.location.World ? this.location.World.id : undefined, this.selectedParentLocationId || undefined);
+    this.locationService.saveLocation(this.location, this.selectedCategoryId, this.selectedWorldId || undefined, this.selectedParentLocationId || undefined);
   }
 
   onDocumentSave($event: any) {
@@ -141,15 +149,24 @@ export class LocationEditComponent implements OnInit {
     this.location.concept = formData['concept'];
     this.selectedCategoryId = formData['categoryId'];
     this.selectedParentLocationId = formData['parentLocationId'];
+    this.selectedWorldId = formData['parentWorldId'];
+
+    console.log("Retornado da bosta do entity lateral", formData);
+
+
     this.saveLocation();
   }
 
-  getFields() : FormField[] {
-    return [
+  // Build the fields array once per relevant state change to keep template stable
+  private buildFields() {
+
+    this.fields = [
       { key: 'concept', label: 'Conceito', value: this.location.concept || '', type: 'text-area' },
       { key: 'categoryId', label: 'Categoria', value: this.selectedCategoryId || '', options: this.locationCategories, optionCompareProp: 'id', optionDisplayProp: 'name' },
       { key: 'parentLocationId', label: 'Localidade Pai', value: this.location.ParentLocation ? this.location.ParentLocation.id : '', options: this.locationService.getLocations(), optionCompareProp: 'id', optionDisplayProp: 'name' },
+      { key: 'parentWorldId', label: 'Mundo', value: this.location.ParentWorld ? this.location.ParentWorld.id : '', options: this.worldService.getWorlds(), optionCompareProp: 'id', optionDisplayProp: 'name' },
     ];
+
   }
 
   getPersonalizationItem(item: any, key: string): string | null {

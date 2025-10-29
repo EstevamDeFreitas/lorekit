@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, OnChanges, OnInit, output, SimpleChanges } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, inject, input, OnChanges, OnInit, output, SimpleChanges } from '@angular/core';
 import { ButtonComponent } from "../button/button.component";
 import { DocumentService } from '../../services/document.service';
 import { Document } from '../../models/document.model';
@@ -25,7 +25,7 @@ import { debounceTime, Subject } from 'rxjs';
     @switch (currentTab) {
       @case ('properties') {
         <div class="flex flex-col gap-2 h-[calc(100%-8rem)]  overflow-y-scroll scrollbar-dark">
-          @for (field of fields(); track $index) {
+          @for (field of fieldValues; track field.key) {
             @if (field.options && field.options.length > 0) {
               <app-combo-box
                 [label]="field.label"
@@ -88,7 +88,7 @@ import { debounceTime, Subject } from 'rxjs';
   </div>`,
   styleUrl: './entity-lateral-menu.component.css',
 })
-export class EntityLateralMenuComponent implements OnInit {
+export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewInit {
   documentArray:Array<Document> = [];
 
   entityTable = input.required<string>();
@@ -100,6 +100,7 @@ export class EntityLateralMenuComponent implements OnInit {
   fieldValues: FormField[] = [];
 
   private fieldValueChanges = new Subject<FormField>();
+  private initialized = false;
 
   currentTab = 'properties';
 
@@ -113,10 +114,9 @@ export class EntityLateralMenuComponent implements OnInit {
   ngOnInit() {
     this.loadDocuments();
 
-    this.fieldValues = this.fields();
-
+    this.syncFieldsFromInput();
     this.fieldValueChanges.pipe(
-      debounceTime(500) // espera 500ms após a última emissão
+      debounceTime(500)
     ).subscribe(() => {
       this.onFieldChange();
     });
@@ -124,6 +124,16 @@ export class EntityLateralMenuComponent implements OnInit {
 
   loadDocuments() {
     this.documentArray = this.documentService.getDocuments(this.entityTable(), this.entityId());
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['fields']) {
+      this.syncFieldsFromInput();
+    }
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => this.initialized = true);
   }
 
   createDocument(formData: Record<string, string>) {
@@ -164,8 +174,10 @@ export class EntityLateralMenuComponent implements OnInit {
   }
 
   onFieldValueChange(field: FormField) {
-    this.fieldValues.find(f => f.key === field.key)!.value = field.value;
+    const idx = this.fieldValues.findIndex(f => f.key === field.key);
+    if (idx >= 0) this.fieldValues[idx].value = field.value;
 
+    if (!this.initialized) return; // evita emitir no init
     this.fieldValueChanges.next(field);
   }
 
@@ -176,6 +188,11 @@ export class EntityLateralMenuComponent implements OnInit {
     });
 
     this.onSave.emit(formData);
+  }
+
+  private syncFieldsFromInput() {
+    const src = this.fields() || [];
+    this.fieldValues = src.map(f => ({ ...f, value: f.value ?? '' }));
   }
 
 }

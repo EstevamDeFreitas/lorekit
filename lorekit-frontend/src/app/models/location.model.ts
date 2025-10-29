@@ -12,7 +12,7 @@ export class Location{
   Personalization?: Personalization;
   Image?: Image;
   LocationCategory?: LocationCategory;
-  World?: World;
+  ParentWorld?: World;
   ParentLocation?: Location;
 
   constructor(id: string = '', name: string = '', description: string = '') {

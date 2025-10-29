@@ -14,7 +14,7 @@ export class WorldService {
     this.crud = this.dbProvider.getCrudHelper();
   }
 
-  getWorlds() {
+  getWorlds() : World[] {
     return this.crud.findAll('World', {}, [{"table": "Personalization", "firstOnly": true}, {"table": "Image", "firstOnly": true}]);
   }
 
