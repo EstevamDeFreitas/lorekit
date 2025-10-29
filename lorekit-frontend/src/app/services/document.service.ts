@@ -16,11 +16,11 @@ export class DocumentService {
   }
 
   getDocuments(entityTable: string, entityId: string): Document[] {
-    return this.crud.findAll('Document', {}, [], {parentTable: entityTable, parentId: entityId});
+    return this.crud.findAll('Document', {}, [{"table": "Personalization", "firstOnly": true}], {parentTable: entityTable, parentId: entityId});
   }
 
   getDocument(documentId: string) : Document {
-    return this.crud.findById('Document', documentId);
+    return this.crud.findById('Document', documentId, [{"table": "Personalization", "firstOnly": true}]);
   }
 
   saveDocument(document: Document, entityTable: string, entityId: string) : Document {
