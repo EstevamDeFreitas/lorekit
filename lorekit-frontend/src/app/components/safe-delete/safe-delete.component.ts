@@ -13,10 +13,10 @@ import { LocationService } from '../../services/location.service';
     <div class="flex flex-col">
       <h2 class="text-lg font-bold">Excluir "{{ dialogData.entityName }}"</h2>
       <br>
-      <div class="flex flex-row gap-1">
+      <!-- <div class="flex flex-row gap-1">
         <input type="checkbox" id="relatedItems" [(ngModel)]="removeRelatedItems"/>
         <p>Excluir items relacionados</p>
-      </div>
+      </div> -->
       <br>
       <div>
         <app-input [label]="'Escreva o nome para confirmar:'" [(value)]="inputValue"></app-input>
