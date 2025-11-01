@@ -27,17 +27,50 @@ import { ImageUploaderComponent } from '../ImageUploader/image-uploader.componen
           <p>Ícone</p>
           <app-input [(value)]="personalizationContent['icon']"></app-input>
         </div>
+
         <div class="flex flex-col gap-2 p-2 border-b border-zinc-800">
           <p>Imagem de Fundo</p>
-          @if(image) {
-            <img (click)="openImageUploader()" class="h-20 w-full object-cover cursor-pointer hover:opacity-50 rounded-md transition" [src]="image.filePath" alt="">
-          }
-          @else {
-            <div (click)="openImageUploader()" class="h-20 w-full bg-zinc-800 flex items-center justify-center rounded-md cursor-pointer hover:opacity-50">
-              <span class="text-zinc-500">Nenhuma imagem definida</span>
-            </div>
-          }
+          <div
+            class="w-full max-h-[12.5rem]"
+            [style.aspect-ratio]="backgroundAspectRatio"
+            (click)="openImageUploader('default', backgroundAspectRatio)"
+          >
+            @if (backgroundImage) {
+              <img
+                class="w-full h-full object-contain cursor-pointer hover:opacity-50 rounded-md transition bg-zinc-800"
+                [src]="backgroundImage.filePath"
+                alt=""
+              >
+            } @else {
+              <div class="w-full h-full bg-zinc-800 flex items-center justify-center rounded-md cursor-pointer hover:opacity-50">
+                <span class="text-zinc-500">Nenhuma imagem definida</span>
+              </div>
+            }
+          </div>
         </div>
+
+        @if (relationshipInfo.entityTable == 'Species'){
+          <div class="flex flex-col gap-2 p-2 border-b border-zinc-800">
+            <p>Imagem da Espécie</p>
+            <div
+              class="w-full max-h-[12.5rem]"
+              [style.aspect-ratio]="fullBodyAspectRatio"
+              (click)="openImageUploader('fullBody', fullBodyAspectRatio)"
+            >
+              @if (fullBodyImage) {
+                <img
+                  class="w-full h-full object-contain cursor-pointer hover:opacity-50 rounded-md transition bg-zinc-800"
+                  [src]="fullBodyImage.filePath"
+                  alt=""
+                >
+              } @else {
+                <div class="w-full h-full bg-zinc-800 flex items-center justify-center rounded-md cursor-pointer hover:opacity-50">
+                  <span class="text-zinc-500">Nenhuma imagem definida</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
 
       </div>
       <div class="flex flex-row justify-end gap-2 mt-4">
@@ -59,7 +92,16 @@ export class PersonalizationComponent {
   dialog = inject(Dialog);
 
   private imageService = inject(ImageService);
-  image : Image | null = null;
+  backgroundImage : Image | null = null;
+  profileImage : Image | null = null;
+  fullBodyImage : Image | null = null;
+
+  backgroundAspectRatio = 10 / 1;
+
+  hasProfileImage = false;
+  profileAspectRatio = 1 / 1;
+  hasFullBodyImage = false;
+  fullBodyAspectRatio = 20 / 35;
 
   constructor(private personalizationService: PersonalizationService) {
     this.loadPersonalization();
@@ -87,12 +129,14 @@ export class PersonalizationComponent {
   }
 
   loadImages() {
-    this.image = this.imageService.getImage(this.relationshipInfo.entityTable, this.relationshipInfo.entityId, "background");
+    this.backgroundImage = this.imageService.getImage(this.relationshipInfo.entityTable, this.relationshipInfo.entityId, "default");
+    this.profileImage = this.imageService.getImage(this.relationshipInfo.entityTable, this.relationshipInfo.entityId, "profile");
+    this.fullBodyImage = this.imageService.getImage(this.relationshipInfo.entityTable, this.relationshipInfo.entityId, "fullBody");
   }
 
-  openImageUploader() {
+  openImageUploader(usageKey:string, aspectRatio?:number) {
     var dialogRef = this.dialog.open(ImageUploaderComponent, {
-      data: { entityTable: this.relationshipInfo.entityTable, entityId: this.relationshipInfo.entityId, usageKey: "background" },
+      data: { entityTable: this.relationshipInfo.entityTable, entityId: this.relationshipInfo.entityId, usageKey: usageKey, aspectRatio: aspectRatio },
       panelClass: 'screen-dialog',
       height: '20rem',
       width: '30rem',

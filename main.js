@@ -43,14 +43,14 @@ function createWindow() {
     height: 800,
     webPreferences: {
       contextIsolation: true,
-      // sandbox pode ficar true (ou padrão). Não usamos Node no preload.
+      webSecurity: isDev ? false : true,
       preload: path.join(__dirname, 'preload.js'),
     },
   });
 
   if(isDev) {
     mainWindow.loadURL(devUrl);
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
+    //mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
   else{
     mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');

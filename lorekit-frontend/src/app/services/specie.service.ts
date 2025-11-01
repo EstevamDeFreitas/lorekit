@@ -19,7 +19,9 @@ export class SpecieService {
 
     return this.crud.findAll('Species', {}, [
       {"table": "Personalization", "firstOnly": true},
+      {"table": "Image", "firstOnly": false},
       {"table": "World", "firstOnly":true, "isParent": true},
+      {"table": "Location", "firstOnly":true, "isParent": true},
       {"table": "Species", "firstOnly":true, "isParent": true}
     ], existsRelation);
   }
@@ -27,6 +29,7 @@ export class SpecieService {
   getSpecie(specieId: string) : Specie {
     return this.crud.findById('Species', specieId, [
       {"table": "Personalization", "firstOnly": true},
+      {"table": "Image", "firstOnly": false},
       {"table": "World", "firstOnly":true, "isParent": true},
       {"table": "Location", "firstOnly":true, "isParent": true},
       {"table": "Species", "firstOnly":true, "isParent": true}

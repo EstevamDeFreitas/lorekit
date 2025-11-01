@@ -18,17 +18,24 @@ import { LocationListComponent } from '../../locations/location-list/location-li
 import { SpecieListComponent } from "../specie-list/specie-list.component";
 import { InputComponent } from '../../../components/input/input.component';
 import { TextAreaComponent } from "../../../components/text-area/text-area.component";
+import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 
 @Component({
   selector: 'app-specie-edit',
   imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent],
   template: `
-    <div class="flex flex-col h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[75vh]': isInDialog()}">
-      @if(specie.Image){
-        <img [src]="specie.Image.filePath" class="w-full h-36 object-cover rounded-md">
+    <div class="flex flex-col relative h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[75vh]': isInDialog()}">
+      @if(getImageByUsageKey(specie.Images, 'default') != null){
+        @let img = getImageByUsageKey(specie.Images, 'default');
+        <img [src]="img?.filePath" class="w-full h-36 object-cover rounded-md">
       }
       @else{
         <div class="w-full h-36 object-cover rounded-md" [ngClass]="getColor(specie)"></div>
+      }
+
+      @if(getImageByUsageKey(specie.Images, 'fullBody') != null){
+        @let fullBodyImg = getImageByUsageKey(specie.Images, 'fullBody');
+        <img [src]="fullBodyImg?.filePath" class="w-19 h-33 absolute top-1.5 left-1.5 object-cover rounded-md">
       }
       <br>
       <div class="flex flex-row items-center">
@@ -101,6 +108,7 @@ export class SpecieEditComponent implements OnInit {
   private specieService = inject(SpecieService);
   private locationService = inject(LocationService);
   public getPersonalizationValue = getPersonalizationValue;
+  public getImageByUsageKey = getImageByUsageKey;
 
   currentTab: string = 'properties';
 

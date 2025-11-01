@@ -15,7 +15,7 @@ export class Specie{
   physicalCharacteristics: string;
   behavioralCharacteristics: string;
 
-  Image?:Image;
+  Images?:Image[];
   ParentLocation?: Location;
   ParentWorld?: World;
   ParentSpecie?: Specie;

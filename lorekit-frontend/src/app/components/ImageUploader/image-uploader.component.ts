@@ -67,6 +67,7 @@ export class ImageUploaderComponent implements OnInit {
     this.entityTable = this.data?.entityTable || '';
     this.entityId = this.data?.entityId || '';
     this.usageKey = this.data?.usageKey || 'default';
+    this.aspectRatio = this.data?.aspectRatio || (10 / 1);
     if (this.entityTable && this.entityId) {
       this.loadImages();
     }
