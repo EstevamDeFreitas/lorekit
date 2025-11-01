@@ -8,12 +8,13 @@ import { PaletteSelectorComponent } from "../palette-selector/palette-selector.c
 import { ImageService } from '../../services/image.service';
 import { Image } from '../../models/image.model';
 import { ImageUploaderComponent } from '../ImageUploader/image-uploader.component';
+import { FormsModule } from '@angular/forms';
 
 
 
 @Component({
   selector: 'app-personalization',
-  imports: [InputComponent, ButtonComponent, PaletteSelectorComponent],
+  imports: [InputComponent, ButtonComponent, PaletteSelectorComponent, FormsModule],
   template: `
     <div class="p-4 bg-zinc-900 rounded-md border border-zinc-800 w-90">
       <h2 class="text-lg mb-4">Personalização</h2>
@@ -21,7 +22,21 @@ import { ImageUploaderComponent } from '../ImageUploader/image-uploader.componen
       <div class="flex flex-col border border-zinc-800 rounded-md mt-2">
         <div class="flex flex-row justify-between items-center p-2 border-b border-zinc-800">
           <p>Cor</p>
-          <app-palette-selector [(selectedColor)]="personalizationContent['color']"></app-palette-selector>
+          <div class="flex flex-row items-center gap-2">
+            <input
+              type="color"
+              class="h-8 w-10 rounded border border-zinc-700 bg-transparent"
+              [(ngModel)]="personalizationContent['color']"
+              (ngModelChange)="onColorChange($event)"
+            />
+            <app-input
+              class="w-30"
+              [placeholder]="'#RRGGBB'"
+              [type]="'text'"
+              [(value)]="personalizationContent['color']"
+              (valueChange)="onHexInput($event)"
+            ></app-input>
+          </div>
         </div>
         <div class="flex flex-row justify-between items-center p-2 border-b border-zinc-800">
           <p>Ícone</p>
@@ -145,6 +160,30 @@ export class PersonalizationComponent {
     dialogRef.closed.subscribe(() => {
       this.loadImages();
     });
+  }
+
+  onColorChange(hex: string) {
+    this.personalizationContent['color'] = this.normalizeHex(hex, this.personalizationContent['color']);
+  }
+
+  onHexInput(val: string) {
+    this.personalizationContent['color'] = this.normalizeHex(val, this.personalizationContent['color']);
+  }
+
+  private normalizeHex(value: string, fallback: string = '#000000'): string {
+    if (!value) return fallback || '#000000';
+    let v = value.trim().toUpperCase();
+    if (!v.startsWith('#')) v = `#${v}`;
+    // Expande #RGB -> #RRGGBB
+    const short = /^#([0-9A-F]{3})$/i;
+    if (short.test(v)) {
+      v = v.replace(short, (_m, g) => {
+        const [r, g1, b] = g;
+        return `#${r}${r}${g1}${g1}${b}${b}`.toUpperCase();
+      });
+    }
+    // Valida #RRGGBB
+    return /^#([0-9A-F]{6})$/i.test(v) ? v : (fallback || '#000000');
   }
 
 }

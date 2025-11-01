@@ -1,5 +1,5 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { NgClass } from '@angular/common';
+import { NgClass, NgStyle } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
@@ -15,17 +15,18 @@ import { SafeDeleteButtonComponent } from "../../../components/safe-delete-butto
 import { environment } from '../../../../enviroments/environment';
 import { LocationListComponent } from "../location-list/location-list.component";
 import { WorldService } from '../../../services/world.service';
+import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, NgStyle],
   template: `
     <div class="flex flex-col h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[75vh]': isInDialog()}">
       @if(location.Image){
         <img [src]="location.Image.filePath" class="w-full h-36 object-cover rounded-md">
       }
       @else{
-        <div class="w-full h-36 object-cover rounded-md" [ngClass]="getColor(location)"></div>
+        <div class="w-full h-36 object-cover rounded-md" [ngStyle]="{'background-color': getPersonalizationValue(location, 'color') || 'var(--color-zinc-800)'}"></div>
       }
       <br>
       <div class="flex flex-row items-center">
@@ -86,6 +87,7 @@ export class LocationEditComponent implements OnInit {
   private worldService = inject(WorldService);
   private cdr = inject(ChangeDetectorRef);
   private locationCategoryService = inject(LocationCategoriesService);
+  public getPersonalizationValue = getPersonalizationValue;
 
   isInDialog = computed(() => !!this.dialogref);
 
@@ -162,17 +164,10 @@ export class LocationEditComponent implements OnInit {
 
   }
 
-  getPersonalizationItem(item: any, key: string): string | null {
-      if (item.Personalization && item.Personalization.contentJson != null && item.Personalization.contentJson != '') {
-        return JSON.parse(item.Personalization.contentJson)[key] || null;
-      }
-      return null;
-    }
-
-    getColor(item: any): string {
-      const color = this.getPersonalizationItem(item, 'color');
-      return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
-    }
+  getColor(item: any): string {
+    const color = this.getPersonalizationValue(item, 'color');
+    return color ? `bg-${color}-500 text-zinc-900` : '';
+  }
 
 
 }

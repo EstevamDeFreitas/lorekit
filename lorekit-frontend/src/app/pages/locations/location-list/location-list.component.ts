@@ -10,6 +10,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { ImageService } from '../../../services/image.service';
 import { environment } from '../../../../enviroments/environment';
 import { buildImageUrl } from '../../../models/image.model';
+import { getPersonalizationValue } from '../../../models/personalization.model';
 
 @Component({
   selector: 'app-location-list',
@@ -42,16 +43,16 @@ import { buildImageUrl } from '../../../models/image.model';
                 @if (location.Image != null){
                   <div (click)="selectLocation(location.id!)" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + buildImageUrl(location.Image.filePath) + ')', 'background-size': 'cover', 'background-position': 'center'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
                     <div class="flex flex-row gap-2 items-center">
-                      <i class="fa" [ngClass]="getPersonalizationItem(location, 'icon') || 'fa-location-dot'"></i>
+                      <i class="fa" [ngClass]="getPersonalizationValue(location, 'icon') || 'fa-location-dot'"></i>
                       <div class="text-base font-bold">{{ location.name }}</div>
                     </div>
                     <div class="text-xs">{{location.concept}}</div>
                   </div>
                 }
                 @else {
-                  <div (click)="selectLocation(location.id!)" [ngClass]="getLocationColor(location)" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
+                  <div (click)="selectLocation(location.id!)" [ngStyle]="{'background-color': getPersonalizationValue(location, 'color') || 'var(--color-zinc-800)'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
                     <div class="flex flex-row gap-2 items-center">
-                      <i class="fa" [ngClass]="getPersonalizationItem(location, 'icon') || 'fa-location-dot'"></i>
+                      <i class="fa" [ngClass]="getPersonalizationValue(location, 'icon') || 'fa-location-dot'"></i>
                       <div class="text-base font-bold">{{ location.name }}</div>
                     </div>
                     <div class="text-xs">{{location.concept}}</div>
@@ -77,6 +78,7 @@ export class LocationListComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   public buildImageUrl = buildImageUrl;
+  public getPersonalizationValue = getPersonalizationValue;
 
   worldId = input<string>();
   locationId = input<string>();
@@ -154,15 +156,8 @@ export class LocationListComponent implements OnInit {
     }
   }
 
-  getPersonalizationItem(location: Location, key: string): string | null {
-    if (location.Personalization && location.Personalization.contentJson != null && location.Personalization.contentJson != '') {
-      return JSON.parse(location.Personalization.contentJson)[key] || null;
-    }
-    return null;
-  }
-
   getLocationColor(location: Location): string {
-    const color = this.getPersonalizationItem(location, 'color');
+    const color = this.getPersonalizationValue(location, 'color');
     return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
   }
 

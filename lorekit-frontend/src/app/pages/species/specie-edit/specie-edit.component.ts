@@ -9,7 +9,7 @@ import { FormField } from '../../../components/form-overlay/form-overlay.compone
 import { getPersonalizationValue } from '../../../models/personalization.model';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { PersonalizationButtonComponent } from '../../../components/personalization-button/personalization-button.component';
-import { NgClass } from '@angular/common';
+import { NgClass, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { EntityLateralMenuComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
@@ -22,7 +22,7 @@ import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 
 @Component({
   selector: 'app-specie-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent],
+  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent],
   template: `
     <div class="flex flex-col relative h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[75vh]': isInDialog()}">
       @if(getImageByUsageKey(specie.Images, 'default') != null){
@@ -30,7 +30,7 @@ import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
         <img [src]="img?.filePath" class="w-full h-36 object-cover rounded-md">
       }
       @else{
-        <div class="w-full h-36 object-cover rounded-md" [ngClass]="getColor(specie)"></div>
+        <div class="w-full h-36 object-cover rounded-md" [ngStyle]="{'background-color': getPersonalizationValue(specie, 'color') || 'var(--color-zinc-800)'}"></div>
       }
 
       @if(getImageByUsageKey(specie.Images, 'fullBody') != null){

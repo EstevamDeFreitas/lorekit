@@ -10,6 +10,7 @@ import { InputComponent } from "../../../components/input/input.component";
 import { ImageService } from '../../../services/image.service';
 import { environment } from '../../../../enviroments/environment';
 import { buildImageUrl } from '../../../models/image.model';
+import { getPersonalizationValue } from '../../../models/personalization.model';
 
 @Component({
   selector: 'app-world-list',
@@ -55,16 +56,16 @@ import { buildImageUrl } from '../../../models/image.model';
             @if(world.Image != null) {
               <div class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + buildImageUrl(world.Image.filePath) + ')', 'background-size': 'cover', 'background-position': 'center'}" (click)="onWorldSelected(world.id)">
                 <div class="flex flex-row gap-2 items-center">
-                  <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
+                  <i class="fa-solid text-xl" [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-earth'"></i>
                   <div class="text-base font-bold">{{world.name}}</div>
                 </div>
                 <div class="text-xs">{{world.concept}}</div>
               </div>
             }
             @else{
-              <div class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2" [ngClass]="getWorldColor(world)" (click)="onWorldSelected(world.id)">
+              <div class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2" [ngStyle]="{'background-color': getPersonalizationValue(world, 'color') || 'var(--color-zinc-800)'}" (click)="onWorldSelected(world.id)">
                 <div class="flex flex-row gap-2 items-center">
-                  <i class="fa-solid text-xl" [ngClass]="getPersonalizationItem(world, 'icon') || 'fa-earth'"></i>
+                  <i class="fa-solid text-xl" [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-earth'"></i>
                   <div class="text-base font-bold">{{world.name}}</div>
                 </div>
                 <div class="text-xs">{{world.concept}}</div>
@@ -88,6 +89,7 @@ export class WorldListComponent {
   newWorldName = '';
 
   public buildImageUrl = buildImageUrl;
+  public getPersonalizationValue = getPersonalizationValue;
 
   worlds: World[] = [];
 
@@ -121,15 +123,8 @@ export class WorldListComponent {
     this.router.navigate(['/app/world/info', worldId]);
   }
 
-  getPersonalizationItem(world: World, key: string): string | null {
-    if (world.Personalization && world.Personalization.contentJson != null && world.Personalization.contentJson != '') {
-      return JSON.parse(world.Personalization.contentJson)[key] || null;
-    }
-    return null;
-  }
-
   getWorldColor(world: World): string {
-    const color = this.getPersonalizationItem(world, 'color');
+    const color = this.getPersonalizationValue(world, 'color');
     return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
   }
 

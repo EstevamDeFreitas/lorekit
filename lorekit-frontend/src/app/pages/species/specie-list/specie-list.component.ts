@@ -42,7 +42,7 @@ import { LocationService } from '../../../services/location.service';
             <div (click)="selectSpecie(specie.id!)" [ngClass]="[
                 'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2',
                 !img ? getColor(specie) : ''
-              ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : null">
+              ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(specie, 'color') || 'var(--color-zinc-800)'}">
               <div class="flex h-35 flex-row gap-2 items-top">
                 <div class="w-20 h-full flex items-center justify-center bg-zinc-800 rounded-md border border-zinc-500'">
                   @if (fullBodyImg) {
@@ -182,7 +182,7 @@ export class SpecieListComponent implements OnInit {
           'background-image':
             `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${url})`,
           'background-size': 'cover',
-          'background-position': 'center'
+          'background-position': 'center',
         }
       : null;
   }

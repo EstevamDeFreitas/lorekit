@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit }
 import { WorldStateService } from '../../../services/world-state.service';
 import { World } from '../../../models/world.model';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
-import { NgClass, NgIf } from '@angular/common';
+import { NgClass, NgIf, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { WorldService } from '../../../services/world.service';
@@ -18,17 +18,18 @@ import { ImageUploaderComponent } from "../../../components/ImageUploader/image-
 import { Image } from '../../../models/image.model';
 import { ImageService } from '../../../services/image.service';
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
+import { getPersonalizationValue } from '../../../models/personalization.model';
 
 @Component({
   standalone: true,
-  imports: [NgIf, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent],
+  imports: [NgStyle, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent],
   template: `
     <div class="flex flex-col h-screen">
       @if(currentWorld.Image){
         <img [src]="currentWorld.Image.filePath" class="w-full h-36 object-cover rounded-md">
       }
       @else{
-        <div class="w-full h-36 object-cover rounded-md" [ngClass]="getWorldColor(currentWorld)"></div>
+        <div class="w-full h-36 object-cover rounded-md" [ngStyle]="{'background-color': getPersonalizationValue(currentWorld, 'color') || 'var(--color-zinc-800)'}"></div>
       }
       <br>
       <div class="flex flex-row items-center">
@@ -91,6 +92,8 @@ export class WorldInfoComponent implements OnInit {
   currentWorld: World = new World();
   currentWorldId: string | null = null;
 
+  public getPersonalizationValue = getPersonalizationValue;
+
   currentTab : string = 'details';
 
   isLoading: boolean = false;
@@ -139,18 +142,6 @@ export class WorldInfoComponent implements OnInit {
     this.fields = [
       { key: 'concept', label: 'Conceito', value: this.currentWorld.concept || '', type: 'text-area' },
     ];
-  }
-
-  getPersonalizationItem(world: World, key: string): string | null {
-    if (world.Personalization && world.Personalization.contentJson != null && world.Personalization.contentJson != '') {
-      return JSON.parse(world.Personalization.contentJson)[key] || null;
-    }
-    return null;
-  }
-
-  getWorldColor(world: World): string {
-    const color = this.getPersonalizationItem(world, 'color');
-    return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
   }
 
 }
