@@ -83,8 +83,6 @@ export class LocationListComponent implements OnInit {
 
   dialog = inject(Dialog);
 
-  apiUrl = environment.apiUrl;
-
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === LocationListComponent ||
       this.activatedRoute.component === LocationListComponent;

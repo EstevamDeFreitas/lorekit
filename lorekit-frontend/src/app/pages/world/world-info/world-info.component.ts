@@ -17,6 +17,7 @@ import { SafeDeleteButtonComponent } from "../../../components/safe-delete-butto
 import { ImageUploaderComponent } from "../../../components/ImageUploader/image-uploader.component";
 import { Image } from '../../../models/image.model';
 import { ImageService } from '../../../services/image.service';
+import { FormField } from '../../../components/form-overlay/form-overlay.component';
 
 @Component({
   standalone: true,
@@ -75,7 +76,7 @@ import { ImageService } from '../../../services/image.service';
         <div class="w-70">
           @if (!isLoading && currentWorldId){
             <div class="p-4 rounded-lg bg-zinc-900 ">
-              <app-entity-lateral-menu *ngIf="!isLoading && currentWorldId" [fields]="getFields()" (onSave)="onWorldSave($event)" entityTable="World" [entityId]="currentWorldId"></app-entity-lateral-menu>
+              <app-entity-lateral-menu [fields]="fields" (onSave)="onWorldSave($event)" entityTable="World" [entityId]="currentWorldId"></app-entity-lateral-menu>
             </div>
           }
         </div>
@@ -94,6 +95,8 @@ export class WorldInfoComponent implements OnInit {
 
   isLoading: boolean = false;
 
+  fields: FormField[] = [];
+
   constructor(private router:Router, private currentRoute : ActivatedRoute, private worldService : WorldService, private cdr: ChangeDetectorRef) {
     this.isLoading = true;
     this.currentRoute.params.subscribe(params => {
@@ -108,6 +111,7 @@ export class WorldInfoComponent implements OnInit {
 
   getWorld() {
     this.currentWorld = this.worldService.getWorldById(this.currentWorldId!);
+    this.buildFields();
 
     this.isLoading = false;
   }
@@ -131,8 +135,8 @@ export class WorldInfoComponent implements OnInit {
     this.worldService.updateWorld(this.currentWorld.id, this.currentWorld);
   }
 
-  getFields() : any[] {
-    return [
+  private buildFields() {
+    this.fields = [
       { key: 'concept', label: 'Conceito', value: this.currentWorld.concept || '', type: 'text-area' },
     ];
   }

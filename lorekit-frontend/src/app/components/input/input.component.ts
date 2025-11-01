@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
   template: `
     <div class="flex flex-col">
       @if (label() != '') {
-        <label class="mb-1 font-medium text-white" [ngClass]="{'!text-red-500':errorMessage() != ''}">{{ label() }}</label>
+        <label class="mb-1 text-sm text-white" [ngClass]="{'!text-red-500':errorMessage() != ''}">{{ label() }}</label>
       }
       <input
         [type]="type()"
@@ -16,7 +16,7 @@ import { CommonModule } from '@angular/common';
         (blur)="markAsTouched()"
         [placeholder]="placeholder()"
         [ngClass]="{'!ring-red-500':errorMessage() != ''}"
-        class="rounded-lg px-3 py-2 ring-1 bg-zinc-925 ring-zinc-800 transition focus:outline-none focus:ring-zinc-100 focus:ring-1"
+        class="rounded-lg px-3 py-2 ring-1 bg-zinc-925 ring-zinc-800 transition focus:outline-none focus:ring-zinc-100 focus:ring-1 placeholder:text-white/10"
       />
       @if (errorMessage() != '') {
         <span class="text-red-500 text-xs mt-1">
@@ -32,7 +32,7 @@ export class InputComponent {
   label = input<string>('');
   placeholder = input<string>('');
   type = input<string>('text');
-  value = model<string>('');
+  value = model<any>('');
   required = input<boolean>(false);
 
   touched = signal(false);

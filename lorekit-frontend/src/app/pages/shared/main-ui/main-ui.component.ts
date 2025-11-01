@@ -25,10 +25,14 @@ import { SettingsComponent } from '../../settings/settings/settings.component';
             <i class="fa-solid fa-city "></i>
             <span class="">Localidades</span>
           </a>
+          <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/specie" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
+            <i class="fa-solid fa-paw "></i>
+            <span class="">Espécies</span>
+          </a>
         </div>
       </div>
 
-      <div class="h-20">
+      <div class="">
         <a (click)="openSettings()" class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 cursor-pointer hover:bg-zinc-800">
           <i class="fa-solid fa-gears "></i>
           <span class="">Configurações</span>

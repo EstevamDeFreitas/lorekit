@@ -16,3 +16,13 @@ export interface WeakRelationship {
   entityTable: string;
   entityId: string;
 }
+
+export function getPersonalizationValue(entity:any, key: string): string | null {
+  let personalization = <Personalization>entity.Personalization;
+
+  if (personalization && personalization.contentJson != null && personalization.contentJson != '') {
+    return JSON.parse(personalization.contentJson)[key] || null;
+  }
+
+  return null;
+}

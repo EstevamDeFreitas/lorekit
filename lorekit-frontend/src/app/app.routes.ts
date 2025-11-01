@@ -35,6 +35,17 @@ export const routes: Routes = [
                 .then(m => m.LocationEditComponent),
           },
       ]},
+      {path:'specie', children:[
+        {path: '', redirectTo: 'list', pathMatch: 'full'},
+        {path: 'list', loadComponent: () =>
+          import('./pages/species/specie-list/specie-list.component')
+            .then(m => m.SpecieListComponent),
+        },
+        {path: 'edit/:specieId', loadComponent: () =>
+          import('./pages/species/specie-edit/specie-edit.component')
+            .then(m => m.SpecieEditComponent),
+        },
+      ]}
     ]
   }
 

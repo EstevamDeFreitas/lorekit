@@ -80,8 +80,6 @@ export class LocationEditComponent implements OnInit {
   dialogref = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
 
-  apiUrl = environment.apiUrl + '/';
-
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
   private locationService = inject(LocationService);
@@ -115,7 +113,6 @@ export class LocationEditComponent implements OnInit {
   selectedParentLocationId?: string;
   selectedWorldId?: string;
 
-  // Cache fields to avoid recreating a new array each change detection cycle
   fields: FormField[] = [];
 
   ngOnInit(): void {
@@ -151,13 +148,9 @@ export class LocationEditComponent implements OnInit {
     this.selectedParentLocationId = formData['parentLocationId'];
     this.selectedWorldId = formData['parentWorldId'];
 
-    console.log("Retornado da bosta do entity lateral", formData);
-
-
     this.saveLocation();
   }
 
-  // Build the fields array once per relevant state change to keep template stable
   private buildFields() {
 
     this.fields = [
