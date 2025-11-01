@@ -81,7 +81,7 @@ function toSqlValue(v: any) {
 
 
 export class CrudHelper {
-  private debugging: boolean = true;
+  private debugging: boolean = false;
   constructor(private db: any) {}
 
   create(table: string, data: Record<string, any>) {

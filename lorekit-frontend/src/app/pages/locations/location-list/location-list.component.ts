@@ -10,7 +10,7 @@ import { Dialog } from '@angular/cdk/dialog';
 import { ImageService } from '../../../services/image.service';
 import { environment } from '../../../../enviroments/environment';
 import { buildImageUrl } from '../../../models/image.model';
-import { getPersonalizationValue } from '../../../models/personalization.model';
+import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
 
 @Component({
   selector: 'app-location-list',
@@ -50,7 +50,7 @@ import { getPersonalizationValue } from '../../../models/personalization.model';
                   </div>
                 }
                 @else {
-                  <div (click)="selectLocation(location.id!)" [ngStyle]="{'background-color': getPersonalizationValue(location, 'color') || 'var(--color-zinc-800)'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
+                  <div (click)="selectLocation(location.id!)" [ngStyle]="{'background-color': getPersonalizationValue(location, 'color') || 'var(--color-zinc-800)'}" [ngClass]="getTextClass(getPersonalizationValue(location, 'color'))" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
                     <div class="flex flex-row gap-2 items-center">
                       <i class="fa" [ngClass]="getPersonalizationValue(location, 'icon') || 'fa-location-dot'"></i>
                       <div class="text-base font-bold">{{ location.name }}</div>
@@ -79,6 +79,7 @@ export class LocationListComponent implements OnInit {
 
   public buildImageUrl = buildImageUrl;
   public getPersonalizationValue = getPersonalizationValue;
+  public getTextClass = getTextClass;
 
   worldId = input<string>();
   locationId = input<string>();

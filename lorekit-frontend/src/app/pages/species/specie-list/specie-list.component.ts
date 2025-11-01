@@ -7,7 +7,7 @@ import { Specie } from '../../../models/specie.model';
 import { WorldService } from '../../../services/world.service';
 import { World } from '../../../models/world.model';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
-import { getPersonalizationValue } from '../../../models/personalization.model';
+import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { NgClass, NgStyle } from '@angular/common';
 import { LocationService } from '../../../services/location.service';
@@ -41,7 +41,7 @@ import { LocationService } from '../../../services/location.service';
             @let fullBodyImg = getImageByUsageKey(specie.Images, 'fullBody');
             <div (click)="selectSpecie(specie.id!)" [ngClass]="[
                 'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2',
-                !img ? getColor(specie) : ''
+
               ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(specie, 'color') || 'var(--color-zinc-800)'}">
               <div class="flex h-35 flex-row gap-2 items-top">
                 <div class="w-20 h-full flex items-center justify-center bg-zinc-800 rounded-md border border-zinc-500'">
@@ -52,7 +52,7 @@ import { LocationService } from '../../../services/location.service';
                     <i class="fa fa-image text-2xl"></i>
                   }
                 </div>
-                <div class="flex-1 flex flex-col justify-between">
+                <div class="flex-1 flex flex-col justify-between" [ngClass]="getTextClass(getPersonalizationValue(specie, 'color'))">
                   <div class="flex flex-row items-center gap-2">
                     <i class="fa" [ngClass]="getPersonalizationValue(specie, 'icon') || 'fa-paw'"></i>
                     <div class="text-base font-bold">{{ specie.name }}</div>
@@ -87,6 +87,7 @@ export class SpecieListComponent implements OnInit {
   public buildImageUrl = buildImageUrl;
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
+  public getTextClass = getTextClass;
 
   worldId = input<string>();
   specieId = input<string>();

@@ -15,7 +15,7 @@ import { SafeDeleteButtonComponent } from "../../../components/safe-delete-butto
 import { environment } from '../../../../enviroments/environment';
 import { LocationListComponent } from "../location-list/location-list.component";
 import { WorldService } from '../../../services/world.service';
-import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
+import { getPersonalizationValue } from '../../../models/personalization.model';
 
 @Component({
   selector: 'app-location-edit',

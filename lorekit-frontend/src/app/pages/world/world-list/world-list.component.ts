@@ -10,7 +10,7 @@ import { InputComponent } from "../../../components/input/input.component";
 import { ImageService } from '../../../services/image.service';
 import { environment } from '../../../../enviroments/environment';
 import { buildImageUrl } from '../../../models/image.model';
-import { getPersonalizationValue } from '../../../models/personalization.model';
+import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 
 @Component({
@@ -48,7 +48,7 @@ import { FormField, FormOverlayDirective } from '../../../components/form-overla
               </div>
             }
             @else{
-              <div class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2" [ngStyle]="{'background-color': getPersonalizationValue(world, 'color') || 'var(--color-zinc-800)'}" (click)="onWorldSelected(world.id)">
+              <div class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2" [ngClass]="getTextClass(getPersonalizationValue(world, 'color'))" [ngStyle]="{'background-color': getPersonalizationValue(world, 'color') || 'var(--color-zinc-800)'}" (click)="onWorldSelected(world.id)">
                 <div class="flex flex-row gap-2 items-center">
                   <i class="fa-solid text-xl" [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-earth'"></i>
                   <div class="text-base font-bold">{{world.name}}</div>
@@ -75,6 +75,7 @@ export class WorldListComponent {
 
   public buildImageUrl = buildImageUrl;
   public getPersonalizationValue = getPersonalizationValue;
+  public getTextClass = getTextClass;
 
   worlds: World[] = [];
 
