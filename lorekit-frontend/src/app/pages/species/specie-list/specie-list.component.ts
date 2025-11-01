@@ -71,19 +71,6 @@ import { LocationService } from '../../../services/location.service';
                 </div>
               </div>
             </div>
-            <!-- @if (getImageByUsageKey(specie.Images, 'default') != null){
-              @let img = getImageByUsageKey(specie.Images, 'default');
-              <div (click)="selectSpecie(specie.id!)" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + buildImageUrl(img?.filePath) + ')', 'background-size': 'cover', 'background-position': 'center'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
-                <div class="flex flex-row gap-2 items-center">
-                  <i class="fa" [ngClass]="getPersonalizationValue(specie, 'icon') || 'fa-paw'"></i>
-                  <div class="text-base font-bold">{{ specie.name }}</div>
-                </div>
-                <div class="text-xs">{{specie.concept}}</div>
-              </div>
-            }
-            @else {
-
-            } -->
           }
         </div>
       </div>

@@ -11,36 +11,21 @@ import { ImageService } from '../../../services/image.service';
 import { environment } from '../../../../enviroments/environment';
 import { buildImageUrl } from '../../../models/image.model';
 import { getPersonalizationValue } from '../../../models/personalization.model';
+import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 
 @Component({
   selector: 'app-world-list',
-  imports: [CommonModule, RouterLink, ButtonComponent, NgClass, OverlayModule, InputComponent],
+  imports: [CommonModule, RouterLink, ButtonComponent, NgClass, OverlayModule, InputComponent, FormOverlayDirective],
   template: `
   <div class="h-screen flex flex-col">
     <div class="flex flex-row justify-between items-center mb-4">
       <h3 class="text-xl font-bold">Mundos</h3>
-      <app-button buttonType="white" label="Novo" (click)="worldCreationOpen = !worldCreationOpen" cdkOverlayOrigin #trigger="cdkOverlayOrigin"></app-button>
-      <ng-template
-        cdkConnectedOverlay
-        [cdkConnectedOverlayOrigin]="trigger"
-        [cdkConnectedOverlayOpen]="worldCreationOpen"
-        [cdkConnectedOverlayPositions]="[
-          {
-            originX: 'start',
-            originY: 'bottom',
-            overlayX: 'end',
-            overlayY: 'top'
-          }
-        ]"
-        >
-        <div class="bg-zinc-800 p-2 rounded-md">
-          <div class="mb-2 text-bold">Criar Novo Mundo</div>
-          <div class="flex flex-col gap-2">
-            <app-input [label]="'Nome do Mundo'" [(value)]="newWorldName"></app-input>
-            <app-button label="Criar" (click)="createWorld()"></app-button>
-          </div>
-        </div>
-      </ng-template>
+      <app-button buttonType="white" label="Novo"
+          appFormOverlay
+          [title]="'Criar Mundo'"
+          [fields]="getFormFields()"
+          (onSave)="createWorld($event)"
+        ></app-button>
     </div>
 
     <div class="flex-1 overflow-y-auto scrollbar-dark">
@@ -128,20 +113,26 @@ export class WorldListComponent {
     return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
   }
 
-  createWorld() {
-    if (this.newWorldName.trim() === '') {
+  createWorld(formData: Record<string, string>) {
+    if (formData['name'].trim() === '') {
       return;
     }
 
     const newWorld: World = {
       id: '',
-      name: this.newWorldName,
+      name: formData['name'],
       description: ''
     };
 
     this.worldService.createWorld(newWorld);
     this.worldCreationOpen = false;
     this.loadWorlds();
+  }
+
+  getFormFields(): FormField[] {
+    return [
+      { key: 'name', label: 'Nome', value: '' },
+    ];
   }
 
 
