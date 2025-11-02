@@ -17,7 +17,7 @@ import { getPersonalizationValue, getTextClass } from '../../../models/personali
   imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle],
   standalone: true,
   template: `
-    <div class="h-full min-h-0 flex flex-col">
+    <div class="min-h-0 flex flex-col overflow-hidden" [ngClass]="{'h-[63vh]': !isRouteComponent(), 'h-[95vh]': isRouteComponent()}">
       <div class="flex flex-row justify-between items-center mb-4">
         @if (isRouteComponent()){
           <h2 class="text-xl font-bold">Localidades</h2>
