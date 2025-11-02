@@ -37,42 +37,51 @@ import { LocationService } from '../../../services/location.service';
       <div class="flex-1 overflow-y-auto scrollbar-dark">
         <br>
         <div class=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          @for (specie of species; track specie.id) {
-            @let img = getImageByUsageKey(specie.Images, 'default');
-            @let fullBodyImg = getImageByUsageKey(specie.Images, 'fullBody');
-            <div (click)="selectSpecie(specie.id!)" [ngClass]="[
-                'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2',
+           @if (species.length === 0){
+            <div class="text-center">
+              <p>Nenhuma espécie disponível.</p>
+            </div>
+          }
+          @else {
+            @for (specie of species; track specie.id) {
+              @let img = getImageByUsageKey(specie.Images, 'default');
+              @let fullBodyImg = getImageByUsageKey(specie.Images, 'fullBody');
+              <div (click)="selectSpecie(specie.id!)" [ngClass]="[
+                  'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2',
 
-              ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(specie, 'color') || 'var(--color-zinc-800)'}">
-              <div class="flex h-35 flex-row gap-2 items-top">
-                <div class="w-20 h-full flex items-center justify-center bg-zinc-800 rounded-md border border-zinc-500'">
-                  @if (fullBodyImg) {
-                    <img class="w-full h-full object-cover rounded-md" [src]="fullBodyImg.filePath" alt="">
-                  }
-                  @else {
-                    <i class="fa fa-image text-2xl"></i>
-                  }
-                </div>
-                <div class="flex-1 flex flex-col justify-between" [ngClass]="getTextClass(getPersonalizationValue(specie, 'color'))">
-                  <div class="flex flex-row items-center gap-2">
-                    <i class="fa" [ngClass]="getPersonalizationValue(specie, 'icon') || 'fa-paw'"></i>
-                    <div class="text-base font-bold">{{ specie.name }}</div>
+                ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(specie, 'color') || 'var(--color-zinc-800)'}">
+                <div class="flex h-35 flex-row gap-2 items-top">
+                  <div class="w-20 h-full flex items-center justify-center bg-zinc-800 rounded-md border border-zinc-500'">
+                    @if (fullBodyImg) {
+                      <img class="w-full h-full object-cover rounded-md" [src]="fullBodyImg.filePath" alt="">
+                    }
+                    @else {
+                      <i class="fa fa-image text-2xl"></i>
+                    }
                   </div>
-                  <div class="text-xs font-bold overflow-hidden text-ellipsis text-justify line-clamp-3">{{specie.concept}}</div>
-                  <div class="flex flex-row gap-1">
-                    <div class="text-xs flex flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
-                      <i class="fa fa-earth"></i>
-                      <div class="">{{specie.ParentWorld?.name}}</div>
+                  <div class="flex-1 flex flex-col justify-between" [ngClass]="getTextClass(getPersonalizationValue(specie, 'color'))">
+                    <div class="flex flex-row items-center gap-2">
+                      <i class="fa" [ngClass]="getPersonalizationValue(specie, 'icon') || 'fa-paw'"></i>
+                      <div class="text-base font-bold">{{ specie.name }}</div>
                     </div>
-                    <div class="text-xs flex flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
-                      <i class="fa fa-location-dot"></i>
-                      <div class="">{{specie.ParentLocation?.name}}</div>
+                    <div class="text-xs font-bold overflow-hidden text-ellipsis text-justify line-clamp-3">{{specie.concept}}</div>
+                    <div class="flex flex-row gap-1">
+                      <div class="text-xs flex flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
+                        <i class="fa fa-earth"></i>
+                        <div class="">{{specie.ParentWorld?.name}}</div>
+                      </div>
+                      <div class="text-xs flex flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
+                        <i class="fa fa-location-dot"></i>
+                        <div class="">{{specie.ParentLocation?.name}}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            }
+
           }
+
         </div>
       </div>
     </div>
