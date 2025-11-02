@@ -157,7 +157,7 @@ export class LocationListComponent implements OnInit {
   }
 
   getSelectableWorlds(){
-      let worlds = [{id:'', name: 'Nenhum'} as World];
+      let worlds = [];
 
       worlds.push(...this.worldService.getWorlds());
 

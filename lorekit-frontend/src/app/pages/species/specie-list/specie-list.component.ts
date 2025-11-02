@@ -140,7 +140,7 @@ export class SpecieListComponent implements OnInit {
   }
 
   getSelectableWorlds(){
-    let worlds = [{id:'', name: 'Nenhum'} as World];
+    let worlds = [];
 
     worlds.push(...this.availableWorlds);
 

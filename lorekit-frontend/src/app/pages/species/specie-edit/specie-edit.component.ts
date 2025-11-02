@@ -154,9 +154,9 @@ export class SpecieEditComponent implements OnInit {
 
     this.fields = [
       { key: 'concept', label: 'Conceito', value: this.specie.concept || '', type: 'text-area' },
-      { key: 'parentLocationId', label: 'Local de Origem', value: this.specie.ParentLocation ? this.specie.ParentLocation.id : '', options: this.locationService.getLocations(), optionCompareProp: 'id', optionDisplayProp: 'name' },
-      { key: 'parentWorldId', label: 'Mundo', value: this.specie.ParentWorld ? this.specie.ParentWorld.id : '', options: this.worldService.getWorlds(), optionCompareProp: 'id', optionDisplayProp: 'name' },
-      { key: 'mainSpecieId', label: 'Espécie Principal', value: this.specie.ParentSpecie ? this.specie.ParentSpecie.id : '', options: this.specieService.getSpecies(null, this.specie.ParentWorld ? this.specie.ParentWorld.id : ''), optionCompareProp: 'id', optionDisplayProp: 'name' },
+      { key: 'parentLocationId', label: 'Local de Origem', value: this.specie.ParentLocation ? this.specie.ParentLocation.id : '', options: this.locationService.getLocations(), optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
+      { key: 'parentWorldId', label: 'Mundo', value: this.specie.ParentWorld ? this.specie.ParentWorld.id : '', options: this.worldService.getWorlds(), optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
+      { key: 'mainSpecieId', label: 'Espécie Principal', value: this.specie.ParentSpecie ? this.specie.ParentSpecie.id : '', options: this.specieService.getSpecies(null, this.specie.ParentWorld ? this.specie.ParentWorld.id : ''), optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
     ];
 
   }

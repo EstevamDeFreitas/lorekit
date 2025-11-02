@@ -44,13 +44,13 @@ export class SpecieService {
     if (specie.id != '') {
       specie = <Specie>this.crud.update('Species', specie.id, specie);
 
-      if (locationId) {
-        this.crud.deleteWhen('Relationship', {
-          parentTable: 'Location',
-          entityTable: 'Species',
-          entityId: specie.id
-        });
+      this.crud.deleteWhen('Relationship', {
+        parentTable: 'Location',
+        entityTable: 'Species',
+        entityId: specie.id
+      });
 
+      if (locationId) {
         this.crud.create('Relationship', {
           parentTable: 'Location',
           parentId: locationId,
@@ -59,13 +59,13 @@ export class SpecieService {
         });
       }
 
-      if(worldId) {
-        this.crud.deleteWhen('Relationship', {
+      this.crud.deleteWhen('Relationship', {
           parentTable: 'World',
           entityTable: 'Species',
           entityId: specie.id
         });
 
+      if(worldId) {
         this.crud.create('Relationship', {
           parentTable: 'World',
           parentId: worldId,
@@ -74,13 +74,13 @@ export class SpecieService {
         });
       }
 
-      if(mainSpecie) {
-        this.crud.deleteWhen('Relationship', {
-          parentTable: 'Species',
-          entityTable: 'Species',
-          entityId: specie.id
-        });
+      this.crud.deleteWhen('Relationship', {
+        parentTable: 'Species',
+        entityTable: 'Species',
+        entityId: specie.id
+      });
 
+      if(mainSpecie) {
         this.crud.create('Relationship', {
           parentTable: 'Species',
           parentId: mainSpecie,

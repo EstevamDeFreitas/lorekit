@@ -13,6 +13,7 @@ export interface FormField {
   options?: any[];
   optionCompareProp?: string;
   optionDisplayProp?: string;
+  clearable?: boolean;
   type?: 'text' | 'email' | 'password' | 'number' | 'text-area';
 }
 
@@ -29,6 +30,7 @@ export interface FormField {
               [label]="field.label"
               [items]="field.options"
               [(comboValue)]="field.value"
+              [clearable]="field.clearable || false"
               [compareProp]="field.optionCompareProp || ''"
               [displayProp]="field.optionDisplayProp || ''"
               >

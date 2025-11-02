@@ -11,9 +11,11 @@ import { NgClass } from '@angular/common';
       <select
         [(ngModel)]="comboValue"
         [ngClass]="'text-' + size()"
+
         class="rounded-lg px-3 py-2 bg-zinc-925 border-zinc-800 border transition focus:outline-none focus:border-zinc-100 focus:bg-zinc-925  focus:border-1"
       >
         <option value="" disabled selected hidden>{{ placeholder() }}</option>
+        <option [ngValue]="null">-- Nenhum --</option>
         @for (item of items(); track item){
           @if (isObject(item)){
             <option [ngValue]="item[compareProp()]" >{{item[displayProp()]}}</option>
@@ -36,6 +38,7 @@ export class ComboBoxComponent implements OnInit {
   comboValue = model<any>('');
   placeholder = input<string>('Selecione...');
   size = input<string>('md');
+  clearable = input<boolean>(false);
 
   ngOnInit() {
 

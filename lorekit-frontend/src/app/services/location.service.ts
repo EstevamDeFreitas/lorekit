@@ -34,20 +34,22 @@ export class LocationService {
         entityTable: 'LocationCategory'
       });
 
-      this.crud.create('Relationship', {
+      if(locationCategoryId){
+        this.crud.create('Relationship', {
+          parentTable: 'Location',
+          parentId: location.id,
+          entityTable: 'LocationCategory',
+          entityId: locationCategoryId
+        });
+      }
+
+      this.crud.deleteWhen('Relationship', {
         parentTable: 'Location',
-        parentId: location.id,
-        entityTable: 'LocationCategory',
-        entityId: locationCategoryId
+        entityTable: 'Location',
+        entityId: location.id
       });
 
       if (locationId) {
-        this.crud.deleteWhen('Relationship', {
-          parentTable: 'Location',
-          entityTable: 'Location',
-          entityId: location.id
-        });
-
         this.crud.create('Relationship', {
           parentTable: 'Location',
           parentId: locationId,
@@ -56,13 +58,13 @@ export class LocationService {
         });
       }
 
-      if(worldId) {
-        this.crud.deleteWhen('Relationship', {
-          parentTable: 'World',
-          entityTable: 'Location',
-          entityId: location.id
-        });
+      this.crud.deleteWhen('Relationship', {
+        parentTable: 'World',
+        entityTable: 'Location',
+        entityId: location.id
+      });
 
+      if(worldId) {
         this.crud.create('Relationship', {
           parentTable: 'World',
           parentId: worldId,
