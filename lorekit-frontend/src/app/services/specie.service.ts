@@ -13,9 +13,13 @@ export class SpecieService {
     this.crud = this.dbProvider.getCrudHelper();
   }
 
-  getSpecies(mainSpecieId: string | null | undefined): Specie[] {
+  getSpecies(mainSpecieId: string | null | undefined, worldId: string | null | undefined): Specie[] {
 
     let existsRelation = mainSpecieId ? { parentId: mainSpecieId, parentTable: 'Species' } : undefined;
+
+    if (!existsRelation && worldId && worldId != '') {
+      existsRelation = { parentId: worldId, parentTable: 'World' };
+    }
 
     return this.crud.findAll('Species', {}, [
       {"table": "Personalization", "firstOnly": true},

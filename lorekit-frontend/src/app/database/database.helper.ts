@@ -188,6 +188,7 @@ export class CrudHelper {
     return row;
   }
 
+  //TODO: Implementar multiplo existsRelation
   findAll(table: string, where: Record<string, any> = {}, include: IncludeDef[] = [], existsRelation?: {parentTable: string, parentId: string}) {
     const clauses = Object.keys(where).map(k => `"${k}" = ?`);
     const sql = `SELECT * FROM "${table}"` + (clauses.length ? ` WHERE ${clauses.join(' AND ')}` : '');

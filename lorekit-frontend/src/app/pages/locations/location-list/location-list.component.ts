@@ -11,10 +11,13 @@ import { ImageService } from '../../../services/image.service';
 import { environment } from '../../../../enviroments/environment';
 import { buildImageUrl } from '../../../models/image.model';
 import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
+import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
+import { WorldService } from '../../../services/world.service';
+import { World } from '../../../models/world.model';
 
 @Component({
   selector: 'app-location-list',
-  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle],
+  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, ComboBoxComponent],
   standalone: true,
   template: `
     <div class="min-h-0 flex flex-col overflow-hidden" [ngClass]="{'h-[63vh]': !isRouteComponent(), 'h-[95vh]': isRouteComponent()}">
@@ -36,6 +39,10 @@ import { getPersonalizationValue, getTextClass } from '../../../models/personali
           ></app-button>
       </div>
       <div class="flex-1 overflow-y-auto scrollbar-dark">
+        @if(!worldId() && !locationId()){
+          <app-combo-box class="w-60" label="Filtro de mundo" [items]="getSelectableWorlds()" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="getLocations()"></app-combo-box>
+          <br>
+        }
         @if (locationCategories.length === 0){
           <div class="text-center">
             <p>Nenhuma localidade disponível.</p>
@@ -83,6 +90,7 @@ export class LocationListComponent implements OnInit {
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
   private locationService = inject(LocationService);
+  private worldService = inject(WorldService);
   private locationCategoryService = inject(LocationCategoriesService);
   private cdr = inject(ChangeDetectorRef);
 
@@ -90,6 +98,8 @@ export class LocationListComponent implements OnInit {
   public getPersonalizationValue = getPersonalizationValue;
   public getTextClass = getTextClass;
 
+
+  selectedWorld : string = '';
   worldId = input<string>();
   locationId = input<string>();
 
@@ -117,7 +127,7 @@ export class LocationListComponent implements OnInit {
   }
 
   getLocations() {
-    const locations = this.worldId() && !this.locationId() ? this.locationService.getLocationByWorldId(this.worldId()!) : this.locationService.getLocations(this.locationId());
+    const locations = (this.worldId() || this.selectedWorld) && !this.locationId() ? this.locationService.getLocationByWorldId(this.worldId() || this.selectedWorld) : this.locationService.getLocations(this.locationId());
 
     this.locationGroups = locations.reduce((groups: Record<string, Location[]>, location) => {
       const category = location.LocationCategory ? location.LocationCategory.id : '';
@@ -145,6 +155,14 @@ export class LocationListComponent implements OnInit {
 
     this.getLocations();
   }
+
+  getSelectableWorlds(){
+      let worlds = [{id:'', name: 'Nenhum'} as World];
+
+      worlds.push(...this.worldService.getWorlds());
+
+      return worlds;
+    }
 
   selectLocation(locationId: string) {
     if (this.isRouteComponent()) {

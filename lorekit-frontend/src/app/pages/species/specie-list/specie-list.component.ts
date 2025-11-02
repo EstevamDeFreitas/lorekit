@@ -11,10 +11,12 @@ import { getPersonalizationValue, getTextClass } from '../../../models/personali
 import { ButtonComponent } from '../../../components/button/button.component';
 import { NgClass, NgStyle } from '@angular/common';
 import { LocationService } from '../../../services/location.service';
+import { SearchComponent } from "../../../components/search/search.component";
+import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 
 @Component({
   selector: 'app-specie-list',
-  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle],
+  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, SearchComponent, ComboBoxComponent],
   template: `
     <div class="min-h-0 flex flex-col" [ngClass]="{'h-[63vh]': !isRouteComponent(), 'h-[95vh]': isRouteComponent()}">
       <div class="flex flex-row justify-between items-center mb-4">
@@ -36,6 +38,10 @@ import { LocationService } from '../../../services/location.service';
       </div>
       <div class="flex-1 overflow-y-auto scrollbar-dark">
         <br>
+        @if(!worldId() && !specieId()){
+          <app-combo-box class="w-60" label="Filtro de mundo" [items]="getSelectableWorlds()" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="onWorldSelect()"></app-combo-box>
+          <br>
+        }
         <div class=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
            @if (species.length === 0){
             <div class="text-center">
@@ -59,18 +65,18 @@ import { LocationService } from '../../../services/location.service';
                       <i class="fa fa-image text-2xl"></i>
                     }
                   </div>
-                  <div class="flex-1 flex flex-col justify-between" [ngClass]="getTextClass(getPersonalizationValue(specie, 'color'))">
+                  <div class="flex-1 flex flex-col overflow-hidden justify-between" [ngClass]="getTextClass(getPersonalizationValue(specie, 'color'))">
                     <div class="flex flex-row items-center gap-2">
                       <i class="fa" [ngClass]="getPersonalizationValue(specie, 'icon') || 'fa-paw'"></i>
                       <div class="text-base font-bold">{{ specie.name }}</div>
                     </div>
                     <div class="text-xs font-bold overflow-hidden text-ellipsis text-justify line-clamp-3">{{specie.concept}}</div>
                     <div class="flex flex-row gap-1">
-                      <div class="text-xs flex flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
+                      <div class="text-xs flex text-nowrap flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
                         <i class="fa fa-earth"></i>
                         <div class="">{{specie.ParentWorld?.name}}</div>
                       </div>
-                      <div class="text-xs flex flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
+                      <div class="text-xs text-nowrap overflow-ellipsis flex flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
                         <i class="fa fa-location-dot"></i>
                         <div class="">{{specie.ParentLocation?.name}}</div>
                       </div>
@@ -102,6 +108,8 @@ export class SpecieListComponent implements OnInit {
   worldId = input<string>();
   specieId = input<string>();
 
+  selectedWorld : string = '';
+
   species : Specie[] = [];
 
   availableWorlds : World[] = [];
@@ -124,11 +132,23 @@ export class SpecieListComponent implements OnInit {
   }
 
   getSpecies(){
-    this.species = this.specieService.getSpecies(this.specieId());
+    this.species = this.specieService.getSpecies(this.specieId(), this.selectedWorld);
   }
 
   getLocations(){
     return this.locationService.getLocations();
+  }
+
+  getSelectableWorlds(){
+    let worlds = [{id:'', name: 'Nenhum'} as World];
+
+    worlds.push(...this.availableWorlds);
+
+    return worlds;
+  }
+
+  onWorldSelect(){
+    this.getSpecies();
   }
 
   getFormFields(): FormField[] {
