@@ -10,7 +10,37 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
-<body class="bg-zinc-950 text-white relative ">
+<body class="bg-zinc-950 text-white relative overflow-hidden">
+  <div id="titlebar"
+       class="h-9 flex items-center absolute justify-between px-2 w-full select-none"
+       style="-webkit-app-region: drag; -webkit-user-select: none;">
+       <div></div>
+    <div class="text-xs opacity-70 px-1 flex flex-row items-center gap-2">
+      <img class="w-5 h-5" src="assets/lorekit-logo.png" alt="">
+      <span class="mt-1 text-sm">Lorekit</span>
+    </div>
+
+    <!-- Tudo dentro desta área deve ser "no-drag" para receber cliques -->
+    <div class="flex gap-1" style="-webkit-app-region: no-drag;">
+      <button id="win-min" class="h-6 w-8 rounded hover:bg-zinc-800" aria-label="Minimizar">
+        <i class="fa-solid fa-minus"></i>
+      </button>
+      <button id="win-max" class="h-6 w-8 rounded hover:bg-zinc-800" aria-label="Maximizar/Restaurar">
+        <i class="fa-regular fa-square"></i>
+      </button>
+      <button id="win-close" class="h-6 w-8 rounded hover:bg-red-600/80" aria-label="Fechar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  </div>
   <app-root></app-root>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('win-min')?.addEventListener('click', () => window.electronAPI?.minimize());
+      document.getElementById('win-max')?.addEventListener('click', () => window.electronAPI?.toggleMaximize());
+      document.getElementById('win-close')?.addEventListener('click', () => window.electronAPI?.close());
+      document.getElementById('titlebar')?.addEventListener('dblclick', () => window.electronAPI?.toggleMaximize());
+    });
+  </script>
 </body>
 </html>

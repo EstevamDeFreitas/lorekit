@@ -27,6 +27,7 @@ import { getPersonalizationValue, getTextClass } from '../../../models/personali
         }
         <app-button
           label="Novo"
+          size="sm"
           buttonType="white"
           appFormOverlay
           [title]="'Criar Localidade'"

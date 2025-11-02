@@ -13,8 +13,8 @@ import { SettingsComponent } from '../../settings/settings/settings.component';
   selector: 'app-main-ui',
   imports: [RouterOutlet, NgClass, RouterLink, ButtonComponent, RouterLinkActive],
   template: `
-  <div class="h-screen w-screen overflow-hidden flex flex-row gap-4 p-4">
-    <div class="flex flex-col  justify-between p-4 w-70 bg-zinc-900 rounded-lg top-0" >
+  <div class="h-screen w-screen overflow-hidden flex flex-row gap-4">
+    <div class="flex flex-col  justify-between p-4 w-60 border-r pt-12 border-zinc-800 top-0" >
       <div>
         <div class="flex flex-col gap-2 mb-4">
           <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/world" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
@@ -39,7 +39,7 @@ import { SettingsComponent } from '../../settings/settings/settings.component';
         </a>
       </div>
     </div>
-    <div class="p-4 h-screen flex-1">
+    <div class="p-4 h-screen flex-1 pt-12">
       <router-outlet />
     </div>
   </div>

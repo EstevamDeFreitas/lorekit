@@ -32,7 +32,21 @@ function registerIpc() {
     }
     return true;
   });
-  }
+  ipcMain.handle('window:minimize', () => {
+    if (mainWindow) mainWindow.minimize();
+    return true;
+  });
+  ipcMain.handle('window:toggle-maximize', () => {
+    if (!mainWindow) return false;
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+    return mainWindow.isMaximized();
+  });
+  ipcMain.handle('window:close', () => {
+    if (mainWindow) mainWindow.close();
+    return true;
+  });
+}
 
 function createWindow() {
   const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
@@ -46,17 +60,18 @@ function createWindow() {
       webSecurity: isDev ? false : true,
       preload: path.join(__dirname, 'preload.js'),
     },
+    frame: false,
   });
 
-  if(isDev) {
+  if (isDev) {
     mainWindow.loadURL(devUrl);
     //mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
-  else{
+  else {
     mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');
   }
 
-  if(app.isPackaged) {
+  if (app.isPackaged) {
     autoUpdater.checkForUpdatesAndNotify();
 
     autoUpdater.on('update-available', info => {

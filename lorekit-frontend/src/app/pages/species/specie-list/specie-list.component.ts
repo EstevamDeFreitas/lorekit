@@ -26,6 +26,7 @@ import { LocationService } from '../../../services/location.service';
         }
         <app-button
           label="Novo"
+          size="sm"
           buttonType="white"
           appFormOverlay
           [title]="'Criar Espécie'"

@@ -22,6 +22,7 @@ import { FormField, FormOverlayDirective } from '../../../components/form-overla
       <h3 class="text-xl font-bold">Mundos</h3>
       <app-button buttonType="white" label="Novo"
           appFormOverlay
+          size="sm"
           [title]="'Criar Mundo'"
           [fields]="getFormFields()"
           (onSave)="createWorld($event)"
