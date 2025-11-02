@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { WorldService } from '../../services/world.service';
 import { DocumentService } from '../../services/document.service';
 import { LocationService } from '../../services/location.service';
+import { SpecieService } from '../../services/specie.service';
 
 @Component({
   imports: [InputComponent, ButtonComponent, FormsModule],
@@ -38,6 +39,7 @@ export class SafeDeleteComponent {
   worldService = inject<WorldService>(WorldService);
   documentService = inject<DocumentService>(DocumentService);
   locationService = inject<LocationService>(LocationService);
+  speciesService = inject<SpecieService>(SpecieService);
 
   inputValue: string = '';
   removeRelatedItems: boolean = false;
@@ -59,6 +61,10 @@ export class SafeDeleteComponent {
           break;
         case 'Document':
           this.documentService.deleteDocument(this.dialogData.entityId, this.removeRelatedItems);
+          this.dialogref.close(true);
+          break;
+        case 'Species':
+          this.speciesService.deleteSpecie(this.dialogData.entityId, this.removeRelatedItems);
           this.dialogref.close(true);
           break;
         default:
