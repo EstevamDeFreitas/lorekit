@@ -7,6 +7,8 @@ import { WorldService } from '../../services/world.service';
 import { DocumentService } from '../../services/document.service';
 import { LocationService } from '../../services/location.service';
 import { SpecieService } from '../../services/specie.service';
+import { DbProvider } from '../../app.config';
+import { CrudHelper } from '../../database/database.helper';
 
 @Component({
   imports: [InputComponent, ButtonComponent, FormsModule],
@@ -41,6 +43,13 @@ export class SafeDeleteComponent {
   locationService = inject<LocationService>(LocationService);
   speciesService = inject<SpecieService>(SpecieService);
 
+  dbProvider = inject<DbProvider>(DbProvider);
+  private crud : CrudHelper;
+
+  constructor() {
+    this.crud = this.dbProvider.getCrudHelper();
+  }
+
   inputValue: string = '';
   removeRelatedItems: boolean = false;
 
@@ -50,27 +59,10 @@ export class SafeDeleteComponent {
 
   onDelete() {
     if (this.namesMatch()) {
-      switch (this.dialogData.entityTable) {
-        case 'World':
-          this.worldService.deleteWorld(this.dialogData.entityId, this.removeRelatedItems);
-          this.dialogref.close(true);
-          break;
-        case 'Location':
-          this.locationService.deleteLocation(this.dialogData.entityId, this.removeRelatedItems);
-          this.dialogref.close(true);
-          break;
-        case 'Document':
-          this.documentService.deleteDocument(this.dialogData.entityId, this.removeRelatedItems);
-          this.dialogref.close(true);
-          break;
-        case 'Species':
-          this.speciesService.deleteSpecie(this.dialogData.entityId, this.removeRelatedItems);
-          this.dialogref.close(true);
-          break;
-        default:
-          console.error('Unknown entity table:', this.dialogData.entityTable);
-          this.dialogref.close(false);
-      }
+
+      this.crud.delete(this.dialogData.entityTable, this.dialogData.entityId, this.removeRelatedItems);
+
+      this.dialogref.close(true);
     }
   }
 

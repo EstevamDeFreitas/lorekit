@@ -87,6 +87,29 @@ import { FormsModule } from '@angular/forms';
           </div>
         }
 
+        @if (relationshipInfo.entityTable == 'Character'){
+          <div class="flex flex-col gap-2 p-2 border-b border-zinc-800">
+            <p>Imagem do Personagem</p>
+            <div
+              class="w-full max-h-[12.5rem]"
+              [style.aspect-ratio]="profileAspectRatio"
+              (click)="openImageUploader('profile', profileAspectRatio)"
+            >
+              @if (profileImage) {
+                <img
+                  class="w-full h-full object-contain cursor-pointer hover:opacity-50 rounded-md transition bg-zinc-800"
+                  [src]="profileImage.filePath"
+                  alt=""
+                >
+              } @else {
+                <div class="w-full h-full bg-zinc-800 flex items-center justify-center rounded-md cursor-pointer hover:opacity-50">
+                  <span class="text-zinc-500">Nenhuma imagem definida</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
       </div>
       <div class="flex flex-row justify-end gap-2 mt-4">
         <app-button label="Salvar" (click)="savePersonalization()"></app-button>

@@ -45,7 +45,18 @@ export const routes: Routes = [
           import('./pages/species/specie-edit/specie-edit.component')
             .then(m => m.SpecieEditComponent),
         },
-      ]}
+      ]},
+      {path:'character', children:[
+        {path: '', redirectTo: 'list', pathMatch: 'full'},
+        {path: 'list', loadComponent: () =>
+          import('./pages/characters/character-list/character-list.component')
+            .then(m => m.CharacterListComponent),
+        },
+        {path: 'edit/:characterId', loadComponent: () =>
+          import('./pages/characters/character-edit/character-edit.component')
+            .then(m => m.CharacterEditComponent),
+        },
+      ]},
     ]
   }
 

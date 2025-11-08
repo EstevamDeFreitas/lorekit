@@ -16,6 +16,6 @@ import { NgClass } from '@angular/common';
 export class TextAreaComponent {
   label = input.required<string>();
   placeholder = input<string>('');
-  value = model<string>('');
+  value = model<any>('');
   height = model<string>('h-18');
 }

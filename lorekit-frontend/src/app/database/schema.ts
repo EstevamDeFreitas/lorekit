@@ -18,16 +18,6 @@ export const schema: TableDef[] = [
     ]
   },
   {
-    name: "Character",
-    columns: [
-      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
-      { name: "name",        def: `"name" TEXT NOT NULL` },
-      { name: "description", def: `"description" TEXT NOT NULL` },
-      { name: "personality", def: `"personality" TEXT NOT NULL` },
-      { name: "concept",     def: `"concept" TEXT` }
-    ]
-  },
-  {
     name: "LocationCategory",
     columns: [
       { name: "id",   def: `"id" TEXT NOT NULL PRIMARY KEY` },
@@ -90,6 +80,24 @@ export const schema: TableDef[] = [
       { name: "averageWeight",              def: `"averageWeight" REAL` },
       { name: "physicalCharacteristics",    def: `"physicalCharacteristics" TEXT` },
       { name: "behavioralCharacteristics",  def: `"behavioralCharacteristics" TEXT` },
+    ]
+  },
+  {
+    name:"Character",
+    columns: [
+      { name: "id",                         def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",                       def: `"name" TEXT NOT NULL` },
+      { name: "description",                def: `"description" TEXT NOT NULL` },
+      { name: "concept",                    def: `"concept" TEXT` },
+      { name: "personality",        def: `"personality" TEXT` },
+      { name: "background",           def: `"background" TEXT` },
+      { name: "height",               def: `"height" REAL` },
+      { name: "weight",               def: `"weight" REAL` },
+      { name: "age",                  def: `"age" INTEGER` },
+      { name: "occupation",           def: `"occupation" TEXT` },
+      { name: "alignment",           def: `"alignment" TEXT` },
+      { name: "objectives",   def: `"objectives" TEXT` },
+      { name: "appearance",        def: `"appearance" TEXT` },
     ]
   },
   {

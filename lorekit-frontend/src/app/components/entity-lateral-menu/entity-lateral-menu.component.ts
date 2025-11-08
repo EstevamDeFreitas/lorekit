@@ -95,7 +95,7 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
   entityId = input.required<string>();
 
   fields = input<FormField[]>([]);
-  onSave = output<Record<string, string>>();
+  onSave = output<Record<string, any>>(); // <-- aceitar qualquer tipo (strings, objetos, etc.)
 
   fieldValues: FormField[] = [];
 
@@ -174,7 +174,9 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
   }
 
   onFieldValueChange(field: FormField) {
+
     const idx = this.fieldValues.findIndex(f => f.key === field.key);
+
     if (idx >= 0) this.fieldValues[idx].value = field.value;
 
     if (!this.initialized) return; // evita emitir no init
@@ -182,7 +184,7 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
   }
 
   onFieldChange() {
-    const formData: Record<string, string> = {};
+    const formData: Record<string, any> = {}; // <-- não restringir a string
     this.fieldValues.forEach(field => {
       formData[field.key] = field.value;
     });
@@ -192,7 +194,19 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
 
   private syncFieldsFromInput() {
     const src = this.fields() || [];
-    this.fieldValues = src.map(f => ({ ...f, value: f.value ?? '' }));
+
+    // Primeira carga: copia valores iniciais
+    if (!this.fieldValues || this.fieldValues.length === 0) {
+      this.fieldValues = src.map(f => ({ ...f, value: f.value ?? '' }));
+      return;
+    }
+
+    // Merge: preserva valores já editados por key
+    const currentByKey = new Map(this.fieldValues.map(f => [f.key, f.value]));
+    this.fieldValues = src.map(f => {
+      const existing = currentByKey.get(f.key);
+      return { ...f, value: existing !== undefined ? existing : (f.value ?? '') };
+    });
   }
 
 }
