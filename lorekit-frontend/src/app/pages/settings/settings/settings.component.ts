@@ -9,6 +9,7 @@ import { InputComponent } from "../../../components/input/input.component";
 import {OverlayModule} from '@angular/cdk/overlay';
 import { LocationCategoriesService } from '../../../services/location-categories.service';
 import { FormOverlayComponent, FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
+import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-settings',
@@ -41,7 +42,7 @@ import { FormOverlayComponent, FormOverlayDirective, FormField } from '../../../
                   ></app-button>
               </div>
               <div class="border border-zinc-700 rounded-md bg-zinc-900">
-                @for (item of locationCategories; track $index) {
+                @for (item of locationCategories; track item.id) {
                   <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
                     <p>{{item.name}}</p>
                     <div class="flex flex-row gap-2">
@@ -77,6 +78,7 @@ import { FormOverlayComponent, FormOverlayDirective, FormField } from '../../../
 })
 export class SettingsComponent implements OnInit{
   dialogref = inject<DialogRef<any>>(DialogRef<any>);
+  confirm = inject<ConfirmService>(ConfirmService);
 
   currentTab: string = '';
 
@@ -146,10 +148,13 @@ export class SettingsComponent implements OnInit{
   }
 
   deleteCategory(category: LocationCategory) {
+    this.confirm.ask(`Tem certeza que deseja deletar a categoria ${category.name}?`).then(confirmed => {
+      if (confirmed) {
+        this.locationService.deleteLocationCategory(category);
+        this.getLocationCategories();
+      }
+    });
 
-    if(!confirm(`Tem certeza que deseja deletar a categoria ${category.name}?`)) return;
 
-    this.locationService.deleteLocationCategory(category);
-    this.locationCategories = this.locationCategories.filter(c => c.id !== category.id);
   }
 }
