@@ -18,7 +18,7 @@ export class Specie{
   Images?:Image[];
   ParentLocation?: Location;
   ParentWorld?: World;
-  ParentSpecie?: Specie;
+  ParentSpecies?: Specie;
 
   constructor(id: string = '', name: string = '', description: string = '') {
     this.id = id;

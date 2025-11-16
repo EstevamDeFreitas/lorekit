@@ -13,10 +13,11 @@ import { NgClass, NgStyle } from '@angular/common';
 import { LocationService } from '../../../services/location.service';
 import { SearchComponent } from "../../../components/search/search.component";
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-specie-list',
-  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, SearchComponent, ComboBoxComponent],
+  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, SearchComponent, ComboBoxComponent, FormsModule],
   template: `
     <div class="min-h-0 flex flex-col" [ngClass]="{'h-[63vh]': !isRouteComponent(), 'h-[95vh]': isRouteComponent()}">
       <div class="flex flex-row justify-between items-center mb-4">
@@ -38,10 +39,19 @@ import { ComboBoxComponent } from "../../../components/combo-box/combo-box.compo
       </div>
       <div class="flex-1 overflow-y-auto scrollbar-dark">
         <br>
-        @if(!worldId() && !specieId()){
-          <app-combo-box class="w-60" label="Filtro de mundo" [items]="getSelectableWorlds()" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="onWorldSelect()"></app-combo-box>
-          <br>
-        }
+        <div class="flex flex-row items-center gap-4">
+          @if(!worldId() && !specieId()){
+            <app-combo-box class="w-60" label="Filtro de mundo" [items]="getSelectableWorlds()" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="onWorldSelect()"></app-combo-box>
+          }
+          @if(!specieId()){
+            <div>
+              <input type="checkbox" name="ignoreSubspecies" id="ignoreSubspecies" [(ngModel)]="ignoreSubspecies" (ngModelChange)="getSpecies()">
+              <label for="ignoreSubspecies" class="ml-2 text-sm text-white" >Ignorar subespécies</label>
+            </div>
+          }
+        </div>
+        <br>
+
         <div class=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
            @if (species.length === 0){
             <div class="text-center">
@@ -109,6 +119,7 @@ export class SpecieListComponent implements OnInit {
   specieId = input<string>();
 
   selectedWorld : string = '';
+  ignoreSubspecies : boolean = false;
 
   species : Specie[] = [];
 
@@ -133,6 +144,10 @@ export class SpecieListComponent implements OnInit {
 
   getSpecies(){
     this.species = this.specieService.getSpecies(this.specieId(), this.selectedWorld);
+
+    if (this.ignoreSubspecies) {
+      this.species = this.species.filter(s => !s.ParentSpecies);
+    }
   }
 
   getLocations(){
