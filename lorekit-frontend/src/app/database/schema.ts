@@ -125,5 +125,12 @@ export const schema: TableDef[] = [
       { name: "culinaryPractices",          def: `"culinaryPractices" TEXT` },
       { name: "language",                   def: `"language" TEXT` },
     ]
+  },
+  {
+    name:"GlobalParameter",
+    columns: [
+      { name: "key",   def: `"key" TEXT NOT NULL PRIMARY KEY` },
+      { name: "value", def: `"value" TEXT NOT NULL` },
+    ]
   }
 ];

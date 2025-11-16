@@ -82,7 +82,9 @@ export class MainUiComponent {
   openSettings() {
     this.settingsDialog.open(SettingsComponent, {
       autoFocus: false,
-      restoreFocus: false
+      restoreFocus: false,
+      height: '400px',
+      width: '800px',
     });
   }
 

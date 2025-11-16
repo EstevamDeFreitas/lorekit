@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, effect, input, OnDestroy, output, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, computed, effect, inject, input, OnDestroy, output, ViewEncapsulation } from '@angular/core';
 
 import EditorJS from '@editorjs/editorjs';
 import List from '@editorjs/list';
@@ -8,6 +8,7 @@ import Table from '@editorjs/table';
 import TailwindHeader from '../../plugins/tailwindheader.plugin';
 import TailwindItalic from '../../plugins/tailwinditalic.plugin';
 import { IconButtonComponent } from '../icon-button/icon-button.component';
+import { GlobalParameterService } from '../../services/global-parameter.service';
 
 @Component({
   selector: 'app-editor',
@@ -33,7 +34,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   entityName = input.required<string>();
   docTitle = input<string>();
 
-  exportFormat = 'text';
+  globalParameterService = inject<GlobalParameterService>(GlobalParameterService);
+
+  exportFormat = computed(() => {
+    const format = this.globalParameterService.getParameter('exportTextFormat');
+    return format === 'md' || format === 'txt' ? format : 'txt';
+  });
 
   editorId = 'editorjs' + Math.floor(Math.random() * 1000000);
 
@@ -133,13 +139,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     const data = await this.editor.save();
 
     const format = this.exportFormat;
-    const text = format === 'md'
+    const text = format() === 'md'
       ? this.blocksToMarkdown(data.blocks || [])
       : this.blocksToPlainText(data.blocks || []);
 
     const fileNameBase = (`${this.entityTable()}_${this.entityName()}_${this.docTitle() ?? ''}`).replace(/[\\/:*?"<>|]+/g, '_');
-    const ext = format === 'md' ? 'md' : 'txt';
-    this.downloadFile(`${fileNameBase}.${ext}`, text, format === 'md' ? 'text/markdown' : 'text/plain');
+    const ext = format();
+    this.downloadFile(`${fileNameBase}.${ext}`, text, format() === 'md' ? 'text/markdown' : 'text/plain');
   }
 
   private downloadFile(filename: string, content: string, mime: string) {

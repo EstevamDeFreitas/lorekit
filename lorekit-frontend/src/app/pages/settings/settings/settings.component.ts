@@ -10,21 +10,24 @@ import {OverlayModule} from '@angular/cdk/overlay';
 import { LocationCategoriesService } from '../../../services/location-categories.service';
 import { FormOverlayComponent, FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
 import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { GlobalParameterService } from '../../../services/global-parameter.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-settings',
-  imports: [NgClass, ButtonComponent, IconButtonComponent, InputComponent, FormOverlayDirective, OverlayModule, FormOverlayComponent],
+  imports: [NgClass, FormsModule, ButtonComponent, IconButtonComponent, InputComponent, FormOverlayDirective, OverlayModule, FormOverlayComponent],
   template: `
-  <div class=" rounded-md border border-zinc-800 w-200">
+  <div class=" rounded-md border border-zinc-800">
 
     <div class="flex flex-row ">
       <div class="w-75 p-4 border-e border-zinc-700 bg-zinc-900">
         <h2 class="text-lg mb-4">Configurações</h2>
         <div class="flex flex-col gap-2">
+          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('general_settings')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'general_settings'}">Configurações Gerais</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('location_categories')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'location_categories'}">Categorias de Localidade</a>
         </div>
       </div>
-      <div class="flex-1 p-4 bg-zinc-900 ">
+      <div class="flex-1 p-4 bg-zinc-900 overflow-y-auto scrollbar-dark">
         @switch (currentTab) {
           @case ('location_categories') {
             <div>
@@ -68,6 +71,27 @@ import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialo
               </div>
             </div>
           }
+          @case ('general_settings') {
+            <div>
+              <h3 class="text-base mb-2">Configurações Gerais</h3>
+              <br>
+              <p>Ao exportar textos, considerar o formato:</p>
+              <div class="border border-zinc-700 rounded-md p-2">
+                <div class="flex flex-row gap-6">
+                  <div class="flex flex-row items-center gap-2">
+                    <input type="radio" id="txtFormat" name="exportTextFormat" value="txt" [(ngModel)]="exportTextFormat" (ngModelChange)="globalParameterService.setParameter('exportTextFormat', exportTextFormat)">
+                    <label for="txtFormat">.txt (Texto simples)</label>
+                  </div>
+                  <div class="flex flex-row gap-4">
+                    <div class="flex flex-row items-center gap-2">
+                      <input type="radio" id="mdFormat" name="exportTextFormat" value="md" [(ngModel)]="exportTextFormat" (ngModelChange)="globalParameterService.setParameter('exportTextFormat', exportTextFormat)">
+                      <label for="mdFormat">.md (Markdown)</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
         }
 
       </div>
@@ -79,6 +103,7 @@ import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialo
 export class SettingsComponent implements OnInit{
   dialogref = inject<DialogRef<any>>(DialogRef<any>);
   confirm = inject<ConfirmService>(ConfirmService);
+  globalParameterService = inject(GlobalParameterService);
 
   currentTab: string = '';
 
@@ -94,10 +119,12 @@ export class SettingsComponent implements OnInit{
     }
   ];
 
+  exportTextFormat : 'md' | 'txt' = 'txt';
+
   constructor(private locationService: LocationCategoriesService) { }
 
   ngOnInit(): void {
-    this.selectTab('location_categories');
+    this.selectTab('general_settings');
   }
 
   selectTab(tab: string) {
@@ -105,6 +132,15 @@ export class SettingsComponent implements OnInit{
 
     if (tab === 'location_categories') {
       this.getLocationCategories();
+    }
+
+    if (tab === 'general_settings') {
+      const format = this.globalParameterService.getParameter('exportTextFormat');
+      if (format === 'md' || format === 'txt') {
+        this.exportTextFormat = format;
+      } else {
+        this.exportTextFormat = 'txt';
+      }
     }
 
   }

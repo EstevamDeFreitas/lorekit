@@ -109,6 +109,17 @@ export class CrudHelper {
     return data;
   }
 
+  updateKey(table: string, key: string, value : string) {
+    const sql = `UPDATE "${table}" SET Value = ? WHERE key = ?`;
+
+    if(this.debugging){
+      console.log(sql, [value, key]);
+    }
+    this.db.run(sql, [value, key]);
+
+    void persistDb(this.db);
+  }
+
   update(table: string, id: string, data: Record<string, any>) {
     const existing = getExistingColumns(this.db, table);
     const keys = Object.keys(data).filter(k => existing.has(k) && k !== 'id');
