@@ -130,6 +130,8 @@ export class LocationEditComponent implements OnInit {
   getLocation(){
     this.location = this.locationService.getLocationById(this.locationId());
     this.selectedCategoryId = this.location.LocationCategory ? this.location.LocationCategory.id : '';
+    this.selectedParentLocationId = this.location.ParentLocation ? this.location.ParentLocation.id : undefined;
+    this.selectedWorldId = this.location.ParentWorld ? this.location.ParentWorld.id : undefined;
     this.isLoading = false;
 
     this.buildFields();
