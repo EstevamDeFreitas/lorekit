@@ -32,7 +32,7 @@ import { SafeDeleteButtonComponent } from "../../../components/safe-delete-butto
     <div class="flex flex-row gap-4 mt-10 h-full">
       <div class="flex-4 h-[calc(100%-8rem)] overflow-y-auto scrollbar-dark flex flex-col">
         @if (!isLoading) {
-          <app-editor [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full"></app-editor>
+          <app-editor entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full"></app-editor>
         }
       </div>
       <div class="flex-1">

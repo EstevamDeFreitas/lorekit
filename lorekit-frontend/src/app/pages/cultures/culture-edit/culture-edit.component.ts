@@ -65,21 +65,21 @@ import { SpecieListComponent } from '../../species/specie-list/specie-list.compo
                     <div class="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <label class="mb-1 text-sm text-white">Tradições</label>
-                        <app-editor class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.traditions || ''" (saveDocument)="onEditorSave($event, 'traditions')"></app-editor>
+                        <app-editor docTitle="Tradições" entityTable="Culture" [entityName]="culture.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.traditions || ''" (saveDocument)="onEditorSave($event, 'traditions')"></app-editor>
                       </div>
                       <div>
                         <label class="mb-1 text-sm text-white">Estrutura Social</label>
-                        <app-editor class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.socialStructure || ''" (saveDocument)="onEditorSave($event, 'socialStructure')"></app-editor>
+                        <app-editor docTitle="Estrutura Social" entityTable="Culture" [entityName]="culture.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.socialStructure || ''" (saveDocument)="onEditorSave($event, 'socialStructure')"></app-editor>
                       </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                       <div>
                         <label class="mb-1 text-sm text-white">Crenças</label>
-                        <app-editor class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.beliefSystems || ''" (saveDocument)="onEditorSave($event, 'beliefSystems')"></app-editor>
+                        <app-editor docTitle="Crenças" entityTable="Culture" [entityName]="culture.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.beliefSystems || ''" (saveDocument)="onEditorSave($event, 'beliefSystems')"></app-editor>
                       </div>
                       <div>
                         <label class="mb-1 text-sm text-white">Práticas Culinárias</label>
-                        <app-editor class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.culinaryPractices || ''" (saveDocument)="onEditorSave($event, 'culinaryPractices')"></app-editor>
+                        <app-editor docTitle="Práticas Culinárias" entityTable="Culture" [entityName]="culture.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.culinaryPractices || ''" (saveDocument)="onEditorSave($event, 'culinaryPractices')"></app-editor>
                       </div>
                     </div>
                     <br>
@@ -87,7 +87,7 @@ import { SpecieListComponent } from '../../species/specie-list/specie-list.compo
                 }
                 @case ('description') {
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-editor [document]="culture.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full"></app-editor>
+                    <app-editor docTitle="Descrição" entityTable="Culture" [entityName]="culture.name" [document]="culture.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full"></app-editor>
                   </div>
                 }
               }

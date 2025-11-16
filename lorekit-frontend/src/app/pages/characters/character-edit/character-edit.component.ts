@@ -78,7 +78,7 @@ import { SpecieListComponent } from '../../species/specie-list/specie-list.compo
                 }
                 @case ('backstory') {
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-editor [document]="character.background || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
+                    <app-editor docTitle="Backstory" entityTable="Character" [entityName]="character.name" [document]="character.background || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
                   </div>
                 }
               }

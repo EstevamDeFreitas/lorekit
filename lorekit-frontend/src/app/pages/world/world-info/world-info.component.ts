@@ -54,7 +54,7 @@ import { getPersonalizationValue } from '../../../models/personalization.model';
               @switch (currentTab) {
                 @case ('details') {
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-editor [document]="currentWorld.description || ''" (saveDocument)="onDocumentSave($event)"></app-editor>
+                    <app-editor docTitle="Descrição" entityTable="World" [entityName]="currentWorld.name" [document]="currentWorld.description || ''" (saveDocument)="onDocumentSave($event)"></app-editor>
                   </div>
                 }
                 @case ('localities') {

@@ -51,7 +51,7 @@ import { getPersonalizationValue } from '../../../models/personalization.model';
               @switch (currentTab) {
                 @case ('details') {
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-editor [document]="location.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
+                    <app-editor docTitle="Descrição" entityTable="Location" [entityName]="location.name" [document]="location.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
                   </div>
                 }
                 @case ('localities') {

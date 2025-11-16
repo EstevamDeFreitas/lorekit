@@ -74,7 +74,7 @@ import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
                 }
                 @case ('details') {
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-editor [document]="specie.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
+                    <app-editor docTitle="Descrição" entityTable="Species" [entityName]="specie.name" [document]="specie.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
                   </div>
                 }
                 @case ('subspecies') {
