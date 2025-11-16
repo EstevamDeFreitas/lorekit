@@ -57,6 +57,17 @@ export const routes: Routes = [
             .then(m => m.CharacterEditComponent),
         },
       ]},
+      {path:'culture', children:[
+        {path: '', redirectTo: 'list', pathMatch: 'full'},
+        {path: 'list', loadComponent: () =>
+          import('./pages/cultures/culture-list/culture-list.component')
+            .then(m => m.CultureListComponent),
+        },
+        {path: 'edit/:cultureId', loadComponent: () =>
+          import('./pages/cultures/culture-edit/culture-edit.component')
+            .then(m => m.CultureEditComponent),
+        },
+      ]},
     ]
   }
 

@@ -18,20 +18,34 @@ import { SettingsComponent } from '../../settings/settings/settings.component';
       <div>
         <div class="flex flex-col gap-2 mb-4">
           <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/world" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
-            <i class="fa-solid fa-earth "></i>
+            <div class="w-5 flex flex-row justify-center">
+              <i class="fa-solid fa-earth"></i>
+            </div>
             <span class="">Mundos</span>
           </a>
           <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/location" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
-            <i class="fa-solid fa-city "></i>
+            <div class="w-5 flex flex-row justify-center">
+              <i class="fa-solid fa-city "></i>
+            </div>
             <span class="">Localidades</span>
           </a>
           <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/specie" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
-            <i class="fa-solid fa-paw "></i>
+            <div class="w-5 flex flex-row justify-center">
+              <i class="fa-solid fa-paw "></i>
+            </div>
             <span class="">Espécies</span>
           </a>
           <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/character" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
-            <i class="fa-solid fa-users "></i>
+            <div class="w-5 flex flex-row justify-center">
+              <i class="fa-solid fa-users "></i>
+            </div>
             <span class="">Personagens</span>
+          </a>
+          <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/culture" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
+            <div class="w-5 flex flex-row justify-center">
+              <i class="fa-solid fa-mortar-pestle"></i>
+            </div>
+            <span class="">Culturas</span>
           </a>
         </div>
       </div>

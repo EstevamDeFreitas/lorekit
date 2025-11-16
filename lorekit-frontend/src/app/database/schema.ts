@@ -109,5 +109,21 @@ export const schema: TableDef[] = [
       { name: "entityTable", def: `"entityTable" TEXT NOT NULL` },
       { name: "entityId",    def: `"entityId" TEXT NOT NULL` },
     ]
+  },
+  {
+    name:"Culture",
+    columns: [
+      { name: "id",                         def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",                       def: `"name" TEXT NOT NULL` },
+      { name: "description",                def: `"description" TEXT NOT NULL` },
+      { name: "concept",                    def: `"concept" TEXT` },
+      { name: "values",                     def: `"values" TEXT` },
+      { name: "traditions",                 def: `"traditions" TEXT` },
+      { name: "socialStructure",            def: `"socialStructure" TEXT` },
+      { name: "beliefSystems",              def: `"beliefSystems" TEXT` },
+      { name: "technologyLevel",            def: `"technologyLevel" TEXT` },
+      { name: "culinaryPractices",          def: `"culinaryPractices" TEXT` },
+      { name: "language",                   def: `"language" TEXT` },
+    ]
   }
 ];
