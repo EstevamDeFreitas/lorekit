@@ -46,7 +46,7 @@ import { FormsModule } from '@angular/forms';
           @if(!specieId()){
             <div>
               <input type="checkbox" name="ignoreSubspecies" id="ignoreSubspecies" [(ngModel)]="ignoreSubspecies" (ngModelChange)="getSpecies()">
-              <label for="ignoreSubspecies" class="ml-2 text-sm text-white" >Ignorar subespécies</label>
+              <label for="ignoreSubspecies" class="ml-2 text-sm text-white" >Ignorar Variações</label>
             </div>
           }
         </div>

@@ -54,7 +54,7 @@ import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
           <div class="flex flex-row gap-4 ms-1">
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'properties'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'properties'}">Propriedades</a>
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'details'}">Detalhes</a>
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'subspecies'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'subspecies'}">Subespécies</a>
+            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'subspecies'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'subspecies'}">Variações</a>
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 overflow-hidden flex flex-col">
             @if (!isLoading) {
