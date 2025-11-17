@@ -70,15 +70,26 @@ import { SpecieListComponent } from '../../species/specie-list/specie-list.compo
                       <app-input [label]="'Alinhamento'" [(value)]="character.alignment" (valueChange)="saveCharacter()"></app-input>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
-                      <app-text-area class="mt-4" height="h-32" [label]="'Personalidade'" [(value)]="character.personality" (valueChange)="saveCharacter()"></app-text-area>
-                      <app-text-area class="mt-4" height="h-32" [label]="'Aparência'" [(value)]="character.appearance" (valueChange)="saveCharacter()"></app-text-area>
+                      <div>
+                        <label class="mb-1 text-sm text-white">Personalidade</label>
+                        <app-editor docTitle="Personalidade" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.personality || ''" (saveDocument)="onEditorSave($event, 'personality')"></app-editor>
+                      </div>
+                      <div>
+                        <label class="mb-1 text-sm text-white">Aparência</label>
+                        <app-editor docTitle="Aparência" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.appearance || ''" (saveDocument)="onEditorSave($event, 'appearance')"></app-editor>
+                      </div>
+                      <div>
+                        <label class="mb-1 text-sm text-white">Objetivos</label>
+                        <app-editor docTitle="Objetivos" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.objectives || ''" (saveDocument)="onEditorSave($event, 'objectives')"></app-editor>
+                      </div>
                     </div>
-                    <app-text-area class="mt-4" height="h-32" [label]="'Objetivos'" [(value)]="character.objectives" (valueChange)="saveCharacter()"></app-text-area>
+                    <br>
                   </div>
                 }
                 @case ('backstory') {
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-editor docTitle="Backstory" entityTable="Character" [entityName]="character.name" [document]="character.background || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
+
+                    <app-editor docTitle="Backstory" entityTable="Character" [entityName]="character.name" [document]="character.background || ''" (saveDocument)="onEditorSave($event, 'background')" class="w-full"></app-editor>
                   </div>
                 }
               }
@@ -177,8 +188,9 @@ export class CharacterEditComponent implements OnInit {
     }, 500);
   }
 
-  onDocumentSave($event: any) {
-    this.character.background = JSON.stringify($event);
+  onEditorSave($event: any, field: keyof Character) {
+    (this.character[field] as any) = JSON.stringify($event);
+
     this.saveCharacter();
   }
 

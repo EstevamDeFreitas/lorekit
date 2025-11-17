@@ -102,6 +102,20 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     try {
       return document ? JSON.parse(document) : {};
     } catch {
+
+      if (document && document.trim().length > 0) {
+        return {
+          blocks: [
+            {
+              type: 'paragraph',
+              data: {
+                text: document.replace(/\n/g, '<br>')
+              }
+            }
+          ]
+        };
+      }
+
       return {};
     }
   }
