@@ -154,19 +154,24 @@ export class SpecieEditComponent implements OnInit {
   getSpecie(){
     this.specie = this.specieService.getSpecie(this.specieId());
 
+    this.selectedParentLocationId = this.specie.ParentLocation ? this.specie.ParentLocation.id : '';
+    this.selectedWorldId = this.specie.ParentWorld ? this.specie.ParentWorld.id : '';
+    this.selectedMainSpecieId = this.specie.ParentSpecies ? this.specie.ParentSpecies.id : '';
+
     this.buildFields();
     this.isLoading = false;
   }
 
   private buildFields() {
 
+    let specieOptions = this.specieService.getSpecies(null, this.specie.ParentWorld ? this.specie.ParentWorld.id : '').filter(s => s.id !== this.specie.id && !s.ParentSpecies);
+
     this.fields = [
       { key: 'concept', label: 'Conceito', value: this.specie.concept || '', type: 'text-area' },
-      { key: 'parentLocationId', label: 'Local de Origem', value: this.specie.ParentLocation ? this.specie.ParentLocation.id : '', options: this.locationService.getLocations(), optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
-      { key: 'parentWorldId', label: 'Mundo', value: this.specie.ParentWorld ? this.specie.ParentWorld.id : '', options: this.worldService.getWorlds(), optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
-      { key: 'mainSpecieId', label: 'Espécie Principal', value: this.specie.ParentSpecies ? this.specie.ParentSpecies.id : '', options: this.specieService.getSpecies(null, this.specie.ParentWorld ? this.specie.ParentWorld.id : ''), optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
+      { key: 'parentLocationId', label: 'Local de Origem', value: this.selectedParentLocationId ?? '', options: this.locationService.getLocations(), optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
+      { key: 'parentWorldId', label: 'Mundo', value: this.selectedWorldId ?? '', options: this.worldService.getWorlds(), optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
+      { key: 'mainSpecieId', label: 'Espécie Principal', value: this.selectedMainSpecieId ?? '', options: specieOptions, optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
     ];
-
   }
 
   getColor(specie: Specie): string {
@@ -188,6 +193,15 @@ export class SpecieEditComponent implements OnInit {
   }
 
   onFieldsSave(formData: Record<string, string>) {
+    //ignore save if no changes
+    if (formData['concept'] === this.specie.concept &&
+        formData['parentLocationId'] === (this.specie.ParentLocation ? this.specie.ParentLocation.id : '') &&
+        formData['parentWorldId'] === (this.specie.ParentWorld ? this.specie.ParentWorld.id : '') &&
+        formData['mainSpecieId'] === (this.specie.ParentSpecies ? this.specie.ParentSpecies.id : '')
+    ) {
+      return;
+    }
+
     this.specie.concept = formData['concept'];
     this.selectedParentLocationId = formData['parentLocationId'];
     this.selectedWorldId = formData['parentWorldId'];
