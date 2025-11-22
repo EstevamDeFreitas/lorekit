@@ -74,13 +74,14 @@ export class FormOverlayComponent {
   handleSave() {
     const formData: Record<string, string> = {};
     this.fields().forEach(field => {
-      formData[field.key] = field.value.trim();
+      formData[field.key] = field.value ? field.value.trim() : '';
     });
 
-    const hasEmptyFields = this.fields().some(field => field.value.trim() === '');
-    if (hasEmptyFields) {
-      return;
-    }
+    // TODO: Tratar validação dos campos obrigatórios
+    // const hasEmptyFields = this.fields().some(field => field.value.trim() === '');
+    // if (hasEmptyFields) {
+    //   return;
+    // }
 
     this.onSave.emit(formData);
   }
