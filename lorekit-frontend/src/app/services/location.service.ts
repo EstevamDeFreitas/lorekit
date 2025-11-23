@@ -18,10 +18,10 @@ export class LocationService {
 
   getLocations(locationId?: string) : Location[] {
     if (locationId) {
-      return this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": true}, {"table": "Personalization", "firstOnly": true}], {parentTable: 'Location', parentId: locationId});
+      return this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": false}, {"table": "Personalization", "firstOnly": true}], {parentTable: 'Location', parentId: locationId});
     }
 
-    return this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": true}, {"table": "Personalization", "firstOnly": true}]);
+    return this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": false}, {"table": "Personalization", "firstOnly": true}]);
   }
 
   saveLocation(location: Location, locationCategoryId: string, worldId?: string, locationId?: string) : Location {
@@ -110,7 +110,7 @@ export class LocationService {
   getLocationById(locationId: string) : Location {
     return this.crud.findById('Location', locationId, [
       {"table": "LocationCategory", "firstOnly": true},
-      {"table": "Image", "firstOnly": true},
+      {"table": "Image", "firstOnly": false},
       {"table": "World", "firstOnly": true, "isParent":true},
       {"table": "Personalization", "firstOnly": true},
       {"table": "Location", "firstOnly": true, "isParent":true},
@@ -118,7 +118,7 @@ export class LocationService {
   }
 
   getLocationByWorldId(worldId: string) : Location[] {
-    return <Location[]>this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": true}, {"table": "Personalization", "firstOnly": true}], {parentTable: 'World', parentId: worldId});
+    return <Location[]>this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": false}, {"table": "Personalization", "firstOnly": true}], {parentTable: 'World', parentId: worldId});
   }
 
 }

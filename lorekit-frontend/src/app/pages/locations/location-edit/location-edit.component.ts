@@ -16,14 +16,16 @@ import { environment } from '../../../../enviroments/environment';
 import { LocationListComponent } from "../location-list/location-list.component";
 import { WorldService } from '../../../services/world.service';
 import { getPersonalizationValue } from '../../../models/personalization.model';
+import { getImageByUsageKey } from '../../../models/image.model';
 
 @Component({
   selector: 'app-location-edit',
   imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, NgStyle],
   template: `
     <div class="flex flex-col h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[75vh]': isInDialog()}">
-      @if(location.Image){
-        <img [src]="location.Image.filePath" class="w-full h-36 object-cover rounded-md">
+      @if(getImageByUsageKey(location.Images, 'default') != null){
+        @let img = getImageByUsageKey(location.Images, 'default');
+        <img [src]="img?.filePath" class="w-full h-36 object-cover rounded-md">
       }
       @else{
         <div class="w-full h-36 object-cover rounded-md" [ngStyle]="{'background-color': getPersonalizationValue(location, 'color') || 'var(--color-zinc-800)'}"></div>
@@ -88,6 +90,7 @@ export class LocationEditComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private locationCategoryService = inject(LocationCategoriesService);
   public getPersonalizationValue = getPersonalizationValue;
+  public getImageByUsageKey = getImageByUsageKey;
 
   isInDialog = computed(() => !!this.dialogref);
 

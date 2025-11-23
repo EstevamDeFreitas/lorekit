@@ -9,7 +9,7 @@ export class World {
   concept?: string;
 
   Personalization?: Personalization;
-  Image?: Image;
+  Images?: Image[];
 
   constructor(id: string = '', name: string = '', description?: string) {
     this.id = id;

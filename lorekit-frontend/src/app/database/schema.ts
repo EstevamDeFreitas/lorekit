@@ -132,5 +132,33 @@ export const schema: TableDef[] = [
       { name: "key",   def: `"key" TEXT NOT NULL PRIMARY KEY` },
       { name: "value", def: `"value" TEXT NOT NULL` },
     ]
+  },
+  {
+    name:"Organization",
+    columns:[
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",        def: `"name" TEXT NOT NULL` },
+      { name: "description", def: `"description" TEXT NOT NULL` },
+      { name: "concept",     def: `"concept" TEXT` },
+    ]
+  },
+  {
+    name:"OrganizationType",
+    columns:[
+      { name: "id",   def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name", def: `"name" TEXT NOT NULL` }
+    ]
+  },
+  {
+    name:"Link",
+    columns:[
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "fromTable", def: `"fromTable" TEXT NOT NULL` },
+      { name: "fromId",    def: `"fromId" TEXT NOT NULL` },
+      { name: "toTable", def: `"toTable" TEXT NOT NULL` },
+      { name: "toId",    def: `"toId" TEXT NOT NULL` },
+      { name: "name",        def: `"name" TEXT` },
+      { name: "configJson",  def: `"configJson" TEXT` },
+    ]
   }
 ];

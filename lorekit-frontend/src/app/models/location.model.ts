@@ -10,7 +10,7 @@ export class Location{
   concept?: string;
 
   Personalization?: Personalization;
-  Image?: Image;
+  Images?: Image[];
   LocationCategory?: LocationCategory;
   ParentWorld?: World;
   ParentLocation?: Location;

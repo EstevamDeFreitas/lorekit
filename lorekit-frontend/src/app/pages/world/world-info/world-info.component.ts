@@ -15,7 +15,7 @@ import { EntityLateralMenuComponent } from "../../../components/entity-lateral-m
 import { LocationListComponent } from "../../locations/location-list/location-list.component";
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { ImageUploaderComponent } from "../../../components/ImageUploader/image-uploader.component";
-import { Image } from '../../../models/image.model';
+import { getImageByUsageKey, Image } from '../../../models/image.model';
 import { ImageService } from '../../../services/image.service';
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { getPersonalizationValue } from '../../../models/personalization.model';
@@ -25,8 +25,9 @@ import { getPersonalizationValue } from '../../../models/personalization.model';
   imports: [NgStyle, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent],
   template: `
     <div class="flex flex-col h-screen">
-      @if(currentWorld.Image){
-        <img [src]="currentWorld.Image.filePath" class="w-full h-36 object-cover rounded-md">
+      @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
+        @let img = getImageByUsageKey(currentWorld.Images, 'default');
+        <img [src]="img?.filePath" class="w-full h-36 object-cover rounded-md">
       }
       @else{
         <div class="w-full h-36 object-cover rounded-md" [ngStyle]="{'background-color': getPersonalizationValue(currentWorld, 'color') || 'var(--color-zinc-800)'}"></div>
@@ -93,6 +94,7 @@ export class WorldInfoComponent implements OnInit {
   currentWorldId: string | null = null;
 
   public getPersonalizationValue = getPersonalizationValue;
+  public getImageByUsageKey = getImageByUsageKey;
 
   currentTab : string = 'details';
 

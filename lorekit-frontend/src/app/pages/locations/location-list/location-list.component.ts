@@ -9,7 +9,7 @@ import { LocationCategoriesService } from '../../../services/location-categories
 import { Dialog } from '@angular/cdk/dialog';
 import { ImageService } from '../../../services/image.service';
 import { environment } from '../../../../enviroments/environment';
-import { buildImageUrl } from '../../../models/image.model';
+import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { WorldService } from '../../../services/world.service';
@@ -54,8 +54,9 @@ import { World } from '../../../models/world.model';
               <h3 class="text-lg mb-2">{{ category.name }}:</h3>
               <div class="grid grid-cols-3 gap-4">
                 @for (location of locationGroups[category.id]; track location.id) {
-                  @if (location.Image != null){
-                    <div (click)="selectLocation(location.id!)" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + buildImageUrl(location.Image.filePath) + ')', 'background-size': 'cover', 'background-position': 'center'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
+                  @let img = getImageByUsageKey(location.Images, 'default');
+                  @if (img != null){
+                    <div (click)="selectLocation(location.id!)" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + buildImageUrl(img.filePath) + ')', 'background-size': 'cover', 'background-position': 'center'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
                       <div class="flex flex-row gap-2 items-center">
                         <i class="fa" [ngClass]="getPersonalizationValue(location, 'icon') || 'fa-location-dot'"></i>
                         <div class="text-base font-bold">{{ location.name }}</div>
@@ -97,6 +98,7 @@ export class LocationListComponent implements OnInit {
   public buildImageUrl = buildImageUrl;
   public getPersonalizationValue = getPersonalizationValue;
   public getTextClass = getTextClass;
+  public getImageByUsageKey = getImageByUsageKey;
 
 
   selectedWorld : string = '';

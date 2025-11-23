@@ -15,11 +15,11 @@ export class WorldService {
   }
 
   getWorlds() : World[] {
-    return this.crud.findAll('World', {}, [{"table": "Personalization", "firstOnly": true}, {"table": "Image", "firstOnly": true}]);
+    return this.crud.findAll('World', {}, [{"table": "Personalization", "firstOnly": true}, {"table": "Image", "firstOnly": false}]);
   }
 
   getWorldById(id: string) : World {
-    return this.crud.findById('World', id, [{"table": "Personalization", "firstOnly": true}, {"table": "Image", "firstOnly": true}]);
+    return this.crud.findById('World', id, [{"table": "Personalization", "firstOnly": true}, {"table": "Image", "firstOnly": false}]);
   }
 
   createWorld(world: World) {
