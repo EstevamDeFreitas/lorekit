@@ -58,6 +58,18 @@ function ensureSchema(db: any) {
     }
 
     if (t.indexes) for (const idx of t.indexes) db.exec(idx);
+
+    //TODO: melhorar verificação para evitar re-insert desnecessário
+    if( t.insertCommands ) {
+      for(const cmd of t.insertCommands) {
+        try{
+          db.exec(cmd);
+        }
+        catch(e){
+          console.log(`Insert command skipped (probably already exists): ${cmd}`);
+        }
+      }
+    }
   }
 }
 

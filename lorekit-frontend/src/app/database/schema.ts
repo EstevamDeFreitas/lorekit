@@ -4,6 +4,7 @@ export type TableDef = {
   columns: ColumnDef[];
   fks?: string[];
   indexes?: string[];
+  insertCommands?: string[];
 };
 
 export const schema: TableDef[] = [
@@ -147,6 +148,15 @@ export const schema: TableDef[] = [
     columns:[
       { name: "id",   def: `"id" TEXT NOT NULL PRIMARY KEY` },
       { name: "name", def: `"name" TEXT NOT NULL` }
+    ],
+    insertCommands: [
+      `INSERT INTO "OrganizationType" (id, name) VALUES ('0f23ffcf-c1eb-471d-9856-f6cd0caa1d3b', 'Governo')`,
+      `INSERT INTO "OrganizationType" (id, name) VALUES ('b0fed817-b417-482b-a189-50dd409ed6f9', 'Corporação')`,
+      `INSERT INTO "OrganizationType" (id, name) VALUES ('12e35331-65ad-4cc6-ae45-5dc2a0d4cad8', 'Grupo Mercenário')`,
+      `INSERT INTO "OrganizationType" (id, name) VALUES ('2d499cea-a835-406d-bb5e-6c1b5521cd45', 'Grupo Religioso')`,
+      `INSERT INTO "OrganizationType" (id, name) VALUES ('b6544f6a-c36d-46d8-a467-80e22072c3dd', 'Grupo Clandestino')`,
+      `INSERT INTO "OrganizationType" (id, name) VALUES ('d06a5085-b7e2-4f5b-aca6-8b36764452f4', 'Guilda')`,
+      `INSERT INTO "OrganizationType" (id, name) VALUES ('d06a5085-b7e2-4f5b-aca6-8b36764452f4', 'Comunidade')`,
     ]
   },
   {

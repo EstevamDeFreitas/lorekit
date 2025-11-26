@@ -25,7 +25,7 @@ import { SettingsComponent } from '../../settings/settings/settings.component';
           </a>
           <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/location" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
             <div class="w-5 flex flex-row justify-center">
-              <i class="fa-solid fa-city "></i>
+              <i class="fa-solid fa-location-dot "></i>
             </div>
             <span class="">Localidades</span>
           </a>
@@ -46,6 +46,12 @@ import { SettingsComponent } from '../../settings/settings/settings.component';
               <i class="fa-solid fa-mortar-pestle"></i>
             </div>
             <span class="">Culturas</span>
+          </a>
+          <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/organization" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
+            <div class="w-5 flex flex-row justify-center">
+              <i class="fa-solid fa-building "></i>
+            </div>
+            <span class="">Organizações</span>
           </a>
         </div>
       </div>

@@ -68,6 +68,19 @@ export const routes: Routes = [
             .then(m => m.CultureEditComponent),
         },
       ]},
+      {
+        path: 'organization', children: [
+          {path: '', redirectTo: 'list', pathMatch: 'full'},
+          {path: 'list', loadComponent: () =>
+            import('./pages/organizations/organization-list/organization-list.component')
+              .then(m => m.OrganizationListComponent),
+          },
+          {path: 'edit/:organizationId', loadComponent: () =>
+            import('./pages/organizations/organization-edit/organization-edit.component')
+              .then(m => m.OrganizationEditComponent),
+          },
+        ]
+      },
     ]
   }
 

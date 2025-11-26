@@ -12,6 +12,8 @@ import { FormOverlayComponent, FormOverlayDirective, FormField } from '../../../
 import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { GlobalParameterService } from '../../../services/global-parameter.service';
 import { FormsModule } from '@angular/forms';
+import { OrganizationType } from '../../../models/organization.model';
+import { OrganizationTypeService } from '../../../services/organization-type.service';
 
 @Component({
   selector: 'app-settings',
@@ -25,6 +27,7 @@ import { FormsModule } from '@angular/forms';
         <div class="flex flex-col gap-2">
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('general_settings')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'general_settings'}">Configurações Gerais</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('location_categories')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'location_categories'}">Categorias de Localidade</a>
+          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('organization_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'organization_types'}">Tipos de Organização</a>
         </div>
       </div>
       <div class="flex-1 p-4 bg-zinc-900 overflow-y-auto scrollbar-dark">
@@ -92,6 +95,48 @@ import { FormsModule } from '@angular/forms';
               </div>
             </div>
           }
+          @case ("organization_types") {
+            <div>
+              <div class="flex flex-row justify-between items-center mb-4">
+                <h3 class="text-base mb-2">Tipos de Organização</h3>
+                <app-button
+                  label="Adicionar"
+                  buttonType="primary"
+                  size="xs"
+                  icon="fa-solid fa-plus"
+                  appFormOverlay
+                  [title]="'Adicionar Tipo de Organização'"
+                  [fields]="organizationTypeFormFields"
+                  (onSave)="createOrganizationType($event)"
+                  ></app-button>
+              </div>
+              <div class="border border-zinc-700 rounded-md bg-zinc-900">
+                @for (item of organizationTypes; track item.id) {
+                  <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
+                    <p>{{item.name}}</p>
+                    <div class="flex flex-row gap-2">
+                      <app-icon-button
+                        icon="fa-solid fa-pencil"
+                        size="sm"
+                        buttonType="secondary"
+                        appFormOverlay
+                        [title]="'Editar Categoria'"
+                        [fields]="[{ key: 'name', label: 'Nome do Tipo de Organização', value: item.name, type: 'text' }]"
+                        [saveLabel]="'Atualizar'"
+                        (onSave)="saveOrganizationType($event, item.id)"
+                        ></app-icon-button>
+                      <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" (click)="deleteOrganizationType(item)"></app-icon-button>
+                    </div>
+                  </div>
+                }
+                @empty {
+                  <div class="flex flex-row justify-between items-center p-2">
+                    <p>Nenhum tipo de organização encontrado.</p>
+                  </div>
+                }
+              </div>
+            </div>
+          }
         }
 
       </div>
@@ -104,6 +149,7 @@ export class SettingsComponent implements OnInit{
   dialogref = inject<DialogRef<any>>(DialogRef<any>);
   confirm = inject<ConfirmService>(ConfirmService);
   globalParameterService = inject(GlobalParameterService);
+  organizationTypeService = inject(OrganizationTypeService);
 
   currentTab: string = '';
 
@@ -114,6 +160,15 @@ export class SettingsComponent implements OnInit{
     {
       key: 'name',
       label: 'Nome da categoria',
+      value: '',
+      type: 'text'
+    }
+  ];
+
+  organizationTypeFormFields : FormField[] = [
+    {
+      key: 'name',
+      label: 'Nome do Tipo de Organização',
       value: '',
       type: 'text'
     }
@@ -132,6 +187,10 @@ export class SettingsComponent implements OnInit{
 
     if (tab === 'location_categories') {
       this.getLocationCategories();
+    }
+
+    if (tab === 'organization_types') {
+      this.getOrganizationTypes();
     }
 
     if (tab === 'general_settings') {
@@ -190,7 +249,51 @@ export class SettingsComponent implements OnInit{
         this.getLocationCategories();
       }
     });
+  }
 
+  //Organization Types
+  organizationTypes: OrganizationType[] = [];
+  createOrganizationType(formData: Record<string, string>) {
+    const typeName = formData['name'];
 
+    if (typeName.trim() === '') {
+      return;
+    }
+
+    const newType: OrganizationType = {
+      id: '',
+      name: typeName.trim()
+    };
+
+    let orgType = this.organizationTypeService.saveOrganizationType(newType);
+    this.organizationTypes.push(orgType);
+  }
+
+  saveOrganizationType(formData: Record<string, string>, typeId: string) {
+    const typeName = formData['name'];
+
+    if (typeName.trim() === '') {
+      return;
+    }
+
+    const typeToUpdate = this.organizationTypes.find(t => t.id === typeId);
+    if (typeToUpdate) {
+      typeToUpdate.name = typeName.trim();
+      this.organizationTypeService.saveOrganizationType(typeToUpdate);
+      this.getOrganizationTypes();
+    }
+  }
+
+  deleteOrganizationType(orgType: OrganizationType) {
+    this.confirm.ask(`Tem certeza que deseja deletar o tipo de organização ${orgType.name}?`).then(confirmed => {
+      if (confirmed) {
+        this.organizationTypeService.deleteOrganizationType(orgType);
+        this.getOrganizationTypes();
+      }
+    });
+  }
+
+  getOrganizationTypes() {
+    this.organizationTypes = this.organizationTypeService.getOrganizationTypes();
   }
 }
