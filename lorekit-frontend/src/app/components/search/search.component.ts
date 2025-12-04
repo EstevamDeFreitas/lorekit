@@ -56,7 +56,6 @@ import { RouterLink } from '@angular/router';
                     @if (key === 'Document'){
                       <div>
                         <div class="font-bold">{{ result.title }}</div>
-                        <div class="text-xs text-zinc-500 line-clamp-2">{{ result.content }}</div>
                       </div>
                     }
                     @else {
@@ -144,6 +143,9 @@ export class SearchComponent implements OnInit, OnDestroy {
   getEditUrl(tableName: string, id: string): string {
     if(tableName === 'Species'){
       return `/app/specie/edit/${id}`;
+    }
+    if(tableName === 'World'){
+      return `/app/world/info/${id}`;
     }
     return `/app/${tableName.toLowerCase()}/edit/${id}`;
   }
