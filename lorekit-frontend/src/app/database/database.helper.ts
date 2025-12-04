@@ -308,6 +308,30 @@ export class CrudHelper {
     }
     return results;
   }
+
+  public searchInTable(table: string, term: string, columns: string[]) {
+    if (!columns.length) {
+      return [];
+    }
+    const likeTerm = `%${term}%`;
+    const clauses = columns.map(col => `"${col}" LIKE ?`).join(' OR ');
+    const sql = `SELECT * FROM "${table}" WHERE ${clauses}`;
+
+    if(this.debugging){
+      console.log(sql, Array(columns.length).fill(likeTerm));
+    }
+
+    const stmt = this.db.prepare(sql);
+    stmt.bind(Array(columns.length).fill(likeTerm));
+
+    const results = [];
+    while (stmt.step()) {
+      results.push(stmt.getAsObject());
+    }
+    stmt.free();
+
+    return results;
+  }
 }
 
 function mapResult(res: any) {

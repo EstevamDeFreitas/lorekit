@@ -33,8 +33,6 @@ export function getTextClass(colorHex?: string | null): string {
   const L = relativeLuminance(rgb);
   const contrastToWhite = (1.0 + 0.05) / (L + 0.05);
   const contrastToBlack = (L + 0.05) / (0.0 + 0.05);
-  console.log(contrastToBlack, contrastToWhite, colorHex);
-
   return contrastToBlack >= contrastToWhite ? 'text-zinc-900' : 'text-white';
 }
 
