@@ -156,7 +156,7 @@ export const schema: TableDef[] = [
       `INSERT INTO "OrganizationType" (id, name) VALUES ('2d499cea-a835-406d-bb5e-6c1b5521cd45', 'Grupo Religioso')`,
       `INSERT INTO "OrganizationType" (id, name) VALUES ('b6544f6a-c36d-46d8-a467-80e22072c3dd', 'Grupo Clandestino')`,
       `INSERT INTO "OrganizationType" (id, name) VALUES ('d06a5085-b7e2-4f5b-aca6-8b36764452f4', 'Guilda')`,
-      `INSERT INTO "OrganizationType" (id, name) VALUES ('d06a5085-b7e2-4f5b-aca6-8b36764452f4', 'Comunidade')`,
+      `INSERT INTO "OrganizationType" (id, name) VALUES ('z06a5085-b7e2-4f5b-aca6-8b36764452f4', 'Comunidade')`,
     ]
   },
   {

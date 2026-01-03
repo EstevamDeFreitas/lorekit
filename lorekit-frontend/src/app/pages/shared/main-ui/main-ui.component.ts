@@ -29,6 +29,12 @@ import { SettingsComponent } from '../../settings/settings/settings.component';
             </div>
             <span class="">Localidades</span>
           </a>
+          <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/document" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
+            <div class="w-5 flex flex-row justify-center">
+              <i class="fa-solid fa-file "></i>
+            </div>
+            <span class="">Documentos</span>
+          </a>
           <a class="flex flex-row items-center p-2 text-sm rounded-md font-bold gap-3 hover:bg-zinc-800" routerLink="/app/specie" routerLinkActive="bg-yellow-500 text-zinc-800 hover:!bg-yellow-400">
             <div class="w-5 flex flex-row justify-center">
               <i class="fa-solid fa-paw "></i>

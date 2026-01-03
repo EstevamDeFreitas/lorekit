@@ -18,7 +18,13 @@ export const routes: Routes = [
 
       ]},
       {path:'document', children:[
-        {path: 'edit/:documentId', component: DocumentEditComponent},
+        {path: '', redirectTo: 'list', pathMatch: 'full'},
+        {path: 'list', loadComponent: () =>
+          import('./pages/documents/document-list/document-list.component')
+            .then(m => m.DocumentListComponent)},
+        {path: 'edit/:documentId', loadComponent: () =>
+          import('./pages/documents/document-edit/document-edit.component')
+            .then(m => m.DocumentEditComponent)},
       ]},
       {path:'location', children:[
         {path: '', redirectTo: 'list', pathMatch: 'full'},
