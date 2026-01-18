@@ -6,16 +6,18 @@ import {OverlayModule} from '@angular/cdk/overlay';
 import { InputComponent } from "../input/input.component";
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormOverlayDirective, FormField } from '../form-overlay/form-overlay.component';
-import { NgClass } from '@angular/common';
+import { NgClass, NgStyle } from '@angular/common';
 import { Dialog } from '@angular/cdk/dialog';
 import { DocumentEditComponent } from '../../pages/documents/document-edit/document-edit.component';
 import { ComboBoxComponent } from "../combo-box/combo-box.component";
 import { TextAreaComponent } from "../text-area/text-area.component";
 import { debounceTime, Subject } from 'rxjs';
+import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../models/personalization.model';
+import { getImageByUsageKey } from '../../models/image.model';
 
 @Component({
   selector: 'app-entity-lateral-menu',
-  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, NgClass, ComboBoxComponent, TextAreaComponent],
+  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, NgClass, ComboBoxComponent, TextAreaComponent, NgStyle],
   template: `
   <div class="flex flex-col gap-4 w-full h-full">
     <div class="flex flex-row justify-around items-center">
@@ -74,7 +76,7 @@ import { debounceTime, Subject } from 'rxjs';
         </div>
         <div class="flex flex-col gap-2 h-[calc(100%-8rem)]  overflow-y-scroll scrollbar-dark">
           @for (item of documentArray; track $index) {
-            <button (click)="openDocument(item)" class=" cursor-pointer flex flex-row hover:font-bold items-center gap-2" [ngClass]="'text-' + (getPersonalizationItem(item, 'color') || 'zinc') + '-500'" >
+            <button (click)="openDocument(item)" class=" cursor-pointer flex flex-row hover:font-bold items-center gap-2" [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(item, 'color'))}" >
               <i class="fa-solid" [ngClass]="getPersonalizationItem(item, 'icon') || 'fa-file'"></i>
               <h2 [title]="item.title" class="whitespace-nowrap overflow-hidden overflow-ellipsis">{{ item.title }}</h2>
             </button>
@@ -98,6 +100,10 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
   onSave = output<Record<string, any>>(); // <-- aceitar qualquer tipo (strings, objetos, etc.)
 
   fieldValues: FormField[] = [];
+
+  public getPersonalizationValue = getPersonalizationValue;
+    public getImageByUsageKey = getImageByUsageKey;
+    public getTextColorStyle = getTextColorStyle;
 
   private fieldValueChanges = new Subject<FormField>();
   private initialized = false;

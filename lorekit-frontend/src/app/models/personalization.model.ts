@@ -27,6 +27,11 @@ export function getPersonalizationValue(entity:any, key: string): string | null 
   return null;
 }
 
+export function getTextColorStyle(colorHex?: string | null): string {
+  if (!colorHex) return 'white';
+  return `${colorHex!}`;
+}
+
 export function getTextClass(colorHex?: string | null): string {
   const rgb = hexToRgb(colorHex ?? '');
   if (!rgb) return 'text-white';
