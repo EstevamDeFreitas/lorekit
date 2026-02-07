@@ -9,12 +9,13 @@ import { ImageService } from '../../services/image.service';
 import { Image } from '../../models/image.model';
 import { ImageUploaderComponent } from '../ImageUploader/image-uploader.component';
 import { FormsModule } from '@angular/forms';
+import { IconSelectorComponent } from "../icon-selector/icon-selector.component";
 
 
 
 @Component({
   selector: 'app-personalization',
-  imports: [InputComponent, ButtonComponent, PaletteSelectorComponent, FormsModule],
+  imports: [InputComponent, ButtonComponent, PaletteSelectorComponent, FormsModule, IconSelectorComponent],
   template: `
     <div class="p-4 bg-zinc-900 rounded-md border border-zinc-800 w-90">
       <h2 class="text-lg mb-4">Personalização</h2>
@@ -40,7 +41,7 @@ import { FormsModule } from '@angular/forms';
         </div>
         <div class="flex flex-row justify-between items-center p-2 border-b border-zinc-800">
           <p>Ícone</p>
-          <app-input [(value)]="personalizationContent['icon']"></app-input>
+          <app-icon-selector [selectedIcon]="personalizationContent['icon']" (onIconSelected)="personalizationContent['icon'] = $event.iconCode"></app-icon-selector>
         </div>
 
         <div class="flex flex-col gap-2 p-2 border-b border-zinc-800">
