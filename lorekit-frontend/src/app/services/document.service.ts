@@ -19,6 +19,16 @@ export class DocumentService {
     return this.crud.findAll('Document', {}, [{"table": "Personalization", "firstOnly": true}], {parentTable: entityTable, parentId: entityId});
   }
 
+  getDocumentsTree(entityTable: string, entityId: string): Document[] {
+    let documents = this.crud.findAll('Document', {}, [{"table": "Personalization", "firstOnly": true}], {parentTable: entityTable, parentId: entityId});
+
+    for(let doc of documents) {
+      doc.SubDocuments = this.getDocumentsTree('Document', doc.id);
+    }
+
+    return documents;
+  }
+
   getAllDocuments() : Document[] {
     return this.crud.findAll('Document', {}, [{"table": "Personalization", "firstOnly": true}]);
   }

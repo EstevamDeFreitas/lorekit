@@ -9,6 +9,8 @@ export class Document {
   Images?: Image[];
   Personalization?: Personalization;
 
+  SubDocuments?: Document[];
+
   constructor(id: string = '', title: string = '', content?: string, type?: string) {
     this.id = id;
     this.title = title;

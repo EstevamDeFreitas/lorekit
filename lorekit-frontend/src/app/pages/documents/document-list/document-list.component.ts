@@ -25,7 +25,7 @@ import { FormOverlayDirective } from '../../../components/form-overlay/form-over
     <div class="min-h-0 flex flex-col" [ngClass]="{'h-[63vh]': !isRouteComponent(), 'h-[95vh]': isRouteComponent()}">
       <div class="flex flex-row justify-between items-center mb-4">
         @if (isRouteComponent()){
-          <h2 class="text-xl font-bold">Documentos</h2>
+          <h2 class="text-xl font-bold">Documentos Principais</h2>
         }
         @else {
           <div></div>

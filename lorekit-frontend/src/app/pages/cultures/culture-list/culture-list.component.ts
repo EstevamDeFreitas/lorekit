@@ -23,7 +23,7 @@ import { ComboBoxComponent } from '../../../components/combo-box/combo-box.compo
     <div class="min-h-0 flex flex-col" [ngClass]="{'h-[63vh]': !isRouteComponent(), 'h-[95vh]': isRouteComponent()}">
       <div class="flex flex-row justify-between items-center mb-4">
         @if (isRouteComponent()){
-          <h2 class="text-xl font-bold">Personagens</h2>
+          <h2 class="text-xl font-bold">Culturas</h2>
         }
         @else {
           <div></div>

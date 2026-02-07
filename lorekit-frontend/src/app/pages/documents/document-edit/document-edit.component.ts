@@ -11,11 +11,12 @@ import { ButtonComponent } from "../../../components/button/button.component";
 import { FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
 import { NgClass } from '@angular/common';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
+import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 
 @Component({
   selector: 'app-document-edit',
   standalone: true,
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, NgClass, FormOverlayDirective, EditorComponent, ButtonComponent, SafeDeleteButtonComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, NgClass, FormOverlayDirective, EditorComponent, ButtonComponent, SafeDeleteButtonComponent, EntityLateralMenuComponent],
   template: `
   <div class="flex flex-col" [ngClass]="{'h-screen': !isInDialog(), 'h-[80vh]': isInDialog()}">
     <div class="flex flex-row items-center">
@@ -38,32 +39,7 @@ import { SafeDeleteButtonComponent } from "../../../components/safe-delete-butto
       <div class="flex-1">
         @if (!isLoading) {
           <div class="p-4 rounded-lg bg-zinc-900">
-            <div class="flex flex-col gap-4">
-              <div class="flex flex-row justify-between items-center">
-                <h3 class="text-sm">Documentos</h3>
-                <app-button
-                  label="Novo"
-                  size="xs"
-                  icon="fa-plus"
-                  buttonType="white"
-                  appFormOverlay
-                  [title]="'Criar Documento'"
-                  [fields]="[{ key: 'name', label: 'Título', value: '' }]"
-                  (onSave)="createDocument($event)"
-                ></app-button>
-              </div>
-              <div class="flex flex-col gap-2 max-h-50 overflow-y-scroll scrollbar-dark">
-                @for (item of documentArray; track $index) {
-                  <button (click)="openDocument(item)" class=" cursor-pointer flex flex-row hover:font-bold items-center gap-2" [ngClass]="'text-' + (getPersonalizationItem(item, 'color') || 'zinc') + '-500'" >
-                    <i class="fa-solid" [ngClass]="getPersonalizationItem(item, 'icon') || 'fa-file'"></i>
-                    <h2>{{ item.title }}</h2>
-                  </button>
-                }
-                @empty {
-                  <p class="text-sm text-zinc-500">Nenhum documento encontrado.</p>
-                }
-              </div>
-            </div>
+            <app-entity-lateral-menu entityTable="Document" [entityId]="document.id"></app-entity-lateral-menu>
           </div>
         }
       </div>

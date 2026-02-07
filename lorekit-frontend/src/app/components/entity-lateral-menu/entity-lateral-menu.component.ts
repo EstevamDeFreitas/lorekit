@@ -14,15 +14,129 @@ import { TextAreaComponent } from "../text-area/text-area.component";
 import { debounceTime, Subject } from 'rxjs';
 import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../models/personalization.model';
 import { getImageByUsageKey } from '../../models/image.model';
+import { IconButtonComponent } from '../icon-button/icon-button.component';
+
+@Component({
+  selector: 'app-tree-view-list',
+  standalone: true,
+  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, NgClass, ComboBoxComponent, TextAreaComponent, NgStyle, IconButtonComponent],
+  template: `
+    <div class="flex flex-col gap-2">
+      @for (item of documentArray(); track item.id) {
+        <div class="grid overflow-hidden overflow-ellipsis gap-1" style="grid-template-columns: 1.5rem 1fr 1.5rem;">
+          <span class="w-6 flex flex-row items-center">
+            @if (!isOpen(item)){
+              <app-icon-button (click)="showSubDocuments(item)" size="xs" buttonType="secondaryActive" icon="fa-solid fa-angle-right"></app-icon-button>
+            }
+            @else {
+              <app-icon-button (click)="hideSubDocuments(item)" size="xs" buttonType="secondaryActive" icon="fa-solid fa-angle-down"></app-icon-button>
+            }
+          </span>
+          <button (click)="openDocument(item)" class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2" [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(item, 'color'))}" >
+            <div class="flex flex-row items-center">
+              <i class="fa-solid " [ngClass]="getPersonalizationItem(item, 'icon') || 'fa-file'"></i>
+            </div>
+            <h2 [title]="item.title" class=" text-xs">{{ item.title }}</h2>
+          </button>
+          <app-icon-button
+            size="xs"
+            buttonType="secondary"
+            icon="fa-solid fa-plus"
+            appFormOverlay
+            [title]="'Criar Documento'"
+            [fields]="[{ key: 'name', label: 'Título', value: '' }]"
+            (onSave)="createDocument($event, item.id)"
+            ></app-icon-button>
+        </div>
+        @if (isOpen(item)){
+          <span class="pl-4">
+            @if (item.SubDocuments && item.SubDocuments.length > 0){
+              <app-tree-view-list [entityId]="entityId()" (onArrayChange)="emitChange()" [entityTable]="'Document'" [documentArray]="item.SubDocuments || []"></app-tree-view-list>
+            }
+            @else{
+              <p class="text-xs text-zinc-600">Não há Documentos Relacionados</p>
+            }
+          </span>
+        }
+      }
+    </div>
+  `
+})
+export class TreeViewListComponent {
+  documentArray = input.required<Array<Document>>();
+
+  onArrayChange = output<void>();
+
+  openDocuments = new Set<string>();
+
+  public getPersonalizationValue = getPersonalizationValue;
+  public getImageByUsageKey = getImageByUsageKey;
+  public getTextColorStyle = getTextColorStyle;
+
+  entityTable = input.required<string>();
+  entityId = input.required<string>();
+
+  private documentService = inject(DocumentService);
+
+  private dialog = inject(Dialog);
+
+  getPersonalizationItem(item: any, key: string): string | null {
+    if (item.Personalization && item.Personalization.contentJson != null && item.Personalization.contentJson != '') {
+      return JSON.parse(item.Personalization.contentJson)[key] || null;
+    }
+    return null;
+  }
+
+  isOpen(document: Document): boolean {
+    return this.openDocuments.has(document.id);
+  }
+
+  showSubDocuments(document: Document) {
+    this.openDocuments.add(document.id);
+  }
+
+  hideSubDocuments(document: Document) {
+    this.openDocuments.delete(document.id);
+  }
+
+  openDocument(item: Document) {
+    this.dialog.open(DocumentEditComponent, {
+      data: {
+        id: item.id,
+        entityTable: this.entityTable(),
+        entityId: this.entityId()
+       },
+      panelClass: 'screen-dialog',
+      height: '80vh',
+      width: '80vw',
+    });
+  }
+
+  emitChange() {
+    this.onArrayChange.emit();
+  }
+
+  createDocument(formData: Record<string, string>, parentDocumentId: string) {
+    if (formData['name'].trim() === '') {
+      return;
+    }
+
+    let newDoc = new Document('', formData['name'], '');
+
+    newDoc = this.documentService.saveDocument(newDoc, "Document", parentDocumentId);
+
+    this.emitChange();
+  }
+}
 
 @Component({
   selector: 'app-entity-lateral-menu',
-  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, NgClass, ComboBoxComponent, TextAreaComponent, NgStyle],
+  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, NgClass, ComboBoxComponent, TextAreaComponent, NgStyle, TreeViewListComponent],
   template: `
   <div class="flex flex-col gap-4 w-full h-full">
     <div class="flex flex-row justify-around items-center">
-      <button class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800 " (click)="currentTab = 'properties'" [ngClass]="{'text-blue-500 bg-blue-300/10 font-bold': currentTab === 'properties'}">Propriedades</button>
-      <button class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800 " (click)="currentTab = 'documents'" [ngClass]="{'text-blue-500 bg-blue-300/10 font-bold': currentTab === 'documents'}">Documentos</button>
+      <button class="px-4 py-2 rounded-md text-sm cursor-pointer hover:bg-zinc-800 " (click)="currentTab = 'properties'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'properties'}">Propriedades</button>
+      <button class="px-4 py-2 rounded-md text-sm cursor-pointer hover:bg-zinc-800 " (click)="currentTab = 'documents'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'documents'}">Documentos</button>
     </div>
     @switch (currentTab) {
       @case ('properties') {
@@ -75,7 +189,8 @@ import { getImageByUsageKey } from '../../models/image.model';
           ></app-button>
         </div>
         <div class="flex flex-col gap-2 h-[calc(100%-8rem)]  overflow-y-scroll scrollbar-dark">
-          @for (item of documentArray; track $index) {
+            <app-tree-view-list [entityId]="entityId()" [entityTable]="entityTable()" (onArrayChange)="loadDocuments()" [documentArray]="documentArray"></app-tree-view-list>
+          <!-- @for (item of documentArray; track $index) {
             <button (click)="openDocument(item)" class=" cursor-pointer flex flex-row hover:font-bold items-center gap-2" [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(item, 'color'))}" >
               <i class="fa-solid" [ngClass]="getPersonalizationItem(item, 'icon') || 'fa-file'"></i>
               <h2 [title]="item.title" class="whitespace-nowrap overflow-hidden overflow-ellipsis">{{ item.title }}</h2>
@@ -83,7 +198,7 @@ import { getImageByUsageKey } from '../../models/image.model';
           }
           @empty {
             <p class="text-sm text-zinc-500">Nenhum documento encontrado.</p>
-          }
+          } -->
         </div>
       }
     }
@@ -129,7 +244,7 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
   }
 
   loadDocuments() {
-    this.documentArray = this.documentService.getDocuments(this.entityTable(), this.entityId());
+    this.documentArray = this.documentService.getDocumentsTree(this.entityTable(), this.entityId());
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -216,3 +331,5 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
   }
 
 }
+
+
