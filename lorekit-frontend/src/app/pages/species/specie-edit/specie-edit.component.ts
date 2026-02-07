@@ -24,18 +24,21 @@ import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
   selector: 'app-specie-edit',
   imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent],
   template: `
-    <div class="flex flex-col relative h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[75vh]': isInDialog()}">
+    <div class="flex flex-col relative h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[80vh]': isInDialog()}">
       @if(getImageByUsageKey(specie.Images, 'default') != null){
         @let img = getImageByUsageKey(specie.Images, 'default');
-        <img [src]="img?.filePath" class="w-full h-36 object-cover rounded-md">
+        <div class="relative w-full h-72  overflow-hidden">
+          <img [src]="img?.filePath" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
+        </div>
       }
       @else{
-        <div class="w-full h-36 object-cover rounded-md" [ngStyle]="{'background-color': getPersonalizationValue(specie, 'color') || 'var(--color-zinc-800)'}"></div>
+        <div class="w-full h-72 object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(specie, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
       }
 
       @if(getImageByUsageKey(specie.Images, 'fullBody') != null){
         @let fullBodyImg = getImageByUsageKey(specie.Images, 'fullBody');
-        <img [src]="fullBodyImg?.filePath" class="w-19 h-33 absolute top-1.5 left-1.5 object-cover rounded-md">
+        <img [src]="fullBodyImg?.filePath" class="w-36 h-65 absolute top-3 left-3 object-cover rounded-md">
       }
       <br>
       <div class="flex flex-row items-center">

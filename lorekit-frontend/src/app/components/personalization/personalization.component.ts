@@ -157,7 +157,7 @@ export class PersonalizationComponent {
   profileImage : Image | null = null;
   fullBodyImage : Image | null = null;
 
-  backgroundAspectRatio = 10 / 1;
+  backgroundAspectRatio = 5 / 1;
 
   hasProfileImage = false;
   profileAspectRatio = 1 / 1;

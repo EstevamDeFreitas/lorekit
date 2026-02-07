@@ -29,15 +29,18 @@ import { SpecieListComponent } from '../../species/specie-list/specie-list.compo
     <div class="flex flex-col relative h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[75vh]': isInDialog()}">
       @if(getImageByUsageKey(character.Images, 'default') != null){
         @let img = getImageByUsageKey(character.Images, 'default');
-        <img [src]="img?.filePath" class="w-full h-36 object-cover rounded-md">
+        <div class="relative w-full h-72  overflow-hidden">
+          <img [src]="img?.filePath" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
+        </div>
       }
       @else{
-        <div class="w-full h-36 object-cover rounded-md" [ngStyle]="{'background-color': getPersonalizationValue(character, 'color') || 'var(--color-zinc-800)'}"></div>
+        <div class="w-full h-72 object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(character, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
       }
 
       @if(getImageByUsageKey(character.Images, 'profile') != null){
         @let profileImg = getImageByUsageKey(character.Images, 'profile');
-        <img [src]="profileImg?.filePath" class="w-33 h-33 absolute top-1.5 left-1.5 object-cover rounded-md">
+        <img [src]="profileImg?.filePath" class="w-66 h-66 absolute top-3 left-3 object-cover rounded-md">
       }
       <br>
       <div class="flex flex-row items-center">

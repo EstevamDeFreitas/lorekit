@@ -52,27 +52,33 @@ import { World } from '../../../models/world.model';
           @for (category of locationCategories; track category.id) {
             @if (locationGroups[category.id] && locationGroups[category.id].length > 0 ) {
               <h3 class="text-lg mb-2">{{ category.name }}:</h3>
-              <div class="grid grid-cols-3 gap-4">
+              <div class="grid grid-cols-4 gap-4">
                 @for (location of locationGroups[category.id]; track location.id) {
                   @let img = getImageByUsageKey(location.Images, 'default');
-                  @if (img != null){
-                    <div (click)="selectLocation(location.id!)" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + buildImageUrl(img.filePath) + ')', 'background-size': 'cover', 'background-position': 'center'}" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
-                      <div class="flex flex-row gap-2 items-center">
-                        <i class="fa" [ngClass]="getPersonalizationValue(location, 'icon') || 'fa-location-dot'"></i>
-                        <div class="text-base font-bold">{{ location.name }}</div>
+                  <div (click)="selectLocation(location.id!)" [ngClass]="[
+                      'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2',
+
+                    ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(location, 'color') || 'var(--color-zinc-800)'}">
+                    <div class="flex h-35 flex-row gap-2 items-top">
+                      <div class="flex-1 flex flex-col overflow-hidden justify-between" [ngClass]="getTextClass(getPersonalizationValue(location, 'color'))">
+                        <div class="flex flex-row items-center gap-2">
+                          <i class="fa" [ngClass]="getPersonalizationValue(location, 'icon') || 'fa-paw'"></i>
+                          <div class="text-base font-bold">{{ location.name }}</div>
+                        </div>
+                        <div class="text-xs font-bold overflow-hidden text-ellipsis text-justify line-clamp-3">{{location.concept}}</div>
+                        <div class="flex flex-row gap-1">
+                          <div class="text-xs flex text-nowrap flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
+                            <i class="fa fa-earth"></i>
+                            <div class="">{{location.ParentWorld?.name}}</div>
+                          </div>
+                          <div class="text-xs flex text-nowrap flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
+                            <i class="fa fa-paw"></i>
+                            <div class="">{{location.ParentLocation?.name}}</div>
+                          </div>
+                        </div>
                       </div>
-                      <div class="text-xs">{{location.concept}}</div>
                     </div>
-                  }
-                  @else {
-                    <div (click)="selectLocation(location.id!)" [ngStyle]="{'background-color': getPersonalizationValue(location, 'color') || 'var(--color-zinc-800)'}" [ngClass]="getTextClass(getPersonalizationValue(location, 'color'))" class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2">
-                      <div class="flex flex-row gap-2 items-center">
-                        <i class="fa" [ngClass]="getPersonalizationValue(location, 'icon') || 'fa-location-dot'"></i>
-                        <div class="text-base font-bold">{{ location.name }}</div>
-                      </div>
-                      <div class="text-xs">{{location.concept}}</div>
-                    </div>
-                  }
+                  </div>
 
                 }
               </div>
@@ -189,6 +195,18 @@ export class LocationListComponent implements OnInit {
   getLocationColor(location: Location): string {
     const color = this.getPersonalizationValue(location, 'color');
     return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
+  }
+
+  buildCardBgStyle(filePath?: string | null) {
+    const url = this.buildImageUrl(filePath);
+    return url
+      ? {
+          'background-image':
+            `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${url})`,
+          'background-size': 'cover',
+          'background-position': 'center',
+        }
+      : null;
   }
 
 }

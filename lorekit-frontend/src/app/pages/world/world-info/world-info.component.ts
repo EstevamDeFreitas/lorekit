@@ -27,10 +27,13 @@ import { getPersonalizationValue } from '../../../models/personalization.model';
     <div class="flex flex-col h-screen">
       @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
         @let img = getImageByUsageKey(currentWorld.Images, 'default');
-        <img [src]="img?.filePath" class="w-full h-36 object-cover rounded-md">
+        <div class="relative w-full h-72  overflow-hidden">
+          <img [src]="img?.filePath" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
+        </div>
       }
       @else{
-        <div class="w-full h-36 object-cover rounded-md" [ngStyle]="{'background-color': getPersonalizationValue(currentWorld, 'color') || 'var(--color-zinc-800)'}"></div>
+        <div class="w-full h-72 object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(currentWorld, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
       }
       <br>
       <div class="flex flex-row items-center">

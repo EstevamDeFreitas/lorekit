@@ -40,25 +40,23 @@ import { FormField, FormOverlayDirective } from '../../../components/form-overla
         <div class=" grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           @for (world of worlds; track world.id) {
             @let img = getImageByUsageKey(world.Images, 'default');
-            @if(img != null) {
-              <div class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2" [ngStyle]="{'background-image': 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(' + buildImageUrl(img.filePath) + ')', 'background-size': 'cover', 'background-position': 'center'}" (click)="onWorldSelected(world.id)">
-                <div class="flex flex-row gap-2 items-center">
-                  <i class="fa-solid text-xl" [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-earth'"></i>
-                  <div class="text-base font-bold">{{world.name}}</div>
-                </div>
-                <div class="text-xs">{{world.concept}}</div>
-              </div>
-            }
-            @else{
-              <div class="rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2" [ngClass]="getTextClass(getPersonalizationValue(world, 'color'))" [ngStyle]="{'background-color': getPersonalizationValue(world, 'color') || 'var(--color-zinc-800)'}" (click)="onWorldSelected(world.id)">
-                <div class="flex flex-row gap-2 items-center">
-                  <i class="fa-solid text-xl" [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-earth'"></i>
-                  <div class="text-base font-bold">{{world.name}}</div>
-                </div>
-                <div class="text-xs">{{world.concept}}</div>
-              </div>
-            }
+              <div (click)="onWorldSelected(world.id)" [ngClass]="[
+                  'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2',
 
+                ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(world, 'color') || 'var(--color-zinc-800)'}">
+                <div class="flex h-35 flex-row gap-2 items-top">
+                  <div class="flex-1 flex flex-col overflow-hidden justify-between" [ngClass]="getTextClass(getPersonalizationValue(world, 'color'))">
+                    <div class="flex flex-row items-center gap-2">
+                      <i class="fa" [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-paw'"></i>
+                      <div class="text-base font-bold">{{ world.name }}</div>
+                    </div>
+                    <div class="text-xs font-bold overflow-hidden text-ellipsis text-justify line-clamp-3">{{world.concept}}</div>
+                    <div class="flex flex-row gap-1">
+
+                    </div>
+                  </div>
+                </div>
+              </div>
           }
         </div>
       }
@@ -79,6 +77,7 @@ export class WorldListComponent {
   public getPersonalizationValue = getPersonalizationValue;
   public getTextClass = getTextClass;
   public getImageByUsageKey = getImageByUsageKey;
+
 
   worlds: World[] = [];
 
@@ -137,6 +136,18 @@ export class WorldListComponent {
     return [
       { key: 'name', label: 'Nome', value: '' },
     ];
+  }
+
+  buildCardBgStyle(filePath?: string | null) {
+    const url = this.buildImageUrl(filePath);
+    return url
+      ? {
+          'background-image':
+            `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${url})`,
+          'background-size': 'cover',
+          'background-position': 'center',
+        }
+      : null;
   }
 
 
