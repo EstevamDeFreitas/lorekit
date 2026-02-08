@@ -4,6 +4,7 @@ import { Component, inject, input, OnInit, output, signal, Directive, ViewContai
 import { Overlay, OverlayRef, ConnectedPosition } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { InputComponent } from '../input/input.component';
+import { ICONS_AVAILABLE } from '../../models/icons_simplified';
 
 interface Icon {
   label: string;
@@ -64,20 +65,15 @@ export class IconSelectorOverlayComponent implements OnInit {
   }
 
   loadIcons() {
-    this.http.get<IconsData>('/assets/icons_simplified.json').subscribe({
-      next: (data) => {
-        this.icons.set(data.availableIcons);
-        this.filteredIcons.set(data.availableIcons);
+    this.icons.set(ICONS_AVAILABLE);
+    this.filteredIcons.set(ICONS_AVAILABLE);
 
-        if (this.initialIcon()) {
-          const found = data.availableIcons.find(i => i.iconCode === this.initialIcon());
-          if (found) {
-            this.selectedIcon.set(found);
-          }
-        }
-      },
-      error: (err) => console.error('Erro ao carregar ícones:', err)
-    });
+    if (this.initialIcon()) {
+      const found = ICONS_AVAILABLE.find(i => i.iconCode === this.initialIcon());
+      if (found) {
+        this.selectedIcon.set(found);
+      }
+    }
   }
 
   selectIcon(icon: Icon) {

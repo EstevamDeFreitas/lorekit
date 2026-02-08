@@ -1,5 +1,4 @@
-{
-  "availableIcons": [
+export const ICONS_AVAILABLE = [
     {
       "label": "0",
       "iconCode": "fa-0"
@@ -5609,4 +5608,3 @@
       "iconCode": "fa-z"
     }
   ]
-}
