@@ -19,12 +19,13 @@ import { SpecieListComponent } from "../specie-list/specie-list.component";
 import { InputComponent } from '../../../components/input/input.component';
 import { TextAreaComponent } from "../../../components/text-area/text-area.component";
 import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
+import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
 
 @Component({
   selector: 'app-specie-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent],
+  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent, DynamicFieldsComponent],
   template: `
-    <div class="flex flex-col relative h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[80vh]': isInDialog()}">
+    <div class="flex flex-col relative" [ngClass]="{'h-[97vh]': !isInDialog(), 'h-[80vh]': isInDialog()}">
       @if(getImageByUsageKey(specie.Images, 'default') != null){
         @let img = getImageByUsageKey(specie.Images, 'default');
         <div class="relative w-full h-72  overflow-hidden">
@@ -81,6 +82,9 @@ import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
                         <app-editor docTitle="Características Comportamentais" entityTable="Species" [entityName]="specie.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="specie.behavioralCharacteristics || ''" (saveDocument)="onEditorSave($event, 'behavioralCharacteristics')"></app-editor>
                       </div>
                     </div>
+                    <br>
+                    <app-dynamic-fields [entityTable]="'Species'" [entityId]="specie.id"></app-dynamic-fields>
+                    <br>
                   </div>
                 }
                 @case ('details') {

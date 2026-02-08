@@ -14,20 +14,25 @@ import { GlobalParameterService } from '../../../services/global-parameter.servi
 import { FormsModule } from '@angular/forms';
 import { OrganizationType } from '../../../models/organization.model';
 import { OrganizationTypeService } from '../../../services/organization-type.service';
+import { schema } from '../../../database/schema';
+import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
+import { DynamicFieldService } from '../../../services/dynamic-field.service';
+import { DynamicField } from '../../../models/dynamicfields.model';
 
 @Component({
   selector: 'app-settings',
-  imports: [NgClass, FormsModule, ButtonComponent, IconButtonComponent, InputComponent, FormOverlayDirective, OverlayModule, FormOverlayComponent],
+  imports: [NgClass, FormsModule, ButtonComponent, IconButtonComponent, InputComponent, FormOverlayDirective, OverlayModule, FormOverlayComponent, ComboBoxComponent],
   template: `
-  <div class=" rounded-md border border-zinc-800">
+  <div class="w-[60vw] rounded-md border border-zinc-800">
 
     <div class="flex flex-row ">
-      <div class="w-75 p-4 border-e border-zinc-700 bg-zinc-900">
+      <div class="w-75 h-[60vh] p-4 border-e border-zinc-700 bg-zinc-900">
         <h2 class="text-lg mb-4">Configurações</h2>
         <div class="flex flex-col gap-2">
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('general_settings')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'general_settings'}">Configurações Gerais</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('location_categories')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'location_categories'}">Categorias de Localidade</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('organization_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'organization_types'}">Tipos de Organização</a>
+          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('dynamic_fields')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'dynamic_fields'}">Campos Dinâmicos</a>
         </div>
       </div>
       <div class="flex-1 p-4 bg-zinc-900 overflow-y-auto scrollbar-dark">
@@ -137,6 +142,64 @@ import { OrganizationTypeService } from '../../../services/organization-type.ser
               </div>
             </div>
           }
+          @case ("dynamic_fields") {
+            <div>
+              <h3 class="text-base mb-2">Campos Dinâmicos</h3>
+              <br>
+              <app-combo-box class="w-60" label="Entidade" [items]="availableTables" (comboValueChange)="onTableSelected($event)"></app-combo-box>
+              <br>
+              @if(currentTable) {
+                <div>
+                  <div class="flex flex-row justify-between align-middle mb-4">
+                    <h4 class="text-md mb-4">Campos para a entidade {{currentTable}}</h4>
+                    <app-button
+                      label="Adicionar"
+                      buttonType="primary"
+                      size="xs"
+                      icon="fa-solid fa-plus"
+                      appFormOverlay
+                      [title]="'Adicionar Campo Dinâmico para ' + currentTable"
+                      [fields]="[{ key: 'name', label: 'Nome do campo', value: '', type: 'text' },
+                        { key: 'options', label: 'Opções do campo (separar por ; )', value: '', type: 'text'},
+                        { key: 'isEditor', label: 'É Campo de Editor?', value: 'false', type: 'boolean'}
+                      ]"
+                      (onSave)="createDynamicField($event)"
+                    ></app-button>
+                  </div>
+
+
+                  @for (field of dynamicFields; track field.id) {
+                    <div class="grid grid-cols-3 items-center p-2 not-last:border-b not-last:border-zinc-700">
+                      <p>{{field.name}}</p>
+                      <p>{{field.options}}</p>
+                      <div class="flex flex-row gap-2 justify-end">
+                        <app-icon-button
+                          label="Editar"
+                          buttonType="primary"
+                          size="xs"
+                          icon="fa-solid fa-pencil"
+                          appFormOverlay
+                          [title]="'Editar Campo Dinâmico'"
+                          [fields]="[{ key: 'name', label: 'Nome do campo', value: field.name, type: 'text' },
+                            { key: 'options', label: 'Opções do campo (separar por ; )', value: field.options ?? '', type: 'text'},
+                            { key: 'isEditor', label: 'É Campo de Editor?', value: field.isEditorField ? 'true' : 'false', type: 'boolean'}
+                          ]"
+                          (onSave)="saveDynamicField($event, field.id)"
+                        ></app-icon-button>
+                        <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" (click)="deleteDynamicField(field)"></app-icon-button>
+                      </div>
+
+                    </div>
+                  }
+                  @empty {
+                    <div class="flex flex-row justify-between items-center p-2">
+                      <p>Nenhum campo dinâmico encontrado para esta entidade.</p>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
         }
 
       </div>
@@ -150,6 +213,7 @@ export class SettingsComponent implements OnInit{
   confirm = inject<ConfirmService>(ConfirmService);
   globalParameterService = inject(GlobalParameterService);
   organizationTypeService = inject(OrganizationTypeService);
+  dynamicFieldService = inject(DynamicFieldService);
 
   currentTab: string = '';
 
@@ -175,6 +239,25 @@ export class SettingsComponent implements OnInit{
   ];
 
   exportTextFormat : 'md' | 'txt' = 'txt';
+
+
+  ignoredTables = ['Personalization',
+                    'Image',
+                    'DynamicField',
+                    'DynamicFieldValue',
+                    'Document',
+                    'LocationCategory',
+                    'Relationship',
+                    'GlobalParameter',
+                    'OrganizationType',
+                    'Link',
+
+                  ];
+  availableTables = schema.filter(t => !this.ignoredTables.includes(t.name)).map(t => t.name);
+
+  currentTable: string = '';
+
+  dynamicFields : DynamicField[] = [];
 
   constructor(private locationService: LocationCategoriesService) { }
 
@@ -295,5 +378,59 @@ export class SettingsComponent implements OnInit{
 
   getOrganizationTypes() {
     this.organizationTypes = this.organizationTypeService.getOrganizationTypes();
+  }
+
+  onTableSelected(event : any) {
+
+    this.currentTable = event;
+
+    this.dynamicFields = this.dynamicFieldService.getDynamicFields(this.currentTable);
+  }
+
+  createDynamicField(formData: Record<string, string>) {
+    const fieldName = formData['name'];
+    const fieldOptions = formData['options'];
+
+    if (fieldName.trim() === '') {
+      return;
+    }
+
+    const newField: DynamicField = {
+      id: '',
+      name: fieldName.trim(),
+      entityTable: this.currentTable,
+      options: fieldOptions,
+      isEditorField: formData['isEditor'] === 'true' || formData['isEditor'] === '1'
+    };
+
+    let field = this.dynamicFieldService.saveDynamicField(newField);
+    this.dynamicFields.push(field);
+  }
+
+  saveDynamicField(formData: Record<string, string>, fieldId: string) {
+    const fieldName = formData['name'];
+    const fieldOptions = formData['options'];
+
+    if (fieldName.trim() === '') {
+      return;
+    }
+
+    const fieldToUpdate = this.dynamicFields.find(f => f.id === fieldId);
+    if (fieldToUpdate) {
+      fieldToUpdate.name = fieldName.trim();
+      fieldToUpdate.options = fieldOptions;
+      this.dynamicFieldService.saveDynamicField(fieldToUpdate);
+      this.onTableSelected(this.currentTable);
+    }
+
+  }
+
+  deleteDynamicField(field: DynamicField) {
+    this.confirm.ask(`Tem certeza que deseja deletar o campo dinâmico ${field.name}?`).then(confirmed => {
+      if (confirmed) {
+        this.dynamicFieldService.deleteDynamicField(field);
+        this.onTableSelected(this.currentTable);
+      }
+    });
   }
 }

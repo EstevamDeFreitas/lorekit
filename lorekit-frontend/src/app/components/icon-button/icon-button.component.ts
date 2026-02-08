@@ -18,7 +18,7 @@ export class IconButtonComponent {
   route = input<string>();
 
   get buttonClasses(): string {
-    const base = 'px-1 py-0.5 rounded-md font-medium focus:outline-none transition text-' + this.size();
+    const base = 'px-2 py-1 rounded-md font-medium focus:outline-none transition text-' + this.size();
 
     let currentTypeStyle = "";
 

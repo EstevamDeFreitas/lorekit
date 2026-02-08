@@ -95,8 +95,6 @@ export class MainUiComponent {
     this.settingsDialog.open(SettingsComponent, {
       autoFocus: false,
       restoreFocus: false,
-      height: '400px',
-      width: '800px',
     });
   }
 

@@ -17,12 +17,14 @@ import { LocationListComponent } from "../location-list/location-list.component"
 import { WorldService } from '../../../services/world.service';
 import { getPersonalizationValue } from '../../../models/personalization.model';
 import { getImageByUsageKey } from '../../../models/image.model';
+import { DynamicFieldService } from '../../../services/dynamic-field.service';
+import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, NgStyle],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, NgStyle, DynamicFieldsComponent],
   template: `
-    <div class="flex flex-col h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[75vh]': isInDialog()}">
+    <div class="flex flex-col" [ngClass]="{'h-[97vh]': !isInDialog(), 'h-[75vh]': isInDialog()}">
       @if(getImageByUsageKey(location.Images, 'default') != null){
         @let img = getImageByUsageKey(location.Images, 'default');
         <div class="relative w-full h-72  overflow-hidden">
@@ -49,6 +51,9 @@ import { getImageByUsageKey } from '../../../models/image.model';
         <div class="flex-4 h-auto  flex flex-col overflow-hidden">
           <div class="flex flex-row gap-4 ms-1">
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'details'}">Detalhes</a>
+             @if(hasDynamicFields) {
+              <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'properties'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'properties'}">Propriedades</a>
+            }
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'localities'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'localities'}">Localidades</a>
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 overflow-hidden flex flex-col">
@@ -63,6 +68,9 @@ import { getImageByUsageKey } from '../../../models/image.model';
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
                     <app-location-list [worldId]="location.ParentWorld?.id" [locationId]="location.id"></app-location-list>
                   </div>
+                }
+                @case ('properties'){
+                  <app-dynamic-fields [entityTable]="'Location'" [entityId]="location.id"></app-dynamic-fields>
                 }
               }
             }
@@ -98,6 +106,10 @@ export class LocationEditComponent implements OnInit {
   isInDialog = computed(() => !!this.dialogref);
 
   currentTab : string = 'details';
+
+  private dynamicFieldService = inject(DynamicFieldService);
+    hasDynamicFields: boolean = this.dynamicFieldService.getDynamicFields('Location').length > 0;
+
 
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === LocationEditComponent ||

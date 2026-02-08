@@ -24,12 +24,14 @@ import { TextAreaComponent } from '../../../components/text-area/text-area.compo
 import { LocationListComponent } from '../../locations/location-list/location-list.component';
 import { SpecieListComponent } from '../../species/specie-list/specie-list.component';
 import { OrganizationTypeService } from '../../../services/organization-type.service';
+import { DynamicFieldService } from '../../../services/dynamic-field.service';
+import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
 
 @Component({
   selector: 'app-organization-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent],
+  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent, DynamicFieldsComponent],
   template: `
-    <div class="flex flex-col relative h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[75vh]': isInDialog()}">
+    <div class="flex flex-col relative" [ngClass]="{'h-[97vh]': !isInDialog(), 'h-[75vh]': isInDialog()}">
       @if(getImageByUsageKey(organization.Images, 'default') != null){
         @let img = getImageByUsageKey(organization.Images, 'default');
         <div class="relative w-full h-72  overflow-hidden">
@@ -60,6 +62,9 @@ import { OrganizationTypeService } from '../../../services/organization-type.ser
         <div class="flex-4 h-auto  flex flex-col overflow-hidden">
           <div class="flex flex-row gap-4 ms-1">
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'description'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'description'}">Informações adicionais</a>
+             @if(hasDynamicFields) {
+              <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'properties'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'properties'}">Propriedades</a>
+            }
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 overflow-hidden flex flex-col">
             @if (!isLoading) {
@@ -68,6 +73,9 @@ import { OrganizationTypeService } from '../../../services/organization-type.ser
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
                     <app-editor docTitle="Descrição" entityTable="Organization" [entityName]="organization.name" [document]="organization.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full"></app-editor>
                   </div>
+                }
+                @case ('properties'){
+                  <app-dynamic-fields [entityTable]="'Organization'" [entityId]="organization.id"></app-dynamic-fields>
                 }
               }
             }
@@ -101,6 +109,10 @@ export class OrganizationEditComponent implements OnInit{
   currentTab: string = 'description';
 
   isInDialog = computed(() => !!this.dialogref);
+
+  private dynamicFieldService = inject(DynamicFieldService);
+      hasDynamicFields: boolean = this.dynamicFieldService.getDynamicFields('Organization').length > 0;
+
 
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === OrganizationEditComponent ||

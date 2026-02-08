@@ -19,10 +19,12 @@ import { getImageByUsageKey, Image } from '../../../models/image.model';
 import { ImageService } from '../../../services/image.service';
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { getPersonalizationValue } from '../../../models/personalization.model';
+import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
+import { DynamicFieldService } from '../../../services/dynamic-field.service';
 
 @Component({
   standalone: true,
-  imports: [NgStyle, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent],
+  imports: [NgStyle, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, DynamicFieldsComponent],
   template: `
     <div class="flex flex-col h-screen">
       @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
@@ -49,6 +51,9 @@ import { getPersonalizationValue } from '../../../models/personalization.model';
         <div class="flex-4 h-auto  flex flex-col overflow-hidden">
           <div class="flex flex-row gap-4 ms-1">
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'details'}">Detalhes do mundo</a>
+            @if(hasDynamicFields) {
+              <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'properties'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'properties'}">Propriedades</a>
+            }
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'localities'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'localities'}">Localidades</a>
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'characters'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'characters'}">Personagens</a>
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'objects'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'objects'}">Objetos</a>
@@ -71,6 +76,9 @@ import { getPersonalizationValue } from '../../../models/personalization.model';
                 }
                 @case ('objects') {
                   <p>Objetos</p>
+                }
+                @case ('properties'){
+                  <app-dynamic-fields [entityTable]="'World'" [entityId]="currentWorld.id"></app-dynamic-fields>
                 }
               }
             }
@@ -104,6 +112,9 @@ export class WorldInfoComponent implements OnInit {
   isLoading: boolean = false;
 
   fields: FormField[] = [];
+
+  private dynamicFieldService = inject(DynamicFieldService);
+  hasDynamicFields: boolean = this.dynamicFieldService.getDynamicFields('World').length > 0;
 
   constructor(private router:Router, private currentRoute : ActivatedRoute, private worldService : WorldService, private cdr: ChangeDetectorRef) {
     this.isLoading = true;

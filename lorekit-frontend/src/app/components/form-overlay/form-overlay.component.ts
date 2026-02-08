@@ -2,6 +2,7 @@ import { Directive, input, output, ViewContainerRef, inject, OnInit, OnDestroy, 
 import { Overlay, OverlayRef, ConnectedPosition } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { InputComponent } from '../input/input.component';
 import { ButtonComponent } from '../button/button.component';
 import { ComboBoxComponent } from "../combo-box/combo-box.component";
@@ -14,12 +15,12 @@ export interface FormField {
   optionCompareProp?: string;
   optionDisplayProp?: string;
   clearable?: boolean;
-  type?: 'text' | 'email' | 'password' | 'number' | 'text-area';
+  type?: 'text' | 'email' | 'password' | 'number' | 'text-area' | 'boolean';
 }
 
 @Component({
   selector: 'app-form-overlay',
-  imports: [InputComponent, ButtonComponent, ComboBoxComponent],
+  imports: [InputComponent, ButtonComponent, ComboBoxComponent, FormsModule],
   template: `
     <div class="bg-zinc-800 p-2 rounded-md min-w-64 shadow-lg border border-zinc-700">
       <div class="mb-3 font-semibold text-white">{{ title() }}</div>
@@ -35,6 +36,18 @@ export interface FormField {
               [displayProp]="field.optionDisplayProp || ''"
               >
             </app-combo-box>
+          }
+          @else if (field.type === 'boolean') {
+            <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input 
+                type="checkbox" 
+                name="{{field.key}}" 
+                id="{{field.key}}" 
+                [checked]="field.value === 'true'"
+                (change)="field.value = $any($event.target).checked ? 'true' : 'false'"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+              <span>{{ field.label }}</span>
+            </label>
           }
           @else {
             <app-input
@@ -205,7 +218,11 @@ export class FormOverlayDirective implements OnInit, OnDestroy {
   private resetFields() {
     const currentFields = this.fields();
     currentFields.forEach(field => {
-      field.value = '';
+      if (field.type === 'boolean') {
+        field.value = 'false';
+      } else {
+        field.value = '';
+      }
     });
   }
 }

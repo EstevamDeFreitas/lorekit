@@ -170,5 +170,22 @@ export const schema: TableDef[] = [
       { name: "name",        def: `"name" TEXT` },
       { name: "configJson",  def: `"configJson" TEXT` },
     ]
+  },
+  {
+    name:"DynamicField",
+    columns:[
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",        def: `"name" TEXT NOT NULL` },
+      { name: "entityTable", def: `"entityTable" TEXT NOT NULL` },
+      { name: "options",   def: `"options" TEXT` },
+      { name: "isEditorField",   def: `"isEditorField" INTEGER` },
+    ]
+  },
+  {
+    name:"DynamicFieldValue",
+    columns:[
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "value",       def: `"value" TEXT` },
+    ]
   }
 ];

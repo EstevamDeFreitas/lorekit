@@ -21,12 +21,13 @@ import { SafeDeleteButtonComponent } from '../../../components/safe-delete-butto
 import { TextAreaComponent } from '../../../components/text-area/text-area.component';
 import { LocationListComponent } from '../../locations/location-list/location-list.component';
 import { SpecieListComponent } from '../../species/specie-list/specie-list.component';
+import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
 
 @Component({
   selector: 'app-character-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent],
+  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent, DynamicFieldsComponent],
   template: `
-    <div class="flex flex-col relative h-screen" [ngClass]="{'h-screen': !isInDialog(), 'h-[75vh]': isInDialog()}">
+    <div class="flex flex-col relative" [ngClass]="{'h-[97vh]': !isInDialog(), 'h-[75vh]': isInDialog()}">
       @if(getImageByUsageKey(character.Images, 'default') != null){
         @let img = getImageByUsageKey(character.Images, 'default');
         <div class="relative w-full h-72  overflow-hidden">
@@ -86,6 +87,8 @@ import { SpecieListComponent } from '../../species/specie-list/specie-list.compo
                         <app-editor docTitle="Objetivos" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.objectives || ''" (saveDocument)="onEditorSave($event, 'objectives')"></app-editor>
                       </div>
                     </div>
+                    <br>
+                    <app-dynamic-fields [entityTable]="'Character'" [entityId]="character.id"></app-dynamic-fields>
                     <br>
                   </div>
                 }

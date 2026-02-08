@@ -51,9 +51,22 @@ function ensureSchema(db: any) {
     db.exec(buildCreateTableSQL(t));
 
     const existing = getExistingColumns(db, t.name);
+    const schemaColumns = new Set(t.columns.map(c => c.name));
+
+    // Adiciona colunas que faltam
     for (const col of t.columns) {
       if (!existing.has(col.name)) {
         db.exec(`ALTER TABLE "${t.name}" ADD COLUMN ${col.def}`);
+      }
+    }
+
+    // Remove colunas que não existem mais no schema
+    const columnsToRemove = Array.from(existing).filter(col => !schemaColumns.has(col));
+    if (columnsToRemove.length > 0) {
+      console.log(`Removing columns from "${t.name}": ${columnsToRemove.join(", ")}`);
+
+      for (const col of columnsToRemove) {
+        db.exec(`ALTER TABLE "${t.name}" DROP COLUMN "${col}"`);
       }
     }
 
