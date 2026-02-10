@@ -172,6 +172,7 @@
   color: var(--color-zinc-900) !important;
 }
 
+/* Image Tool Styles */
 .image-tool {
   margin: 1rem 0;
 }
@@ -184,14 +185,23 @@
   background-color: rgba(55, 65, 81, 0.5);
 }
 
+.image-tool__image-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .image-tool__image-container img {
   display: block;
   object-fit: contain;
+  user-select: none;
 }
 
 .image-tool__caption {
   outline: none;
   position: relative;
+  width: 100%;
 }
 
 .image-tool__caption:empty:before {
@@ -206,10 +216,21 @@
   opacity: 0.5;
 }
 
+/* Resize Handles */
+.image-resize-handle {
+  border-radius: 2px;
+}
+
+.image-resize-handle:hover {
+  background: rgba(59, 130, 246, 0.8) !important;
+  opacity: 1 !important;
+}
+
 /* Settings Buttons */
 .image-settings {
   display: flex;
   gap: 0.5rem;
+  align-items: center;
 }
 
 .cdx-settings-button {
@@ -223,6 +244,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 32px;
 }
 
 .cdx-settings-button:hover {
@@ -240,4 +262,9 @@
 .image-tool__upload-button.border-blue-500 {
   border-color: #3b82f6 !important;
   background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Prevent text selection during resize */
+body.is-resizing {
+  user-select: none;
 }

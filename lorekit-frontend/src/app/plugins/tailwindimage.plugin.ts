@@ -6,6 +6,9 @@ export default class TailwindImage {
   wrapper: HTMLElement | null = null;
   api: any;
   config: any;
+  isResizing: boolean = false;
+  startX: number = 0;
+  startWidth: number = 0;
 
   static get toolbox() {
     return {
@@ -39,7 +42,8 @@ export default class TailwindImage {
       caption: data?.caption || '',
       withBorder: data?.withBorder !== undefined ? data.withBorder : false,
       withBackground: data?.withBackground !== undefined ? data.withBackground : false,
-      stretched: data?.stretched !== undefined ? data.stretched : false
+      stretched: data?.stretched !== undefined ? data.stretched : false,
+      width: data?.width || 'auto' // pode ser 'auto', '25%', '50%', '75%', '100%' ou valor em pixels
     };
   }
 
@@ -135,17 +139,47 @@ export default class TailwindImage {
 
     if (this.data.stretched) {
       container.classList.add('w-full');
+      container.style.maxWidth = '100%';
+    } else {
+      // Aplica largura customizada
+      if (this.data.width === 'auto') {
+        container.style.maxWidth = '100%';
+        container.style.width = 'auto';
+        container.classList.add('mx-auto');
+      } else if (typeof this.data.width === 'string' && this.data.width.endsWith('%')) {
+        container.style.width = this.data.width;
+        container.style.maxWidth = '100%';
+        container.classList.add('mx-auto');
+      } else {
+        container.style.width = `${this.data.width}px`;
+        container.style.maxWidth = '100%';
+        container.classList.add('mx-auto');
+      }
     }
+
+    const imgWrapper = document.createElement('div');
+    imgWrapper.classList.add('relative', 'inline-block', 'max-w-full');
 
     const img = document.createElement('img');
     img.src = buildImageUrl(this.data.url);
-    img.classList.add('max-w-full', 'h-auto', 'mx-auto', 'rounded');
+    img.classList.add('max-w-full', 'h-auto', 'block', 'rounded');
 
     img.onerror = () => {
       img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle"%3EImagem não encontrada%3C/text%3E%3C/svg%3E';
     };
 
-    container.appendChild(img);
+    imgWrapper.appendChild(img);
+
+    // Handles de redimensionamento (esquerda e direita)
+    if (!this.data.stretched) {
+      const leftHandle = this.createResizeHandle('left');
+      const rightHandle = this.createResizeHandle('right');
+
+      imgWrapper.appendChild(leftHandle);
+      imgWrapper.appendChild(rightHandle);
+    }
+
+    container.appendChild(imgWrapper);
 
     // Botão de exclusão
     const deleteBtn = document.createElement('button');
@@ -158,7 +192,8 @@ export default class TailwindImage {
       'flex', 'items-center', 'justify-center',
       'opacity-0', 'group-hover:opacity-100',
       'transition-opacity',
-      'cursor-pointer'
+      'cursor-pointer',
+      'z-10'
     );
     deleteBtn.title = 'Remover imagem';
     deleteBtn.addEventListener('click', () => {
@@ -168,30 +203,108 @@ export default class TailwindImage {
     container.appendChild(deleteBtn);
 
     // Caption
-    if (this.data.caption || this.config.captionPlaceholder) {
-      const caption = document.createElement('div');
-      caption.contentEditable = 'true';
-      caption.classList.add(
-        'image-tool__caption',
-        'text-center',
-        'text-sm',
-        'text-gray-400',
-        'mt-2',
-        'focus:outline-none',
-        'italic'
-      );
-      caption.setAttribute('data-placeholder', this.config.captionPlaceholder || 'Legenda...');
-      caption.textContent = this.data.caption;
+    const caption = document.createElement('div');
+    caption.contentEditable = 'true';
+    caption.classList.add(
+      'image-tool__caption',
+      'text-center',
+      'text-sm',
+      'text-gray-400',
+      'mt-2',
+      'focus:outline-none',
+      'italic'
+    );
+    caption.setAttribute('data-placeholder', this.config.captionPlaceholder || 'Legenda...');
+    caption.textContent = this.data.caption;
 
-      caption.addEventListener('input', () => {
-        this.data.caption = caption.textContent || '';
-      });
+    caption.addEventListener('input', () => {
+      this.data.caption = caption.textContent || '';
+    });
 
-      container.appendChild(caption);
-    }
+    container.appendChild(caption);
 
     this.wrapper.innerHTML = '';
     this.wrapper.appendChild(container);
+  }
+
+  createResizeHandle(side: 'left' | 'right'): HTMLElement {
+    const handle = document.createElement('div');
+    handle.classList.add('image-resize-handle', `image-resize-handle--${side}`);
+    handle.style.cssText = `
+      position: absolute;
+      top: 0;
+      ${side}: -5px;
+      width: 10px;
+      height: 100%;
+      cursor: ew-resize;
+      background: rgba(59, 130, 246, 0.5);
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 5;
+    `;
+
+    // Mostra os handles no hover
+    const container = this.wrapper?.querySelector('.image-tool__image-container');
+    if (container) {
+      container.addEventListener('mouseenter', () => {
+        handle.style.opacity = '0';
+      });
+      container.addEventListener('mouseover', () => {
+        handle.style.opacity = '1';
+      });
+      container.addEventListener('mouseleave', () => {
+        if (!this.isResizing) {
+          handle.style.opacity = '0';
+        }
+      });
+    }
+
+    handle.addEventListener('mousedown', (e) => this.startResize(e, side));
+
+    return handle;
+  }
+
+  startResize(e: MouseEvent, side: 'left' | 'right') {
+    e.preventDefault();
+    e.stopPropagation();
+
+    this.isResizing = true;
+    this.startX = e.clientX;
+
+    const container = this.wrapper?.querySelector('.image-tool__image-container') as HTMLElement;
+    if (!container) return;
+
+    this.startWidth = container.offsetWidth;
+
+    const onMouseMove = (e: MouseEvent) => this.resize(e, side);
+    const onMouseUp = () => {
+      this.isResizing = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      // Esconde os handles após redimensionar
+      const handles = this.wrapper?.querySelectorAll('.image-resize-handle');
+      handles?.forEach(h => (h as HTMLElement).style.opacity = '0');
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }
+
+  resize(e: MouseEvent, side: 'left' | 'right') {
+    const container = this.wrapper?.querySelector('.image-tool__image-container') as HTMLElement;
+    if (!container) return;
+
+    const deltaX = e.clientX - this.startX;
+    const multiplier = side === 'right' ? 1 : -1;
+    const newWidth = Math.max(100, this.startWidth + (deltaX * multiplier * 2));
+
+    // Limita o tamanho máximo ao container pai
+    const maxWidth = container.parentElement?.offsetWidth || window.innerWidth;
+    const finalWidth = Math.min(newWidth, maxWidth);
+
+    this.data.width = finalWidth;
+    container.style.width = `${finalWidth}px`;
   }
 
   async uploadFile(file: File) {
@@ -231,7 +344,8 @@ export default class TailwindImage {
       caption: this.data.caption,
       withBorder: this.data.withBorder,
       withBackground: this.data.withBackground,
-      stretched: this.data.stretched
+      stretched: this.data.stretched,
+      width: this.data.width
     };
   }
 
@@ -261,6 +375,11 @@ export default class TailwindImage {
         isActive: () => this.data.stretched,
         toggle: () => {
           this.data.stretched = !this.data.stretched;
+          if (this.data.stretched) {
+            this.data.width = '100%';
+          } else {
+            this.data.width = 'auto';
+          }
           this.renderImage();
         }
       },
@@ -294,6 +413,40 @@ export default class TailwindImage {
 
       wrapper.appendChild(button);
     });
+
+    // Adiciona botões de tamanho rápido
+    const sizeWrapper = document.createElement('div');
+    sizeWrapper.classList.add('image-settings', 'border-l', 'border-gray-600', 'pl-2', 'ml-2');
+
+    const sizes = [
+      { label: '25%', value: '25%' },
+      { label: '50%', value: '50%' },
+      { label: '75%', value: '75%' },
+      { label: '100%', value: '100%' }
+    ];
+
+    sizes.forEach(size => {
+      const button = document.createElement('div');
+      button.classList.add('cdx-settings-button');
+      button.innerHTML = size.label;
+      button.title = `Largura ${size.label}`;
+      button.style.fontSize = '11px';
+      button.style.padding = '4px 6px';
+
+      if (this.data.width === size.value) {
+        button.classList.add('cdx-settings-button--active');
+      }
+
+      button.addEventListener('click', () => {
+        this.data.width = size.value;
+        this.data.stretched = false;
+        this.renderImage();
+      });
+
+      sizeWrapper.appendChild(button);
+    });
+
+    wrapper.appendChild(sizeWrapper);
 
     return wrapper;
   }
