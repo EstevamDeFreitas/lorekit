@@ -20,10 +20,10 @@ import { FormOverlayDirective } from '../../../components/form-overlay/form-over
 
 @Component({
   selector: 'app-document-list',
-  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, ComboBoxComponent, FormsModule],
+  imports: [NgClass, NgStyle, FormsModule],
   template: `
-    <div class="min-h-0 flex flex-col" [ngClass]="{'h-[63vh]': !isRouteComponent(), 'h-[95vh]': isRouteComponent()}">
-      <div class="flex flex-row justify-between items-center mb-4">
+    <div class="flex flex-col relative">
+      <div class="flex flex-row justify-between items-center mb-4 sticky  z-25 bg-zinc-950 py-2" [ngClass]="{'top-0': isRouteComponent(), 'top-13': !isRouteComponent()}">
         @if (isRouteComponent()){
           <h2 class="text-xl font-bold">Documentos Principais</h2>
         }
@@ -32,7 +32,7 @@ import { FormOverlayDirective } from '../../../components/form-overlay/form-over
         }
 
       </div>
-      <div class="flex-1 overflow-y-auto scrollbar-dark">
+      <div >
         <!-- <br>
         <div class="flex flex-row items-center gap-4">
           @if(!worldId()){
@@ -134,7 +134,7 @@ export class DocumentListComponent implements OnInit {
       import('../document-edit/document-edit.component').then(({ DocumentEditComponent }) => {
         const dialogRef = this.dialog.open(DocumentEditComponent, {
           data: { id: documentId },
-          panelClass: 'screen-dialog',
+          panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
           height: '80vh',
           width: '80vw',
         });

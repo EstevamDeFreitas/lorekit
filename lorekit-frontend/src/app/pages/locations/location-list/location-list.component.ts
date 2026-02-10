@@ -20,8 +20,8 @@ import { World } from '../../../models/world.model';
   imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, ComboBoxComponent],
   standalone: true,
   template: `
-    <div class="min-h-0 flex flex-col overflow-hidden" [ngClass]="{'h-[63vh]': !isRouteComponent(), 'h-[95vh]': isRouteComponent()}">
-      <div class="flex flex-row justify-between items-center mb-4">
+    <div class="flex flex-col relative">
+      <div class="flex flex-row justify-between items-center sticky  z-25 bg-zinc-950 py-2" [ngClass]="{'top-0': isRouteComponent(), 'top-13': !isRouteComponent()}">
         @if (isRouteComponent()){
           <h2 class="text-xl font-bold">Localidades</h2>
         }
@@ -38,11 +38,13 @@ import { World } from '../../../models/world.model';
           (onSave)="createLocation($event)"
           ></app-button>
       </div>
-      <div class="flex-1 overflow-y-auto scrollbar-dark">
-        @if(!worldId() && !locationId()){
-          <app-combo-box class="w-60" label="Filtro de mundo" [items]="getSelectableWorlds()" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="getLocations()"></app-combo-box>
-          <br>
-        }
+      @if(!worldId() && !locationId()){
+        <div class="flex flex-row top-13 py-2 sticky bg-zinc-950">
+          <app-combo-box class="w-60  " label="Filtro de mundo" [items]="getSelectableWorlds()" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="getLocations()"></app-combo-box>
+        </div>
+      }
+      <div>
+
         @if (locationCategories.length === 0){
           <div class="text-center">
             <p>Nenhuma localidade disponível.</p>
@@ -180,7 +182,7 @@ export class LocationListComponent implements OnInit {
       import('../location-edit/location-edit.component').then(({ LocationEditComponent }) => {
         const dialogRef = this.dialog.open(LocationEditComponent, {
           data: { id: locationId },
-          panelClass: 'screen-dialog',
+          panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
           height: '80vh',
           width: '80vw',
         });

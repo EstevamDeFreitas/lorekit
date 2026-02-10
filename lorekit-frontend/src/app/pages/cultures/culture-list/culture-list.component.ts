@@ -20,8 +20,8 @@ import { ComboBoxComponent } from '../../../components/combo-box/combo-box.compo
   selector: 'app-culture-list',
   imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, ComboBoxComponent],
   template: `
-    <div class="min-h-0 flex flex-col" [ngClass]="{'h-[63vh]': !isRouteComponent(), 'h-[95vh]': isRouteComponent()}">
-      <div class="flex flex-row justify-between items-center mb-4">
+    <div class="flex flex-col relative" >
+      <div class="flex flex-row justify-between items-center sticky z-25 bg-zinc-950 py-2" [ngClass]="{'top-0': isRouteComponent(), 'top-13': !isRouteComponent()}">
         @if (isRouteComponent()){
           <h2 class="text-xl font-bold">Culturas</h2>
         }
@@ -38,12 +38,12 @@ import { ComboBoxComponent } from '../../../components/combo-box/combo-box.compo
           (onSave)="createCulture($event)"
           ></app-button>
       </div>
-      <div class="flex-1 overflow-y-auto scrollbar-dark">
-        <br>
-        @if(!worldId()){
+      @if(!worldId()){
+        <div class="flex flex-row top-13 py-2 sticky bg-zinc-950">
           <app-combo-box class="w-60" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="onWorldSelect()"></app-combo-box>
-          <br>
-        }
+        </div>
+      }
+      <div>
         <div class=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           @if (cultures.length === 0){
             <div class="text-center">
@@ -150,7 +150,7 @@ export class CultureListComponent implements OnInit{
       import('../culture-edit/culture-edit.component').then(({ CultureEditComponent }) => {
         const dialogRef = this.dialog.open(CultureEditComponent, {
           data: { id: cultureId },
-          panelClass: 'screen-dialog',
+          panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
           height: '80vh',
           width: '80vw',
         });

@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-import { WorldEditComponent } from './pages/world/world-edit/world-edit.component';
 import { AuthGuard } from './guards/auth.guard';
 import { LoginComponent } from './pages/auth/login/login.component';
 import { WorldListComponent } from './pages/world/world-list/world-list.component';

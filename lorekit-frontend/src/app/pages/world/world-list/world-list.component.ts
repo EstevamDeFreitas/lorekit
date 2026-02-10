@@ -17,8 +17,8 @@ import { FormField, FormOverlayDirective } from '../../../components/form-overla
   selector: 'app-world-list',
   imports: [CommonModule, RouterLink, ButtonComponent, NgClass, OverlayModule, InputComponent, FormOverlayDirective],
   template: `
-  <div class="flex flex-col h-[95vh]" >
-    <div class="flex flex-row justify-between items-center mb-4">
+  <div class="flex flex-col relative" >
+    <div class="flex flex-row justify-between items-center mb-4 sticky top-0 z-50 bg-zinc-950 py-2">
       <h3 class="text-xl font-bold">Mundos</h3>
       <app-button buttonType="white" label="Novo"
           appFormOverlay
@@ -29,7 +29,7 @@ import { FormField, FormOverlayDirective } from '../../../components/form-overla
         ></app-button>
     </div>
 
-    <div class="flex-1 overflow-y-auto scrollbar-dark">
+    <div class="">
       <br>
       @if (worlds.length === 0){
         <div class="text-center">

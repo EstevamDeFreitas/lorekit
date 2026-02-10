@@ -17,10 +17,10 @@ import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-specie-list',
-  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, SearchComponent, ComboBoxComponent, FormsModule],
+  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, ComboBoxComponent, FormsModule],
   template: `
-    <div class="min-h-0 flex flex-col" [ngClass]="{'h-[63vh]': !isRouteComponent(), 'h-[95vh]': isRouteComponent()}">
-      <div class="flex flex-row justify-between items-center mb-4">
+    <div class="flex flex-col relative">
+      <div class="flex flex-row justify-between items-center sticky z-25 top-0 bg-zinc-950 py-2" >
         @if (isRouteComponent()){
           <h2 class="text-xl font-bold">Espécies</h2>
         }
@@ -37,21 +37,18 @@ import { FormsModule } from '@angular/forms';
           (onSave)="createSpecie($event)"
           ></app-button>
       </div>
-      <div class="flex-1 overflow-y-auto scrollbar-dark">
-        <br>
-        <div class="flex flex-row items-center gap-4">
-          @if(!worldId() && !specieId()){
+      @if(!specieId()){
+        <div class="flex flex-row items-center gap-4 top-13 z-50 py-2 sticky bg-zinc-950">
+          @if(!worldId()){
             <app-combo-box class="w-60" label="Filtro de mundo" [items]="getSelectableWorlds()" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="onWorldSelect()"></app-combo-box>
           }
-          @if(!specieId()){
-            <div>
-              <input type="checkbox" name="ignoreSubspecies" id="ignoreSubspecies" [(ngModel)]="ignoreSubspecies" (ngModelChange)="getSpecies()">
-              <label for="ignoreSubspecies" class="ml-2 text-sm text-white" >Ignorar Variações</label>
-            </div>
-          }
+          <div>
+            <input type="checkbox" name="ignoreSubspecies" id="ignoreSubspecies" [(ngModel)]="ignoreSubspecies" (ngModelChange)="getSpecies()">
+            <label for="ignoreSubspecies" class="ml-2 text-sm text-white" >Ignorar Variações</label>
+          </div>
         </div>
-        <br>
-
+      }
+      <div>
         <div class=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
            @if (species.length === 0){
             <div class="text-center">
@@ -183,7 +180,7 @@ export class SpecieListComponent implements OnInit {
       import('../specie-edit/specie-edit.component').then(({ SpecieEditComponent }) => {
         const dialogRef = this.dialog.open(SpecieEditComponent, {
           data: { id: specieId },
-          panelClass: 'screen-dialog',
+          panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
           height: '80vh',
           width: '80vw',
         });

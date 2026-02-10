@@ -27,19 +27,19 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
   selector: 'app-culture-edit',
   imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent, DynamicFieldsComponent],
   template: `
-    <div class="flex flex-col relative" [ngClass]="{'h-[97vh]': !isInDialog(), 'h-[75vh]': isInDialog()}">
+    <div class="flex flex-col relative">
       @if(getImageByUsageKey(culture.Images, 'default') != null){
         @let img = getImageByUsageKey(culture.Images, 'default');
-        <div class="relative w-full h-72  overflow-hidden">
+        <div class="relative w-full h-[30vh]  overflow-hidden">
           <img [src]="img?.filePath" class="w-full h-full object-cover">
           <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
         </div>
       }
       @else{
-        <div class="w-full h-72 object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(culture, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
+        <div class="w-full h-[30vh] object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(culture, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
       }
       <br>
-      <div class="flex flex-row items-center">
+      <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/culture"></app-icon-button>
         }
@@ -48,19 +48,18 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
           <app-personalization-button [entityId]="culture.id" [entityTable]="'Culture'" [size]="'xl'" (onClose)="getCulture()"></app-personalization-button>
           <app-safe-delete-button [entityName]="culture.name" [entityId]="culture.id" [entityTable]="'Culture'" [size]="'xl'"></app-safe-delete-button>
         </div>
-        <div class="flex-2"></div>
       </div>
-      <div class="flex flex-row gap-4 flex-1 overflow-hidden h-full mt-10">
-        <div class="flex-4 h-auto  flex flex-col overflow-hidden">
+      <div class="flex flex-row gap-4 mt-10">
+        <div class="flex-4 h-auto  flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'properties'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'properties'}">Principal</a>
             <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'description'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'description'}">Informações adicionais</a>
           </div>
-          <div class="p-4 pb-10 rounded-lg mt-2 flex-1 overflow-hidden flex flex-col">
+          <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
             @if (!isLoading) {
               @switch (currentTab) {
                 @case ('properties') {
-                  <div class="w-full flex-1 overflow-y-auto scrollbar-dark p-1">
+                  <div class="w-full flex-1 p-1">
                     <div class="grid grid-cols-3 gap-4 mb-4">
                       <app-input [label]="'Valores'" [(value)]="culture.values" (valueChange)="saveCulture()"></app-input>
                       <app-input [label]="'Nível Tecnológico'" [(value)]="culture.technologyLevel" (valueChange)="saveCulture()"></app-input>
@@ -92,7 +91,7 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
                   </div>
                 }
                 @case ('description') {
-                  <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
+                  <div class="w-full ">
                     <app-editor docTitle="Descrição" entityTable="Culture" [entityName]="culture.name" [document]="culture.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full"></app-editor>
                   </div>
                 }
@@ -102,7 +101,7 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
         </div>
         <div class="w-70">
           @if (!isLoading){
-            <div class="p-4 rounded-lg bg-zinc-900">
+            <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
               <app-entity-lateral-menu [fields]="getFormFields()" (onSave)="onFieldsSave($event)" entityTable="Culture" [entityId]="culture.id"></app-entity-lateral-menu>
             </div>
           }

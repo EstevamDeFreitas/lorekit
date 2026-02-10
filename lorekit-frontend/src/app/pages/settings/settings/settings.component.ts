@@ -23,7 +23,7 @@ import { DynamicField } from '../../../models/dynamicfields.model';
   selector: 'app-settings',
   imports: [NgClass, FormsModule, ButtonComponent, IconButtonComponent, InputComponent, FormOverlayDirective, OverlayModule, FormOverlayComponent, ComboBoxComponent],
   template: `
-  <div class="w-[60vw] rounded-md border border-zinc-800">
+  <div class="w-[60vw] h-[60vh] rounded-md border border-zinc-800">
 
     <div class="flex flex-row ">
       <div class="w-75 h-[60vh] p-4 border-e border-zinc-700 bg-zinc-900">
@@ -35,7 +35,7 @@ import { DynamicField } from '../../../models/dynamicfields.model';
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('dynamic_fields')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'dynamic_fields'}">Campos Dinâmicos</a>
         </div>
       </div>
-      <div class="flex-1 p-4 bg-zinc-900 overflow-y-auto scrollbar-dark">
+      <div class="flex-1 p-4 h-[60vh] bg-zinc-900 overflow-y-auto scrollbar-dark">
         @switch (currentTab) {
           @case ('location_categories') {
             <div>

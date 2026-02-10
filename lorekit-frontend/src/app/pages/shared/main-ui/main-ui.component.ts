@@ -69,7 +69,7 @@ import { SettingsComponent } from '../../settings/settings/settings.component';
         </a>
       </div>
     </div>
-    <div class="p-4 h-screen flex-1 pt-12">
+    <div class="px-4  h-[calc(100vh-2.5rem)] mt-10 overflow-y-auto scrollbar-dark flex-1">
       <router-outlet />
     </div>
   </div>

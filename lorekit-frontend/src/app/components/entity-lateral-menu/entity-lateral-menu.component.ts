@@ -19,7 +19,7 @@ import { IconButtonComponent } from '../icon-button/icon-button.component';
 @Component({
   selector: 'app-tree-view-list',
   standalone: true,
-  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, NgClass, ComboBoxComponent, TextAreaComponent, NgStyle, IconButtonComponent],
+  imports: [OverlayModule, RouterModule, FormOverlayDirective, NgClass, NgStyle, IconButtonComponent],
   template: `
     <div class="flex flex-col gap-2">
       @for (item of documentArray(); track item.id) {
@@ -106,7 +106,7 @@ export class TreeViewListComponent {
         entityTable: this.entityTable(),
         entityId: this.entityId()
        },
-      panelClass: 'screen-dialog',
+      panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
       height: '80vh',
       width: '80vw',
     });
@@ -131,7 +131,7 @@ export class TreeViewListComponent {
 
 @Component({
   selector: 'app-entity-lateral-menu',
-  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, NgClass, ComboBoxComponent, TextAreaComponent, NgStyle, TreeViewListComponent],
+  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, NgClass, ComboBoxComponent, TextAreaComponent, TreeViewListComponent],
   template: `
   <div class="flex flex-col gap-4 w-full h-full">
     <div class="flex flex-row justify-around items-center">
@@ -288,7 +288,7 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
         entityTable: this.entityTable(),
         entityId: this.entityId()
        },
-      panelClass: 'screen-dialog',
+      panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
       height: '80vh',
       width: '80vw',
     });

@@ -21,8 +21,8 @@ import { OrganizationTypeService } from '../../../services/organization-type.ser
   selector: 'app-organization-list',
   imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, SearchComponent, ComboBoxComponent, FormsModule],
   template: `
-    <div class="min-h-0 flex flex-col" [ngClass]="{'h-[63vh]': !isRouteComponent(), 'h-[95vh]': isRouteComponent()}">
-      <div class="flex flex-row justify-between items-center mb-4">
+    <div class="flex flex-col relative">
+      <div class="flex flex-row justify-between items-center mb-4 sticky top-0 z-50 bg-zinc-950 py-2">
         @if (isRouteComponent()){
           <h2 class="text-xl font-bold">Organizações</h2>
         }
@@ -39,15 +39,13 @@ import { OrganizationTypeService } from '../../../services/organization-type.ser
           (onSave)="createOrganization($event)"
           ></app-button>
       </div>
-      <div class="flex-1 overflow-y-auto scrollbar-dark">
-        <br>
-        <div class="flex flex-row items-center gap-4">
-          @if(!worldId()){
-            <app-combo-box class="w-60" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="onWorldSelect()"></app-combo-box>
-          }
+      @if(!worldId()){
+        <div class="flex flex-row items-center gap-4 top-13 py-2 sticky bg-zinc-950">
+          <app-combo-box class="w-60" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="onWorldSelect()"></app-combo-box>
         </div>
+      }
+      <div>
         <br>
-
         <div class=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
            @if (organizations.length === 0){
             <div class="text-center">
@@ -173,7 +171,7 @@ export class OrganizationListComponent implements OnInit
       import('../organization-edit/organization-edit.component').then(({ OrganizationEditComponent }) => {
         const dialogRef = this.dialog.open(OrganizationEditComponent, {
           data: { id: organizationId },
-          panelClass: 'screen-dialog',
+          panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
           height: '80vh',
           width: '80vw',
         });

@@ -18,8 +18,8 @@ import { EntityLateralMenuComponent } from "../../../components/entity-lateral-m
   standalone: true,
   imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, NgClass, FormOverlayDirective, EditorComponent, ButtonComponent, SafeDeleteButtonComponent, EntityLateralMenuComponent],
   template: `
-  <div class="flex flex-col" [ngClass]="{'h-screen': !isInDialog(), 'h-[80vh]': isInDialog()}">
-    <div class="flex flex-row items-center">
+  <div class="flex flex-col relative">
+    <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">
       @if (isRouteComponent()){
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" [route]="getReturnUrl()"></app-icon-button>
       }
@@ -28,17 +28,16 @@ import { EntityLateralMenuComponent } from "../../../components/entity-lateral-m
         <app-personalization-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-personalization-button>
         <app-safe-delete-button [entityName]="document.title" [entityId]="document.id" [entityTable]="'Document'" [size]="'xl'"></app-safe-delete-button>
       </div>
-      <div class="flex-2"></div>
     </div>
-    <div class="flex flex-row gap-4 mt-10 h-full">
-      <div class="flex-4 h-[calc(100%-8rem)] overflow-y-auto scrollbar-dark flex flex-col">
+    <div class="flex flex-row gap-4 mt-10">
+      <div class="flex-4 flex flex-col">
         @if (!isLoading) {
           <app-editor entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full"></app-editor>
         }
       </div>
       <div class="flex-1">
         @if (!isLoading) {
-          <div class="p-4 rounded-lg bg-zinc-900">
+          <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
             <app-entity-lateral-menu entityTable="Document" [entityId]="document.id"></app-entity-lateral-menu>
           </div>
         }
@@ -126,7 +125,7 @@ export class DocumentEditComponent implements OnInit {
   openDocument(item: Document) {
     this.dialog.open(DocumentEditComponent, {
       data: { id: item.id, entityTable: "Document", entityId: this.documentId() },
-      panelClass: 'screen-dialog',
+      panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
       height: '80vh',
       width: '80vw',
     });
