@@ -27,7 +27,7 @@ import { EditorComponent } from "../editor/editor.component";
                 <div class=" text-sm text-white mb-1">{{ field.name }}</div>
               </div>
               <div class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark">
-                <app-editor [docTitle]="field.template.name" [entityTable]="entityTable()" [entityName]="field.template.name" [document]="field.value || ''" (saveDocument)="onEditorSave($event, field.template.id)" class="w-full"></app-editor>
+                <app-editor [entityId]="field.fieldValueId" [docTitle]="field.template.name" [entityTable]="entityTable()" [entityName]="field.template.name" [document]="field.value || ''" (saveDocument)="onEditorSave($event, field.template.id)" class="w-full"></app-editor>
               </div>
             </div>
 

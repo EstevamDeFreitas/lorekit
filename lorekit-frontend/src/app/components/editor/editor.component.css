@@ -172,3 +172,72 @@
   color: var(--color-zinc-900) !important;
 }
 
+.image-tool {
+  margin: 1rem 0;
+}
+
+.image-tool__upload-button {
+  transition: all 0.2s ease;
+}
+
+.image-tool__upload-button:hover {
+  background-color: rgba(55, 65, 81, 0.5);
+}
+
+.image-tool__image-container img {
+  display: block;
+  object-fit: contain;
+}
+
+.image-tool__caption {
+  outline: none;
+  position: relative;
+}
+
+.image-tool__caption:empty:before {
+  content: attr(data-placeholder);
+  color: #6b7280;
+  font-style: italic;
+  position: absolute;
+  pointer-events: none;
+}
+
+.image-tool__caption:focus:before {
+  opacity: 0.5;
+}
+
+/* Settings Buttons */
+.image-settings {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cdx-settings-button {
+  padding: 0.5rem;
+  background: transparent;
+  border: 1px solid #374151;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  color: #9ca3af;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cdx-settings-button:hover {
+  background: #374151;
+  color: #fff;
+}
+
+.cdx-settings-button--active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+/* Drag and Drop Feedback */
+.image-tool__upload-button.border-blue-500 {
+  border-color: #3b82f6 !important;
+  background-color: rgba(59, 130, 246, 0.1);
+}

@@ -7,8 +7,10 @@ import Table from '@editorjs/table';
 
 import TailwindHeader from '../../plugins/tailwindheader.plugin';
 import TailwindItalic from '../../plugins/tailwinditalic.plugin';
+import TailwindImage from '../../plugins/tailwindimage.plugin';
 import { IconButtonComponent } from '../icon-button/icon-button.component';
 import { GlobalParameterService } from '../../services/global-parameter.service';
+import { ImageService } from '../../services/image.service';
 
 @Component({
   selector: 'app-editor',
@@ -31,10 +33,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   document = input('');
   saveDocument = output<any>();
   entityTable = input.required<string>();
+  entityId = input.required<string>();
   entityName = input.required<string>();
   docTitle = input<string>();
 
   globalParameterService = inject<GlobalParameterService>(GlobalParameterService);
+  imageService = inject<ImageService>(ImageService);
 
   exportFormat = computed(() => {
     const format = this.globalParameterService.getParameter('exportTextFormat');
@@ -76,6 +80,34 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
           class: TailwindItalic,
           shortcut: 'CMD+I',
         },
+        image: {
+          class: TailwindImage,
+          config: {
+            captionPlaceholder: 'Legenda da imagem...',
+            uploader: async (file: File) => {
+              try {
+                const usageKey = `editor_${Date.now()}`;
+                const image = await this.imageService.uploadImage(
+                  file,
+                  this.entityTable(),
+                  this.entityId(),
+                  usageKey
+                );
+                return {
+                  success: 1,
+                  file: {
+                    url: image.filePath
+                  }
+                };
+              } catch (error) {
+                console.error('Erro ao fazer upload:', error);
+                return {
+                  success: 0
+                };
+              }
+            }
+          }
+        }
       },
       data: this.parseDocument(this.document()),
     });
@@ -94,7 +126,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
 
   private async handleChange() {
     const now = Date.now();
-
     await this.saveContent();
   }
 
@@ -102,7 +133,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     try {
       return document ? JSON.parse(document) : {};
     } catch {
-
       if (document && document.trim().length > 0) {
         return {
           blocks: [
@@ -115,7 +145,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
           ]
         };
       }
-
       return {};
     }
   }
@@ -187,17 +216,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     let s = html;
 
     s = s.replace(/<br\s*\/?>/gi, '  \n');
-
     s = s.replace(/<a\s+[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gi, (m, href, text) => {
       return `[${this.htmlToText(text)}](${href})`;
     });
-
     s = s.replace(/<(strong|b)>(.*?)<\/\1>/gi, (m, _tag, inner) => `**${this.htmlToText(inner)}**`);
-
     s = s.replace(/<(em|i)>(.*?)<\/\1>/gi, (m, _tag, inner) => `*${this.htmlToText(inner)}*`);
-
     s = s.replace(/<code>(.*?)<\/code>/gi, (m, inner) => `\`${this.htmlToText(inner)}\``);
-
     s = this.htmlToText(s);
 
     return s;
@@ -209,7 +233,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
 
   private blocksToMarkdown(blocks: any[]): string {
     const out: string[] = [];
-
     const mdFromHtmlInline = (html: string) => this.htmlInlineToMarkdown(html);
 
     for (const b of blocks) {
@@ -259,6 +282,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
           }
           break;
         }
+        case 'image': {
+          const url = b.data?.url ?? '';
+          const caption = b.data?.caption ?? '';
+          if (url) {
+            out.push(`![${caption}](${url})`, '');
+          }
+          break;
+        }
         default: {
           const raw = mdFromHtmlInline(b.data?.text ?? '');
           if (raw) out.push(raw, '');
@@ -278,7 +309,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
         case 'header': {
           const t = this.htmlToText(b.data?.text ?? '');
           lines.push(t);
-          lines.push(''); // linha em branco após header
+          lines.push('');
           break;
         }
         case 'paragraph': {
@@ -288,7 +319,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
           break;
         }
         case 'list': {
-          const style = b.data?.style; // 'ordered' | 'unordered'
+          const style = b.data?.style;
           const items: string[] = b.data?.items ?? [];
           items.forEach((item: string, idx: number) => {
             const t = this.htmlToText(item);
@@ -319,8 +350,18 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
           lines.push('');
           break;
         }
+        case 'image': {
+          const caption = b.data?.caption ?? '';
+          const url = b.data?.url ?? '';
+          if (caption) {
+            lines.push(`[Imagem: ${caption}]`);
+          } else if (url) {
+            lines.push(`[Imagem: ${url}]`);
+          }
+          lines.push('');
+          break;
+        }
         default: {
-          // fallback genérico
           const raw = b.data?.text ? this.htmlToText(b.data.text) : '';
           if (raw) lines.push(raw, '');
           break;
@@ -328,8 +369,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
       }
     }
 
-    // remove espaços extras no final
     return lines.join('\n').replace(/\s+$/g, '').trimEnd() + '\n';
   }
-
 }

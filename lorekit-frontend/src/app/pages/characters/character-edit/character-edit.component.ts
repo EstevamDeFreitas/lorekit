@@ -75,15 +75,15 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
                     <div class="grid grid-cols-2 gap-4">
                       <div>
                         <label class="mb-1 text-sm text-white">Personalidade</label>
-                        <app-editor docTitle="Personalidade" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.personality || ''" (saveDocument)="onEditorSave($event, 'personality')"></app-editor>
+                        <app-editor [entityId]="character.id" docTitle="Personalidade" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.personality || ''" (saveDocument)="onEditorSave($event, 'personality')"></app-editor>
                       </div>
                       <div>
                         <label class="mb-1 text-sm text-white">Aparência</label>
-                        <app-editor docTitle="Aparência" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.appearance || ''" (saveDocument)="onEditorSave($event, 'appearance')"></app-editor>
+                        <app-editor [entityId]="character.id" docTitle="Aparência" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.appearance || ''" (saveDocument)="onEditorSave($event, 'appearance')"></app-editor>
                       </div>
                       <div>
                         <label class="mb-1 text-sm text-white">Objetivos</label>
-                        <app-editor docTitle="Objetivos" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.objectives || ''" (saveDocument)="onEditorSave($event, 'objectives')"></app-editor>
+                        <app-editor [entityId]="character.id" docTitle="Objetivos" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.objectives || ''" (saveDocument)="onEditorSave($event, 'objectives')"></app-editor>
                       </div>
                     </div>
                     <br>
@@ -93,7 +93,7 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
                 }
                 @case ('backstory') {
                   <div class="w-full ">
-                    <app-editor docTitle="Backstory" entityTable="Character" [entityName]="character.name" [document]="character.background || ''" (saveDocument)="onEditorSave($event, 'background')" class="w-full"></app-editor>
+                    <app-editor [entityId]="character.id" docTitle="Backstory" entityTable="Character" [entityName]="character.name" [document]="character.background || ''" (saveDocument)="onEditorSave($event, 'background')" class="w-full"></app-editor>
                   </div>
                 }
               }

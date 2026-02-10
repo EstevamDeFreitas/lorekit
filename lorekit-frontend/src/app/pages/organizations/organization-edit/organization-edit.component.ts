@@ -70,7 +70,7 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
               @switch (currentTab) {
                 @case ('description') {
                   <div class="w-full ">
-                    <app-editor docTitle="Descrição" entityTable="Organization" [entityName]="organization.name" [document]="organization.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full"></app-editor>
+                    <app-editor [entityId]="organization.id" docTitle="Descrição" entityTable="Organization" [entityName]="organization.name" [document]="organization.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full"></app-editor>
                   </div>
                 }
                 @case ('properties'){

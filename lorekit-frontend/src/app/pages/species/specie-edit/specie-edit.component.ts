@@ -73,11 +73,11 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
                     <div class="grid grid-cols-2 gap-4">
                       <div>
                         <label class="mb-1 text-sm text-white">Características físicas</label>
-                        <app-editor docTitle="Características físicas" entityTable="Species" [entityName]="specie.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="specie.physicalCharacteristics || ''" (saveDocument)="onEditorSave($event, 'physicalCharacteristics')"></app-editor>
+                        <app-editor [entityId]="specie.id" docTitle="Características físicas" entityTable="Species" [entityName]="specie.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="specie.physicalCharacteristics || ''" (saveDocument)="onEditorSave($event, 'physicalCharacteristics')"></app-editor>
                       </div>
                       <div>
                         <label class="mb-1 text-sm text-white">Características Comportamentais</label>
-                        <app-editor docTitle="Características Comportamentais" entityTable="Species" [entityName]="specie.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="specie.behavioralCharacteristics || ''" (saveDocument)="onEditorSave($event, 'behavioralCharacteristics')"></app-editor>
+                        <app-editor [entityId]="specie.id" docTitle="Características Comportamentais" entityTable="Species" [entityName]="specie.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="specie.behavioralCharacteristics || ''" (saveDocument)="onEditorSave($event, 'behavioralCharacteristics')"></app-editor>
                       </div>
                     </div>
                     <br>
@@ -87,7 +87,7 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
                 }
                 @case ('details') {
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-editor docTitle="Descrição" entityTable="Species" [entityName]="specie.name" [document]="specie.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full"></app-editor>
+                    <app-editor [entityId]="specie.id" docTitle="Descrição" entityTable="Species" [entityName]="specie.name" [document]="specie.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full"></app-editor>
                   </div>
                 }
                 @case ('subspecies') {

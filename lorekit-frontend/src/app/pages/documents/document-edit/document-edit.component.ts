@@ -32,7 +32,7 @@ import { EntityLateralMenuComponent } from "../../../components/entity-lateral-m
     <div class="flex flex-row gap-4 mt-10">
       <div class="flex-4 flex flex-col">
         @if (!isLoading) {
-          <app-editor entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full"></app-editor>
+          <app-editor [entityId]="document.id" entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full"></app-editor>
         }
       </div>
       <div class="flex-1">

@@ -61,7 +61,7 @@ import { DynamicFieldService } from '../../../services/dynamic-field.service';
               @switch (currentTab) {
                 @case ('details') {
                   <div class="w-full flex-1">
-                    <app-editor docTitle="Descrição" entityTable="World" [entityName]="currentWorld.name" [document]="currentWorld.description || ''" (saveDocument)="onDocumentSave($event)"></app-editor>
+                    <app-editor [entityId]="currentWorld.id" docTitle="Descrição" entityTable="World" [entityName]="currentWorld.name" [document]="currentWorld.description || ''" (saveDocument)="onDocumentSave($event)"></app-editor>
                   </div>
                 }
                 @case ('localities') {
