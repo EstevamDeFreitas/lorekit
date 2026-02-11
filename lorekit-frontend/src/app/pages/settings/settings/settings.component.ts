@@ -18,10 +18,11 @@ import { schema } from '../../../database/schema';
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DynamicField } from '../../../models/dynamicfields.model';
+import { ElectronService } from '../../../services/electron.service';
 
 @Component({
   selector: 'app-settings',
-  imports: [NgClass, FormsModule, ButtonComponent, IconButtonComponent, InputComponent, FormOverlayDirective, OverlayModule, FormOverlayComponent, ComboBoxComponent],
+  imports: [NgClass, FormsModule, ButtonComponent, IconButtonComponent, FormOverlayDirective, OverlayModule, ComboBoxComponent],
   template: `
   <div class="w-[60vw] h-[60vh] rounded-md border border-zinc-800">
 
@@ -205,7 +206,11 @@ import { DynamicField } from '../../../models/dynamicfields.model';
       </div>
 
     </div>
-  </div>`,
+  </div>
+  <div class="mt-2 text-center text-xs text-zinc-500">
+    Versão {{appVersion}}
+  </div>
+  `,
   styleUrl: './settings.component.css',
 })
 export class SettingsComponent implements OnInit{
@@ -259,10 +264,14 @@ export class SettingsComponent implements OnInit{
 
   dynamicFields : DynamicField[] = [];
 
+  appVersion: string = '';
+  electronService = inject(ElectronService);
+
   constructor(private locationService: LocationCategoriesService) { }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     this.selectTab('general_settings');
+    this.appVersion = await this.electronService.getAppVersion();
   }
 
   selectTab(tab: string) {

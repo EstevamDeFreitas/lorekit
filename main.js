@@ -48,6 +48,9 @@ function registerIpc() {
     if (mainWindow) mainWindow.close();
     return true;
   });
+  ipcMain.handle('get-app-version', () => {
+    return app.getVersion();
+  });
 
   // Permite "Abrir assim mesmo" na tela de update
   ipcMain.on('updater:open-main', () => openMainOnce()); // ADDED

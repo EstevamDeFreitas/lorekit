@@ -9,4 +9,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   minimize: () => ipcRenderer.invoke('window:minimize'),
   toggleMaximize: () => ipcRenderer.invoke('window:toggle-maximize'),
   close:    () => ipcRenderer.invoke('window:close'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 });
