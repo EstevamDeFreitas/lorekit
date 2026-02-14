@@ -499,8 +499,8 @@ export class RelationGraphComponent implements OnInit {
       this.movedDuringPan = true;
     }
 
-    this.panX = this.panOriginX - dx;
-    this.panY = this.panOriginY - dy;
+    this.panX = this.panOriginX + dx;
+    this.panY = this.panOriginY + dy;
   }
 
   @HostListener('window:mouseup')
