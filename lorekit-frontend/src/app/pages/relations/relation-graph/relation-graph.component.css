@@ -1,0 +1,7 @@
+:host {
+  display: block;
+}
+
+svg text {
+  user-select: none;
+}

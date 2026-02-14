@@ -86,6 +86,12 @@ export const routes: Routes = [
           },
         ]
       },
+      {
+        path: 'relations',
+        loadComponent: () =>
+          import('./pages/relations/relation-graph/relation-graph.component')
+            .then(m => m.RelationGraphComponent),
+      },
     ]
   }
 
