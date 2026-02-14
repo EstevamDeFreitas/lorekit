@@ -1,4 +1,4 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, computed, effect, inject, input, OnDestroy, output, ViewEncapsulation } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, computed, inject, input, OnDestroy, output, ViewEncapsulation } from '@angular/core';
 
 import EditorJS from '@editorjs/editorjs';
 import List from '@editorjs/list';
@@ -8,9 +8,11 @@ import Table from '@editorjs/table';
 import TailwindHeader from '../../plugins/tailwindheader.plugin';
 import TailwindItalic from '../../plugins/tailwinditalic.plugin';
 import TailwindImage from '../../plugins/tailwindimage.plugin';
+import TailwindMentionPlugin from '../../plugins/tailwindmention.plugin';
 import { IconButtonComponent } from '../icon-button/icon-button.component';
 import { GlobalParameterService } from '../../services/global-parameter.service';
 import { ImageService } from '../../services/image.service';
+import { EntityMentionService } from '../../services/entity-mention.service';
 
 @Component({
   selector: 'app-editor',
@@ -28,7 +30,7 @@ import { ImageService } from '../../services/image.service';
 export class EditorComponent implements AfterViewInit, OnDestroy{
   editor!: EditorJS;
   private lastSaveTime = 0;
-  private readonly SAVE_DELAY = 5000;
+  private mentionPlugin: TailwindMentionPlugin | null = null;
 
   document = input('');
   saveDocument = output<any>();
@@ -39,6 +41,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
 
   globalParameterService = inject<GlobalParameterService>(GlobalParameterService);
   imageService = inject<ImageService>(ImageService);
+  entityMentionService = inject<EntityMentionService>(EntityMentionService);
 
   exportFormat = computed(() => {
     const format = this.globalParameterService.getParameter('exportTextFormat');
@@ -111,7 +114,37 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
       },
       data: this.parseDocument(this.document()),
     });
-    this.disableSpellcheck();
+
+    this.editor.isReady
+      .then(() => {
+        this.disableSpellcheck();
+        this.initMentionPlugin();
+      })
+      .catch((error) => {
+        console.error('Erro ao iniciar editor:', error);
+      });
+  }
+
+  private initMentionPlugin() {
+    this.mentionPlugin = new TailwindMentionPlugin({
+      holderId: this.editorId,
+      minChars: 1,
+      maxResults: 8,
+      search: async (term, limit) => {
+        return this.entityMentionService.search(term, limit);
+      },
+      onMentionClick: async (mention) => {
+        const parsed = this.entityMentionService.parseMentionHref(mention.href);
+        if (parsed) {
+          await this.entityMentionService.openMentionEditor({
+            entityTable: parsed.table,
+            entityId: parsed.id,
+          });
+        }
+      }
+    });
+
+    this.mentionPlugin.init();
   }
 
   private disableSpellcheck() {
@@ -125,7 +158,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   }
 
   private async handleChange() {
-    const now = Date.now();
     await this.saveContent();
   }
 
@@ -171,6 +203,11 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   }
 
   async ngOnDestroy() {
+    if (this.mentionPlugin) {
+      this.mentionPlugin.destroy();
+      this.mentionPlugin = null;
+    }
+
     if (this.editor) {
       await this.saveContent();
       this.editor.destroy();

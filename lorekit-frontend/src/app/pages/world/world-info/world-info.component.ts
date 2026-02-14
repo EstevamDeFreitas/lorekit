@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit } from '@angular/core';
 import { WorldStateService } from '../../../services/world-state.service';
 import { World } from '../../../models/world.model';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
@@ -21,6 +21,7 @@ import { FormField } from '../../../components/form-overlay/form-overlay.compone
 import { getPersonalizationValue } from '../../../models/personalization.model';
 import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
+import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 
 @Component({
   standalone: true,
@@ -38,7 +39,9 @@ import { DynamicFieldService } from '../../../services/dynamic-field.service';
         <div class="w-full h-[30vh] object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(currentWorld, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
       }
       <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">
-        <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/world"></app-icon-button>
+        @if (isRouteComponent()){
+          <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/world"></app-icon-button>
+        }
         <input type="text" (blur)="saveWorldName()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="currentWorld.name" />
         <div class="flex flex-row gap-2">
           <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" (onClose)="getWorld()"></app-personalization-button>
@@ -99,6 +102,9 @@ import { DynamicFieldService } from '../../../services/dynamic-field.service';
   changeDetection: ChangeDetectionStrategy.Default,
 })
 export class WorldInfoComponent implements OnInit {
+  dialogref = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
+  data = inject<any>(DIALOG_DATA, { optional: true });
+
   currentWorld: World = new World();
   currentWorldId: string | null = null;
 
@@ -114,12 +120,30 @@ export class WorldInfoComponent implements OnInit {
   private dynamicFieldService = inject(DynamicFieldService);
   hasDynamicFields: boolean = this.dynamicFieldService.getDynamicFields('World').length > 0;
 
+  protected readonly isRouteComponent = computed(() => {
+    return this.router.routerState.root.firstChild?.component === WorldInfoComponent ||
+      this.currentRoute.component === WorldInfoComponent;
+  });
+
+  readonly worldId = computed(() => {
+    if (this.data?.id) {
+      return this.data.id as string;
+    }
+
+    return this.currentRoute.snapshot.paramMap.get('worldId') ?? this.currentWorldId ?? '';
+  });
+
   constructor(private router:Router, private currentRoute : ActivatedRoute, private worldService : WorldService, private cdr: ChangeDetectorRef) {
     this.isLoading = true;
-    this.currentRoute.params.subscribe(params => {
-      this.currentWorldId = params['worldId'];
+    if (this.data?.id) {
+      this.currentWorldId = this.data.id;
       this.getWorld();
-    });
+    } else {
+      this.currentRoute.params.subscribe(params => {
+        this.currentWorldId = params['worldId'];
+        this.getWorld();
+      });
+    }
   }
 
   ngOnInit() {
@@ -127,7 +151,14 @@ export class WorldInfoComponent implements OnInit {
   }
 
   getWorld() {
-    this.currentWorld = this.worldService.getWorldById(this.currentWorldId!);
+    const id = this.worldId();
+    if (!id) {
+      this.isLoading = false;
+      return;
+    }
+
+    this.currentWorldId = id;
+    this.currentWorld = this.worldService.getWorldById(id);
     this.buildFields();
 
     this.isLoading = false;
