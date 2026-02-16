@@ -13,6 +13,7 @@ import { SpecieService } from '../../../services/specie.service';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { NgClass, NgStyle } from '@angular/common';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { WorldStateService } from '../../../services/world-state.service';
 
 @Component({
   selector: 'app-character-list',
@@ -105,6 +106,7 @@ export class CharacterListComponent implements OnInit {
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
   public getTextClass = getTextClass;
+  private worldStateService = inject(WorldStateService);
 
   dialog = inject(Dialog);
 
@@ -122,6 +124,9 @@ export class CharacterListComponent implements OnInit {
   characters : Character[] = [];
 
   ngOnInit() {
+    this.worldStateService.currentWorld$.subscribe(world => {
+      this.selectedWorld = world ? world.id : '';
+    });
     this.getAvailableWorlds();
     this.getAvailableSpecies();
     this.getCharacters();

@@ -16,6 +16,7 @@ import { ButtonComponent } from '../../../components/button/button.component';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { SearchComponent } from '../../../components/search/search.component';
 import { OrganizationTypeService } from '../../../services/organization-type.service';
+import { WorldStateService } from '../../../services/world-state.service';
 
 @Component({
   selector: 'app-organization-list',
@@ -110,6 +111,7 @@ export class OrganizationListComponent implements OnInit
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
   public getTextClass = getTextClass;
+  private worldStateService = inject(WorldStateService);
 
   dialog = inject(Dialog);
 
@@ -128,6 +130,9 @@ export class OrganizationListComponent implements OnInit
   organizations : Organization[] = [];
 
   ngOnInit(): void {
+    this.worldStateService.currentWorld$.subscribe(world => {
+      this.selectedWorld = world ? world.id : '';
+    });
     this.getAvailableWorlds();
     this.getAvailableLocations();
     this.getAvailableOrganizationTypes();

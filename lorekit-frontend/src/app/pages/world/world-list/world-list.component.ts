@@ -41,8 +41,8 @@ import { FormField, FormOverlayDirective } from '../../../components/form-overla
           @for (world of worlds; track world.id) {
             @let img = getImageByUsageKey(world.Images, 'default');
               <div (click)="onWorldSelected(world.id)" [ngClass]="[
-                  'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2',
-
+                  'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border  p-3 mb-2',
+                  currentWorldId === world.id ? 'border-yellow-500' : 'border-zinc-800'
                 ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(world, 'color') || 'var(--color-zinc-800)'}">
                 <div class="flex h-35 flex-row gap-2 items-top">
                   <div class="flex-1 flex flex-col overflow-hidden justify-between" [ngClass]="getTextClass(getPersonalizationValue(world, 'color'))">
@@ -52,7 +52,7 @@ import { FormField, FormOverlayDirective } from '../../../components/form-overla
                     </div>
                     <div class="text-xs font-bold overflow-hidden text-ellipsis text-justify line-clamp-3">{{world.concept}}</div>
                     <div class="flex flex-row gap-1">
-
+                      <app-button [label]="currentWorldId === world.id ?'Desfixar como Mundo Padrão' :'Fixar como Mundo Padrão'" [buttonType]="currentWorldId === world.id ? 'primary' : 'white'" size="xs" (click)="$event.stopPropagation(); setWorldAsDefault(world)"></app-button>
                     </div>
                   </div>
                 </div>
@@ -84,10 +84,14 @@ export class WorldListComponent {
   private imageService = inject(ImageService);
   worldsWithImages: { [key: string]: string | undefined } = {};
 
+  currentWorldId = '';
+
   constructor(private worldService: WorldService, private worldStateService : WorldStateService, private router:Router) { }
 
   ngOnInit() {
-    this.worldStateService.clearWorld();
+    this.worldStateService.currentWorld$.subscribe(world => {
+      this.currentWorldId = world ? world.id : '';
+    })
     this.loadWorlds();
   }
 
@@ -105,8 +109,6 @@ export class WorldListComponent {
     if (!world) {
       return;
     }
-
-    this.worldStateService.setWorld(world);
 
     this.router.navigate(['/app/world/info', worldId]);
   }
@@ -150,5 +152,12 @@ export class WorldListComponent {
       : null;
   }
 
+  setWorldAsDefault(world: World) {
+    if (this.currentWorldId === world.id) {
+      this.worldStateService.clearWorld();
+      return;
+    }
+    this.worldStateService.setWorld(world);
+  }
 
 }

@@ -17,6 +17,7 @@ import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
+import { WorldStateService } from '../../../services/world-state.service';
 
 @Component({
   selector: 'app-document-list',
@@ -89,6 +90,7 @@ export class DocumentListComponent implements OnInit {
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
   public getTextClass = getTextClass;
+  private worldStateService = inject(WorldStateService);
 
   dialog = inject(Dialog);
 
@@ -105,6 +107,9 @@ export class DocumentListComponent implements OnInit {
   selectedWorld : string = '';
 
   ngOnInit(): void {
+    // this.worldStateService.currentWorld$.subscribe(world => {
+    //   this.selectedWorld = world ? world.id : '';
+    // });
     this.getAvailableWorlds();
     this.getAvailableLocations();
     this.getDocuments();

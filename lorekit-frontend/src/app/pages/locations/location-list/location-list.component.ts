@@ -14,6 +14,7 @@ import { getPersonalizationValue, getTextClass } from '../../../models/personali
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { WorldService } from '../../../services/world.service';
 import { World } from '../../../models/world.model';
+import { WorldStateService } from '../../../services/world-state.service';
 
 @Component({
   selector: 'app-location-list',
@@ -115,6 +116,10 @@ export class LocationListComponent implements OnInit {
 
   dialog = inject(Dialog);
 
+  private worldStateService = inject(WorldStateService);
+
+  currentWorldId = '';
+
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === LocationListComponent ||
       this.activatedRoute.component === LocationListComponent;
@@ -127,6 +132,9 @@ export class LocationListComponent implements OnInit {
   locations: Location[] = [];
 
   ngOnInit() {
+    this.worldStateService.currentWorld$.subscribe(world => {
+      this.selectedWorld = world ? world.id : '';
+    });
     this.getLocationCategories();
     this.getLocations();
   }

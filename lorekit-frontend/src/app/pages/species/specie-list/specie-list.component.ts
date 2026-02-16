@@ -14,6 +14,7 @@ import { LocationService } from '../../../services/location.service';
 import { SearchComponent } from "../../../components/search/search.component";
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { FormsModule } from '@angular/forms';
+import { WorldStateService } from '../../../services/world-state.service';
 
 @Component({
   selector: 'app-specie-list',
@@ -111,6 +112,7 @@ export class SpecieListComponent implements OnInit {
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
   public getTextClass = getTextClass;
+  private worldStateService = inject(WorldStateService);
 
   worldId = input<string>();
   specieId = input<string>();
@@ -131,6 +133,9 @@ export class SpecieListComponent implements OnInit {
 
 
   ngOnInit() {
+    this.worldStateService.currentWorld$.subscribe(world => {
+      this.selectedWorld = world ? world.id : '';
+    });
     this.getAvailableWorlds();
     this.getSpecies();
   }

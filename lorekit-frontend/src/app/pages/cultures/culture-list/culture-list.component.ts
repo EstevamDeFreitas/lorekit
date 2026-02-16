@@ -15,6 +15,7 @@ import { FormField, FormOverlayDirective } from '../../../components/form-overla
 import { NgClass, NgStyle } from '@angular/common';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { WorldStateService } from '../../../services/world-state.service';
 
 @Component({
   selector: 'app-culture-list',
@@ -95,6 +96,7 @@ export class CultureListComponent implements OnInit{
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
   public getTextClass = getTextClass;
+  private worldStateService = inject(WorldStateService);
 
   dialog = inject(Dialog);
 
@@ -112,6 +114,9 @@ export class CultureListComponent implements OnInit{
   cultures:Culture[] = [];
 
   ngOnInit(): void {
+    this.worldStateService.currentWorld$.subscribe(world => {
+      this.selectedWorld = world ? world.id : '';
+    });
     this.getAvailableWorlds();
     this.getAvailableLocations();
     this.getCultures();
