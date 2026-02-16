@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, OnInit, computed, effect, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, OnInit, ViewChild, computed, effect, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgClass, SlicePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
@@ -39,6 +39,27 @@ import { buildImageUrl } from '../../../models/image.model';
         <div class="w-40">
           <app-button label="Atualizar" buttonType="secondary" (click)="refreshGraph()" />
         </div>
+
+        <div class="flex flex-col">
+          <label class="text-xs mb-1">Níveis</label>
+          <select
+            class="rounded-lg px-3 py-2 bg-zinc-925 border-zinc-800 border transition focus:outline-none focus:border-zinc-100"
+            [(ngModel)]="relationshipDepth"
+            (ngModelChange)="onDepthChange()"
+            [disabled]="loadAllLevels"
+          >
+            <option [ngValue]="1">1</option>
+            <option [ngValue]="2">2</option>
+            <option [ngValue]="3">3</option>
+            <option [ngValue]="4">4</option>
+            <option [ngValue]="5">5</option>
+          </select>
+        </div>
+
+        <label class="flex flex-row items-center gap-2 text-sm pb-2 cursor-pointer select-none">
+          <input type="checkbox" [(ngModel)]="loadAllLevels" (ngModelChange)="onToggleAllLevels()" />
+          Carregar todas relações
+        </label>
       </div>
 
       @if (!graphView) {
@@ -61,7 +82,7 @@ import { buildImageUrl } from '../../../models/image.model';
               <button class="w-7 h-7 rounded hover:bg-zinc-800 cursor-pointer" (click)="$event.stopPropagation(); zoomIn()">+</button>
             </div>
 
-            <svg class="w-full h-[70vh]" [attr.viewBox]="graphViewBox">
+            <svg #graphSvg class="w-full h-[70vh]" [attr.viewBox]="graphViewBox">
               <defs>
                 <marker
                   id="arrow-head"
@@ -106,6 +127,7 @@ import { buildImageUrl } from '../../../models/image.model';
                   class="cursor-pointer"
                   (contextmenu)="openNodeContextMenu($event, node)"
                   (click)="$event.stopPropagation(); selectNode(node)"
+                  (mousedown)="startNodeDrag($event, node)"
                 >
                   <rect
                     [attr.x]="nodeRect(node).x"
@@ -180,7 +202,6 @@ import { buildImageUrl } from '../../../models/image.model';
             />
 
             <app-input label="Nome da Relação" [(value)]="relationDraft.name" />
-            <app-input label="Config JSON" [(value)]="relationDraft.configJson" />
 
             <div class="grid grid-cols-2 gap-2">
               @if (!editingLinkId) {
@@ -244,6 +265,7 @@ import { buildImageUrl } from '../../../models/image.model';
 })
 export class RelationGraphComponent implements OnInit {
   public buildImageUrl = buildImageUrl;
+  @ViewChild('graphSvg') graphSvg?: ElementRef<SVGSVGElement>;
 
   rootTable = input<string | null>(null);
   rootId = input<string | null>(null);
@@ -262,6 +284,12 @@ export class RelationGraphComponent implements OnInit {
   private panOriginX = 0;
   private panOriginY = 0;
   private movedDuringPan = false;
+  isNodeDragging = false;
+  private draggedNode: GraphNode | null = null;
+  private movedDuringNodeDrag = false;
+
+  relationshipDepth = 2;
+  loadAllLevels = false;
 
   get graphViewBox(): string {
     const viewWidth = this.canvasWidth / this.zoomLevel;
@@ -292,14 +320,12 @@ export class RelationGraphComponent implements OnInit {
     toTable: string;
     toId: string;
     name: string;
-    configJson: string;
   } = {
     fromTable: '',
     fromId: '',
     toTable: '',
     toId: '',
     name: '',
-    configJson: ''
   };
 
   relationDraftFromLabel = '';
@@ -365,6 +391,18 @@ export class RelationGraphComponent implements OnInit {
   }
 
   refreshGraph(): void {
+    this.loadGraph();
+  }
+
+  onDepthChange(): void {
+    this.loadGraph();
+  }
+
+  onToggleAllLevels(): void {
+    this.loadGraph();
+  }
+
+  private loadGraph(): void {
     if (!this.currentRootTable || !this.currentRootId) {
       if (this.selectedTable && this.selectedEntityId) {
         this.setRoot(this.selectedTable, this.selectedEntityId, true);
@@ -372,7 +410,10 @@ export class RelationGraphComponent implements OnInit {
       return;
     }
 
-    this.graphView = this.linkService.getGraphForRoot(this.currentRootTable, this.currentRootId);
+    this.graphView = this.linkService.getGraphForRoot(this.currentRootTable, this.currentRootId, {
+      depth: this.relationshipDepth,
+      includeAllLevels: this.loadAllLevels,
+    });
   }
 
   selectNode(node: GraphNode): void {
@@ -382,6 +423,17 @@ export class RelationGraphComponent implements OnInit {
     }
 
     this.selectedNodeKey = node.key;
+  }
+
+  startNodeDrag(event: MouseEvent, node: GraphNode): void {
+    event.stopPropagation();
+
+    if (event.button !== 0) return;
+    if (node.isRoot) return;
+
+    this.isNodeDragging = true;
+    this.draggedNode = node;
+    this.movedDuringNodeDrag = false;
   }
 
   nodeCircleClass(node: GraphNode): string {
@@ -478,6 +530,7 @@ export class RelationGraphComponent implements OnInit {
   }
 
   startPan(event: MouseEvent): void {
+    if (this.isNodeDragging) return;
     if (event.button !== 0) return;
 
     this.isPanning = true;
@@ -490,6 +543,11 @@ export class RelationGraphComponent implements OnInit {
 
   @HostListener('window:mousemove', ['$event'])
   onPanMove(event: MouseEvent): void {
+    if (this.isNodeDragging) {
+      this.moveDraggedNode(event);
+      return;
+    }
+
     if (!this.isPanning) return;
 
     const dx = (event.clientX - this.panStartX) / this.zoomLevel;
@@ -505,6 +563,25 @@ export class RelationGraphComponent implements OnInit {
 
   @HostListener('window:mouseup')
   stopPan(): void {
+    if (this.isNodeDragging && this.draggedNode) {
+      if (this.movedDuringNodeDrag && this.graphView) {
+        this.linkService.saveNodePosition(
+          { table: this.currentRootTable, id: this.currentRootId },
+          {
+            table: this.draggedNode.table,
+            id: this.draggedNode.id,
+            x: this.draggedNode.x,
+            y: this.draggedNode.y,
+          },
+          this.graphView.edges.map((edge) => edge.link)
+        );
+      }
+
+      this.isNodeDragging = false;
+      this.draggedNode = null;
+      this.movedDuringNodeDrag = false;
+    }
+
     this.isPanning = false;
   }
 
@@ -531,7 +608,6 @@ export class RelationGraphComponent implements OnInit {
     this.draftTargetEntities = this.linkService.getEntitiesByTable(this.relationDraft.toTable);
     this.relationDraft.toId = this.currentRootId || this.draftTargetEntities[0]?.id || '';
     this.relationDraft.name = '';
-    this.relationDraft.configJson = '';
     this.editingLinkId = null;
 
     this.closeContextMenu();
@@ -550,7 +626,6 @@ export class RelationGraphComponent implements OnInit {
       toTable: edge.link.toTable,
       toId: edge.link.toId,
       name: edge.link.name || '',
-      configJson: edge.link.configJson || ''
     };
     const sourceEntity = this.linkService.getEntitySummary(edge.link.fromTable, edge.link.fromId);
     this.relationDraftFromLabel = sourceEntity?.label || edge.link.fromId;
@@ -569,7 +644,6 @@ export class RelationGraphComponent implements OnInit {
         toTable: this.relationDraft.toTable,
         toId: this.relationDraft.toId,
         name: this.relationDraft.name,
-        configJson: this.relationDraft.configJson
       });
     } else {
       this.linkService.createLink({
@@ -578,7 +652,6 @@ export class RelationGraphComponent implements OnInit {
         toTable: this.relationDraft.toTable,
         toId: this.relationDraft.toId,
         name: this.relationDraft.name,
-        configJson: this.relationDraft.configJson
       });
     }
 
@@ -603,7 +676,6 @@ export class RelationGraphComponent implements OnInit {
       toTable: '',
       toId: '',
       name: '',
-      configJson: ''
     };
     const sourceEntity = this.linkService.getEntitySummary(this.currentRootTable, this.currentRootId);
     this.relationDraftFromLabel = sourceEntity?.label || '';
@@ -613,7 +685,10 @@ export class RelationGraphComponent implements OnInit {
     this.currentRootTable = table;
     this.currentRootId = id;
 
-    this.graphView = this.linkService.getGraphForRoot(table, id);
+    this.graphView = this.linkService.getGraphForRoot(table, id, {
+      depth: this.relationshipDepth,
+      includeAllLevels: this.loadAllLevels,
+    });
 
     if (syncSelectors) {
       this.selectedTable = table;
@@ -626,6 +701,30 @@ export class RelationGraphComponent implements OnInit {
 
   private nodeByKey(key: string): GraphNode | undefined {
     return this.graphView?.nodes.find((node) => node.key === key);
+  }
+
+  private moveDraggedNode(event: MouseEvent): void {
+    if (!this.draggedNode || !this.graphSvg) return;
+
+    const svg = this.graphSvg.nativeElement;
+    const rect = svg.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    const [viewX, viewY, viewW, viewH] = this.graphViewBox.split(' ').map(Number);
+    if ([viewX, viewY, viewW, viewH].some((n) => Number.isNaN(n))) return;
+
+    const ratioX = (event.clientX - rect.left) / rect.width;
+    const ratioY = (event.clientY - rect.top) / rect.height;
+
+    const nextX = viewX + ratioX * viewW;
+    const nextY = viewY + ratioY * viewH;
+
+    if (Math.abs(nextX - this.draggedNode.x) > 0.5 || Math.abs(nextY - this.draggedNode.y) > 0.5) {
+      this.movedDuringNodeDrag = true;
+    }
+
+    this.draggedNode.x = nextX;
+    this.draggedNode.y = nextY;
   }
 
   outgoingEdges(graph: GraphView): GraphEdge[] {
