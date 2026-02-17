@@ -22,10 +22,11 @@ import { getPersonalizationValue } from '../../../models/personalization.model';
 import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 
 @Component({
   standalone: true,
-  imports: [NgStyle, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, DynamicFieldsComponent],
+  imports: [NgStyle, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, DynamicFieldsComponent, EntityTransferButtonComponent],
   template: `
     <div class="flex flex-col">
       @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
@@ -44,6 +45,7 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
         }
         <input type="text" (blur)="saveWorldName()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="currentWorld.name" />
         <div class="flex flex-row gap-2">
+          <app-entity-transfer-button [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'"></app-entity-transfer-button>
           <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" (onClose)="getWorld()"></app-personalization-button>
           <app-safe-delete-button [entityName]="currentWorld.name" [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" ></app-safe-delete-button>
         </div>

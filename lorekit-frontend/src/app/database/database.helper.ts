@@ -10,6 +10,7 @@ export const ElectronSafeAPI = {
     return window?.electronAPI ?? {
       // fallback para web: mock simples
       getDbPath: async () => 'browser-mode.db',
+      getImagePath: async () => 'browser-images',
       readFile: async () => null,
       writeFile: async () => null
     };
@@ -31,12 +32,12 @@ export async function openDbAndEnsureSchema() {
   ensureSchema(db);
 
   // garante que o arquivo inicial existe/atualiza schema no disco
-  await persistDb(db);
+  await persistDbToDisk(db);
 
   return db;
 }
 
-async function persistDb(db: any) {
+export async function persistDbToDisk(db: any) {
   try {
     const dbPath = await ElectronSafeAPI.electron.getDbPath();
     const binary = db.export();
@@ -130,7 +131,7 @@ export class CrudHelper {
 
     this.db.run(sql, values);
 
-    void persistDb(this.db);
+    void persistDbToDisk(this.db);
     return data;
   }
 
@@ -142,7 +143,7 @@ export class CrudHelper {
     }
     this.db.run(sql, [value, key]);
 
-    void persistDb(this.db);
+    void persistDbToDisk(this.db);
   }
 
   update(table: string, id: string, data: Record<string, any>) {
@@ -160,7 +161,7 @@ export class CrudHelper {
 
     this.db.run(sql, [...values, id]);
 
-    void persistDb(this.db);
+    void persistDbToDisk(this.db);
     return data;
   }
 
@@ -177,7 +178,7 @@ export class CrudHelper {
 
     this.db.run(sql, Object.values(where));
 
-    void persistDb(this.db);
+    void persistDbToDisk(this.db);
   }
 
   delete(table: string, id: string, deleteRelatedItems: boolean = false) {
@@ -205,7 +206,7 @@ export class CrudHelper {
 
     this.db.run(sql, [id]);
 
-    void persistDb(this.db);
+    void persistDbToDisk(this.db);
   }
 
   findById(table: string, id: string, include: IncludeDef[] = []) {

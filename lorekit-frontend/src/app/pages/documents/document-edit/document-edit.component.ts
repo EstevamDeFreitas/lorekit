@@ -12,11 +12,12 @@ import { FormOverlayDirective, FormField } from '../../../components/form-overla
 import { NgClass } from '@angular/common';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
+import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 
 @Component({
   selector: 'app-document-edit',
   standalone: true,
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, NgClass, FormOverlayDirective, EditorComponent, ButtonComponent, SafeDeleteButtonComponent, EntityLateralMenuComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, NgClass, FormOverlayDirective, EditorComponent, ButtonComponent, SafeDeleteButtonComponent, EntityLateralMenuComponent, EntityTransferButtonComponent],
   template: `
   <div class="flex flex-col relative">
     <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">
@@ -25,6 +26,7 @@ import { EntityLateralMenuComponent } from "../../../components/entity-lateral-m
       }
       <input type="text" (blur)="saveDocument()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="document.title" />
       <div class="flex flex-row gap-2">
+        <app-entity-transfer-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-entity-transfer-button>
         <app-personalization-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-personalization-button>
         <app-safe-delete-button [entityName]="document.title" [entityId]="document.id" [entityTable]="'Document'" [size]="'xl'"></app-safe-delete-button>
       </div>

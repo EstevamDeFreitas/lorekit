@@ -19,10 +19,11 @@ import { getPersonalizationValue } from '../../../models/personalization.model';
 import { getImageByUsageKey } from '../../../models/image.model';
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
+import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, NgStyle, DynamicFieldsComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, NgStyle, DynamicFieldsComponent, EntityTransferButtonComponent],
   template: `
     <div class="flex flex-col">
       @if(getImageByUsageKey(location.Images, 'default') != null){
@@ -42,6 +43,7 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
         }
         <input type="text" (blur)="saveLocation()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="location.name" />
         <div class="flex flex-row gap-2">
+          <app-entity-transfer-button [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'"></app-entity-transfer-button>
           <app-personalization-button [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'" (onClose)="getLocation()"></app-personalization-button>
           <app-safe-delete-button [entityName]="location.name" [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'"></app-safe-delete-button>
         </div>

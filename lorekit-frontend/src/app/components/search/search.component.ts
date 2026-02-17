@@ -1,4 +1,4 @@
-import { Component, input, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, input, OnDestroy, OnInit } from '@angular/core';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -6,28 +6,43 @@ import { debounceTime, distinctUntilChanged, Subject, Subscription } from 'rxjs'
 import { CrudHelper } from '../../database/database.helper';
 import { DbProvider } from '../../app.config';
 import { schema } from '../../database/schema';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { EntityTransferService } from '../../services/entity-transfer.service';
 
 @Component({
   selector: 'app-search',
   imports: [CommonModule, OverlayModule, FormsModule, RouterLink],
   template: `
-  <div
-      cdkOverlayOrigin
-      #trigger="cdkOverlayOrigin"
-      class="w-90 flex flex-row items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white"
+  <div class="flex flex-row items-center gap-2">
+    <div
+        cdkOverlayOrigin
+        #trigger="cdkOverlayOrigin"
+        class="w-90 flex flex-row items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white"
+      >
+      <div class="w-8 h-5 flex flex-row justify-center items-center">
+          <i class="fa fa-search "></i>
+        </div>
+        <input
+          type="text"
+          (focus)="isOpen = true"
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearchInput($event)"
+          placeholder="Pesquisar..."
+          class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10"
+        />
+    </div>
+
+    <button
+      type="button"
+      class="h-8 px-3 rounded-md bg-zinc-100 text-zinc-900 hover:brightness-90 text-sm"
+      title="Importar pacote .lorekit"
+      (click)="openImportFilePicker(fileInput)"
     >
-    <div class="w-8 h-5 flex flex-row justify-center items-center">
-        <i class="fa fa-search "></i>
-      </div>
-      <input
-        type="text"
-        (focus)="isOpen = true"
-        [(ngModel)]="searchTerm"
-        (ngModelChange)="onSearchInput($event)"
-        placeholder="Pesquisar..."
-        class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10"
-      />
+      <i class="fa-solid fa-file-import me-1"></i>
+      Importar
+    </button>
+
+    <input #fileInput type="file" accept=".lorekit,application/json" class="hidden" (change)="onImportFileSelected($event)" />
   </div>
 
   <ng-template
@@ -85,6 +100,8 @@ export class SearchComponent implements OnInit, OnDestroy {
   private searchSubject = new Subject<string>();
   private searchSubscription?: Subscription;
   private crud : CrudHelper;
+  private readonly router = inject(Router);
+  private readonly entityTransferService = inject(EntityTransferService);
 
   currentTables = schema;
 
@@ -148,5 +165,27 @@ export class SearchComponent implements OnInit, OnDestroy {
       return `/app/world/info/${id}`;
     }
     return `/app/${tableName.toLowerCase()}/edit/${id}`;
+  }
+
+  openImportFilePicker(fileInput: HTMLInputElement) {
+    fileInput.click();
+  }
+
+  async onImportFileSelected(event: Event) {
+    const inputEl = event.target as HTMLInputElement;
+    const file = inputEl.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const root = await this.entityTransferService.importBundleFromFile(file);
+      this.router.navigateByUrl(this.getEditUrl(root.table, root.id));
+    } catch (error: any) {
+      alert(error?.message || 'Falha ao importar o arquivo.');
+    } finally {
+      inputEl.value = '';
+    }
   }
 }

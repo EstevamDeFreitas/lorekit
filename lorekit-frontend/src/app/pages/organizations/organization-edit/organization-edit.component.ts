@@ -26,10 +26,11 @@ import { SpecieListComponent } from '../../species/specie-list/specie-list.compo
 import { OrganizationTypeService } from '../../../services/organization-type.service';
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
+import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 
 @Component({
   selector: 'app-organization-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent, DynamicFieldsComponent],
+  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent, DynamicFieldsComponent, EntityTransferButtonComponent],
   template: `
     <div class="flex flex-col relative">
       @if(getImageByUsageKey(organization.Images, 'default') != null){
@@ -53,6 +54,7 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
         }
         <input type="text" (blur)="saveOrganization()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="organization.name" />
         <div class="flex flex-row gap-2">
+          <app-entity-transfer-button [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'"></app-entity-transfer-button>
           <app-personalization-button [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'" (onClose)="getOrganization()"></app-personalization-button>
           <app-safe-delete-button [entityName]="organization.name" [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'"></app-safe-delete-button>
         </div>

@@ -20,10 +20,11 @@ import { InputComponent } from '../../../components/input/input.component';
 import { TextAreaComponent } from "../../../components/text-area/text-area.component";
 import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
+import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 
 @Component({
   selector: 'app-specie-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, SpecieListComponent, DynamicFieldsComponent],
+  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, SpecieListComponent, DynamicFieldsComponent, EntityTransferButtonComponent],
   template: `
     <div class="flex flex-col relative">
       @if(getImageByUsageKey(specie.Images, 'default') != null){
@@ -47,6 +48,7 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
         }
         <input type="text" (blur)="saveSpecie()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="specie.name" />
         <div class="flex flex-row gap-2">
+          <app-entity-transfer-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-entity-transfer-button>
           <app-personalization-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'" (onClose)="getSpecie()"></app-personalization-button>
           <app-safe-delete-button [entityName]="specie.name" [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-safe-delete-button>
         </div>
