@@ -27,10 +27,11 @@ import { OrganizationTypeService } from '../../../services/organization-type.ser
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
 import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
+import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 
 @Component({
   selector: 'app-organization-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent, DynamicFieldsComponent, EntityTransferButtonComponent],
+  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent, DynamicFieldsComponent, EntityTransferButtonComponent, NavButtonComponent],
   template: `
     <div class="flex flex-col relative">
       @if(getImageByUsageKey(organization.Images, 'default') != null){
@@ -62,9 +63,9 @@ import { EntityTransferButtonComponent } from '../../../components/entity-transf
       <div class="flex flex-row gap-4 flex-1 mt-10">
         <div class="flex-4 h-auto  flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'description'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'description'}">Informações adicionais</a>
+            <app-nav-button [label]="'Informações adicionais'" size="sm" [active]="currentTab === 'description'" (click)="currentTab = 'description'"></app-nav-button>
              @if(hasDynamicFields) {
-              <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'properties'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'properties'}">Propriedades</a>
+              <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
             }
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">

@@ -23,10 +23,11 @@ import { DynamicFieldsComponent } from "../../../components/DynamicFields/Dynami
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
+import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 
 @Component({
   standalone: true,
-  imports: [NgStyle, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, DynamicFieldsComponent, EntityTransferButtonComponent],
+  imports: [NgStyle, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, DynamicFieldsComponent, EntityTransferButtonComponent, NavButtonComponent],
   template: `
     <div class="flex flex-col">
       @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
@@ -53,13 +54,13 @@ import { EntityTransferButtonComponent } from '../../../components/entity-transf
       <div class="flex flex-row gap-4 flex-1 mt-10">
         <div class="flex-4 flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'details'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'details'}">Detalhes do mundo</a>
+            <app-nav-button [label]="'Detalhes do mundo'" size="sm" [active]="currentTab === 'details'" (click)="currentTab = 'details'"></app-nav-button>
             @if(hasDynamicFields) {
-              <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'properties'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'properties'}">Propriedades</a>
+              <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
             }
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'localities'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'localities'}">Localidades</a>
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'characters'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'characters'}">Personagens</a>
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'objects'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'objects'}">Objetos</a>
+            <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="currentTab = 'localities'"></app-nav-button>
+            <!-- <app-nav-button [label]="'Personagens'" size="sm" [active]="currentTab === 'characters'" (click)="currentTab = 'characters'"></app-nav-button>
+            <app-nav-button [label]="'Objetos'" size="sm" [active]="currentTab === 'objects'" (click)="currentTab = 'objects'"></app-nav-button> -->
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
             @if (!isLoading) {

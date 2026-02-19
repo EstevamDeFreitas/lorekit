@@ -23,10 +23,11 @@ import { LocationListComponent } from '../../locations/location-list/location-li
 import { SpecieListComponent } from '../../species/specie-list/specie-list.component';
 import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
 import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
+import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 
 @Component({
   selector: 'app-character-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, DynamicFieldsComponent, EntityTransferButtonComponent],
+  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, DynamicFieldsComponent, EntityTransferButtonComponent, NavButtonComponent],
   template: `
     <div class="flex flex-col relative">
       @if(getImageByUsageKey(character.Images, 'default') != null){
@@ -59,8 +60,8 @@ import { EntityTransferButtonComponent } from '../../../components/entity-transf
       <div class="flex flex-row gap-4 flex-1 mt-10">
         <div class="flex-4 flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'properties'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'properties'}">Propriedades</a>
-            <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-900" (click)="currentTab = 'backstory'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'backstory'}">Backstory</a>
+            <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
+            <app-nav-button [label]="'Backstory'" size="sm" [active]="currentTab === 'backstory'" (click)="currentTab = 'backstory'"></app-nav-button>
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
             @if (!isLoading) {

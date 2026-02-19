@@ -15,6 +15,7 @@ import { debounceTime, Subject } from 'rxjs';
 import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../models/personalization.model';
 import { getImageByUsageKey } from '../../models/image.model';
 import { IconButtonComponent } from '../icon-button/icon-button.component';
+import { NavButtonComponent } from "../nav-button/nav-button.component";
 
 @Component({
   selector: 'app-tree-view-list',
@@ -131,12 +132,12 @@ export class TreeViewListComponent {
 
 @Component({
   selector: 'app-entity-lateral-menu',
-  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, NgClass, ComboBoxComponent, TextAreaComponent, TreeViewListComponent],
+  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, NgClass, ComboBoxComponent, TextAreaComponent, TreeViewListComponent, NavButtonComponent],
   template: `
   <div class="flex flex-col gap-4 w-full h-full">
     <div class="flex flex-row justify-around items-center">
-      <button class="px-4 py-2 rounded-md text-sm cursor-pointer hover:bg-zinc-800 " (click)="currentTab = 'properties'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'properties'}">Propriedades</button>
-      <button class="px-4 py-2 rounded-md text-sm cursor-pointer hover:bg-zinc-800 " (click)="currentTab = 'documents'" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'documents'}">Documentos</button>
+      <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
+      <app-nav-button [label]="'Documentos'" size="sm" [active]="currentTab === 'documents'" (click)="currentTab = 'documents'"></app-nav-button>
     </div>
     @switch (currentTab) {
       @case ('properties') {
