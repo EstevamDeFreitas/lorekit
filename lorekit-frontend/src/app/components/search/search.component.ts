@@ -32,7 +32,7 @@ import { EntityTransferService } from '../../services/entity-transfer.service';
         />
     </div>
 
-    <button
+    <!-- <button
       type="button"
       class="h-8 px-3 rounded-md bg-zinc-100 text-zinc-900 hover:brightness-90 text-sm"
       title="Importar pacote .lorekit"
@@ -40,7 +40,7 @@ import { EntityTransferService } from '../../services/entity-transfer.service';
     >
       <i class="fa-solid fa-file-import me-1"></i>
       Importar
-    </button>
+    </button> -->
 
     <input #fileInput type="file" accept=".lorekit,application/json" class="hidden" (change)="onImportFileSelected($event)" />
   </div>

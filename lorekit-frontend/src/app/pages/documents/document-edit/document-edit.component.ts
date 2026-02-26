@@ -26,7 +26,7 @@ import { EntityTransferButtonComponent } from '../../../components/entity-transf
       }
       <input type="text" (blur)="saveDocument()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="document.title" />
       <div class="flex flex-row gap-2">
-        <app-entity-transfer-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-entity-transfer-button>
+        <!-- <app-entity-transfer-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-entity-transfer-button> -->
         <app-personalization-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-personalization-button>
         <app-safe-delete-button [entityName]="document.title" [entityId]="document.id" [entityTable]="'Document'" [size]="'xl'"></app-safe-delete-button>
       </div>

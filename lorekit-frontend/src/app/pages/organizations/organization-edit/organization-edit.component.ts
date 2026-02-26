@@ -55,7 +55,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
         }
         <input type="text" (blur)="saveOrganization()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="organization.name" />
         <div class="flex flex-row gap-2">
-          <app-entity-transfer-button [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'"></app-entity-transfer-button>
+          <!-- <app-entity-transfer-button [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'"></app-entity-transfer-button> -->
           <app-personalization-button [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'" (onClose)="getOrganization()"></app-personalization-button>
           <app-safe-delete-button [entityName]="organization.name" [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'"></app-safe-delete-button>
         </div>
