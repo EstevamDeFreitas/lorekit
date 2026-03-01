@@ -12,10 +12,14 @@ import { NgClass } from '@angular/common';
 import { WorldStateService } from '../../../services/world-state.service';
 import { TreeViewListComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 import { DocumentEditComponent } from '../document-edit/document-edit.component';
+import { FormsModule } from '@angular/forms';
+import { ButtonComponent } from "../../../components/button/button.component";
+import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
+import { FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 
 @Component({
   selector: 'app-document-list',
-  imports: [NgClass, TreeViewListComponent, DocumentEditComponent],
+  imports: [NgClass, TreeViewListComponent, DocumentEditComponent, FormsModule, ButtonComponent, IconButtonComponent, FormOverlayDirective],
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row justify-between items-center mb-4 sticky  z-25 bg-zinc-950 py-2" [ngClass]="{'top-0': isRouteComponent(), 'top-13': !isRouteComponent()}">
@@ -27,12 +31,35 @@ import { DocumentEditComponent } from '../document-edit/document-edit.component'
         }
       </div>
       <div class="flex flex-row gap-4 items-start">
-        <div class="w-80 bg-zinc-900 p-2 rounded-md sticky top-16 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-dark">
+        <div class="w-80 bg-zinc-900 p-3 rounded-md sticky top-16 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-dark">
+          <div class="flex flex-row items-center gap-1 mb-4">
+            <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white">
+              <div class="w-8 h-5 flex flex-row justify-center items-center">
+                  <i class="fa fa-search "></i>
+                </div>
+                <input
+                  type="text"
+                  [(ngModel)]="searchTerm"
+                  (ngModelChange)="onDocumentFilter()"
+                  placeholder="Pesquisar..."
+                  class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10"
+                />
+            </div>
+            <app-icon-button
+              size="sm"
+              buttonType="secondary"
+              icon="fa-solid fa-plus"
+              appFormOverlay
+              [title]="'Criar Documento'"
+              [fields]="[{ key: 'name', label: 'Título', value: '' }]"
+              (onSave)="createDocument($event)"
+              ></app-icon-button>
+          </div>
           <app-tree-view-list
             [openInDialog]="false"
             (onArrayChange)="getDocuments()"
             (onDocumentSelect)="selectDocument($event.id)"
-            [documentArray]="documents"
+            [documentArray]="filteredDocuments"
           ></app-tree-view-list>
         </div>
 
@@ -73,10 +100,13 @@ export class DocumentListComponent implements OnInit {
   availableWorlds : World[] = [];
   availableLocations : Location[] = [];
   documents : Document[] = [];
+  filteredDocuments : Document[] = [];
   selectedDocumentId = '';
   showDocumentEditor = true;
 
   selectedWorld : string = '';
+
+  searchTerm : string = '';
 
   ngOnInit(): void {
     this.worldStateService.currentWorld$.subscribe(world => {
@@ -96,8 +126,9 @@ export class DocumentListComponent implements OnInit {
   }
 
   getDocuments() {
-    this.documents = this.documentService.getDocumentsTree(null, null).filter(doc => !doc.ParentDocument);
+    this.documents = this.documentService.getDocumentsTree(null, null).filter(doc => !doc.ParentDocument).sort((a, b) => a.title.localeCompare(b.title));
 
+    this.onDocumentFilter();
     // if (!this.selectedDocumentId && this.documents.length > 0) {
     //   this.selectedDocumentId = this.documents[0].id;
     //   return;
@@ -154,6 +185,49 @@ export class DocumentListComponent implements OnInit {
           'background-position': 'center',
         }
       : null;
+  }
+
+  onDocumentFilter (){
+    const search = this.searchTerm.trim().toLowerCase();
+
+    if (!search) {
+      this.filteredDocuments = this.documents;
+      return;
+    }
+
+    this.filteredDocuments = this.filterDocumentsTree(this.documents, search);
+  }
+
+  private filterDocumentsTree(docs: Document[], search: string): Document[] {
+    const filtered: Document[] = [];
+
+    for (const doc of docs) {
+      const titleMatches = doc.title.toLowerCase().includes(search);
+      const filteredChildren = doc.SubDocuments?.length
+        ? this.filterDocumentsTree(doc.SubDocuments, search)
+        : [];
+
+      if (titleMatches || filteredChildren.length > 0) {
+        filtered.push({
+          ...doc,
+          SubDocuments: filteredChildren,
+        });
+      }
+    }
+
+    return filtered;
+  }
+
+  createDocument(formData: Record<string, string>) {
+    if (formData['name'].trim() === '') {
+      return;
+    }
+
+    let newDoc = new Document('', formData['name'], '');
+
+    newDoc = this.documentService.saveDocument(newDoc, "Document", null);
+
+    this.getDocuments();
   }
 
 

@@ -167,3 +167,7 @@ select:focus {
 .card-texture.texture-topography::after {
   background-image: url('../src/assets/background-patterns/topography.svg');
 }
+
+.text-xss {
+  font-size: 0.625rem; /* 10px */
+}

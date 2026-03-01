@@ -48,43 +48,28 @@ export class DocumentService {
     return this.crud.findById('Document', documentId, [{"table": "Personalization", "firstOnly": true}]);
   }
 
-  saveDocument(document: Document, entityTable: string, entityId: string, worldId: string | null = null) : Document {
+  saveDocument(document: Document, entityTable: string | null = null, entityId: string | null = null, worldId: string | null = null) : Document {
     if (document.id != '') {
       document = <Document>this.crud.update('Document', document.id, document);
 
-      this.crud.deleteWhen('Relationship', {
-        parentTable: 'World',
-        entityTable: 'Document',
-        entityId: document.id
-      });
-
-      if (worldId) {
-        this.crud.create('Relationship', {
-          parentTable: 'World',
-          parentId: worldId,
-          entityTable: 'Document',
-          entityId: document.id
-        });
-      }
-
+      // this.crud.deleteWhen('Relationship', {
+      //   parentTable: 'World',
+      //   entityTable: 'Document',
+      //   entityId: document.id
+      // });
 
       return document;
     } else {
       document = <Document>this.crud.create('Document', document);
 
-      this.crud.create('Relationship', {
-        parentTable: entityTable,
-        parentId: entityId,
-        entityTable: 'Document',
-        entityId: document.id
-      });
-
-      this.crud.create('Relationship', {
-        parentTable: 'World',
-        parentId: worldId,
-        entityTable: 'Document',
-        entityId: document.id
-      });
+        if(entityTable && entityId) {
+          this.crud.create('Relationship', {
+            parentTable: entityTable,
+            parentId: entityId,
+            entityTable: 'Document',
+            entityId: document.id
+          });
+        }
 
       return document;
 

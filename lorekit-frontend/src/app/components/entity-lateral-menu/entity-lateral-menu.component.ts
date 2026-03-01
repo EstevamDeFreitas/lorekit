@@ -40,7 +40,7 @@ import { NavButtonComponent } from "../nav-button/nav-button.component";
             <h2 [title]="item.title" class=" text-xs">{{ item.title }}</h2>
           </button>
           <app-icon-button
-            size="xs"
+            size="xss"
             buttonType="secondary"
             icon="fa-solid fa-plus"
             appFormOverlay

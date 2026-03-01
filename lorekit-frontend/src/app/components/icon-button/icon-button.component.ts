@@ -18,7 +18,9 @@ export class IconButtonComponent {
   route = input<string>();
 
   get buttonClasses(): string {
-    const base = 'px-2 py-1 rounded-md font-medium focus:outline-none transition text-' + this.size();
+    const base = 'rounded-md font-medium focus:outline-none transition text-' + this.size();
+
+    const padding = this.size() === 'xss' ? 'px-1 py-0.5' : 'px-2 py-1';
 
     let currentTypeStyle = "";
 
@@ -47,6 +49,6 @@ export class IconButtonComponent {
 
     }
 
-    return `${base} ${currentTypeStyle} + (${this.disabled() ? ' cursor-not-allowed' : ' cursor-pointer hover:brightness-85 active:brightness-70'})`;
+    return `${base} ${padding} ${currentTypeStyle} ${this.disabled() ? ' cursor-not-allowed' : ' cursor-pointer hover:brightness-85 active:brightness-70'}`;
   }
 }
