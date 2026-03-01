@@ -52,7 +52,14 @@ import { NavButtonComponent } from "../nav-button/nav-button.component";
         @if (isOpen(item)){
           <span class="pl-4">
             @if (item.SubDocuments && item.SubDocuments.length > 0){
-              <app-tree-view-list [entityId]="entityId()" (onArrayChange)="emitChange()" [entityTable]="'Document'" [documentArray]="item.SubDocuments || []"></app-tree-view-list>
+              <app-tree-view-list
+                [entityId]="entityId()"
+                [openInDialog]="openInDialog()"
+                (onArrayChange)="emitChange()"
+                (onDocumentSelect)="emitDocumentSelection($event)"
+                [entityTable]="'Document'"
+                [documentArray]="item.SubDocuments || []"
+              ></app-tree-view-list>
             }
             @else{
               <p class="text-xs text-zinc-600">Não há Documentos Relacionados</p>
@@ -67,6 +74,7 @@ export class TreeViewListComponent {
   documentArray = input.required<Array<Document>>();
 
   onArrayChange = output<void>();
+  onDocumentSelect = output<Document>();
 
   openDocuments = new Set<string>();
 
@@ -74,8 +82,9 @@ export class TreeViewListComponent {
   public getImageByUsageKey = getImageByUsageKey;
   public getTextColorStyle = getTextColorStyle;
 
-  entityTable = input.required<string>();
-  entityId = input.required<string>();
+  entityTable = input<string>();
+  entityId = input<string>();
+  openInDialog = input<boolean>(true);
 
   private documentService = inject(DocumentService);
 
@@ -101,6 +110,11 @@ export class TreeViewListComponent {
   }
 
   openDocument(item: Document) {
+    if (!this.openInDialog()) {
+      this.onDocumentSelect.emit(item);
+      return;
+    }
+
     this.dialog.open(DocumentEditComponent, {
       data: {
         id: item.id,
@@ -115,6 +129,10 @@ export class TreeViewListComponent {
 
   emitChange() {
     this.onArrayChange.emit();
+  }
+
+  emitDocumentSelection(item: Document) {
+    this.onDocumentSelect.emit(item);
   }
 
   createDocument(formData: Record<string, string>, parentDocumentId: string) {
@@ -132,7 +150,7 @@ export class TreeViewListComponent {
 
 @Component({
   selector: 'app-entity-lateral-menu',
-  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, NgClass, ComboBoxComponent, TextAreaComponent, TreeViewListComponent, NavButtonComponent],
+  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, ComboBoxComponent, TextAreaComponent, TreeViewListComponent, NavButtonComponent],
   template: `
   <div class="flex flex-col gap-4 w-full h-full">
     <div class="flex flex-row justify-around items-center">

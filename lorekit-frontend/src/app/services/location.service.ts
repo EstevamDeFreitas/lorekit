@@ -18,10 +18,10 @@ export class LocationService {
 
   getLocations(locationId?: string) : Location[] {
     if (locationId) {
-      return this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": false}, {"table": "Personalization", "firstOnly": true}], {parentTable: 'Location', parentId: locationId});
+      return this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": false}, {"table": "Personalization", "firstOnly": true}, {"table": "Location", "firstOnly": true, "isParent":true}, {"table": "World", "firstOnly": true, "isParent":true}], {parentTable: 'Location', parentId: locationId});
     }
 
-    return this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": false}, {"table": "Personalization", "firstOnly": true}]);
+    return this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": false}, {"table": "Personalization", "firstOnly": true}, {"table": "World", "firstOnly": true, "isParent":true}]);
   }
 
   saveLocation(location: Location, locationCategoryId: string, worldId?: string, locationId?: string) : Location {
@@ -118,7 +118,7 @@ export class LocationService {
   }
 
   getLocationByWorldId(worldId: string) : Location[] {
-    return <Location[]>this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": false}, {"table": "Personalization", "firstOnly": true}], {parentTable: 'World', parentId: worldId});
+    return <Location[]>this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": false}, {"table": "Personalization", "firstOnly": true}, {"table": "Location", "firstOnly": true, "isParent":true}, {"table": "World", "firstOnly": true, "isParent":true}], {parentTable: 'World', parentId: worldId});
   }
 
 }

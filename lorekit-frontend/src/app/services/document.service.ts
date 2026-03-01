@@ -19,8 +19,15 @@ export class DocumentService {
     return this.crud.findAll('Document', {}, [{"table": "Personalization", "firstOnly": true}], {parentTable: entityTable, parentId: entityId});
   }
 
-  getDocumentsTree(entityTable: string, entityId: string): Document[] {
-    let documents = this.crud.findAll('Document', {}, [{"table": "Personalization", "firstOnly": true}], {parentTable: entityTable, parentId: entityId});
+  getDocumentsTree(entityTable: string | null, entityId: string | null): Document[] {
+    let documents : Document[] = [];
+
+    if(entityTable && entityId) {
+      documents = this.crud.findAll('Document', {}, [{"table": "Personalization", "firstOnly": true}, {"table": "Document", "firstOnly": true}], {parentTable: entityTable, parentId: entityId});
+    }
+    else{
+      documents = this.crud.findAll('Document', {}, [{"table": "Personalization", "firstOnly": true}, {"table": "Document", "firstOnly": true}, {"table": "Document", "firstOnly": true, "isParent":true}]);
+    }
 
     for(let doc of documents) {
       doc.SubDocuments = this.getDocumentsTree('Document', doc.id);
@@ -41,15 +48,40 @@ export class DocumentService {
     return this.crud.findById('Document', documentId, [{"table": "Personalization", "firstOnly": true}]);
   }
 
-  saveDocument(document: Document, entityTable: string, entityId: string) : Document {
+  saveDocument(document: Document, entityTable: string, entityId: string, worldId: string | null = null) : Document {
     if (document.id != '') {
-      return <Document>this.crud.update('Document', document.id, document);
+      document = <Document>this.crud.update('Document', document.id, document);
+
+      this.crud.deleteWhen('Relationship', {
+        parentTable: 'World',
+        entityTable: 'Document',
+        entityId: document.id
+      });
+
+      if (worldId) {
+        this.crud.create('Relationship', {
+          parentTable: 'World',
+          parentId: worldId,
+          entityTable: 'Document',
+          entityId: document.id
+        });
+      }
+
+
+      return document;
     } else {
       document = <Document>this.crud.create('Document', document);
 
       this.crud.create('Relationship', {
         parentTable: entityTable,
         parentId: entityId,
+        entityTable: 'Document',
+        entityId: document.id
+      });
+
+      this.crud.create('Relationship', {
+        parentTable: 'World',
+        parentId: worldId,
         entityTable: 'Document',
         entityId: document.id
       });

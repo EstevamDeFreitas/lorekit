@@ -10,6 +10,7 @@ export class Document {
   Personalization?: Personalization;
 
   SubDocuments?: Document[];
+  ParentDocument?: Document;
 
   constructor(id: string = '', title: string = '', content?: string, type?: string) {
     this.id = id;

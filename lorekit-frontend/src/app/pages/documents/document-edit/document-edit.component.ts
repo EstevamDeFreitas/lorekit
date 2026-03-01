@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
@@ -7,17 +7,13 @@ import { DocumentService } from '../../../services/document.service';
 import { Document } from '../../../models/document.model';
 import { EditorComponent } from "../../../components/editor/editor.component";
 import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { ButtonComponent } from "../../../components/button/button.component";
-import { FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
-import { NgClass } from '@angular/common';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
-import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 
 @Component({
   selector: 'app-document-edit',
   standalone: true,
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, NgClass, FormOverlayDirective, EditorComponent, ButtonComponent, SafeDeleteButtonComponent, EntityLateralMenuComponent, EntityTransferButtonComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, SafeDeleteButtonComponent, EntityLateralMenuComponent],
   template: `
   <div class="flex flex-col relative">
     <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">
@@ -32,24 +28,26 @@ import { EntityTransferButtonComponent } from '../../../components/entity-transf
       </div>
     </div>
     <div class="flex flex-row gap-4 mt-10">
-      <div class="flex-4 flex flex-col">
+      <div class="flex flex-col" [class.flex-4]="showLateralMenu()" [class.flex-1]="!showLateralMenu()">
         @if (!isLoading) {
           <app-editor [entityId]="document.id" entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full"></app-editor>
         }
       </div>
-      <div class="flex-1">
-        @if (!isLoading) {
-          <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
-            <app-entity-lateral-menu entityTable="Document" [entityId]="document.id"></app-entity-lateral-menu>
-          </div>
-        }
-      </div>
+      @if (showLateralMenu()) {
+        <div class="flex-1">
+          @if (!isLoading) {
+            <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
+              <app-entity-lateral-menu entityTable="Document" [entityId]="document.id"></app-entity-lateral-menu>
+            </div>
+          }
+        </div>
+      }
     </div>
   </div>`,
   styleUrl: './document-edit.component.css',
   changeDetection: ChangeDetectionStrategy.Default
 })
-export class DocumentEditComponent implements OnInit {
+export class DocumentEditComponent {
   dialogref = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
   private dialog = inject(Dialog);
@@ -62,8 +60,15 @@ export class DocumentEditComponent implements OnInit {
   document:Document = new Document();
   isLoading = true;
   documentArray:Array<Document> = [];
+  documentIdInput = input<string | null>(null);
+  showLateralMenu = input<boolean>(true);
 
   readonly documentId = computed(() => {
+    const inputId = this.documentIdInput();
+    if (inputId) {
+      return inputId;
+    }
+
     if (this.data?.id) {
       return this.data.id as string;
     }
@@ -83,12 +88,15 @@ export class DocumentEditComponent implements OnInit {
       this.returnUrl = queryParams['returnUrl'];
     });
 
-    this.loadDocument();
-    this.loadDocuments();
+    effect(() => {
+      const id = this.documentId();
+      if (!id) {
+        return;
+      }
 
-  }
-
-  ngOnInit(): void {
+      this.loadDocument();
+      this.loadDocuments();
+    });
 
   }
 
@@ -97,11 +105,16 @@ export class DocumentEditComponent implements OnInit {
   }
 
   loadDocument() {
+    this.isLoading = true;
     this.document = this.documentService.getDocument(this.documentId());
     this.isLoading = false;
   }
 
   saveDocument(content?: string) {
+    if (this.isLoading) {
+      return;
+    }
+
     if (content) {
       this.document.content = JSON.stringify(content);
     }
