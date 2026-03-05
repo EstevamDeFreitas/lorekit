@@ -1,96 +1,93 @@
-import { ChangeDetectorRef, Component, computed, inject, input, OnInit } from '@angular/core';
-import { NgClass, NgStyle } from '@angular/common';
-import { ButtonComponent } from "../../../components/button/button.component";
+import { Component, computed, inject, input, OnInit } from '@angular/core';
+import { NgClass } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
 import { LocationService } from '../../../services/location.service';
 import { Location, LocationCategory } from '../../../models/location.model';
 import { LocationCategoriesService } from '../../../services/location-categories.service';
 import { Dialog } from '@angular/cdk/dialog';
-import { ImageService } from '../../../services/image.service';
-import { environment } from '../../../../enviroments/environment';
-import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
-import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { WorldService } from '../../../services/world.service';
 import { World } from '../../../models/world.model';
 import { WorldStateService } from '../../../services/world-state.service';
+import { FormsModule } from '@angular/forms';
+import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
+import { TreeViewListComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
+import { Document } from '../../../models/document.model';
+import { LocationEditComponent } from '../location-edit/location-edit.component';
 
 @Component({
   selector: 'app-location-list',
-  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, ComboBoxComponent],
+  imports: [FormOverlayDirective, NgClass, ComboBoxComponent, FormsModule, IconButtonComponent, TreeViewListComponent, LocationEditComponent],
   standalone: true,
   template: `
     <div class="flex flex-col relative">
-      <div class="flex flex-row justify-between items-center sticky  z-25 bg-zinc-950 py-2" [ngClass]="{'top-0': isRouteComponent(), 'top-13': !isRouteComponent()}">
+      <div class="flex flex-row justify-between items-center mb-4 sticky z-25 bg-zinc-950 py-2" [ngClass]="{'top-0': isRouteComponent(), 'top-13': !isRouteComponent()}">
         @if (isRouteComponent()){
           <h2 class="text-xl font-bold">Localidades</h2>
         }
         @else {
           <div></div>
         }
-        <app-button
-          label="Novo"
-          size="sm"
-          buttonType="white"
-          appFormOverlay
-          [title]="'Criar Localidade'"
-          [fields]="getFormFields()"
-          (onSave)="createLocation($event)"
-          ></app-button>
       </div>
-      @if(!worldId() && !locationId()){
-        <div class="flex flex-row top-13 py-2 sticky bg-zinc-950">
-          <app-combo-box class="w-60  " label="Filtro de mundo" [items]="getSelectableWorlds()" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="getLocations()"></app-combo-box>
-        </div>
-      }
-      <div>
-
-        @if (locationCategories.length === 0){
-          <div class="text-center">
-            <p>Nenhuma localidade disponível.</p>
-          </div>
-        }
-        @else {
-          @for (category of locationCategories; track category.id) {
-            @if (locationGroups[category.id] && locationGroups[category.id].length > 0 ) {
-              <h3 class="text-lg mb-2">{{ category.name }}:</h3>
-              <div class="grid grid-cols-4 gap-4">
-                @for (location of locationGroups[category.id]; track location.id) {
-                  @let img = getImageByUsageKey(location.Images, 'default');
-                  <div (click)="selectLocation(location.id!)" [ngClass]="[
-                      'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2',
-
-                    ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(location, 'color') || 'var(--color-zinc-800)'}">
-                    <div class="flex h-35 flex-row gap-2 items-top">
-                      <div class="flex-1 flex flex-col overflow-hidden justify-between" [ngClass]="getTextClass(getPersonalizationValue(location, 'color'))">
-                        <div class="flex flex-row items-center gap-2">
-                          <i class="fa" [ngClass]="getPersonalizationValue(location, 'icon') || 'fa-paw'"></i>
-                          <div class="text-base font-bold">{{ location.name }}</div>
-                        </div>
-                        <div class="text-xs font-bold overflow-hidden text-ellipsis text-justify line-clamp-3">{{location.concept}}</div>
-                        <div class="flex flex-row gap-1">
-                          <div class="text-xs flex text-nowrap flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
-                            <i class="fa fa-earth"></i>
-                            <div class="">{{location.ParentWorld?.name}}</div>
-                          </div>
-                          <div class="text-xs flex text-nowrap flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
-                            <i class="fa fa-paw"></i>
-                            <div class="">{{location.ParentLocation?.name}}</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                }
-              </div>
-
-            }
-
+      <div class="flex flex-row gap-4 items-start">
+        <div class="w-80 bg-zinc-900 p-3 rounded-md sticky top-16 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-dark">
+          @if(!worldId() && !locationId()){
+            <div class="mb-4">
+              <app-combo-box class="w-full" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name" [(comboValue)]="selectedWorld" (comboValueChange)="getLocations()"></app-combo-box>
+            </div>
           }
-        }
 
+          <div class="flex flex-row items-center gap-1 mb-4">
+            <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white">
+              <div class="w-8 h-5 flex flex-row justify-center items-center">
+                <i class="fa fa-search"></i>
+              </div>
+              <input
+                type="text"
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="onLocationFilter()"
+                placeholder="Pesquisar..."
+                class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10"
+              />
+            </div>
+            <app-icon-button
+              size="sm"
+              buttonType="secondary"
+              icon="fa-solid fa-plus"
+              appFormOverlay
+              [title]="'Criar Localidade'"
+              [fields]="locationFormFields"
+              (onSave)="createLocation($event)"
+              ></app-icon-button>
+          </div>
+
+          <app-tree-view-list
+            [openInDialog]="false"
+            [allowCreate]="true"
+            [useCustomCreate]="true"
+            [createTitle]="'Criar Localidade'"
+            [createFieldLabel]="'Nome'"
+            [fallbackIcon]="'fa-paw'"
+            [emptyChildrenLabel]="'Não há Localidades Relacionadas'"
+            (onDocumentSelect)="selectLocation($event.id)"
+            (onCreateChild)="createSubLocation($event)"
+            [documentArray]="filteredLocationTreeDocuments"
+          ></app-tree-view-list>
+        </div>
+
+        <div class="flex-1 min-h-[60vh]">
+          @if (selectedLocationId && showLocationEditor) {
+            <div class="rounded-md p-8">
+              <app-location-edit [locationIdInput]="selectedLocationId" [showLateralMenu]="false"></app-location-edit>
+            </div>
+          }
+          @else {
+            <div class="h-full rounded-md border border-zinc-800 bg-zinc-900/30 flex items-center justify-center text-zinc-500">
+              Selecione uma localidade na árvore para editar
+            </div>
+          }
+        </div>
       </div>
     </div>
   `,
@@ -102,13 +99,6 @@ export class LocationListComponent implements OnInit {
   private locationService = inject(LocationService);
   private worldService = inject(WorldService);
   private locationCategoryService = inject(LocationCategoriesService);
-  private cdr = inject(ChangeDetectorRef);
-
-  public buildImageUrl = buildImageUrl;
-  public getPersonalizationValue = getPersonalizationValue;
-  public getTextClass = getTextClass;
-  public getImageByUsageKey = getImageByUsageKey;
-
 
   selectedWorld : string = '';
   worldId = input<string>();
@@ -118,44 +108,54 @@ export class LocationListComponent implements OnInit {
 
   private worldStateService = inject(WorldStateService);
 
-  currentWorldId = '';
-
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === LocationListComponent ||
       this.activatedRoute.component === LocationListComponent;
   });
 
   locationCategories: LocationCategory[] = [];
-
-  locationGroups: Record<string, Location[]> = {};
+  availableWorlds : World[] = [];
+  locationFormFields: FormField[] = [];
 
   locations: Location[] = [];
+  locationTree: TreeLocationNode[] = [];
+  filteredLocationTree: TreeLocationNode[] = [];
+  filteredLocationTreeDocuments: Document[] = [];
+  searchTerm : string = '';
+  selectedLocationId = '';
+  showLocationEditor = true;
 
   ngOnInit() {
     this.worldStateService.currentWorld$.subscribe(world => {
-      this.selectedWorld = world ? world.id : '';
+      const worldId = world ? world.id : '';
+
+      if (this.selectedWorld === worldId) {
+        return;
+      }
+
+      this.selectedWorld = worldId;
+      this.getLocations();
     });
+    this.getAvailableWorlds();
     this.getLocationCategories();
     this.getLocations();
+  }
+
+  getAvailableWorlds() {
+    this.availableWorlds = this.worldService.getWorlds();
   }
 
 
   getLocationCategories() {
     this.locationCategories = this.locationCategoryService.getLocationCategories();
+    this.locationFormFields = this.getFormFields();
   }
 
   getLocations() {
-    const locations = (this.worldId() || this.selectedWorld) && !this.locationId() ? this.locationService.getLocationByWorldId(this.worldId() || this.selectedWorld) : this.locationService.getLocations(this.locationId());
+    this.locations = (this.worldId() || this.selectedWorld) && !this.locationId() ? this.locationService.getLocationByWorldId(this.worldId() || this.selectedWorld) : this.locationService.getLocations(this.locationId());
 
-    this.locationGroups = locations.reduce((groups: Record<string, Location[]>, location) => {
-      const category = location.LocationCategory ? location.LocationCategory.id : '';
-      if (!groups[category]) {
-        groups[category] = [];
-      }
-      groups[category].push(location);
-      return groups;
-    }, {});
-
+    this.locationTree = this.buildLocationTree(this.locations);
+    this.onLocationFilter();
   }
 
   getFormFields(): FormField[] {
@@ -169,54 +169,115 @@ export class LocationListComponent implements OnInit {
 
     let newLocation = new Location('', formData['name'], '');
 
-    this.locationService.saveLocation(newLocation, formData['type'], this.worldId(), this.locationId());
+    this.locationService.saveLocation(newLocation, formData['type'], this.worldId() || this.selectedWorld || undefined, this.locationId());
 
     this.getLocations();
   }
 
-  getSelectableWorlds(){
-      let worlds = [];
-
-      worlds.push(...this.worldService.getWorlds());
-
-      return worlds;
-    }
-
   selectLocation(locationId: string) {
-    if (this.isRouteComponent()) {
-      this.router.navigate(['app/location/edit', locationId]);
+    if (this.selectedLocationId === locationId) {
+      return;
     }
-    else {
-      import('../location-edit/location-edit.component').then(({ LocationEditComponent }) => {
-        const dialogRef = this.dialog.open(LocationEditComponent, {
-          data: { id: locationId },
-          panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
-          height: '80vh',
-          width: '80vw',
-        });
 
-        dialogRef.closed.subscribe(() => {
-          this.getLocations();
-        });
+    this.showLocationEditor = false;
+
+    setTimeout(() => {
+      this.selectedLocationId = locationId;
+      this.showLocationEditor = true;
+    });
+  }
+
+  createSubLocation(event: { parentId: string, formData: Record<string, string> }) {
+    const name = event.formData['name']?.trim();
+    if (!name) {
+      return;
+    }
+
+    const parentLocation = this.locations.find(location => location.id === event.parentId);
+    const parentWorldId = parentLocation?.ParentWorld?.id;
+    const parentCategoryId = parentLocation?.LocationCategory?.id || '';
+    const selectedWorldId = this.worldId() || this.selectedWorld || undefined;
+
+    const newLocation = new Location('', name, '');
+    this.locationService.saveLocation(newLocation, parentCategoryId, selectedWorldId || parentWorldId, event.parentId);
+    this.getLocations();
+  }
+
+  onLocationFilter() {
+    const search = this.searchTerm.trim().toLowerCase();
+
+    if (!search) {
+      this.filteredLocationTree = this.locationTree;
+      this.filteredLocationTreeDocuments = this.filteredLocationTree as unknown as Document[];
+      return;
+    }
+
+    this.filteredLocationTree = this.filterLocationTree(this.locationTree, search);
+    this.filteredLocationTreeDocuments = this.filteredLocationTree as unknown as Document[];
+  }
+
+  private buildLocationTree(locations: Location[]): TreeLocationNode[] {
+    const nodeMap = new Map<string, TreeLocationNode>();
+
+    for (const location of locations) {
+      nodeMap.set(location.id, {
+        ...location,
+        title: location.name,
+        SubDocuments: [],
       });
     }
+
+    const roots: TreeLocationNode[] = [];
+
+    for (const location of locations) {
+      const node = nodeMap.get(location.id)!;
+      const parentId = location.ParentLocation?.id;
+
+      if (parentId && nodeMap.has(parentId)) {
+        nodeMap.get(parentId)!.SubDocuments.push(node);
+      }
+      else {
+        roots.push(node);
+      }
+    }
+
+    this.sortTreeByTitle(roots);
+    return roots;
   }
 
-  getLocationColor(location: Location): string {
-    const color = this.getPersonalizationValue(location, 'color');
-    return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
+  private sortTreeByTitle(nodes: TreeLocationNode[]) {
+    nodes.sort((a, b) => a.title.localeCompare(b.title));
+
+    for (const node of nodes) {
+      if (node.SubDocuments.length > 0) {
+        this.sortTreeByTitle(node.SubDocuments);
+      }
+    }
   }
 
-  buildCardBgStyle(filePath?: string | null) {
-    const url = this.buildImageUrl(filePath);
-    return url
-      ? {
-          'background-image':
-            `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${url})`,
-          'background-size': 'cover',
-          'background-position': 'center',
-        }
-      : null;
+  private filterLocationTree(docs: TreeLocationNode[], search: string): TreeLocationNode[] {
+    const filtered: TreeLocationNode[] = [];
+
+    for (const doc of docs) {
+      const titleMatches = doc.title.toLowerCase().includes(search);
+      const filteredChildren = doc.SubDocuments?.length
+        ? this.filterLocationTree(doc.SubDocuments, search)
+        : [];
+
+      if (titleMatches || filteredChildren.length > 0) {
+        filtered.push({
+          ...doc,
+          SubDocuments: filteredChildren,
+        });
+      }
+    }
+
+    return filtered;
   }
 
+}
+
+interface TreeLocationNode extends Location {
+  title: string;
+  SubDocuments: TreeLocationNode[];
 }

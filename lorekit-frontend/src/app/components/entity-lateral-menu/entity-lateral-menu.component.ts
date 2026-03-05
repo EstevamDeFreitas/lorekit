@@ -35,19 +35,24 @@ import { NavButtonComponent } from "../nav-button/nav-button.component";
           </span>
           <button (click)="openDocument(item)" class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2" [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(item, 'color'))}" >
             <div class="flex flex-row items-center">
-              <i class="fa-solid " [ngClass]="getPersonalizationItem(item, 'icon') || 'fa-file'"></i>
+              <i class="fa-solid " [ngClass]="getPersonalizationItem(item, 'icon') || fallbackIcon()"></i>
             </div>
             <h2 [title]="item.title" class=" text-xs">{{ item.title }}</h2>
           </button>
-          <app-icon-button
-            size="xss"
-            buttonType="secondary"
-            icon="fa-solid fa-plus"
-            appFormOverlay
-            [title]="'Criar Documento'"
-            [fields]="[{ key: 'name', label: 'Título', value: '' }]"
-            (onSave)="createDocument($event, item.id)"
-            ></app-icon-button>
+          @if (allowCreate()) {
+            <app-icon-button
+              size="xss"
+              buttonType="secondary"
+              icon="fa-solid fa-plus"
+              appFormOverlay
+              [title]="createTitle()"
+              [fields]="[{ key: 'name', label: createFieldLabel(), value: '' }]"
+              (onSave)="createChild(item.id, $event)"
+              ></app-icon-button>
+          }
+          @else {
+            <span></span>
+          }
         </div>
         @if (isOpen(item)){
           <span class="pl-4">
@@ -55,6 +60,8 @@ import { NavButtonComponent } from "../nav-button/nav-button.component";
               <app-tree-view-list
                 [entityId]="entityId()"
                 [openInDialog]="openInDialog()"
+                [allowCreate]="allowCreate()"
+                [fallbackIcon]="fallbackIcon()"
                 (onArrayChange)="emitChange()"
                 (onDocumentSelect)="emitDocumentSelection($event)"
                 [entityTable]="'Document'"
@@ -62,7 +69,7 @@ import { NavButtonComponent } from "../nav-button/nav-button.component";
               ></app-tree-view-list>
             }
             @else{
-              <p class="text-xs text-zinc-600">Não há Documentos Relacionados</p>
+              <p class="text-xs text-zinc-600">{{ emptyChildrenLabel() }}</p>
             }
           </span>
         }
@@ -75,6 +82,7 @@ export class TreeViewListComponent {
 
   onArrayChange = output<void>();
   onDocumentSelect = output<Document>();
+  onCreateChild = output<{ parentId: string, formData: Record<string, string> }>();
 
   openDocuments = new Set<string>();
 
@@ -85,6 +93,12 @@ export class TreeViewListComponent {
   entityTable = input<string>();
   entityId = input<string>();
   openInDialog = input<boolean>(true);
+  allowCreate = input<boolean>(true);
+  fallbackIcon = input<string>('fa-file');
+  emptyChildrenLabel = input<string>('Não há Documentos Relacionados');
+  createTitle = input<string>('Criar Documento');
+  createFieldLabel = input<string>('Título');
+  useCustomCreate = input<boolean>(false);
 
   private documentService = inject(DocumentService);
 
@@ -145,6 +159,15 @@ export class TreeViewListComponent {
     newDoc = this.documentService.saveDocument(newDoc, "Document", parentDocumentId);
 
     this.emitChange();
+  }
+
+  createChild(parentId: string, formData: Record<string, string>) {
+    if (this.useCustomCreate()) {
+      this.onCreateChild.emit({ parentId, formData });
+      return;
+    }
+
+    this.createDocument(formData, parentId);
   }
 }
 

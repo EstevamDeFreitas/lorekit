@@ -1,6 +1,6 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { NgClass, NgStyle } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit } from '@angular/core';
+import { NgComponentOutlet, NgStyle } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
 import { Location, LocationCategory } from '../../../models/location.model';
@@ -13,18 +13,16 @@ import { LocationCategoriesService } from '../../../services/location-categories
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { environment } from '../../../../enviroments/environment';
-import { LocationListComponent } from "../location-list/location-list.component";
 import { WorldService } from '../../../services/world.service';
 import { getPersonalizationValue } from '../../../models/personalization.model';
 import { getImageByUsageKey } from '../../../models/image.model';
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
-import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgClass, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, NgStyle, DynamicFieldsComponent, EntityTransferButtonComponent, NavButtonComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NgStyle, NgComponentOutlet, DynamicFieldsComponent, NavButtonComponent],
   template: `
     <div class="flex flex-col">
       @if(getImageByUsageKey(location.Images, 'default') != null){
@@ -56,7 +54,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
             @if(hasDynamicFields) {
               <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
             }
-            <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="currentTab = 'localities'"></app-nav-button>
+            <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button>
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2  flex flex-col">
             @if (!isLoading) {
@@ -68,7 +66,12 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
                 }
                 @case ('localities') {
                   <div class="w-full ">
-                    <app-location-list [worldId]="location.ParentWorld?.id" [locationId]="location.id"></app-location-list>
+                    @if (locationListComponent) {
+                      <ng-container *ngComponentOutlet="locationListComponent; inputs: { worldId: location.ParentWorld?.id, locationId: location.id }"></ng-container>
+                    }
+                    @else {
+                      <p class="text-zinc-500">Carregando localidades...</p>
+                    }
                   </div>
                 }
                 @case ('properties'){
@@ -78,13 +81,15 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
             }
           </div>
         </div>
-        <div class="w-70">
-          @if (!isLoading){
-            <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
-              <app-entity-lateral-menu [fields]="fields" (onSave)="onFieldsSave($event)" entityTable="Location" [entityId]="location.id"></app-entity-lateral-menu>
-            </div>
-          }
-        </div>
+        @if (showLateralMenu()) {
+          <div class="w-70">
+            @if (!isLoading){
+              <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
+                <app-entity-lateral-menu [fields]="fields" (onSave)="onFieldsSave($event)" entityTable="Location" [entityId]="location.id"></app-entity-lateral-menu>
+              </div>
+            }
+          </div>
+        }
       </div>
     </div>
   `,
@@ -100,7 +105,6 @@ export class LocationEditComponent implements OnInit {
   private activatedRoute = inject(ActivatedRoute);
   private locationService = inject(LocationService);
   private worldService = inject(WorldService);
-  private cdr = inject(ChangeDetectorRef);
   private locationCategoryService = inject(LocationCategoriesService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
@@ -108,6 +112,7 @@ export class LocationEditComponent implements OnInit {
   isInDialog = computed(() => !!this.dialogref);
 
   currentTab : string = 'details';
+  locationListComponent: any = null;
 
   private dynamicFieldService = inject(DynamicFieldService);
     hasDynamicFields: boolean = this.dynamicFieldService.getDynamicFields('Location').length > 0;
@@ -119,12 +124,20 @@ export class LocationEditComponent implements OnInit {
   });
 
   readonly locationId = computed(() => {
+    const inputId = this.locationIdInput();
+    if (inputId) {
+      return inputId;
+    }
+
     if (this.data?.id) {
       return this.data.id as string;
     }
 
     return this.activatedRoute.snapshot.paramMap.get('locationId') ?? '';
   });
+
+  locationIdInput = input<string | null>(null);
+  showLateralMenu = input<boolean>(true);
 
   location : Location = {} as Location;
   isLoading = true;
@@ -173,6 +186,18 @@ export class LocationEditComponent implements OnInit {
     this.selectedWorldId = formData['parentWorldId'];
 
     this.saveLocation();
+  }
+
+  openLocalitiesTab() {
+    this.currentTab = 'localities';
+
+    if (this.locationListComponent) {
+      return;
+    }
+
+    import('../location-list/location-list.component').then(({ LocationListComponent }) => {
+      this.locationListComponent = LocationListComponent;
+    });
   }
 
   private buildFields() {
