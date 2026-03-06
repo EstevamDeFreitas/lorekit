@@ -12,26 +12,22 @@ import { World } from '../../../models/world.model';
 import { Location } from '../../../models/location.model';
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { Culture } from '../../../models/culture.model';
-import { NgClass, NgStyle } from '@angular/common';
+import { NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { EntityLateralMenuComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
-import { InputComponent } from '../../../components/input/input.component';
 import { PersonalizationButtonComponent } from '../../../components/personalization-button/personalization-button.component';
 import { SafeDeleteButtonComponent } from '../../../components/safe-delete-button/safe-delete-button.component';
-import { TextAreaComponent } from '../../../components/text-area/text-area.component';
-import { LocationListComponent } from '../../locations/location-list/location-list.component';
-import { SpecieListComponent } from '../../species/specie-list/specie-list.component';
 import { OrganizationTypeService } from '../../../services/organization-type.service';
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
-import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
-import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
+import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
+import { OrganizationConfiguredFieldsComponent } from '../organization-configured-fields/organization-configured-fields.component';
 
 @Component({
   selector: 'app-organization-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent, DynamicFieldsComponent, EntityTransferButtonComponent, NavButtonComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, OrganizationConfiguredFieldsComponent],
   template: `
     <div class="flex flex-col relative">
       @if(getImageByUsageKey(organization.Images, 'default') != null){
@@ -56,6 +52,14 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
         <input type="text" (blur)="saveOrganization()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="organization.name" />
         <div class="flex flex-row gap-2">
           <!-- <app-entity-transfer-button [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'"></app-entity-transfer-button> -->
+          <app-ui-field-config-button
+            [entityTable]="'Organization'"
+            [entityId]="organization.id"
+            [parentEntityTable]="selectedWorldId ? 'World' : null"
+            [parentEntityId]="selectedWorldId"
+            [parentLabel]="organization.ParentWorld ? ('Mundo: ' + organization.ParentWorld.name) : null"
+            [backRoute]="'/app/organization/edit/' + organization.id">
+          </app-ui-field-config-button>
           <app-personalization-button [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'" (onClose)="getOrganization()"></app-personalization-button>
           <app-safe-delete-button [entityName]="organization.name" [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'"></app-safe-delete-button>
         </div>
@@ -77,7 +81,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
                   </div>
                 }
                 @case ('properties'){
-                  <app-dynamic-fields [entityTable]="'Organization'" [entityId]="organization.id"></app-dynamic-fields>
+                  <app-organization-configured-fields [organization]="organization"></app-organization-configured-fields>
                 }
               }
             }

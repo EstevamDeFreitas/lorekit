@@ -17,12 +17,13 @@ import { WorldService } from '../../../services/world.service';
 import { getPersonalizationValue } from '../../../models/personalization.model';
 import { getImageByUsageKey } from '../../../models/image.model';
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
-import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
+import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
+import { LocationConfiguredFieldsComponent } from '../location-configured-fields/location-configured-fields.component';
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NgStyle, NgComponentOutlet, DynamicFieldsComponent, NavButtonComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NgStyle, NgComponentOutlet, NavButtonComponent, UiFieldConfigButtonComponent, LocationConfiguredFieldsComponent],
   template: `
     <div class="flex flex-col">
       @if(getImageByUsageKey(location.Images, 'default') != null){
@@ -43,6 +44,14 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
         <input type="text" (blur)="saveLocation()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="location.name" />
         <div class="flex flex-row gap-2">
           <!-- <app-entity-transfer-button [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'"></app-entity-transfer-button> -->
+          <app-ui-field-config-button
+            [entityTable]="'Location'"
+            [entityId]="location.id"
+            [parentEntityTable]="selectedWorldId ? 'World' : null"
+            [parentEntityId]="selectedWorldId || null"
+            [parentLabel]="location.ParentWorld ? ('Mundo: ' + location.ParentWorld.name) : null"
+            [backRoute]="'/app/location/edit/' + location.id">
+          </app-ui-field-config-button>
           <app-personalization-button [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'" (onClose)="getLocation()"></app-personalization-button>
           <app-safe-delete-button [entityName]="location.name" [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'"></app-safe-delete-button>
         </div>
@@ -75,7 +84,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
                   </div>
                 }
                 @case ('properties'){
-                  <app-dynamic-fields [entityTable]="'Location'" [entityId]="location.id"></app-dynamic-fields>
+                  <app-location-configured-fields [location]="location"></app-location-configured-fields>
                 }
               }
             }

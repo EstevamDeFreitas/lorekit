@@ -211,6 +211,31 @@ export function getSystemCatalog(entityTable: string): UiFieldCatalogItem[] {
     ];
   }
 
+  if (entityTable === 'Character') {
+    return [
+      { token: 'schema:age', key: 'age', label: 'Idade', source: 'schema', isEditorField: false },
+      { token: 'schema:height', key: 'height', label: 'Altura', source: 'schema', isEditorField: false },
+      { token: 'schema:weight', key: 'weight', label: 'Peso', source: 'schema', isEditorField: false },
+      { token: 'schema:occupation', key: 'occupation', label: 'Ocupacao', source: 'schema', isEditorField: false },
+      { token: 'schema:alignment', key: 'alignment', label: 'Alinhamento', source: 'schema', isEditorField: false },
+      { token: 'schema:personality', key: 'personality', label: 'Personalidade', source: 'schema', isEditorField: true },
+      { token: 'schema:appearance', key: 'appearance', label: 'Aparencia', source: 'schema', isEditorField: true },
+      { token: 'schema:objectives', key: 'objectives', label: 'Objetivos', source: 'schema', isEditorField: true },
+    ];
+  }
+
+  if (entityTable === 'Species') {
+    return [
+      { token: 'schema:classification', key: 'classification', label: 'Classificacao', source: 'schema', isEditorField: false },
+      { token: 'schema:diet', key: 'diet', label: 'Dieta', source: 'schema', isEditorField: false },
+      { token: 'schema:averageLifespan', key: 'averageLifespan', label: 'Expectativa de Vida (anos)', source: 'schema', isEditorField: false },
+      { token: 'schema:averageHeight', key: 'averageHeight', label: 'Altura media (metros)', source: 'schema', isEditorField: false },
+      { token: 'schema:averageWeight', key: 'averageWeight', label: 'Peso medio (kg)', source: 'schema', isEditorField: false },
+      { token: 'schema:physicalCharacteristics', key: 'physicalCharacteristics', label: 'Caracteristicas fisicas', source: 'schema', isEditorField: true },
+      { token: 'schema:behavioralCharacteristics', key: 'behavioralCharacteristics', label: 'Caracteristicas comportamentais', source: 'schema', isEditorField: true },
+    ];
+  }
+
   return [];
 }
 
@@ -228,6 +253,41 @@ export function getSystemDefaultConfig(entityTable: string): UiConfigPayload {
         { token: 'schema:socialStructure', col: 7, row: 2, width: 6, height: 6 },
         { token: 'schema:beliefSystems', col: 1, row: 8, width: 6, height: 6 },
         { token: 'schema:culinaryPractices', col: 7, row: 8, width: 6, height: 6 },
+      ],
+    };
+  }
+
+  if (entityTable === 'Character') {
+    return {
+      version: 1,
+      columns: 12,
+      rowHeight: 56,
+      items: [
+        { token: 'schema:age', col: 1, row: 1, width: 2, height: 1 },
+        { token: 'schema:height', col: 3, row: 1, width: 2, height: 1 },
+        { token: 'schema:weight', col: 5, row: 1, width: 2, height: 1 },
+        { token: 'schema:occupation', col: 7, row: 1, width: 3, height: 1 },
+        { token: 'schema:alignment', col: 10, row: 1, width: 3, height: 1 },
+        { token: 'schema:personality', col: 1, row: 2, width: 6, height: 6 },
+        { token: 'schema:appearance', col: 7, row: 2, width: 6, height: 6 },
+        { token: 'schema:objectives', col: 1, row: 8, width: 12, height: 6 },
+      ],
+    };
+  }
+
+  if (entityTable === 'Species') {
+    return {
+      version: 1,
+      columns: 12,
+      rowHeight: 56,
+      items: [
+        { token: 'schema:classification', col: 1, row: 1, width: 3, height: 1 },
+        { token: 'schema:diet', col: 4, row: 1, width: 3, height: 1 },
+        { token: 'schema:averageLifespan', col: 7, row: 1, width: 3, height: 1 },
+        { token: 'schema:averageHeight', col: 10, row: 1, width: 3, height: 1 },
+        { token: 'schema:averageWeight', col: 1, row: 2, width: 3, height: 1 },
+        { token: 'schema:physicalCharacteristics', col: 1, row: 3, width: 6, height: 6 },
+        { token: 'schema:behavioralCharacteristics', col: 7, row: 3, width: 6, height: 6 },
       ],
     };
   }

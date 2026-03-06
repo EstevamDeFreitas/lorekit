@@ -9,23 +9,21 @@ import { FormField } from '../../../components/form-overlay/form-overlay.compone
 import { getPersonalizationValue } from '../../../models/personalization.model';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { PersonalizationButtonComponent } from '../../../components/personalization-button/personalization-button.component';
-import { NgClass, NgStyle } from '@angular/common';
+import { NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { EntityLateralMenuComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
 import { SafeDeleteButtonComponent } from '../../../components/safe-delete-button/safe-delete-button.component';
 import { LocationListComponent } from '../../locations/location-list/location-list.component';
 import { SpecieListComponent } from "../specie-list/specie-list.component";
-import { InputComponent } from '../../../components/input/input.component';
-import { TextAreaComponent } from "../../../components/text-area/text-area.component";
 import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
-import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
-import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
+import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
+import { SpecieConfiguredFieldsComponent } from '../specie-configured-fields/specie-configured-fields.component';
 
 @Component({
   selector: 'app-specie-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, SpecieListComponent, DynamicFieldsComponent, EntityTransferButtonComponent, NavButtonComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, SpecieListComponent, NavButtonComponent, UiFieldConfigButtonComponent, SpecieConfiguredFieldsComponent],
   template: `
     <div class="flex flex-col relative">
       @if(getImageByUsageKey(specie.Images, 'default') != null){
@@ -50,6 +48,14 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
         <input type="text" (blur)="saveSpecie()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="specie.name" />
         <div class="flex flex-row gap-2">
           <!-- <app-entity-transfer-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-entity-transfer-button> -->
+          <app-ui-field-config-button
+            [entityTable]="'Species'"
+            [entityId]="specie.id"
+            [parentEntityTable]="selectedWorldId ? 'World' : null"
+            [parentEntityId]="selectedWorldId"
+            [parentLabel]="specie.ParentWorld ? ('Mundo: ' + specie.ParentWorld.name) : null"
+            [backRoute]="'/app/specie/edit/' + specie.id">
+          </app-ui-field-config-button>
           <app-personalization-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'" (onClose)="getSpecie()"></app-personalization-button>
           <app-safe-delete-button [entityName]="specie.name" [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-safe-delete-button>
         </div>
@@ -66,26 +72,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
               @switch (currentTab) {
                 @case ('properties') {
                   <div class="w-full flex-1  p-1">
-                    <div class="grid grid-cols-3 gap-4">
-                      <app-input [label]="'Classificação'" placeholder="Humanoide, Anthro..." [(value)]="specie.classification" (valueChange)="saveSpecie()"></app-input>
-                      <app-input [label]="'Dieta'" placeholder="Herbívoro, Carnívoro..." [(value)]="specie.diet" (valueChange)="saveSpecie()"></app-input>
-                      <app-input [label]="'Expectativa de Vida (anos)'" [(value)]="specie.averageLifespan" (valueChange)="saveSpecie()"></app-input>
-                      <app-input [label]="'Altura média (metros)'"  [(value)]="specie.averageHeight" (valueChange)="saveSpecie()"></app-input>
-                      <app-input [label]="'Peso médio (kg)'"  [(value)]="specie.averageWeight" (valueChange)="saveSpecie()"></app-input>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                      <div>
-                        <label class="mb-1 text-sm text-white">Características físicas</label>
-                        <app-editor [entityId]="specie.id" docTitle="Características físicas" entityTable="Species" [entityName]="specie.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="specie.physicalCharacteristics || ''" (saveDocument)="onEditorSave($event, 'physicalCharacteristics')"></app-editor>
-                      </div>
-                      <div>
-                        <label class="mb-1 text-sm text-white">Características Comportamentais</label>
-                        <app-editor [entityId]="specie.id" docTitle="Características Comportamentais" entityTable="Species" [entityName]="specie.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="specie.behavioralCharacteristics || ''" (saveDocument)="onEditorSave($event, 'behavioralCharacteristics')"></app-editor>
-                      </div>
-                    </div>
-                    <br>
-                    <app-dynamic-fields [entityTable]="'Species'" [entityId]="specie.id"></app-dynamic-fields>
-                    <br>
+                    <app-specie-configured-fields [specie]="specie" (requestSave)="saveSpecie()"></app-specie-configured-fields>
                   </div>
                 }
                 @case ('details') {

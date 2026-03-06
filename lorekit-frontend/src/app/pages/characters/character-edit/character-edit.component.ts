@@ -10,24 +10,22 @@ import { Character } from '../../../models/character.model';
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { World } from '../../../models/world.model';
 import { Specie } from '../../../models/specie.model';
-import { NgClass, NgStyle } from '@angular/common';
+import { NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { EntityLateralMenuComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
-import { InputComponent } from '../../../components/input/input.component';
 import { PersonalizationButtonComponent } from '../../../components/personalization-button/personalization-button.component';
 import { SafeDeleteButtonComponent } from '../../../components/safe-delete-button/safe-delete-button.component';
-import { TextAreaComponent } from '../../../components/text-area/text-area.component';
 import { LocationListComponent } from '../../locations/location-list/location-list.component';
 import { SpecieListComponent } from '../../species/specie-list/specie-list.component';
-import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
-import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
+import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
+import { CharacterConfiguredFieldsComponent } from '../character-configured-fields/character-configured-fields.component';
 
 @Component({
   selector: 'app-character-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, DynamicFieldsComponent, EntityTransferButtonComponent, NavButtonComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, CharacterConfiguredFieldsComponent],
   template: `
     <div class="flex flex-col relative">
       @if(getImageByUsageKey(character.Images, 'default') != null){
@@ -53,6 +51,14 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
         <input type="text" (blur)="saveCharacter()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="character.name" />
         <div class="flex flex-row gap-2">
           <!-- <app-entity-transfer-button [entityId]="character.id" [entityTable]="'Character'" [size]="'xl'"></app-entity-transfer-button> -->
+          <app-ui-field-config-button
+            [entityTable]="'Character'"
+            [entityId]="character.id"
+            [parentEntityTable]="selectedWorldId ? 'World' : null"
+            [parentEntityId]="selectedWorldId"
+            [parentLabel]="character.ParentWorld ? ('Mundo: ' + character.ParentWorld.name) : null"
+            [backRoute]="'/app/character/edit/' + character.id">
+          </app-ui-field-config-button>
           <app-personalization-button [entityId]="character.id" [entityTable]="'Character'" [size]="'xl'" (onClose)="getCharacter()"></app-personalization-button>
           <app-safe-delete-button [entityName]="character.name" [entityId]="character.id" [entityTable]="'Character'" [size]="'xl'"></app-safe-delete-button>
         </div>
@@ -68,30 +74,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
               @switch (currentTab) {
                 @case ('properties') {
                   <div class="w-full flex-1 p-1">
-                    <div class="grid grid-cols-3 gap-4">
-                      <app-input [label]="'Idade'" [(value)]="character.age" (valueChange)="saveCharacter()"></app-input>
-                      <app-input [label]="'Altura'" [(value)]="character.height" (valueChange)="saveCharacter()"></app-input>
-                      <app-input [label]="'Peso'" [(value)]="character.weight" (valueChange)="saveCharacter()"></app-input>
-                      <app-input [label]="'Ocupação'" [(value)]="character.occupation" (valueChange)="saveCharacter()"></app-input>
-                      <app-input [label]="'Alinhamento'" [(value)]="character.alignment" (valueChange)="saveCharacter()"></app-input>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                      <div>
-                        <label class="mb-1 text-sm text-white">Personalidade</label>
-                        <app-editor [entityId]="character.id" docTitle="Personalidade" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.personality || ''" (saveDocument)="onEditorSave($event, 'personality')"></app-editor>
-                      </div>
-                      <div>
-                        <label class="mb-1 text-sm text-white">Aparência</label>
-                        <app-editor [entityId]="character.id" docTitle="Aparência" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.appearance || ''" (saveDocument)="onEditorSave($event, 'appearance')"></app-editor>
-                      </div>
-                      <div>
-                        <label class="mb-1 text-sm text-white">Objetivos</label>
-                        <app-editor [entityId]="character.id" docTitle="Objetivos" entityTable="Character" [entityName]="character.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="character.objectives || ''" (saveDocument)="onEditorSave($event, 'objectives')"></app-editor>
-                      </div>
-                    </div>
-                    <br>
-                    <app-dynamic-fields [entityTable]="'Character'" [entityId]="character.id"></app-dynamic-fields>
-                    <br>
+                    <app-character-configured-fields [character]="character" (requestSave)="saveCharacter()"></app-character-configured-fields>
                   </div>
                 }
                 @case ('backstory') {
