@@ -1,5 +1,6 @@
 import { NgStyle } from '@angular/common';
 import { Component, inject } from '@angular/core';
+import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem } from '../../../models/ui-field-config.model';
@@ -21,7 +22,11 @@ interface ParentScopeOption {
           <h1 class="text-xl font-semibold text-white">Configurar Layout de Campos</h1>
           <p class="text-sm text-zinc-400">Arraste campos para o grid e redimensione pelas bordas.</p>
         </div>
-        <a [routerLink]="backRoute" class="text-sm px-3 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-white">Voltar</a>
+        @if (isDialogMode) {
+          <button (click)="closeDialog()" class="text-sm px-3 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-white">Fechar</button>
+        } @else {
+          <a [routerLink]="backRoute" class="text-sm px-3 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-white">Voltar</a>
+        }
       </div>
 
       <div class="flex flex-wrap gap-4 items-end bg-zinc-900 p-3 rounded-lg border border-zinc-800">
@@ -109,6 +114,8 @@ interface ParentScopeOption {
   styleUrl: './ui-field-config-editor.component.css',
 })
 export class UiFieldConfigEditorComponent {
+  private dialogRef = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
+  private dialogData = inject<any>(DIALOG_DATA, { optional: true });
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private uiFieldConfigService = inject(UiFieldConfigService);
@@ -145,9 +152,9 @@ export class UiFieldConfigEditorComponent {
 
   ngOnInit(): void {
     const queryMap = this.route.snapshot.queryParamMap;
-    this.entityTable = queryMap.get('entityTable') ?? '';
-    this.entityId = queryMap.get('entityId');
-    this.backRoute = queryMap.get('backRoute') ?? '/app/culture/list';
+    this.entityTable = this.dialogData?.entityTable ?? queryMap.get('entityTable') ?? '';
+    this.entityId = this.dialogData?.entityId ?? queryMap.get('entityId');
+    this.backRoute = this.dialogData?.backRoute ?? queryMap.get('backRoute') ?? '/app/culture/list';
 
     if (!this.entityTable) {
       this.router.navigate(['/app']);
@@ -157,9 +164,9 @@ export class UiFieldConfigEditorComponent {
     this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
     this.layout = this.uiFieldConfigService.getResolvedConfig(this.entityTable, this.entityId);
 
-    const parentTable = queryMap.get('parentEntityTable');
-    const parentId = queryMap.get('parentEntityId');
-    const parentLabel = queryMap.get('parentLabel');
+    const parentTable = this.dialogData?.parentEntityTable ?? queryMap.get('parentEntityTable');
+    const parentId = this.dialogData?.parentEntityId ?? queryMap.get('parentEntityId');
+    const parentLabel = this.dialogData?.parentLabel ?? queryMap.get('parentLabel');
 
     if (parentTable && parentId) {
       this.parentScopeOptions = [{
@@ -170,7 +177,10 @@ export class UiFieldConfigEditorComponent {
       this.selectedParentScopeKey = `${parentTable}:${parentId}`;
     }
 
-    if (this.entityId) {
+    const requestedScopeMode = this.dialogData?.scopeMode as 'entity' | 'parent' | 'global' | undefined;
+    if (requestedScopeMode) {
+      this.scopeMode = requestedScopeMode;
+    } else if (this.entityId) {
       this.scopeMode = 'entity';
     } else {
       this.scopeMode = this.parentScopeOptions.length > 0 ? 'parent' : 'global';
@@ -178,6 +188,14 @@ export class UiFieldConfigEditorComponent {
 
     document.addEventListener('mousemove', this.onDocumentMouseMove);
     document.addEventListener('mouseup', this.onDocumentMouseUp);
+  }
+
+  get isDialogMode(): boolean {
+    return !!this.dialogRef;
+  }
+
+  closeDialog(): void {
+    this.dialogRef?.close();
   }
 
   ngOnDestroy(): void {

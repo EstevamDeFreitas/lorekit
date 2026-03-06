@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject
 import { WorldStateService } from '../../../services/world-state.service';
 import { World } from '../../../models/world.model';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
-import { NgClass, NgIf, NgStyle } from '@angular/common';
+import { NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { WorldService } from '../../../services/world.service';
@@ -22,12 +22,13 @@ import { getPersonalizationValue } from '../../../models/personalization.model';
 import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
+import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
+import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world-configured-fields.component';
 
 @Component({
   standalone: true,
-  imports: [NgStyle, NgClass, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, DynamicFieldsComponent, EntityTransferButtonComponent, NavButtonComponent],
+  imports: [NgStyle, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, WorldConfiguredFieldsComponent],
   template: `
     <div class="flex flex-col">
       @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
@@ -47,6 +48,11 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
         <input type="text" (blur)="saveWorldName()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="currentWorld.name" />
         <div class="flex flex-row gap-2">
           <!-- <app-entity-transfer-button [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'"></app-entity-transfer-button> -->
+          <app-ui-field-config-button
+            [entityTable]="'World'"
+            [entityId]="currentWorld.id"
+            [backRoute]="'/app/world/info/' + currentWorld.id">
+          </app-ui-field-config-button>
           <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" (onClose)="getWorld()"></app-personalization-button>
           <app-safe-delete-button [entityName]="currentWorld.name" [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" ></app-safe-delete-button>
         </div>
@@ -55,9 +61,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
         <div class="flex-4 flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
             <app-nav-button [label]="'Detalhes do mundo'" size="sm" [active]="currentTab === 'details'" (click)="currentTab = 'details'"></app-nav-button>
-            @if(hasDynamicFields) {
-              <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
-            }
+            <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
             <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="currentTab = 'localities'"></app-nav-button>
             <!-- <app-nav-button [label]="'Personagens'" size="sm" [active]="currentTab === 'characters'" (click)="currentTab = 'characters'"></app-nav-button>
             <app-nav-button [label]="'Objetos'" size="sm" [active]="currentTab === 'objects'" (click)="currentTab = 'objects'"></app-nav-button> -->
@@ -82,7 +86,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
                   <p>Objetos</p>
                 }
                 @case ('properties'){
-                  <app-dynamic-fields [entityTable]="'World'" [entityId]="currentWorld.id"></app-dynamic-fields>
+                  <app-world-configured-fields [world]="currentWorld" (requestSave)="saveWorldName()"></app-world-configured-fields>
                 }
               }
             }
@@ -119,9 +123,6 @@ export class WorldInfoComponent implements OnInit {
   isLoading: boolean = false;
 
   fields: FormField[] = [];
-
-  private dynamicFieldService = inject(DynamicFieldService);
-  hasDynamicFields: boolean = this.dynamicFieldService.getDynamicFields('World').length > 0;
 
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === WorldInfoComponent ||

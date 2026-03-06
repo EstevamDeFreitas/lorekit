@@ -236,6 +236,12 @@ export function getSystemCatalog(entityTable: string): UiFieldCatalogItem[] {
     ];
   }
 
+  if (entityTable === 'World') {
+    return [
+      { token: 'schema:concept', key: 'concept', label: 'Conceito', source: 'schema', isEditorField: false },
+    ];
+  }
+
   return [];
 }
 
@@ -288,6 +294,17 @@ export function getSystemDefaultConfig(entityTable: string): UiConfigPayload {
         { token: 'schema:averageWeight', col: 1, row: 2, width: 3, height: 1 },
         { token: 'schema:physicalCharacteristics', col: 1, row: 3, width: 6, height: 6 },
         { token: 'schema:behavioralCharacteristics', col: 7, row: 3, width: 6, height: 6 },
+      ],
+    };
+  }
+
+  if (entityTable === 'World') {
+    return {
+      version: 1,
+      columns: 12,
+      rowHeight: 56,
+      items: [
+        { token: 'schema:concept', col: 1, row: 1, width: 12, height: 2 },
       ],
     };
   }

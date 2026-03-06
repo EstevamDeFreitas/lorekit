@@ -1,4 +1,5 @@
 import { DialogRef } from '@angular/cdk/dialog';
+import { Dialog } from '@angular/cdk/dialog';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { ButtonComponent } from "../../../components/button/button.component";
@@ -19,6 +20,7 @@ import { ComboBoxComponent } from "../../../components/combo-box/combo-box.compo
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DynamicField } from '../../../models/dynamicfields.model';
 import { ElectronService } from '../../../services/electron.service';
+import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-config-editor/ui-field-config-editor.component';
 
 @Component({
   selector: 'app-settings',
@@ -34,6 +36,7 @@ import { ElectronService } from '../../../services/electron.service';
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('location_categories')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'location_categories'}">Categorias de Localidade</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('organization_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'organization_types'}">Tipos de Organização</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('dynamic_fields')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'dynamic_fields'}">Campos Dinâmicos</a>
+          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('global_field_config')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'global_field_config'}">Campos Globais</a>
         </div>
       </div>
       <div class="flex-1 p-4 h-[60vh] bg-zinc-900 overflow-y-auto scrollbar-dark">
@@ -201,6 +204,32 @@ import { ElectronService } from '../../../services/electron.service';
               }
             </div>
           }
+          @case ("global_field_config") {
+            <div>
+              <h3 class="text-base mb-2">Configuração Global de Campos</h3>
+              <br>
+              <p class="text-sm text-zinc-400 mb-3">Selecione uma entidade para definir o layout global dos campos exibidos.</p>
+              <div class="flex flex-col gap-4 max-w-96">
+                <app-combo-box
+                  class="w-full"
+                  label="Entidade"
+                  [items]="fieldConfigAvailableTables"
+                  [comboValue]="selectedFieldConfigTable"
+                  (comboValueChange)="selectedFieldConfigTable = $event">
+                </app-combo-box>
+
+                <div class="flex flex-row gap-2">
+                  <app-button
+                    label="Configurar Layout Global"
+                    buttonType="primary"
+                    size="sm"
+                    icon="fa-solid fa-table-cells-large"
+                    (click)="openGlobalFieldConfigDialog()">
+                  </app-button>
+                </div>
+              </div>
+            </div>
+          }
         }
 
       </div>
@@ -219,6 +248,7 @@ export class SettingsComponent implements OnInit{
   globalParameterService = inject(GlobalParameterService);
   organizationTypeService = inject(OrganizationTypeService);
   dynamicFieldService = inject(DynamicFieldService);
+  private dialog = inject(Dialog);
 
   currentTab: string = '';
 
@@ -251,6 +281,7 @@ export class SettingsComponent implements OnInit{
                     'DynamicField',
                     'DynamicFieldValue',
                     'Document',
+                    'UiFieldConfig',
                     'LocationCategory',
                     'Relationship',
                     'GlobalParameter',
@@ -259,6 +290,8 @@ export class SettingsComponent implements OnInit{
 
                   ];
   availableTables = schema.filter(t => !this.ignoredTables.includes(t.name)).map(t => t.name);
+  fieldConfigAvailableTables = [...this.availableTables];
+  selectedFieldConfigTable: string = this.fieldConfigAvailableTables[0] || '';
 
   currentTable: string = '';
 
@@ -394,6 +427,23 @@ export class SettingsComponent implements OnInit{
     this.currentTable = event;
 
     this.dynamicFields = this.dynamicFieldService.getDynamicFields(this.currentTable);
+  }
+
+  openGlobalFieldConfigDialog() {
+    if (!this.selectedFieldConfigTable) {
+      return;
+    }
+
+    this.dialog.open(UiFieldConfigEditorComponent, {
+      panelClass: 'screen-dialog',
+      width: '95vw',
+      maxWidth: '1400px',
+      height: '90vh',
+      data: {
+        entityTable: this.selectedFieldConfigTable,
+        scopeMode: 'global',
+      },
+    });
   }
 
   createDynamicField(formData: Record<string, string>) {
