@@ -1,21 +1,24 @@
-import { Component, computed, input } from '@angular/core';
-import { Params, RouterLink } from '@angular/router';
+import { Component, computed, inject, input } from '@angular/core';
+import { Params, Router } from '@angular/router';
+import { IconButtonComponent } from '../icon-button/icon-button.component';
 
 @Component({
   selector: 'app-ui-field-config-button',
-  imports: [RouterLink],
+  imports: [IconButtonComponent],
   template: `
-    <a
-      [routerLink]="'/app/ui-field-config/edit'"
-      [queryParams]="queryParams()"
-      class="rounded-md px-2 py-1 text-xl text-white cursor-pointer hover:brightness-85 active:brightness-70"
-      title="Configurar layout de campos">
-      <i class="fa-solid fa-table-cells-large"></i>
-    </a>
+    <app-icon-button
+      icon="fa-solid fa-table-cells-large"
+      buttonType="white"
+      size="lg"
+      title="Configurar layout de campos"
+      (click)="goToConfig()">
+    </app-icon-button>
   `,
   styleUrl: './ui-field-config-button.component.css',
 })
 export class UiFieldConfigButtonComponent {
+  private router = inject(Router);
+
   entityTable = input.required<string>();
   entityId = input<string | null>(null);
   parentEntityTable = input<string | null>(null);
@@ -44,4 +47,10 @@ export class UiFieldConfigButtonComponent {
 
     return params;
   });
+
+  goToConfig(): void {
+    this.router.navigate(['/app/ui-field-config/edit'], {
+      queryParams: this.queryParams(),
+    });
+  }
 }

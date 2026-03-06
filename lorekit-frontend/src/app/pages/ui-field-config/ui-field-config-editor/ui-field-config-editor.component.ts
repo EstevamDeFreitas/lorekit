@@ -1,10 +1,14 @@
 import { NgStyle } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem } from '../../../models/ui-field-config.model';
 import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
+import { DbProvider } from '../../../app.config';
+import { schema } from '../../../database/schema';
+import { ButtonComponent } from '../../../components/button/button.component';
+import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
+import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 
 interface ParentScopeOption {
   parentEntityTable: string;
@@ -12,9 +16,19 @@ interface ParentScopeOption {
   label: string;
 }
 
+interface ParentEntityItem {
+  id: string;
+  label: string;
+}
+
+interface SelectOptionItem {
+  value: string;
+  label: string;
+}
+
 @Component({
   selector: 'app-ui-field-config-editor',
-  imports: [NgStyle, FormsModule, RouterLink],
+  imports: [NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent],
   template: `
     <div class="p-4 md:p-6 flex flex-col gap-4">
       <div class="flex flex-row items-center justify-between gap-3 border-b border-zinc-800 pb-4">
@@ -23,40 +37,55 @@ interface ParentScopeOption {
           <p class="text-sm text-zinc-400">Arraste campos para o grid e redimensione pelas bordas.</p>
         </div>
         @if (isDialogMode) {
-          <button (click)="closeDialog()" class="text-sm px-3 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-white">Fechar</button>
+          <app-button label="Fechar" buttonType="secondary" size="xs" (click)="closeDialog()"></app-button>
         } @else {
-          <a [routerLink]="backRoute" class="text-sm px-3 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-white">Voltar</a>
+          <app-button label="Voltar" buttonType="secondary" size="xs" [route]="backRoute"></app-button>
         }
       </div>
 
       <div class="flex flex-wrap gap-4 items-end bg-zinc-900 p-3 rounded-lg border border-zinc-800">
-        <div class="flex flex-col gap-1">
-          <label class="text-xs text-zinc-400">Escopo</label>
-          <select class="bg-zinc-800 text-white rounded-md px-2 py-1 text-sm" [(ngModel)]="scopeMode">
-            @if (entityId) {
-              <option value="entity">Exclusivo desta entidade</option>
-            }
-            @if (parentScopeOptions.length > 0) {
-              <option value="parent">Por entidade pai</option>
-            }
-            <option value="global">Global da entidade</option>
-          </select>
-        </div>
+        <app-combo-box
+          class="min-w-56"
+          label="Escopo"
+          [items]="scopeModeItems"
+          compareProp="value"
+          displayProp="label"
+          [(comboValue)]="scopeMode">
+        </app-combo-box>
 
         @if (scopeMode === 'parent' && parentScopeOptions.length > 0) {
-          <div class="flex flex-col gap-1">
-            <label class="text-xs text-zinc-400">Pai</label>
-            <select class="bg-zinc-800 text-white rounded-md px-2 py-1 text-sm" [(ngModel)]="selectedParentScopeKey">
-              @for (option of parentScopeOptions; track option.parentEntityTable + ':' + option.parentEntityId) {
-                <option [value]="option.parentEntityTable + ':' + option.parentEntityId">{{ option.label }}</option>
-              }
-            </select>
-          </div>
+          <app-combo-box
+            class="min-w-72"
+            label="Pai"
+            [items]="parentScopeItems"
+            compareProp="value"
+            displayProp="label"
+            [(comboValue)]="selectedParentScopeKey">
+          </app-combo-box>
+        }
+
+        @if (scopeMode === 'parent' && allowParentSelection) {
+          <app-combo-box
+            class="min-w-48"
+            label="Tabela Pai"
+            [items]="parentSelectableTables"
+            [comboValue]="selectedParentTable"
+            (comboValueChange)="onParentTableChange($event)">
+          </app-combo-box>
+
+          <app-combo-box
+            class="min-w-72"
+            label="Entidade Pai"
+            [items]="parentEntityItems"
+            compareProp="id"
+            displayProp="label"
+            [(comboValue)]="selectedParentEntityId">
+          </app-combo-box>
         }
 
         <div class="flex flex-row gap-2 ms-auto">
-          <button class="text-xs px-3 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-white" (click)="resetToDefault()">Padrao do Sistema</button>
-          <button class="text-xs px-3 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white" (click)="save()">Salvar Layout</button>
+          <app-button label="Padrao do Sistema" buttonType="secondary" size="xs" (click)="resetToDefault()"></app-button>
+          <app-button label="Salvar Layout" buttonType="primary" size="xs" (click)="save()"></app-button>
         </div>
       </div>
 
@@ -77,7 +106,15 @@ interface ParentScopeOption {
                 (mousedown)="startMove($event, item)">
                 <div class="layout-item-header">
                   <span>{{ getTokenLabel(item.token) }}</span>
-                  <button class="layout-remove" (click)="removeItem(item.token); $event.stopPropagation()">x</button>
+                  <app-icon-button
+                    class="layout-remove"
+                    icon="fa-solid fa-xmark"
+                    size="xss"
+                    buttonType="danger"
+                    title="Remover campo"
+                    (mousedown)="$event.stopPropagation()"
+                    (click)="removeItem(item.token); $event.stopPropagation()">
+                  </app-icon-button>
                 </div>
                 <div class="layout-item-body">
                   <div class="text-[11px] text-zinc-400">{{ item.width }}x{{ item.height }}</div>
@@ -118,6 +155,7 @@ export class UiFieldConfigEditorComponent {
   private dialogData = inject<any>(DIALOG_DATA, { optional: true });
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private dbProvider = inject(DbProvider);
   private uiFieldConfigService = inject(UiFieldConfigService);
 
   entityTable = '';
@@ -130,6 +168,33 @@ export class UiFieldConfigEditorComponent {
   scopeMode: 'entity' | 'parent' | 'global' = 'global';
   parentScopeOptions: ParentScopeOption[] = [];
   selectedParentScopeKey = '';
+  allowParentSelection = false;
+  parentSelectableTables: string[] = [];
+  selectedParentTable = '';
+  parentEntityItems: ParentEntityItem[] = [];
+  selectedParentEntityId = '';
+
+  get scopeModeItems(): SelectOptionItem[] {
+    const options: SelectOptionItem[] = [];
+
+    if (this.entityId) {
+      options.push({ value: 'entity', label: 'Exclusivo desta entidade' });
+    }
+
+    if (this.parentScopeOptions.length > 0 || this.allowParentSelection) {
+      options.push({ value: 'parent', label: 'Por entidade pai' });
+    }
+
+    options.push({ value: 'global', label: 'Global da entidade' });
+    return options;
+  }
+
+  get parentScopeItems(): SelectOptionItem[] {
+    return this.parentScopeOptions.map((option) => ({
+      value: `${option.parentEntityTable}:${option.parentEntityId}`,
+      label: option.label,
+    }));
+  }
 
   private draggingToken = '';
 
@@ -167,6 +232,21 @@ export class UiFieldConfigEditorComponent {
     const parentTable = this.dialogData?.parentEntityTable ?? queryMap.get('parentEntityTable');
     const parentId = this.dialogData?.parentEntityId ?? queryMap.get('parentEntityId');
     const parentLabel = this.dialogData?.parentLabel ?? queryMap.get('parentLabel');
+    this.allowParentSelection = !!this.dialogData?.allowParentSelection;
+
+    if (this.allowParentSelection) {
+      const ignored = new Set([
+        'Personalization', 'Image', 'DynamicField', 'DynamicFieldValue', 'Document',
+        'UiFieldConfig', 'LocationCategory', 'Relationship', 'GlobalParameter', 'OrganizationType', 'Link'
+      ]);
+
+      this.parentSelectableTables = schema
+        .map((tableDef) => tableDef.name)
+        .filter((name) => !ignored.has(name));
+
+      this.selectedParentTable = parentTable || this.parentSelectableTables[0] || '';
+      this.loadParentEntities(this.selectedParentTable);
+    }
 
     if (parentTable && parentId) {
       this.parentScopeOptions = [{
@@ -175,6 +255,8 @@ export class UiFieldConfigEditorComponent {
         label: parentLabel ?? `${parentTable} (${parentId})`,
       }];
       this.selectedParentScopeKey = `${parentTable}:${parentId}`;
+      this.selectedParentTable = parentTable;
+      this.selectedParentEntityId = parentId;
     }
 
     const requestedScopeMode = this.dialogData?.scopeMode as 'entity' | 'parent' | 'global' | undefined;
@@ -205,6 +287,11 @@ export class UiFieldConfigEditorComponent {
 
   allowDrop(event: DragEvent): void {
     event.preventDefault();
+  }
+
+  onParentTableChange(tableName: string): void {
+    this.selectedParentTable = tableName;
+    this.loadParentEntities(tableName);
   }
 
   onCatalogDragStart(event: DragEvent, token: string): void {
@@ -242,10 +329,11 @@ export class UiFieldConfigEditorComponent {
   }
 
   startMove(event: MouseEvent, item: UiFieldLayoutItem): void {
-    if ((event.target as HTMLElement).classList.contains('resize-handle-right') ||
-      (event.target as HTMLElement).classList.contains('resize-handle-bottom') ||
-      (event.target as HTMLElement).classList.contains('resize-handle-corner') ||
-      (event.target as HTMLElement).classList.contains('layout-remove')) {
+    const target = event.target as HTMLElement;
+    if (target.closest('.resize-handle-right') ||
+      target.closest('.resize-handle-bottom') ||
+      target.closest('.resize-handle-corner') ||
+      target.closest('.layout-remove')) {
       return;
     }
 
@@ -390,9 +478,18 @@ export class UiFieldConfigEditorComponent {
     }
 
     if (this.scopeMode === 'parent') {
-      const selected = this.parentScopeOptions.find((option) => (
+      let selected = this.parentScopeOptions.find((option) => (
         `${option.parentEntityTable}:${option.parentEntityId}` === this.selectedParentScopeKey
       ));
+
+      if (!selected && this.allowParentSelection && this.selectedParentTable && this.selectedParentEntityId) {
+        const parentItem = this.parentEntityItems.find((item) => item.id === this.selectedParentEntityId);
+        selected = {
+          parentEntityTable: this.selectedParentTable,
+          parentEntityId: this.selectedParentEntityId,
+          label: parentItem?.label || `${this.selectedParentTable} (${this.selectedParentEntityId})`,
+        };
+      }
 
       if (!selected) {
         return;
@@ -423,6 +520,67 @@ export class UiFieldConfigEditorComponent {
   private getDefaultHeight(token: string): number {
     const catalogItem = this.catalog.find((item) => item.token === token);
     return catalogItem?.isEditorField ? 6 : 1;
+  }
+
+  private loadParentEntities(tableName: string): void {
+    if (!tableName) {
+      this.parentEntityItems = [];
+      this.selectedParentEntityId = '';
+      return;
+    }
+
+    const db = this.dbProvider.getDb<any>();
+    const labelColumn = this.getPreferredLabelColumn(tableName);
+
+    let sql = '';
+    if (labelColumn) {
+      sql = `SELECT id, "${labelColumn}" as label FROM "${tableName}" ORDER BY "${labelColumn}" COLLATE NOCASE`;
+    } else {
+      sql = `SELECT id FROM "${tableName}" ORDER BY id`;
+    }
+
+    const result = db.exec(sql);
+    if (!result.length) {
+      this.parentEntityItems = [];
+      this.selectedParentEntityId = '';
+      return;
+    }
+
+    const columns = result[0].columns;
+    this.parentEntityItems = result[0].values.map((row: unknown[]) => {
+      const id = String(row[columns.indexOf('id')]);
+      const labelRaw = columns.includes('label') ? row[columns.indexOf('label')] : null;
+      return {
+        id,
+        label: labelRaw ? String(labelRaw) : id,
+      };
+    });
+
+    const previousSelected = this.selectedParentEntityId;
+    this.selectedParentEntityId = this.parentEntityItems.some((item) => item.id === previousSelected)
+      ? previousSelected
+      : (this.parentEntityItems[0]?.id || '');
+  }
+
+  private getPreferredLabelColumn(tableName: string): string | null {
+    const db = this.dbProvider.getDb<any>();
+    const pragma = db.exec(`PRAGMA table_info("${tableName}")`);
+    if (!pragma.length) {
+      return null;
+    }
+
+    const nameIndex = pragma[0].columns.indexOf('name');
+    const cols = pragma[0].values.map((row: unknown[]) => String(row[nameIndex]));
+
+    if (cols.includes('name')) {
+      return 'name';
+    }
+
+    if (cols.includes('title')) {
+      return 'title';
+    }
+
+    return null;
   }
 }
 

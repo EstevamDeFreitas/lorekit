@@ -442,6 +442,7 @@ export class SettingsComponent implements OnInit{
       data: {
         entityTable: this.selectedFieldConfigTable,
         scopeMode: 'global',
+        allowParentSelection: true,
       },
     });
   }
