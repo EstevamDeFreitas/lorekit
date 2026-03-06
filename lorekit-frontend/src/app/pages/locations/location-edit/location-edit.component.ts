@@ -81,15 +81,13 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
             }
           </div>
         </div>
-        @if (showLateralMenu()) {
-          <div class="w-70">
-            @if (!isLoading){
-              <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
-                <app-entity-lateral-menu [fields]="fields" (onSave)="onFieldsSave($event)" entityTable="Location" [entityId]="location.id"></app-entity-lateral-menu>
-              </div>
-            }
-          </div>
-        }
+        <div class="w-70">
+          @if (!isLoading){
+            <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
+              <app-entity-lateral-menu [fields]="fields" (onSave)="onFieldsSave($event)" entityTable="Location" [entityId]="location.id"></app-entity-lateral-menu>
+            </div>
+          }
+        </div>
       </div>
     </div>
   `,

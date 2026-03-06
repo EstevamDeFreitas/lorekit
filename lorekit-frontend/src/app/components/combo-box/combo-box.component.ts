@@ -12,7 +12,7 @@ import { NgClass } from '@angular/common';
         [(ngModel)]="comboValue"
         [ngClass]="'text-' + size()"
 
-        class="rounded-lg px-3 py-2 bg-zinc-925 border-zinc-800 border transition focus:outline-none focus:border-zinc-100 focus:bg-zinc-925  focus:border-1"
+        class="rounded-lg px-3 py-2 text-sm bg-zinc-925 border-zinc-800 border transition focus:outline-none focus:border-zinc-100 focus:bg-zinc-925  focus:border-1"
       >
         <option value="" disabled selected hidden>{{ placeholder() }}</option>
         <option [ngValue]="null">-- Nenhum --</option>

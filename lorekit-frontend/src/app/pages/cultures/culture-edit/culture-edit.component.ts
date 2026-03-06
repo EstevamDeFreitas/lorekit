@@ -70,11 +70,11 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
                     </div>
                     <div class="grid grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label class="mb-1 text-sm text-white">Tradições</label>
+                        <label class="mb-1 text-xs text-white">Tradições</label>
                         <app-editor [entityId]="culture.id" docTitle="Tradições" entityTable="Culture" [entityName]="culture.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.traditions || ''" (saveDocument)="onEditorSave($event, 'traditions')"></app-editor>
                       </div>
                       <div>
-                        <label class="mb-1 text-sm text-white">Estrutura Social</label>
+                        <label class="mb-1 text-xs text-white">Estrutura Social</label>
                         <app-editor [entityId]="culture.id" docTitle="Estrutura Social" entityTable="Culture" [entityName]="culture.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.socialStructure || ''" (saveDocument)="onEditorSave($event, 'socialStructure')"></app-editor>
                       </div>
                     </div>
