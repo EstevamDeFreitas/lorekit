@@ -10,24 +10,20 @@ import { Culture } from '../../../models/culture.model';
 import { World } from '../../../models/world.model';
 import { Location } from '../../../models/location.model';
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
-import { NgClass, NgStyle } from '@angular/common';
+import { NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { EntityLateralMenuComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
-import { InputComponent } from '../../../components/input/input.component';
 import { PersonalizationButtonComponent } from '../../../components/personalization-button/personalization-button.component';
 import { SafeDeleteButtonComponent } from '../../../components/safe-delete-button/safe-delete-button.component';
-import { TextAreaComponent } from '../../../components/text-area/text-area.component';
-import { LocationListComponent } from '../../locations/location-list/location-list.component';
-import { SpecieListComponent } from '../../species/specie-list/specie-list.component';
-import { DynamicFieldsComponent } from "../../../components/DynamicFields/DynamicFields.component";
-import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
+import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
+import { CultureConfiguredFieldsComponent } from '../culture-configured-fields/culture-configured-fields.component';
 
 @Component({
   selector: 'app-culture-edit',
-  imports: [InputComponent, IconButtonComponent, PersonalizationButtonComponent, NgClass, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, LocationListComponent, SpecieListComponent, TextAreaComponent, DynamicFieldsComponent, EntityTransferButtonComponent, NavButtonComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, CultureConfiguredFieldsComponent],
   template: `
     <div class="flex flex-col relative">
       @if(getImageByUsageKey(culture.Images, 'default') != null){
@@ -48,6 +44,14 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
         <input type="text" (blur)="saveCulture()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="culture.name" />
         <div class="flex flex-row gap-2">
           <!-- <app-entity-transfer-button [entityId]="culture.id" [entityTable]="'Culture'" [size]="'xl'"></app-entity-transfer-button> -->
+          <app-ui-field-config-button
+            [entityTable]="'Culture'"
+            [entityId]="culture.id"
+            [parentEntityTable]="selectedWorldId ? 'World' : null"
+            [parentEntityId]="selectedWorldId"
+            [parentLabel]="culture.ParentWorld ? ('Mundo: ' + culture.ParentWorld.name) : null"
+            [backRoute]="'/app/culture/edit/' + culture.id">
+          </app-ui-field-config-button>
           <app-personalization-button [entityId]="culture.id" [entityTable]="'Culture'" [size]="'xl'" (onClose)="getCulture()"></app-personalization-button>
           <app-safe-delete-button [entityName]="culture.name" [entityId]="culture.id" [entityTable]="'Culture'" [size]="'xl'"></app-safe-delete-button>
         </div>
@@ -63,34 +67,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
               @switch (currentTab) {
                 @case ('properties') {
                   <div class="w-full flex-1 p-1">
-                    <div class="grid grid-cols-3 gap-4 mb-4">
-                      <app-input [label]="'Valores'" [(value)]="culture.values" (valueChange)="saveCulture()"></app-input>
-                      <app-input [label]="'Nível Tecnológico'" [(value)]="culture.technologyLevel" (valueChange)="saveCulture()"></app-input>
-                      <app-input [label]="'Linguagem'" [(value)]="culture.language" (valueChange)="saveCulture()"></app-input>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label class="mb-1 text-xs text-white">Tradições</label>
-                        <app-editor [entityId]="culture.id" docTitle="Tradições" entityTable="Culture" [entityName]="culture.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.traditions || ''" (saveDocument)="onEditorSave($event, 'traditions')"></app-editor>
-                      </div>
-                      <div>
-                        <label class="mb-1 text-xs text-white">Estrutura Social</label>
-                        <app-editor [entityId]="culture.id" docTitle="Estrutura Social" entityTable="Culture" [entityName]="culture.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.socialStructure || ''" (saveDocument)="onEditorSave($event, 'socialStructure')"></app-editor>
-                      </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                      <div>
-                        <label class="mb-1 text-sm text-white">Crenças</label>
-                        <app-editor [entityId]="culture.id" docTitle="Crenças" entityTable="Culture" [entityName]="culture.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.beliefSystems || ''" (saveDocument)="onEditorSave($event, 'beliefSystems')"></app-editor>
-                      </div>
-                      <div>
-                        <label class="mb-1 text-sm text-white">Práticas Culinárias</label>
-                        <app-editor [entityId]="culture.id" docTitle="Práticas Culinárias" entityTable="Culture" [entityName]="culture.name" class="rounded-lg border border-zinc-800 bg-zinc-925 h-96 overflow-y-auto scrollbar-dark" [document]="culture.culinaryPractices || ''" (saveDocument)="onEditorSave($event, 'culinaryPractices')"></app-editor>
-                      </div>
-                    </div>
-                    <br>
-                    <app-dynamic-fields [entityTable]="'Culture'" [entityId]="culture.id"></app-dynamic-fields>
-                    <br>
+                    <app-culture-configured-fields [culture]="culture" (requestSave)="saveCulture()"></app-culture-configured-fields>
                   </div>
                 }
                 @case ('description') {

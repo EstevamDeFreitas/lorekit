@@ -44,20 +44,21 @@ export class DynamicFieldService {
         this.crud.update('DynamicFieldValue', value.id, value);
       } else {
         let parent = value.ParentDynamicField;
-        value = <DynamicFieldValue>this.crud.create('DynamicFieldValue', value);
+        const created = <DynamicFieldValue>this.crud.create('DynamicFieldValue', value);
+        value.id = created.id;
 
         this.crud.create('Relationship', {
           parentTable: entityTable,
           parentId: entityId,
           entityTable: 'DynamicFieldValue',
-          entityId: value.id
+          entityId: created.id
         });
 
         this.crud.create('Relationship', {
           parentTable: "DynamicField",
           parentId: parent?.id,
           entityTable: 'DynamicFieldValue',
-          entityId: value.id
+          entityId: created.id
         });
       }
     });

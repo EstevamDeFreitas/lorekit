@@ -187,5 +187,20 @@ export const schema: TableDef[] = [
       { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
       { name: "value",       def: `"value" TEXT` },
     ]
+  },
+  {
+    name:"UiFieldConfig",
+    columns:[
+      { name: "id",                def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "uiConfig",          def: `"uiConfig" TEXT NOT NULL` },
+      { name: "entityTable",       def: `"entityTable" TEXT NOT NULL` },
+      { name: "entityId",          def: `"entityId" TEXT` },
+      { name: "parentEntityTable", def: `"parentEntityTable" TEXT` },
+      { name: "parentEntityId",    def: `"parentEntityId" TEXT` },
+    ],
+    indexes: [
+      `CREATE INDEX IF NOT EXISTS "idx_ui_field_config_entity" ON "UiFieldConfig" ("entityTable", "entityId")`,
+      `CREATE INDEX IF NOT EXISTS "idx_ui_field_config_parent" ON "UiFieldConfig" ("entityTable", "parentEntityTable", "parentEntityId")`,
+    ]
   }
 ];

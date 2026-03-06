@@ -92,6 +92,17 @@ export const routes: Routes = [
           import('./pages/relations/relation-graph/relation-graph.component')
             .then(m => m.RelationGraphComponent),
       },
+      {
+        path: 'ui-field-config',
+        children: [
+          {
+            path: 'edit',
+            loadComponent: () =>
+              import('./pages/ui-field-config/ui-field-config-editor/ui-field-config-editor.component')
+                .then(m => m.UiFieldConfigEditorComponent),
+          },
+        ]
+      },
     ]
   }
 
