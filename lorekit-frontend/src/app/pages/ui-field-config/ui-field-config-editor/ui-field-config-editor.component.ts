@@ -9,6 +9,7 @@ import { schema } from '../../../database/schema';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialog.component';
 
 interface ParentScopeOption {
   parentEntityTable: string;
@@ -83,9 +84,15 @@ interface SelectOptionItem {
           </app-combo-box>
         }
 
-        <div class="flex flex-row gap-2 ms-auto">
-          <app-button label="Padrao do Sistema" buttonType="secondary" size="xs" (click)="resetToDefault()"></app-button>
-          <app-button label="Salvar Layout" buttonType="primary" size="xs" (click)="save()"></app-button>
+        <div class="flex flex-col items-end gap-1 ms-auto">
+          <div class="flex flex-row gap-2">
+            <app-button label="Padrao do Sistema" buttonType="secondary" size="xs" (click)="confirmResetToDefault()"></app-button>
+            <app-button label="Salvar Layout" buttonType="primary" size="xs" (click)="save()"></app-button>
+          </div>
+
+          @if (noticeMessage) {
+            <span class="text-xs text-emerald-300">{{ noticeMessage }}</span>
+          }
         </div>
       </div>
 
@@ -157,6 +164,7 @@ export class UiFieldConfigEditorComponent {
   private router = inject(Router);
   private dbProvider = inject(DbProvider);
   private uiFieldConfigService = inject(UiFieldConfigService);
+  private confirmService = inject(ConfirmService);
 
   entityTable = '';
   entityId: string | null = null;
@@ -173,6 +181,8 @@ export class UiFieldConfigEditorComponent {
   selectedParentTable = '';
   parentEntityItems: ParentEntityItem[] = [];
   selectedParentEntityId = '';
+  noticeMessage = '';
+  private noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
   get scopeModeItems(): SelectOptionItem[] {
     const options: SelectOptionItem[] = [];
@@ -283,6 +293,11 @@ export class UiFieldConfigEditorComponent {
   ngOnDestroy(): void {
     document.removeEventListener('mousemove', this.onDocumentMouseMove);
     document.removeEventListener('mouseup', this.onDocumentMouseUp);
+
+    if (this.noticeTimer) {
+      clearTimeout(this.noticeTimer);
+      this.noticeTimer = null;
+    }
   }
 
   allowDrop(event: DragEvent): void {
@@ -450,7 +465,44 @@ export class UiFieldConfigEditorComponent {
   }
 
   resetToDefault(): void {
-    this.layout = getSystemDefaultConfig(this.entityTable);
+    if (this.scopeMode === 'entity' && this.entityId) {
+      this.uiFieldConfigService.deleteConfig({
+        entityTable: this.entityTable,
+        entityId: this.entityId,
+        scopeMode: 'entity',
+      });
+    }
+
+    if (this.scopeMode === 'parent') {
+      const selected = this.getSelectedParentScope();
+      if (selected) {
+        this.uiFieldConfigService.deleteConfig({
+          entityTable: this.entityTable,
+          scopeMode: 'parent',
+          parentEntityTable: selected.parentEntityTable,
+          parentEntityId: selected.parentEntityId,
+        });
+      }
+    }
+
+    if (this.scopeMode === 'global') {
+      this.uiFieldConfigService.deleteConfig({
+        entityTable: this.entityTable,
+        scopeMode: 'global',
+      });
+    }
+
+    this.layout = this.uiFieldConfigService.getResolvedConfig(this.entityTable, this.entityId);
+  }
+
+  async confirmResetToDefault(): Promise<void> {
+    const confirmed = await this.confirmService.ask('a configuracao sera perdida, deseja prosseguir?');
+    if (!confirmed) {
+      return;
+    }
+
+    this.resetToDefault();
+    this.showNotice('Configuracao restaurada para o padrao do sistema.');
   }
 
   save(): void {
@@ -474,22 +526,12 @@ export class UiFieldConfigEditorComponent {
         scopeMode: 'entity',
         uiConfig: cleanedLayout,
       });
+      this.showNotice('Configuracao salva.');
       return;
     }
 
     if (this.scopeMode === 'parent') {
-      let selected = this.parentScopeOptions.find((option) => (
-        `${option.parentEntityTable}:${option.parentEntityId}` === this.selectedParentScopeKey
-      ));
-
-      if (!selected && this.allowParentSelection && this.selectedParentTable && this.selectedParentEntityId) {
-        const parentItem = this.parentEntityItems.find((item) => item.id === this.selectedParentEntityId);
-        selected = {
-          parentEntityTable: this.selectedParentTable,
-          parentEntityId: this.selectedParentEntityId,
-          label: parentItem?.label || `${this.selectedParentTable} (${this.selectedParentEntityId})`,
-        };
-      }
+      const selected = this.getSelectedParentScope();
 
       if (!selected) {
         return;
@@ -502,6 +544,7 @@ export class UiFieldConfigEditorComponent {
         parentEntityId: selected.parentEntityId,
         uiConfig: cleanedLayout,
       });
+      this.showNotice('Configuracao salva.');
       return;
     }
 
@@ -510,6 +553,20 @@ export class UiFieldConfigEditorComponent {
       scopeMode: 'global',
       uiConfig: cleanedLayout,
     });
+    this.showNotice('Configuracao salva.');
+  }
+
+  private showNotice(message: string): void {
+    this.noticeMessage = message;
+
+    if (this.noticeTimer) {
+      clearTimeout(this.noticeTimer);
+    }
+
+    this.noticeTimer = setTimeout(() => {
+      this.noticeMessage = '';
+      this.noticeTimer = null;
+    }, 2400);
   }
 
   private getDefaultWidth(token: string): number {
@@ -520,6 +577,23 @@ export class UiFieldConfigEditorComponent {
   private getDefaultHeight(token: string): number {
     const catalogItem = this.catalog.find((item) => item.token === token);
     return catalogItem?.isEditorField ? 6 : 1;
+  }
+
+  private getSelectedParentScope(): ParentScopeOption | null {
+    let selected = this.parentScopeOptions.find((option) => (
+      `${option.parentEntityTable}:${option.parentEntityId}` === this.selectedParentScopeKey
+    ));
+
+    if (!selected && this.allowParentSelection && this.selectedParentTable && this.selectedParentEntityId) {
+      const parentItem = this.parentEntityItems.find((item) => item.id === this.selectedParentEntityId);
+      selected = {
+        parentEntityTable: this.selectedParentTable,
+        parentEntityId: this.selectedParentEntityId,
+        label: parentItem?.label || `${this.selectedParentTable} (${this.selectedParentEntityId})`,
+      };
+    }
+
+    return selected ?? null;
   }
 
   private loadParentEntities(tableName: string): void {

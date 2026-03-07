@@ -108,6 +108,24 @@ export class UiFieldConfigService {
     return created as UiFieldConfig;
   }
 
+  deleteConfig(options: {
+    entityTable: string;
+    scopeMode: ScopeMode;
+    entityId?: string | null;
+    parentEntityTable?: string | null;
+    parentEntityId?: string | null;
+  }): boolean {
+    const rowToDelete = this.buildScopeRow(options);
+    const existing = this.findExistingByScope(rowToDelete);
+
+    if (!existing) {
+      return false;
+    }
+
+    this.crud.deleteWhen('UiFieldConfig', { id: existing.id });
+    return true;
+  }
+
   private buildScopeRow(options: {
     entityTable: string;
     scopeMode: ScopeMode;
