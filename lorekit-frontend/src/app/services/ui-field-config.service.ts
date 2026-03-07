@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { DbProvider } from '../app.config';
 import { CrudHelper } from '../database/database.helper';
 import { UiConfigPayload, UiFieldCatalogItem, UiFieldConfig } from '../models/ui-field-config.model';
+import { DynamicField } from '../models/dynamicfields.model';
 import { DynamicFieldService } from './dynamic-field.service';
 
 type ScopeMode = 'entity' | 'parent' | 'global';
@@ -36,6 +37,10 @@ export class UiFieldConfigService {
       }));
 
     return [...fixedFields, ...dynamicFields];
+  }
+
+  saveDynamicField(field: DynamicField): DynamicField {
+    return this.dynamicFieldService.saveDynamicField(field);
   }
 
   getResolvedConfig(entityTable: string, entityId: string | null): UiConfigPayload {

@@ -4,12 +4,14 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem } from '../../../models/ui-field-config.model';
 import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
+import { DynamicField } from '../../../models/dynamicfields.model';
 import { DbProvider } from '../../../app.config';
 import { schema } from '../../../database/schema';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { InputComponent } from '../../../components/input/input.component';
 
 interface ParentScopeOption {
   parentEntityTable: string;
@@ -29,7 +31,7 @@ interface SelectOptionItem {
 
 @Component({
   selector: 'app-ui-field-config-editor',
-  imports: [NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent],
+  imports: [NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent, InputComponent],
   template: `
     <div class="p-4 md:p-6 flex flex-col gap-4">
       <div class="flex flex-row items-center justify-between gap-3 border-b border-zinc-800 pb-4">
@@ -135,9 +137,46 @@ interface SelectOptionItem {
           </div>
         </div>
 
-        <div class="bg-zinc-900 rounded-lg border border-zinc-800 p-3">
+        <div class="bg-zinc-900 rounded-lg border border-zinc-800 p-3 h-[65vh] overflow-y-auto scrollbar-dark flex flex-col min-h-0">
+          <div class="rounded-lg border border-zinc-800 bg-zinc-925 p-3 mb-3">
+            <div class="text-sm text-zinc-200 mb-2">Novo campo dinamico</div>
+
+            <div class="flex flex-col gap-2">
+              <app-input
+                label="Nome do campo"
+                [placeholder]="'Digite o nome do campo'"
+                [(value)]="newFieldName">
+              </app-input>
+
+              <app-input
+                label="Opcoes"
+                [placeholder]="'Separe por ; (opcional)'"
+                [(value)]="newFieldOptions">
+              </app-input>
+
+              <label class="flex items-center gap-2 text-xs text-zinc-300 select-none">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 accent-emerald-500"
+                  [checked]="newFieldIsEditorField"
+                  (change)="newFieldIsEditorField = $any($event.target).checked" />
+                Campo de editor (texto longo)
+              </label>
+
+              <div class="flex justify-end">
+                <app-button
+                  label="Criar Campo"
+                  buttonType="secondary"
+                  size="xs"
+                  [disabled]="creatingDynamicField"
+                  (click)="createDynamicField()">
+                </app-button>
+              </div>
+            </div>
+          </div>
+
           <div class="text-sm text-zinc-300 mb-3">Campos disponiveis</div>
-          <div class="flex flex-col gap-2 max-h-[70vh] overflow-y-auto pr-1 scrollbar-dark">
+          <div class="flex flex-col gap-2 pr-1 min-h-0 flex-1">
             @for (field of catalog; track field.token) {
               <div
                 class="catalog-item"
@@ -181,6 +220,12 @@ export class UiFieldConfigEditorComponent {
   selectedParentTable = '';
   parentEntityItems: ParentEntityItem[] = [];
   selectedParentEntityId = '';
+
+  newFieldName = '';
+  newFieldOptions = '';
+  newFieldIsEditorField = false;
+  creatingDynamicField = false;
+
   noticeMessage = '';
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -567,6 +612,40 @@ export class UiFieldConfigEditorComponent {
       this.noticeMessage = '';
       this.noticeTimer = null;
     }, 2400);
+  }
+
+  createDynamicField(): void {
+    const name = this.newFieldName.trim();
+    if (!name) {
+      this.showNotice('Informe um nome para o campo dinamico.');
+      return;
+    }
+
+    const normalizedName = name.toLocaleLowerCase();
+    const alreadyExists = this.catalog.some((field) => (
+      field.source === 'dynamic' && field.label.toLocaleLowerCase() === normalizedName
+    ));
+
+    if (alreadyExists) {
+      this.showNotice('Ja existe um campo dinamico com esse nome.');
+      return;
+    }
+
+    this.creatingDynamicField = true;
+    try {
+      const dynamicField = new DynamicField('', name, this.entityTable, this.newFieldOptions.trim());
+      dynamicField.isEditorField = this.newFieldIsEditorField;
+
+      this.uiFieldConfigService.saveDynamicField(dynamicField);
+      this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
+
+      this.newFieldName = '';
+      this.newFieldOptions = '';
+      this.newFieldIsEditorField = false;
+      this.showNotice('Campo dinamico criado.');
+    } finally {
+      this.creatingDynamicField = false;
+    }
   }
 
   private getDefaultWidth(token: string): number {
