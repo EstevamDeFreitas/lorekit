@@ -202,5 +202,27 @@ export const schema: TableDef[] = [
       `CREATE INDEX IF NOT EXISTS "idx_ui_field_config_entity" ON "UiFieldConfig" ("entityTable", "entityId")`,
       `CREATE INDEX IF NOT EXISTS "idx_ui_field_config_parent" ON "UiFieldConfig" ("entityTable", "parentEntityTable", "parentEntityId")`,
     ]
+  },
+  {
+    name: "PluginRegistry",
+    columns: [
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "version",     def: `"version" TEXT NOT NULL` },
+      { name: "status",      def: `"status" TEXT NOT NULL` },
+      { name: "installedAt", def: `"installedAt" TEXT NOT NULL` },
+      { name: "source",      def: `"source" TEXT` },
+      { name: "checksum",    def: `"checksum" TEXT` },
+    ]
+  },
+  {
+    name: "PluginSetting",
+    columns: [
+      { name: "pluginId", def: `"pluginId" TEXT NOT NULL` },
+      { name: "key",      def: `"key" TEXT NOT NULL` },
+      { name: "value",    def: `"value" TEXT` },
+    ],
+    indexes: [
+      `CREATE UNIQUE INDEX IF NOT EXISTS "idx_plugin_setting_plugin_key" ON "PluginSetting" ("pluginId", "key")`
+    ]
   }
 ];
