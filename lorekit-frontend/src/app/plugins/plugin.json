@@ -1,0 +1,11 @@
+{
+  "id": "sample-plugin",
+  "name": "Sample Plugin",
+  "version": "1.0.0",
+  "minLorekitVersion": "0.1.0",
+  "entrypoint": "plugins/sample/index.js",
+  "migrations": [],
+  "permissions": [
+    "database:read"
+  ]
+}

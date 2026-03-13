@@ -8,6 +8,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { tokenInterceptor } from './interceptors/token.interceptor';
 import { TW500C, TW700C, TWZINC } from './theme/tailwind-classes';
 import { CrudHelper, openDbAndEnsureSchema } from './database/database.helper';
+import { PluginRegistryService } from './services/plugin-registry.service';
 
 export class DbProvider {
   private db: any | null = null;
@@ -32,6 +33,9 @@ export const appConfig: ApplicationConfig = {
       const dbProvider = inject(DbProvider);
       const db = await openDbAndEnsureSchema();
       dbProvider.setDb(db);
+
+      const pluginRegistryService = inject(PluginRegistryService);
+      pluginRegistryService.loadEnabledPlugins();
     }),
   ]
 };
