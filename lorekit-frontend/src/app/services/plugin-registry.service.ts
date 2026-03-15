@@ -3,6 +3,8 @@ import { CrudHelper } from '../database/database.helper';
 import { DbProvider } from '../app.config';
 
 export const PLUGIN_LIFECYCLE_STATUSES = [
+  'cataloged',
+  'downloading',
   'downloaded',
   'installed',
   'enabled',
@@ -19,6 +21,8 @@ export interface PluginRegistryItem {
   installedAt: string;
   source?: string;
   checksum?: string;
+  lastError?: string;
+  appVersion?: string;
 }
 
 @Injectable({
@@ -53,6 +57,30 @@ export class PluginRegistryService {
 
     this.crud.create('PluginRegistry', payload);
     return payload;
+  }
+
+  markPluginDownloading(plugin: Pick<PluginRegistryItem, 'id' | 'version'> & { source?: string; appVersion?: string }): void {
+    this.registerPlugin({
+      ...plugin,
+      status: 'downloading',
+      installedAt: new Date().toISOString(),
+      lastError: ''
+    });
+  }
+
+  markPluginDownloaded(pluginId: string, checksum: string): void {
+    this.crud.update('PluginRegistry', pluginId, {
+      status: 'downloaded',
+      checksum,
+      lastError: ''
+    });
+  }
+
+  markPluginFailed(pluginId: string, errorMessage: string): void {
+    this.crud.update('PluginRegistry', pluginId, {
+      status: 'failed',
+      lastError: errorMessage,
+    });
   }
 
   updatePluginStatus(pluginId: string, status: PluginLifecycleStatus): void {

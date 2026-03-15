@@ -212,6 +212,8 @@ export const schema: TableDef[] = [
       { name: "installedAt", def: `"installedAt" TEXT NOT NULL` },
       { name: "source",      def: `"source" TEXT` },
       { name: "checksum",    def: `"checksum" TEXT` },
+      { name: "lastError",   def: `"lastError" TEXT` },
+      { name: "appVersion",  def: `"appVersion" TEXT` },
     ]
   },
   {
