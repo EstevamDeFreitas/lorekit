@@ -9,28 +9,6 @@ export type TableDef = {
 
 export const schema: TableDef[] = [
   {
-    name: "PluginRuntimeState",
-    columns: [
-      { name: "pluginId", def: `"pluginId" TEXT NOT NULL PRIMARY KEY` },
-      { name: "status", def: `"status" TEXT NOT NULL` },
-      { name: "enabled", def: `"enabled" INTEGER NOT NULL DEFAULT 0` },
-      { name: "lastError", def: `"lastError" TEXT` },
-      { name: "updatedAt", def: `"updatedAt" TEXT NOT NULL` },
-    ]
-  },
-  {
-    name: "PluginMigrationHistory",
-    columns: [
-      { name: "pluginId", def: `"pluginId" TEXT NOT NULL` },
-      { name: "migrationId", def: `"migrationId" TEXT NOT NULL` },
-      { name: "appliedAt", def: `"appliedAt" TEXT NOT NULL` },
-    ],
-    indexes: [
-      `CREATE UNIQUE INDEX IF NOT EXISTS "idx_plugin_migration_history_unique" ON "PluginMigrationHistory" ("pluginId", "migrationId")`,
-      `CREATE INDEX IF NOT EXISTS "idx_plugin_migration_history_plugin" ON "PluginMigrationHistory" ("pluginId", "appliedAt")`,
-    ]
-  },
-  {
     name: "World",
     columns: [
       { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
