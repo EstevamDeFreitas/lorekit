@@ -1,11 +1,106 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
+const crypto = require('crypto');
 const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
 let updateWindow; // ADDED
 let hasOpenedMain = false; // ADDED: evita abrir múltiplas janelas
+
+function sanitizePathSegment(value, fallback = 'plugin') {
+  const cleaned = String(value || '').trim().replace(/[^a-zA-Z0-9._-]/g, '-');
+  return cleaned || fallback;
+}
+
+function downloadPluginPackage({ requestId, pluginId, version, url, expectedChecksum }, event) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.protocol !== 'https:') {
+        reject(new Error('PLUGIN_DOWNLOAD_INVALID_PROTOCOL'));
+        return;
+      }
+
+      const pluginsDir = path.join(app.getPath('userData'), 'plugins');
+      await fs.promises.mkdir(pluginsDir, { recursive: true });
+
+      const safePluginId = sanitizePathSegment(pluginId, 'plugin');
+      const safeVersion = sanitizePathSegment(version, 'latest');
+      const destinationPath = path.join(pluginsDir, `${safePluginId}-${safeVersion}.zip`);
+      const tempPath = `${destinationPath}.part`;
+
+      const hash = crypto.createHash('sha256');
+      let downloadedBytes = 0;
+      let expectedBytes = 0;
+
+      const request = https.get(parsedUrl, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`PLUGIN_DOWNLOAD_HTTP_${response.statusCode}`));
+          response.resume();
+          return;
+        }
+
+        expectedBytes = Number(response.headers['content-length'] || 0);
+        const fileStream = fs.createWriteStream(tempPath);
+
+        response.on('data', (chunk) => {
+          downloadedBytes += chunk.length;
+          hash.update(chunk);
+          event.sender.send('plugins:download-progress', {
+            requestId,
+            pluginId,
+            downloadedBytes,
+            totalBytes: expectedBytes,
+            progress: expectedBytes > 0 ? Math.min(downloadedBytes / expectedBytes, 1) : 0,
+          });
+        });
+
+        response.on('error', async (streamError) => {
+          fileStream.close();
+          await fs.promises.rm(tempPath, { force: true });
+          reject(streamError);
+        });
+
+        fileStream.on('error', async (fileError) => {
+          request.destroy(fileError);
+          await fs.promises.rm(tempPath, { force: true });
+          reject(fileError);
+        });
+
+        response.pipe(fileStream);
+
+        fileStream.on('finish', async () => {
+          try {
+            fileStream.close();
+            if (expectedBytes > 0 && downloadedBytes !== expectedBytes) {
+              throw new Error('PLUGIN_DOWNLOAD_INCOMPLETE');
+            }
+
+            const calculatedChecksum = hash.digest('hex');
+            if (expectedChecksum && calculatedChecksum !== String(expectedChecksum).toLowerCase()) {
+              throw new Error('PLUGIN_DOWNLOAD_CHECKSUM_INVALID');
+            }
+
+            await fs.promises.rename(tempPath, destinationPath);
+            resolve({ pluginId, destinationPath, checksum: calculatedChecksum, downloadedBytes });
+          } catch (error) {
+            await fs.promises.rm(tempPath, { force: true });
+            reject(error);
+          }
+        });
+      });
+
+      request.on('error', async (requestError) => {
+        await fs.promises.rm(tempPath, { force: true });
+        reject(requestError);
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
 
 function registerIpc() {
   ipcMain.handle('get-db-path', () => {
@@ -13,6 +108,9 @@ function registerIpc() {
   });
   ipcMain.handle('get-image-path', () => {
     return path.join(app.getPath('userData'), 'images');
+  });
+  ipcMain.handle('plugins:download', async (event, payload) => {
+    return downloadPluginPackage(payload, event);
   });
   ipcMain.handle('read-file', async (_e, filePath) => {
     try {

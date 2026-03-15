@@ -1,0 +1,31 @@
+{
+  "updatedAt": "2026-01-15T12:00:00.000Z",
+  "catalogSignature": "sha256:demo-catalog-signature",
+  "plugins": [
+    {
+      "id": "tailwind-tools",
+      "name": "Tailwind Tools",
+      "version": "1.2.0",
+      "description": "Pacote de formatação com utilitários adicionais para editor de documentos.",
+      "author": "Lorekit Team",
+      "minAppVersion": "0.13.0",
+      "maxAppVersion": "1.0.0",
+      "downloadUrl": "https://plugins.lorekit.app/tailwind-tools-1.2.0.zip",
+      "checksum": "5f70bf18a086007016e948b04aed3b82103a36beea4f53e819f45f4e4f3bcf0f",
+      "signature": "sig:tailwind-tools-1.2.0",
+      "changelog": "Adiciona novos botões de estilo e melhorias no parser markdown."
+    },
+    {
+      "id": "timeline-view",
+      "name": "Timeline View",
+      "version": "0.9.1",
+      "description": "Visualização temporal para eventos e personagens com filtros rápidos.",
+      "author": "Lorekit Labs",
+      "minAppVersion": "0.12.0",
+      "downloadUrl": "https://plugins.lorekit.app/timeline-view-0.9.1.zip",
+      "checksum": "5f70bf18a086007016e948b04aed3b82103a36beea4f53e819f45f4e4f3bcf0f",
+      "signature": "sig:timeline-view-0.9.1",
+      "changelog": "Primeira versão pública do plugin de timeline."
+    }
+  ]
+}

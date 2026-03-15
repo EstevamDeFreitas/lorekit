@@ -1,15 +1,13 @@
 import { DialogRef } from '@angular/cdk/dialog';
 import { Dialog } from '@angular/cdk/dialog';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
-import { LocationService } from '../../../services/location.service';
 import { LocationCategory } from '../../../models/location.model';
-import { InputComponent } from "../../../components/input/input.component";
-import {OverlayModule} from '@angular/cdk/overlay';
+import { OverlayModule } from '@angular/cdk/overlay';
 import { LocationCategoriesService } from '../../../services/location-categories.service';
-import { FormOverlayComponent, FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
+import { FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
 import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { GlobalParameterService } from '../../../services/global-parameter.service';
 import { FormsModule } from '@angular/forms';
@@ -19,8 +17,10 @@ import { schema } from '../../../database/schema';
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DynamicField } from '../../../models/dynamicfields.model';
-import { ElectronService } from '../../../services/electron.service';
+import { ElectronService, PluginDownloadProgress } from '../../../services/electron.service';
 import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-config-editor/ui-field-config-editor.component';
+import { PluginCatalogEntry, PluginMarketplaceService } from '../../../services/plugin-marketplace.service';
+import { PluginRegistryService } from '../../../services/plugin-registry.service';
 
 @Component({
   selector: 'app-settings',
@@ -37,6 +37,7 @@ import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-con
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('organization_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'organization_types'}">Tipos de Organização</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('dynamic_fields')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'dynamic_fields'}">Campos Dinâmicos</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('global_field_config')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'global_field_config'}">Campos Globais</a>
+          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('plugin_marketplace')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'plugin_marketplace'}">Marketplace de Plugins</a>
         </div>
       </div>
       <div class="flex-1 p-4 h-[60vh] bg-zinc-900 overflow-y-auto scrollbar-dark">
@@ -90,21 +91,19 @@ import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-con
               <p>Ao exportar textos, considerar o formato:</p>
               <div class="border border-zinc-700 rounded-md p-2">
                 <div class="flex flex-row gap-6">
-                  <div class="flex flex-row items-center gap-2">
-                    <input type="radio" id="txtFormat" name="exportTextFormat" value="txt" [(ngModel)]="exportTextFormat" (ngModelChange)="globalParameterService.setParameter('exportTextFormat', exportTextFormat)">
-                    <label for="txtFormat">.txt (Texto simples)</label>
+                  <div class="flex flex-row gap-2">
+                    <input type="radio" name="format" value="txt" [checked]="exportTextFormat === 'txt'" (change)="setExportTextFormat('txt')">
+                    <span>.txt</span>
                   </div>
-                  <div class="flex flex-row gap-4">
-                    <div class="flex flex-row items-center gap-2">
-                      <input type="radio" id="mdFormat" name="exportTextFormat" value="md" [(ngModel)]="exportTextFormat" (ngModelChange)="globalParameterService.setParameter('exportTextFormat', exportTextFormat)">
-                      <label for="mdFormat">.md (Markdown)</label>
-                    </div>
+                  <div class="flex flex-row gap-2">
+                    <input type="radio" name="format" value="md" [checked]="exportTextFormat === 'md'" (change)="setExportTextFormat('md')">
+                    <span>.md</span>
                   </div>
                 </div>
               </div>
             </div>
           }
-          @case ("organization_types") {
+          @case ('organization_types') {
             <div>
               <div class="flex flex-row justify-between items-center mb-4">
                 <h3 class="text-base mb-2">Tipos de Organização</h3>
@@ -230,6 +229,67 @@ import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-con
               </div>
             </div>
           }
+          @case ('plugin_marketplace') {
+            <div>
+              <div class="flex justify-between items-center mb-3">
+                <h3 class="text-base">Marketplace de Plugins</h3>
+                <app-button label="Atualizar catálogo" buttonType="secondary" size="xs" icon="fa-solid fa-rotate" (click)="loadPluginCatalog()"></app-button>
+              </div>
+              @if (catalogError) {
+                <p class="text-sm text-red-400 mb-3">{{ catalogError }}</p>
+              }
+              <div class="grid grid-cols-[260px_1fr] gap-4 h-[45vh]">
+                <div class="border border-zinc-700 rounded-md overflow-y-auto">
+                  @for (plugin of catalogPlugins; track plugin.id) {
+                    <button class="w-full text-left p-3 border-b border-zinc-800 hover:bg-zinc-800/60" [ngClass]="{'bg-yellow-300/10': selectedPlugin?.id === plugin.id}" (click)="selectPlugin(plugin)">
+                      <div class="font-semibold">{{ plugin.name }}</div>
+                      <div class="text-xs text-zinc-400">v{{ plugin.version }} • {{ plugin.author }}</div>
+                    </button>
+                  }
+                  @empty {
+                    <p class="p-3 text-sm text-zinc-400">Nenhum plugin no catálogo.</p>
+                  }
+                </div>
+
+                <div class="border border-zinc-700 rounded-md p-4">
+                  @if (selectedPlugin) {
+                    <h4 class="text-lg">{{ selectedPlugin.name }} <span class="text-zinc-400 text-sm">v{{ selectedPlugin.version }}</span></h4>
+                    <p class="text-sm text-zinc-300 mt-2">{{ selectedPlugin.description }}</p>
+                    <p class="text-xs text-zinc-400 mt-2">Compatível com app {{ selectedPlugin.minAppVersion }} - {{ selectedPlugin.maxAppVersion || 'latest' }}</p>
+                    <p class="text-xs text-zinc-500 mt-2">Assinatura catálogo: {{ selectedPlugin.signature }}</p>
+
+                    @if (selectedPlugin.changelog) {
+                      <p class="text-xs text-zinc-400 mt-3">{{ selectedPlugin.changelog }}</p>
+                    }
+
+                    @if (getInstallationState(selectedPlugin.id)) {
+                      <p class="text-xs mt-3" [ngClass]="getInstallationState(selectedPlugin.id)?.status === 'failed' ? 'text-red-400' : 'text-zinc-300'">
+                        Status: {{ getInstallationState(selectedPlugin.id)?.status }}
+                        @if (getInstallationState(selectedPlugin.id)?.lastError) {
+                          • {{ getInstallationState(selectedPlugin.id)?.lastError }}
+                        }
+                      </p>
+                    }
+
+                    @if (installProgressByPlugin[selectedPlugin.id] !== undefined) {
+                      <div class="mt-3">
+                        <div class="h-2 w-full rounded bg-zinc-800 overflow-hidden">
+                          <div class="h-full bg-yellow-500" [style.width.%]="(installProgressByPlugin[selectedPlugin.id] || 0) * 100"></div>
+                        </div>
+                        <p class="text-xs text-zinc-400 mt-1">Progresso: {{ ((installProgressByPlugin[selectedPlugin.id] || 0) * 100).toFixed(0) }}%</p>
+                      </div>
+                    }
+
+                    <div class="mt-4">
+                      <app-button label="Instalar" buttonType="primary" size="sm" icon="fa-solid fa-download" (click)="installSelectedPlugin()"></app-button>
+                    </div>
+                  } @else {
+                    <p class="text-sm text-zinc-400">Selecione um plugin para ver os detalhes.</p>
+                  }
+                </div>
+              </div>
+            </div>
+          }
         }
 
       </div>
@@ -242,69 +302,165 @@ import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-con
   `,
   styleUrl: './settings.component.css',
 })
-export class SettingsComponent implements OnInit{
+export class SettingsComponent implements OnInit, OnDestroy {
   dialogref = inject<DialogRef<any>>(DialogRef<any>);
   confirm = inject<ConfirmService>(ConfirmService);
   globalParameterService = inject(GlobalParameterService);
   organizationTypeService = inject(OrganizationTypeService);
   dynamicFieldService = inject(DynamicFieldService);
   private dialog = inject(Dialog);
+  private marketplaceService = inject(PluginMarketplaceService);
+  private pluginRegistryService = inject(PluginRegistryService);
 
   currentTab: string = '';
-
   locationCategories: LocationCategory[] = [];
   creatingCategory: boolean = false;
+  exportTextFormat: 'md' | 'txt' = 'txt';
 
-  categoryFormFields : FormField[] = [
-    {
-      key: 'name',
-      label: 'Nome da categoria',
-      value: '',
-      type: 'text'
-    }
-  ];
+  categoryFormFields: FormField[] = [{ key: 'name', label: 'Nome da categoria', value: '', type: 'text' }];
+  organizationTypeFormFields: FormField[] = [{ key: 'name', label: 'Nome do Tipo de Organização', value: '', type: 'text' }];
 
-  organizationTypeFormFields : FormField[] = [
-    {
-      key: 'name',
-      label: 'Nome do Tipo de Organização',
-      value: '',
-      type: 'text'
-    }
-  ];
-
-  exportTextFormat : 'md' | 'txt' = 'txt';
-
-
-  ignoredTables = ['Personalization',
-                    'Image',
-                    'DynamicField',
-                    'DynamicFieldValue',
-                    'Document',
-                    'UiFieldConfig',
-                    'LocationCategory',
-                    'Relationship',
-                    'GlobalParameter',
-                    'OrganizationType',
-                    'Link',
-
-                  ];
+  ignoredTables = ['Personalization', 'Image', 'DynamicField', 'DynamicFieldValue', 'Document', 'UiFieldConfig', 'LocationCategory', 'Relationship', 'GlobalParameter', 'OrganizationType', 'Link'];
   availableTables = schema.filter(t => !this.ignoredTables.includes(t.name)).map(t => t.name);
   fieldConfigAvailableTables = [...this.availableTables];
   selectedFieldConfigTable: string = this.fieldConfigAvailableTables[0] || '';
-
   currentTable: string = '';
-
-  dynamicFields : DynamicField[] = [];
+  dynamicFields: DynamicField[] = [];
+  organizationTypes: OrganizationType[] = [];
 
   appVersion: string = '';
   electronService = inject(ElectronService);
+
+  catalogPlugins: PluginCatalogEntry[] = [];
+  selectedPlugin: PluginCatalogEntry | null = null;
+  catalogError: string = '';
+  installProgressByPlugin: Record<string, number> = {};
+  private unsubscribeDownloadProgress: (() => void) | null = null;
 
   constructor(private locationService: LocationCategoriesService) { }
 
   async ngOnInit(): Promise<void> {
     this.selectTab('general_settings');
     this.appVersion = await this.electronService.getAppVersion();
+    this.unsubscribeDownloadProgress = this.electronService.onPluginDownloadProgress((payload) => this.handlePluginDownloadProgress(payload));
+  }
+
+  ngOnDestroy(): void {
+    this.unsubscribeDownloadProgress?.();
+  }
+
+  async loadPluginCatalog(): Promise<void> {
+    this.catalogError = '';
+    try {
+      const catalog = await this.marketplaceService.fetchCatalog();
+      if (!catalog.catalogSignature) {
+        throw new Error('Catálogo inválido: assinatura ausente.');
+      }
+      this.catalogPlugins = catalog.plugins;
+      this.selectedPlugin = this.catalogPlugins[0] ?? null;
+    } catch (error) {
+      this.catalogError = `Erro ao carregar catálogo: ${error instanceof Error ? error.message : 'desconhecido'}`;
+    }
+  }
+
+  selectPlugin(plugin: PluginCatalogEntry): void {
+    this.selectedPlugin = plugin;
+  }
+
+  getInstallationState(pluginId: string) {
+    return this.pluginRegistryService.getPluginById(pluginId);
+  }
+
+  private handlePluginDownloadProgress(progress: PluginDownloadProgress): void {
+    this.installProgressByPlugin[progress.pluginId] = progress.progress;
+  }
+
+  async installSelectedPlugin(): Promise<void> {
+    if (!this.selectedPlugin) {
+      return;
+    }
+
+    const plugin = this.selectedPlugin;
+    const requestId = crypto.randomUUID();
+
+    if (!this.isVersionCompatible(this.appVersion, plugin.minAppVersion, plugin.maxAppVersion)) {
+      const message = `Versão incompatível. App ${this.appVersion}, plugin exige ${plugin.minAppVersion}${plugin.maxAppVersion ? ` até ${plugin.maxAppVersion}` : '+'}.`;
+      this.pluginRegistryService.registerPlugin({
+        id: plugin.id,
+        version: plugin.version,
+        status: 'failed',
+        source: plugin.downloadUrl,
+        checksum: plugin.checksum,
+        appVersion: this.appVersion,
+        lastError: message,
+      });
+      return;
+    }
+
+    this.pluginRegistryService.markPluginDownloading({
+      id: plugin.id,
+      version: plugin.version,
+      source: plugin.downloadUrl,
+      appVersion: this.appVersion,
+    });
+
+    this.installProgressByPlugin[plugin.id] = 0;
+
+    try {
+      const result = await this.electronService.downloadPlugin({
+        requestId,
+        pluginId: plugin.id,
+        version: plugin.version,
+        url: plugin.downloadUrl,
+        expectedChecksum: plugin.checksum,
+      });
+
+      this.pluginRegistryService.markPluginDownloaded(plugin.id, result.checksum);
+      this.pluginRegistryService.updatePluginStatus(plugin.id, 'installed');
+      this.installProgressByPlugin[plugin.id] = 1;
+    } catch (error) {
+      const normalized = this.normalizeInstallError(error);
+      this.pluginRegistryService.markPluginFailed(plugin.id, normalized);
+    }
+  }
+
+  private normalizeInstallError(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error || 'unknown');
+
+    if (message.includes('PLUGIN_DOWNLOAD_INCOMPLETE')) {
+      return 'Download incompleto.';
+    }
+
+    if (message.includes('PLUGIN_DOWNLOAD_CHECKSUM_INVALID')) {
+      return 'Checksum inválido.';
+    }
+
+    if (message.includes('PLUGIN_DOWNLOAD_INVALID_PROTOCOL')) {
+      return 'A URL de download deve usar HTTPS.';
+    }
+
+    return `Falha no download: ${message}`;
+  }
+
+  private parseVersion(version: string): [number, number, number] {
+    const cleaned = version.replace(/^v/, '').split('-')[0].split('.').map(v => Number.parseInt(v, 10));
+    return [cleaned[0] || 0, cleaned[1] || 0, cleaned[2] || 0];
+  }
+
+  private compareVersion(a: string, b: string): number {
+    const [a1, a2, a3] = this.parseVersion(a);
+    const [b1, b2, b3] = this.parseVersion(b);
+
+    if (a1 !== b1) return a1 > b1 ? 1 : -1;
+    if (a2 !== b2) return a2 > b2 ? 1 : -1;
+    if (a3 !== b3) return a3 > b3 ? 1 : -1;
+    return 0;
+  }
+
+  private isVersionCompatible(appVersion: string, minVersion: string, maxVersion?: string): boolean {
+    if (this.compareVersion(appVersion, minVersion) < 0) return false;
+    if (maxVersion && this.compareVersion(appVersion, maxVersion) > 0) return false;
+    return true;
   }
 
   selectTab(tab: string) {
@@ -327,6 +483,14 @@ export class SettingsComponent implements OnInit{
       }
     }
 
+    if (tab === 'plugin_marketplace') {
+      this.loadPluginCatalog();
+    }
+  }
+
+  setExportTextFormat(format: 'md' | 'txt') {
+    this.exportTextFormat = format;
+    this.globalParameterService.setParameter('exportTextFormat', format);
   }
 
   getLocationCategories() {
@@ -335,10 +499,7 @@ export class SettingsComponent implements OnInit{
 
   saveCategory(formData: Record<string, string>, categoryId: string) {
     const categoryName = formData['name'];
-
-    if (categoryName.trim() === '') {
-      return;
-    }
+    if (categoryName.trim() === '') return;
 
     const categoryToUpdate = this.locationCategories.find(c => c.id === categoryId);
     if (categoryToUpdate) {
@@ -348,23 +509,14 @@ export class SettingsComponent implements OnInit{
     }
   }
 
-
   createCategory(formData: Record<string, string>) {
     const categoryName = formData['name'];
+    if (categoryName.trim() === '') return;
 
-    if (categoryName.trim() === '') {
-      return;
-    }
-
-    const newCategory: LocationCategory = {
-      id: '',
-      name: categoryName.trim()
-    };
-
-    let category = this.locationService.saveLocationCategory(newCategory);
+    const newCategory: LocationCategory = { id: '', name: categoryName.trim() };
+    const category = this.locationService.saveLocationCategory(newCategory);
     this.locationCategories.push(category);
     this.creatingCategory = false;
-
   }
 
   deleteCategory(category: LocationCategory) {
@@ -376,30 +528,18 @@ export class SettingsComponent implements OnInit{
     });
   }
 
-  //Organization Types
-  organizationTypes: OrganizationType[] = [];
   createOrganizationType(formData: Record<string, string>) {
     const typeName = formData['name'];
+    if (typeName.trim() === '') return;
 
-    if (typeName.trim() === '') {
-      return;
-    }
-
-    const newType: OrganizationType = {
-      id: '',
-      name: typeName.trim()
-    };
-
-    let orgType = this.organizationTypeService.saveOrganizationType(newType);
+    const newType: OrganizationType = { id: '', name: typeName.trim() };
+    const orgType = this.organizationTypeService.saveOrganizationType(newType);
     this.organizationTypes.push(orgType);
   }
 
   saveOrganizationType(formData: Record<string, string>, typeId: string) {
     const typeName = formData['name'];
-
-    if (typeName.trim() === '') {
-      return;
-    }
+    if (typeName.trim() === '') return;
 
     const typeToUpdate = this.organizationTypes.find(t => t.id === typeId);
     if (typeToUpdate) {
@@ -422,17 +562,13 @@ export class SettingsComponent implements OnInit{
     this.organizationTypes = this.organizationTypeService.getOrganizationTypes();
   }
 
-  onTableSelected(event : any) {
-
+  onTableSelected(event: any) {
     this.currentTable = event;
-
     this.dynamicFields = this.dynamicFieldService.getDynamicFields(this.currentTable);
   }
 
   openGlobalFieldConfigDialog() {
-    if (!this.selectedFieldConfigTable) {
-      return;
-    }
+    if (!this.selectedFieldConfigTable) return;
 
     this.dialog.open(UiFieldConfigEditorComponent, {
       panelClass: 'screen-dialog',
@@ -450,10 +586,7 @@ export class SettingsComponent implements OnInit{
   createDynamicField(formData: Record<string, string>) {
     const fieldName = formData['name'];
     const fieldOptions = formData['options'];
-
-    if (fieldName.trim() === '') {
-      return;
-    }
+    if (fieldName.trim() === '') return;
 
     const newField: DynamicField = {
       id: '',
@@ -463,17 +596,14 @@ export class SettingsComponent implements OnInit{
       isEditorField: formData['isEditor'] === 'true' || formData['isEditor'] === '1'
     };
 
-    let field = this.dynamicFieldService.saveDynamicField(newField);
+    const field = this.dynamicFieldService.saveDynamicField(newField);
     this.dynamicFields.push(field);
   }
 
   saveDynamicField(formData: Record<string, string>, fieldId: string) {
     const fieldName = formData['name'];
     const fieldOptions = formData['options'];
-
-    if (fieldName.trim() === '') {
-      return;
-    }
+    if (fieldName.trim() === '') return;
 
     const fieldToUpdate = this.dynamicFields.find(f => f.id === fieldId);
     if (fieldToUpdate) {
@@ -482,7 +612,6 @@ export class SettingsComponent implements OnInit{
       this.dynamicFieldService.saveDynamicField(fieldToUpdate);
       this.onTableSelected(this.currentTable);
     }
-
   }
 
   deleteDynamicField(field: DynamicField) {
