@@ -1,6 +1,6 @@
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { Dialog, DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
-import { NgStyle } from '@angular/common';
+import { NgClass, NgStyle } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,6 +10,7 @@ import { PersonalizationButtonComponent } from "../../../components/personalizat
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { TextAreaComponent } from "../../../components/text-area/text-area.component";
 import { GreatMark } from '../../../models/great-mark.model';
+import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
 import { TimelineEvent } from '../../../models/timeline-event.model';
 import { Timeline } from '../../../models/timeline.model';
@@ -38,6 +39,7 @@ interface TimelineSectionViewModel {
     CdkDropList,
     FormsModule,
     IconButtonComponent,
+    NgClass,
     NgStyle,
     PersonalizationButtonComponent,
     SafeDeleteButtonComponent,
@@ -57,7 +59,7 @@ interface TimelineSectionViewModel {
             (blur)="saveTimeline()"
           />
           <div class="flex items-center gap-2">
-            <app-button label="Nova Great Mark" buttonType="secondary" size="sm" (click)="openGreatMarkDialog(getDefaultTailMarkOrder())"></app-button>
+            <app-button label="Novo Grande Marco" buttonType="secondary" size="sm" (click)="openGreatMarkDialog(getDefaultTailMarkOrder())"></app-button>
             <app-personalization-button [entityId]="timeline.id" [entityTable]="'Timeline'" [size]="'xl'" (onClose)="loadTimeline()"></app-personalization-button>
             <app-safe-delete-button [entityName]="timeline.name" [entityId]="timeline.id" [entityTable]="'Timeline'" [size]="'xl'"></app-safe-delete-button>
           </div>
@@ -91,169 +93,164 @@ interface TimelineSectionViewModel {
         </div>
 
         <div class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 min-h-[70vh]">
-          <div class="flex flex-col gap-6">
-            @for (section of sections; track section.id; let sectionIndex = $index) {
-              <div class="relative rounded-2xl border border-zinc-800/80 bg-zinc-950/20 px-3 py-4">
-                <div class="absolute left-1/2 top-0 bottom-0 w-[3px] -translate-x-1/2 rounded-full" [style.background-color]="section.color || 'rgb(63 63 70)'"></div>
+          <div class="relative min-h-[60vh] py-6">
+            <div class="absolute left-1/2 top-0 bottom-0 w-[3px] -translate-x-1/2 rounded-full bg-zinc-800"></div>
 
-                <div class="relative z-10 flex flex-col gap-4">
-                  @if (!section.mark) {
-                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-                      <div></div>
-                      <div class="flex flex-col items-center gap-2">
-                        <button
-                          type="button"
-                          class="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm cursor-pointer hover:border-zinc-400"
-                          (click)="openEventDialog(getSectionInsertOrder(sectionIndex, 'start'), buildGeneratedDate(1))">
-                          Adicionar evento no início
-                        </button>
-                        <button
-                          type="button"
-                          class="text-xs text-zinc-400 hover:text-white cursor-pointer"
-                          (click)="openGreatMarkDialog(getBoundaryMarkOrder(sectionIndex))">
-                          Criar Great Mark nesta região
-                        </button>
-                      </div>
-                      <div></div>
-                    </div>
-                  }
-                  @else {
-                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-                      <div></div>
-                      <button
-                        type="button"
-                        class="rounded-full px-5 py-3 shadow-lg border-2 cursor-pointer min-w-64"
-                        [ngStyle]="{
-                          'background-color': section.color || '#27272A',
-                          'border-color': section.color || '#52525B',
-                          'color': getTextColor(section.color)
-                        }"
-                        (click)="openGreatMarkDialog(section.mark.sortOrder, section.mark.id)">
-                        <div class="font-semibold">{{ section.mark.name }}</div>
-                        @if (section.mark.concept) {
-                          <div class="text-xs opacity-80 mt-1">{{ section.mark.concept }}</div>
-                        }
-                      </button>
-                      <div></div>
-                    </div>
+            <div class="relative z-10 flex flex-col gap-6">
+              <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                <div></div>
+                <button
+                  type="button"
+                  class="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm cursor-pointer hover:border-zinc-400"
+                  (click)="openEventDialog(getInitialInsertOrder())">
+                  Adicionar evento no início
+                </button>
+                <div></div>
+              </div>
 
-                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-                      <div></div>
-                      <button
-                        type="button"
-                        class="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm cursor-pointer hover:border-zinc-400"
-                        (click)="openEventDialog(getSectionInsertOrder(sectionIndex, 'start'), getNextGeneratedDateForSection(sectionIndex))">
-                        Adicionar evento após esta mark
-                      </button>
-                      <div></div>
-                    </div>
-                  }
-
-                  <div
-                    cdkDropList
-                    [id]="section.dropListId"
-                    [cdkDropListData]="section.events"
-                    [cdkDropListConnectedTo]="connectedDropLists"
-                    class="flex flex-col gap-4"
-                    (cdkDropListDropped)="onDrop($event)">
-                    @for (event of section.events; track event.id) {
-                      @let side = eventSides[event.id] || 'left';
-                      <div cdkDrag class="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
-                        @if (side === 'left') {
-                          <button
-                            type="button"
-                            class="group rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-left cursor-pointer hover:border-zinc-600"
-                            [style.border-left-width.px]="4"
-                            [style.border-left-color]="section.color || '#71717A'"
-                            (click)="openEventDialog(event.chronologyOrder, event.date || '', event.id)">
-                            <div class="flex items-center justify-between gap-3">
-                              <div class="text-xs uppercase tracking-[0.2em] text-zinc-500">{{ event.date || 'Sem data' }}</div>
-                              @if (event.ParentEventType) {
-                                <span class="text-xs px-2 py-1 rounded-md bg-zinc-800 border border-zinc-700">{{ event.ParentEventType.name }}</span>
-                              }
-                            </div>
-                            <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
-                            <p class="mt-2 text-sm text-zinc-400 line-clamp-3">{{ event.concept || event.description || 'Sem resumo definido.' }}</p>
-                            <div class="mt-3 flex flex-wrap gap-2">
-                              @if (event.ParentLocation) {
-                                <span class="text-xs px-2 py-1 rounded-md bg-zinc-950 border border-zinc-700">
-                                  <i class="fa-solid fa-location-dot me-1"></i>{{ event.ParentLocation.name }}
-                                </span>
-                              }
-                            </div>
-                          </button>
-                        }
-                        @else {
-                          <div></div>
-                        }
-
-                        <div class="flex flex-col items-center gap-2">
-                          <div class="w-5 h-5 rounded-full border-4 border-zinc-950 shadow-lg" [style.background-color]="section.color || '#71717A'"></div>
-                          <i class="fa-solid fa-grip-lines text-xs text-zinc-500"></i>
-                        </div>
-
-                        @if (side === 'right') {
-                          <button
-                            type="button"
-                            class="group rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-left cursor-pointer hover:border-zinc-600"
-                            [style.border-left-width.px]="4"
-                            [style.border-left-color]="section.color || '#71717A'"
-                            (click)="openEventDialog(event.chronologyOrder, event.date || '', event.id)">
-                            <div class="flex items-center justify-between gap-3">
-                              <div class="text-xs uppercase tracking-[0.2em] text-zinc-500">{{ event.date || 'Sem data' }}</div>
-                              @if (event.ParentEventType) {
-                                <span class="text-xs px-2 py-1 rounded-md bg-zinc-800 border border-zinc-700">{{ event.ParentEventType.name }}</span>
-                              }
-                            </div>
-                            <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
-                            <p class="mt-2 text-sm text-zinc-400 line-clamp-3">{{ event.concept || event.description || 'Sem resumo definido.' }}</p>
-                            <div class="mt-3 flex flex-wrap gap-2">
-                              @if (event.ParentLocation) {
-                                <span class="text-xs px-2 py-1 rounded-md bg-zinc-950 border border-zinc-700">
-                                  <i class="fa-solid fa-location-dot me-1"></i>{{ event.ParentLocation.name }}
-                                </span>
-                              }
-                            </div>
-                          </button>
-                        }
-                        @else {
-                          <div></div>
-                        }
-                      </div>
-                    }
-
-                    @if (section.events.length === 0) {
-                      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-                        <div></div>
-                        <div class="rounded-lg border border-dashed border-zinc-700 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-500">
-                          Nenhum evento nesta seção.
-                        </div>
-                        <div></div>
-                      </div>
-                    }
+              @for (section of sections; track section.id; let sectionIndex = $index) {
+                @if (section.mark) {
+                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                    <div></div>
+                    <button
+                      type="button"
+                      class="rounded-2xl px-5 py-4 shadow-lg border cursor-pointer min-w-72 bg-zinc-900/90"
+                      [ngStyle]="buildGreatMarkStyle(section.mark)"
+                      (click)="openGreatMarkDialog(section.mark.sortOrder, section.mark.id)">
+                      <div class="text-xs uppercase tracking-[0.22em] opacity-70 mb-2">Grande Marco</div>
+                      <div class="font-semibold text-lg">{{ section.mark.name }}</div>
+                      @if (section.mark.concept) {
+                        <div class="text-sm opacity-80 mt-2 line-clamp-3">{{ section.mark.concept }}</div>
+                      }
+                    </button>
+                    <div></div>
                   </div>
 
                   <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
                     <div></div>
-                    <div class="flex flex-col items-center gap-2">
-                      <button
-                        type="button"
-                        class="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm cursor-pointer hover:border-zinc-400"
-                        (click)="openEventDialog(getSectionInsertOrder(sectionIndex, 'end'), getNextGeneratedDateForSection(sectionIndex))">
-                        Adicionar evento ao final desta seção
-                      </button>
-                      <button
-                        type="button"
-                        class="text-xs text-zinc-400 hover:text-white cursor-pointer"
-                        (click)="openGreatMarkDialog(getBoundaryMarkOrder(sectionIndex))">
-                        Inserir Great Mark após esta seção
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      class="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm cursor-pointer hover:border-zinc-400"
+                      (click)="openEventDialog(getAfterMarkInsertOrder(sectionIndex))">
+                      Adicionar evento após este grande marco
+                    </button>
                     <div></div>
                   </div>
+                }
+
+                <div
+                  cdkDropList
+                  [id]="section.dropListId"
+                  [cdkDropListData]="section.events"
+                  [cdkDropListConnectedTo]="connectedDropLists"
+                  class="flex flex-col gap-5"
+                  (cdkDropListDropped)="onDrop($event)">
+                  @for (event of section.events; track event.id) {
+                    @let side = eventSides[event.id] || 'left';
+                    <div cdkDrag class="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
+                      @if (side === 'left') {
+                        <button
+                          type="button"
+                          class="group rounded-2xl border border-zinc-800 p-4 text-left cursor-pointer hover:border-zinc-600"
+                          [style.border-left-width.px]="4"
+                          [style.border-left-color]="section.color || '#71717A'"
+                          [ngStyle]="buildEventCardStyle(event)"
+                          [class.text-white]="hasBackgroundImage(event)"
+                          [ngClass]="!hasBackgroundImage(event) ? getTextClass(getPersonalizationValue(event, 'color') || undefined) : ''"
+                          (click)="openEventDialog(event.chronologyOrder, event.id)">
+                          <div class="flex items-center justify-between gap-3">
+                            <div class="text-xs uppercase tracking-[0.2em] opacity-70">{{ event.date || 'Sem data' }}</div>
+                            @if (event.ParentEventType) {
+                              <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">{{ event.ParentEventType.name }}</span>
+                            }
+                          </div>
+                          <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
+                          <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.concept || event.description || 'Sem resumo definido.' }}</p>
+                          <div class="mt-3 flex flex-wrap gap-2">
+                            @if (event.ParentLocation) {
+                              <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">
+                                <i class="fa-solid fa-location-dot me-1"></i>{{ event.ParentLocation.name }}
+                              </span>
+                            }
+                          </div>
+                        </button>
+                      }
+                      @else {
+                        <div></div>
+                      }
+
+                      <div class="flex flex-col items-center gap-2">
+                        <div class="w-5 h-5 rounded-full border-4 border-zinc-950 shadow-lg" [style.background-color]="section.color || '#71717A'"></div>
+                        <i class="fa-solid fa-grip-lines text-xs text-zinc-500"></i>
+                      </div>
+
+                      @if (side === 'right') {
+                        <button
+                          type="button"
+                          class="group rounded-2xl border border-zinc-800 p-4 text-left cursor-pointer hover:border-zinc-600"
+                          [style.border-left-width.px]="4"
+                          [style.border-left-color]="section.color || '#71717A'"
+                          [ngStyle]="buildEventCardStyle(event)"
+                          [class.text-white]="hasBackgroundImage(event)"
+                          [ngClass]="!hasBackgroundImage(event) ? getTextClass(getPersonalizationValue(event, 'color') || undefined) : ''"
+                          (click)="openEventDialog(event.chronologyOrder, event.id)">
+                          <div class="flex items-center justify-between gap-3">
+                            <div class="text-xs uppercase tracking-[0.2em] opacity-70">{{ event.date || 'Sem data' }}</div>
+                            @if (event.ParentEventType) {
+                              <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">{{ event.ParentEventType.name }}</span>
+                            }
+                          </div>
+                          <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
+                          <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.concept || event.description || 'Sem resumo definido.' }}</p>
+                          <div class="mt-3 flex flex-wrap gap-2">
+                            @if (event.ParentLocation) {
+                              <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">
+                                <i class="fa-solid fa-location-dot me-1"></i>{{ event.ParentLocation.name }}
+                              </span>
+                            }
+                          </div>
+                        </button>
+                      }
+                      @else {
+                        <div></div>
+                      }
+                    </div>
+                  }
+
+                  @if (section.events.length === 0) {
+                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                      <div></div>
+                      <div class="rounded-lg border border-dashed border-zinc-700 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-500">
+                        Nenhum evento nesta parte da timeline.
+                      </div>
+                      <div></div>
+                    </div>
+                  }
                 </div>
-              </div>
-            }
+
+                <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                  <div></div>
+                  <button
+                    type="button"
+                    class="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm cursor-pointer hover:border-zinc-400"
+                    (click)="openEventDialog(getBetweenSectionsInsertOrder(sectionIndex))">
+                    {{ getBetweenSectionsLabel(sectionIndex) }}
+                  </button>
+                  <div></div>
+                </div>
+
+                <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                  <div></div>
+                  <button
+                    type="button"
+                    class="text-xs text-zinc-400 hover:text-white cursor-pointer"
+                    (click)="openGreatMarkDialog(getBoundaryMarkOrder(sectionIndex))">
+                    Inserir grande marco aqui
+                  </button>
+                  <div></div>
+                </div>
+              }
+            </div>
           </div>
         </div>
       </div>
@@ -270,6 +267,9 @@ export class TimelineEditComponent {
   private readonly greatMarkService = inject(GreatMarkService);
   private readonly eventService = inject(EventService);
 
+  private readonly MARK_SPACING = 100000;
+  private readonly EVENT_SPACING = 100;
+
   dialogRef = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
 
@@ -285,6 +285,8 @@ export class TimelineEditComponent {
   }];
   connectedDropLists: string[] = ['timeline-section-initial'];
   eventSides: Record<string, EventSide> = {};
+  public readonly getPersonalizationValue = getPersonalizationValue;
+  public readonly getTextClass = getTextClass;
 
   readonly timelineId = computed(() => {
     if (this.data?.id) {
@@ -343,7 +345,7 @@ export class TimelineEditComponent {
         id: `section-${mark.id}`,
         mark,
         events: sortedEvents.filter(event =>
-          event.sortOrder >= mark.sortOrder &&
+          event.sortOrder > mark.sortOrder &&
           (!nextMark || event.sortOrder < nextMark.sortOrder)
         ),
         color: getPersonalizationValue(mark, 'color'),
@@ -387,7 +389,7 @@ export class TimelineEditComponent {
       );
     }
 
-    this.persistSectionOrdering();
+    this.normalizeTimelineOrdering();
   }
 
   openGreatMarkDialog(defaultSortOrder: number, markId?: string) {
@@ -403,11 +405,12 @@ export class TimelineEditComponent {
     dialogRef.closed.subscribe((result: any) => {
       if (result?.saved || result?.deleted) {
         this.loadTimeline();
+        this.normalizeTimelineOrdering();
       }
     });
   }
 
-  openEventDialog(defaultSortOrder: number, defaultDate: string, eventId?: string) {
+  openEventDialog(defaultSortOrder: number, eventId?: string) {
     const dialogRef = this.dialog.open(TimelineEventEditComponent, {
       panelClass: ['screen-dialog', 'overflow-visible'],
       width: '90vw',
@@ -416,7 +419,6 @@ export class TimelineEditComponent {
         id: eventId,
         timelineId: this.timeline.id,
         defaultSortOrder,
-        defaultDate,
         worldId: this.timeline.ParentWorld?.id || null,
       },
     });
@@ -425,7 +427,7 @@ export class TimelineEditComponent {
       if (result?.saved || result?.deleted) {
         this.loadTimeline();
 
-        if (result?.reorderRequired) {
+        if (result?.reorderRequired || result?.deleted) {
           this.persistLoadedEventOrdering();
         }
       }
@@ -435,131 +437,169 @@ export class TimelineEditComponent {
   persistLoadedEventOrdering() {
     this.events = [...this.events].sort((a, b) => a.chronologyOrder - b.chronologyOrder);
     this.buildSections();
-    this.persistSectionOrdering();
+    this.normalizeTimelineOrdering();
   }
 
-  persistSectionOrdering() {
-    const updates: Array<Pick<TimelineEvent, 'id' | 'sortOrder' | 'chronologyOrder' | 'date'>> = [];
-    let generatedIndex = 1;
+  normalizeTimelineOrdering() {
+    const markUpdates: Array<Pick<GreatMark, 'id' | 'sortOrder'>> = [];
+    const eventUpdates: Array<Pick<TimelineEvent, 'id' | 'sortOrder' | 'chronologyOrder'>> = [];
 
-    for (let sectionIndex = 0; sectionIndex < this.sections.length; sectionIndex++) {
+    this.sections[0]?.events.forEach((timelineEvent, index) => {
+      const order = (index + 1) * this.EVENT_SPACING;
+      timelineEvent.sortOrder = order;
+      timelineEvent.chronologyOrder = order;
+      eventUpdates.push({
+        id: timelineEvent.id,
+        sortOrder: order,
+        chronologyOrder: order,
+      });
+    });
+
+    for (let sectionIndex = 1; sectionIndex < this.sections.length; sectionIndex++) {
       const section = this.sections[sectionIndex];
-      const nextMark = this.sections[sectionIndex + 1]?.mark || null;
-      const lowerBound = section.mark?.sortOrder ?? 0;
-      const upperBound = nextMark?.sortOrder ?? null;
+      const markOrder = sectionIndex * this.MARK_SPACING;
 
-      if (section.events.length === 0) {
-        continue;
-      }
-
-      if (upperBound != null) {
-        const step = (upperBound - lowerBound) / (section.events.length + 1);
-
-        section.events.forEach((timelineEvent, index) => {
-          const order = lowerBound + (step * (index + 1));
-          timelineEvent.sortOrder = order;
-          timelineEvent.chronologyOrder = order;
-          timelineEvent.date = this.buildGeneratedDate(generatedIndex);
-          updates.push({
-            id: timelineEvent.id,
-            sortOrder: order,
-            chronologyOrder: order,
-            date: timelineEvent.date,
-          });
-          generatedIndex++;
-        });
-      } else {
-        section.events.forEach((timelineEvent, index) => {
-          const order = lowerBound + ((index + 1) * 10);
-          timelineEvent.sortOrder = order;
-          timelineEvent.chronologyOrder = order;
-          timelineEvent.date = this.buildGeneratedDate(generatedIndex);
-          updates.push({
-            id: timelineEvent.id,
-            sortOrder: order,
-            chronologyOrder: order,
-            date: timelineEvent.date,
-          });
-          generatedIndex++;
+      if (section.mark) {
+        section.mark.sortOrder = markOrder;
+        markUpdates.push({
+          id: section.mark.id,
+          sortOrder: markOrder,
         });
       }
+
+      section.events.forEach((timelineEvent, eventIndex) => {
+        const order = markOrder + ((eventIndex + 1) * this.EVENT_SPACING);
+        timelineEvent.sortOrder = order;
+        timelineEvent.chronologyOrder = order;
+        eventUpdates.push({
+          id: timelineEvent.id,
+          sortOrder: order,
+          chronologyOrder: order,
+        });
+      });
     }
 
-    if (updates.length > 0) {
-      this.eventService.saveEventOrdering(updates);
+    if (markUpdates.length > 0) {
+      this.greatMarkService.saveGreatMarkOrdering(markUpdates);
+    }
+
+    if (eventUpdates.length > 0) {
+      this.eventService.saveEventOrdering(eventUpdates);
     }
 
     this.loadTimeline();
+  }
+
+  getInitialInsertOrder() {
+    const firstEvent = this.sections[0]?.events[0];
+    return firstEvent ? Math.max(1, firstEvent.sortOrder - 1) : this.EVENT_SPACING;
+  }
+
+  getAfterMarkInsertOrder(sectionIndex: number) {
+    const mark = this.sections[sectionIndex]?.mark;
+    return mark ? mark.sortOrder + 1 : this.getInitialInsertOrder();
+  }
+
+  getBetweenSectionsInsertOrder(sectionIndex: number) {
+    const section = this.sections[sectionIndex];
+    const nextSection = this.sections[sectionIndex + 1];
+    const lastEvent = section?.events.at(-1);
+    const anchor = lastEvent?.sortOrder ?? section?.mark?.sortOrder ?? 0;
+
+    if (nextSection?.mark) {
+      return Math.max(anchor + 1, nextSection.mark.sortOrder - 1);
+    }
+
+    return anchor + this.EVENT_SPACING;
+  }
+
+  getBetweenSectionsLabel(sectionIndex: number) {
+    return this.sections[sectionIndex + 1]?.mark ? 'Adicionar evento entre seções' : 'Adicionar evento no final da timeline';
   }
 
   getDefaultTailMarkOrder() {
     const lastMark = [...this.greatMarks].sort((a, b) => a.sortOrder - b.sortOrder).at(-1);
     const lastEvent = [...this.events].sort((a, b) => a.sortOrder - b.sortOrder).at(-1);
     const lower = Math.max(lastMark?.sortOrder || 0, lastEvent?.sortOrder || 0);
-    return lower + 10;
+    return lower + this.MARK_SPACING;
   }
 
   getBoundaryMarkOrder(sectionIndex: number) {
+    const nextSection = this.sections[sectionIndex + 1];
+    if (nextSection?.mark) {
+      return nextSection.mark.sortOrder - 1;
+    }
+
     const section = this.sections[sectionIndex];
-    const nextMark = this.sections[sectionIndex + 1]?.mark || null;
-    const lastEvent = section.events.at(-1);
-    const lowerBound = lastEvent?.sortOrder ?? section.mark?.sortOrder ?? 0;
-
-    if (!nextMark) {
-      return lowerBound + 10;
-    }
-
-    return lowerBound + ((nextMark.sortOrder - lowerBound) / 2);
+    const anchor = section?.events.at(-1)?.sortOrder ?? section?.mark?.sortOrder ?? 0;
+    return anchor + this.MARK_SPACING;
   }
 
-  getSectionInsertOrder(sectionIndex: number, position: 'start' | 'end') {
-    const section = this.sections[sectionIndex];
-    const nextMark = this.sections[sectionIndex + 1]?.mark || null;
-    const lowerBound = section.mark?.sortOrder ?? 0;
-    const upperBound = nextMark?.sortOrder ?? null;
-    const firstEvent = section.events[0];
-    const lastEvent = section.events.at(-1);
+  buildGreatMarkStyle(mark: GreatMark) {
+    const color = getPersonalizationValue(mark, 'color') || '#3F3F46';
+    const image = getImageByUsageKey(mark.Images, 'default');
 
-    if (position === 'start') {
-      if (firstEvent) {
-        return lowerBound + ((firstEvent.sortOrder - lowerBound) / 2);
-      }
-
-      if (upperBound != null) {
-        return lowerBound + ((upperBound - lowerBound) / 2);
-      }
-
-      return lowerBound + 10;
+    if (image?.filePath) {
+      return {
+        'background-image': `linear-gradient(to bottom, rgba(24,24,27,0.35), rgba(24,24,27,0.88)), url(${buildImageUrl(image.filePath)})`,
+        'background-size': 'cover',
+        'background-position': 'center',
+        'border-color': color,
+        'color': '#FFFFFF',
+      };
     }
 
-    if (lastEvent) {
-      if (upperBound != null) {
-        return lastEvent.sortOrder + ((upperBound - lastEvent.sortOrder) / 2);
-      }
+    return {
+      'background-image': `linear-gradient(to bottom, ${this.hexToRgba(color, 0.18)}, rgba(24,24,27,0.94))`,
+      'background-color': '#18181B',
+      'border-color': color,
+      'color': this.getTextColorValue(color),
+    };
+  }
 
-      return lastEvent.sortOrder + 10;
+  buildEventCardStyle(event: TimelineEvent) {
+    const image = getImageByUsageKey(event.Images, 'default');
+    const color = getPersonalizationValue(event, 'color') || '#27272A';
+
+    if (image?.filePath) {
+      return {
+        'background-image': `linear-gradient(rgba(0,0,0,0.58), rgba(0,0,0,0.7)), url(${buildImageUrl(image.filePath)})`,
+        'background-size': 'cover',
+        'background-position': 'center',
+      };
     }
 
-    if (upperBound != null) {
-      return lowerBound + ((upperBound - lowerBound) / 2);
-    }
-
-    return lowerBound + 10;
+    return {
+      'background-color': color,
+    };
   }
 
-  getNextGeneratedDateForSection(sectionIndex: number) {
-    const absoluteIndex = this.sections
-      .slice(0, sectionIndex + 1)
-      .reduce((total, section) => total + section.events.length, 0) + 1;
-
-    return this.buildGeneratedDate(absoluteIndex);
+  hasBackgroundImage(event: TimelineEvent) {
+    return !!getImageByUsageKey(event.Images, 'default');
   }
 
-  buildGeneratedDate(index: number) {
-    return index.toString().padStart(3, '0');
-  }
-
-  getTextColor(color: string | null) {
+  getTextColorValue(color: string | null) {
     return getTextClass(color || undefined) === 'text-zinc-900' ? '#18181B' : '#FFFFFF';
+  }
+
+  private hexToRgba(hexColor: string, alpha: number) {
+    let value = hexColor.trim();
+    if (!value.startsWith('#')) {
+      value = `#${value}`;
+    }
+
+    if (/^#([0-9a-fA-F]{3})$/.test(value)) {
+      value = `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`;
+    }
+
+    if (!/^#([0-9a-fA-F]{6})$/.test(value)) {
+      return `rgba(63, 63, 70, ${alpha})`;
+    }
+
+    const r = parseInt(value.slice(1, 3), 16);
+    const g = parseInt(value.slice(3, 5), 16);
+    const b = parseInt(value.slice(5, 7), 16);
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 }

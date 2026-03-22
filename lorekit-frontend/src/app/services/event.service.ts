@@ -52,12 +52,11 @@ export class EventService {
     return this.getEventById(event.id);
   }
 
-  saveEventOrdering(events: Array<Pick<TimelineEvent, 'id' | 'sortOrder' | 'chronologyOrder' | 'date'>>) {
+  saveEventOrdering(events: Array<Pick<TimelineEvent, 'id' | 'sortOrder' | 'chronologyOrder'>>) {
     for (const event of events) {
       this.crud.update('Event', event.id, {
         sortOrder: event.sortOrder,
         chronologyOrder: event.chronologyOrder,
-        date: event.date,
       });
     }
   }
@@ -68,6 +67,7 @@ export class EventService {
 
   private getEventIncludes() {
     return [
+      { table: 'Image', firstOnly: false },
       { table: 'Personalization', firstOnly: true },
       { table: 'Timeline', firstOnly: true, isParent: true },
       { table: 'EventType', firstOnly: true, isParent: true },

@@ -4,6 +4,7 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
 import { InputComponent } from "../../../components/input/input.component";
+import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
 import { TextAreaComponent } from "../../../components/text-area/text-area.component";
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialog.component';
@@ -23,14 +24,13 @@ interface TimelineEventDialogData {
   id?: string;
   timelineId: string;
   defaultSortOrder: number;
-  defaultDate?: string;
   worldId?: string | null;
 }
 
 @Component({
   selector: 'app-timeline-event-edit',
   standalone: true,
-  imports: [ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, TextAreaComponent],
+  imports: [ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
   template: `
     <div class="w-[52rem] max-w-[94vw] rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
@@ -38,7 +38,12 @@ interface TimelineEventDialogData {
           <h2 class="text-lg font-bold">{{ event.id ? 'Editar Evento' : 'Novo Evento' }}</h2>
           <p class="text-sm text-zinc-400">A ordem real da timeline é controlada pelo campo de ordem cronológica.</p>
         </div>
-        <app-icon-button icon="fa-solid fa-xmark" buttonType="secondary" size="lg" (click)="dialogRef.close()"></app-icon-button>
+        <div class="flex items-center gap-2">
+          @if (event.id) {
+            <app-personalization-button [entityId]="event.id" [entityTable]="'Event'" [size]="'lg'"></app-personalization-button>
+          }
+          <app-icon-button icon="fa-solid fa-xmark" buttonType="secondary" size="lg" (click)="dialogRef.close()"></app-icon-button>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -161,8 +166,6 @@ export class TimelineEventEditComponent {
       this.selectedEventTypeId = this.event.ParentEventType?.id || null;
       this.selectedLocationId = this.event.ParentLocation?.id || null;
       this.relatedEntities = buildTimelineEventRelatedEntities(this.event);
-    } else {
-      this.event.date = this.data.defaultDate || '';
     }
   }
 

@@ -2,6 +2,7 @@ import { Character } from "./character.model";
 import { Culture } from "./culture.model";
 import { Document } from "./document.model";
 import { EventType } from "./event-type.model";
+import { Image } from "./image.model";
 import { Location } from "./location.model";
 import { Organization } from "./organization.model";
 import { Personalization } from "./personalization.model";
@@ -37,6 +38,7 @@ export class TimelineEvent {
   sortOrder: number;
   chronologyOrder: number;
 
+  Images?: Image[];
   Personalization?: Personalization | null;
   ParentTimeline?: Timeline | null;
   ParentLocation?: Location | null;

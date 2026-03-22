@@ -15,6 +15,7 @@ export class GreatMarkService {
 
   getGreatMarksByTimelineId(timelineId: string): GreatMark[] {
     const marks = this.crud.findAll('GreatMark', {}, [
+      { table: 'Image', firstOnly: false },
       { table: 'Personalization', firstOnly: true },
       { table: 'Timeline', firstOnly: true, isParent: true },
     ], { parentTable: 'Timeline', parentId: timelineId }) as GreatMark[];
@@ -24,6 +25,7 @@ export class GreatMarkService {
 
   getGreatMarkById(markId: string): GreatMark {
     return this.crud.findById('GreatMark', markId, [
+      { table: 'Image', firstOnly: false },
       { table: 'Personalization', firstOnly: true },
       { table: 'Timeline', firstOnly: true, isParent: true },
     ]);
@@ -54,5 +56,13 @@ export class GreatMarkService {
 
   deleteGreatMark(markId: string, deleteRelatedItems: boolean = true) {
     return this.crud.delete('GreatMark', markId, deleteRelatedItems);
+  }
+
+  saveGreatMarkOrdering(marks: Array<Pick<GreatMark, 'id' | 'sortOrder'>>) {
+    for (const mark of marks) {
+      this.crud.update('GreatMark', mark.id, {
+        sortOrder: mark.sortOrder,
+      });
+    }
   }
 }

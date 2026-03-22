@@ -1,3 +1,4 @@
+import { Image } from "./image.model";
 import { Personalization } from "./personalization.model";
 import { Timeline } from "./timeline.model";
 
@@ -8,6 +9,7 @@ export class GreatMark {
   concept?: string | null;
   sortOrder: number;
 
+  Images?: Image[];
   Personalization?: Personalization | null;
   ParentTimeline?: Timeline | null;
 

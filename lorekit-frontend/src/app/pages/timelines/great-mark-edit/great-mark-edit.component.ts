@@ -23,8 +23,8 @@ interface GreatMarkDialogData {
     <div class="w-[36rem] max-w-[92vw] rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
         <div>
-          <h2 class="text-lg font-bold">{{ mark.id ? 'Editar Great Mark' : 'Nova Great Mark' }}</h2>
-          <p class="text-sm text-zinc-400">As marcas dividem as seções visuais da timeline.</p>
+          <h2 class="text-lg font-bold">{{ mark.id ? 'Editar Grande Marco' : 'Novo Grande Marco' }}</h2>
+          <p class="text-sm text-zinc-400">Os grandes marcos dividem as seções visuais da timeline quando você quiser usar.</p>
         </div>
         <div class="flex items-center gap-2">
           @if (mark.id) {
@@ -84,7 +84,7 @@ export class GreatMarkEditComponent {
   }
 
   deleteMark() {
-    this.confirm.ask(`Tem certeza que deseja excluir a Great Mark ${this.mark.name}?`).then(confirmed => {
+    this.confirm.ask(`Tem certeza que deseja excluir o grande marco ${this.mark.name}?`).then(confirmed => {
       if (!confirmed) {
         return;
       }
