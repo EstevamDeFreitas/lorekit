@@ -13,13 +13,12 @@ import { WorldStateService } from '../../../services/world-state.service';
 import { TreeViewListComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 import { DocumentEditComponent } from '../document-edit/document-edit.component';
 import { FormsModule } from '@angular/forms';
-import { ButtonComponent } from "../../../components/button/button.component";
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
 import { FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 
 @Component({
   selector: 'app-document-list',
-  imports: [NgClass, TreeViewListComponent, DocumentEditComponent, FormsModule, ButtonComponent, IconButtonComponent, FormOverlayDirective],
+  imports: [NgClass, TreeViewListComponent, DocumentEditComponent, FormsModule, IconButtonComponent, FormOverlayDirective],
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row justify-between items-center mb-4 sticky  z-25 bg-zinc-950 py-2" [ngClass]="{'top-0': isRouteComponent(), 'top-13': !isRouteComponent()}">
@@ -57,8 +56,10 @@ import { FormOverlayDirective } from '../../../components/form-overlay/form-over
           </div>
           <app-tree-view-list
             [openInDialog]="false"
+            [useCustomCreate]="true"
             (onArrayChange)="getDocuments()"
             (onDocumentSelect)="selectDocument($event.id)"
+            (onCreateChild)="createSubDocument($event)"
             [documentArray]="filteredDocuments"
           ></app-tree-view-list>
         </div>
@@ -227,6 +228,17 @@ export class DocumentListComponent implements OnInit {
 
     newDoc = this.documentService.saveDocument(newDoc, "Document", null);
 
+    this.getDocuments();
+  }
+
+  createSubDocument(event: { parentId: string, formData: Record<string, string> }) {
+    const name = event.formData['name']?.trim();
+    if (!name) {
+      return;
+    }
+
+    const newDoc = new Document('', name, '');
+    this.documentService.saveDocument(newDoc, 'Document', event.parentId);
     this.getDocuments();
   }
 

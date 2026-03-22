@@ -63,7 +63,7 @@ import { LocationConfiguredFieldsComponent } from '../location-configured-fields
             @if(hasDynamicFields) {
               <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
             }
-            <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button>
+            <!-- <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button> -->
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2  flex flex-col">
             @if (!isLoading) {
@@ -73,7 +73,7 @@ import { LocationConfiguredFieldsComponent } from '../location-configured-fields
                     <app-editor [entityId]="location.id" docTitle="Descrição" entityTable="Location" [entityName]="location.name" [document]="location.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
                   </div>
                 }
-                @case ('localities') {
+                <!-- @case ('localities') {
                   <div class="w-full ">
                     @if (locationListComponent) {
                       <ng-container *ngComponentOutlet="locationListComponent; inputs: { worldId: location.ParentWorld?.id, locationId: location.id }"></ng-container>
@@ -82,7 +82,7 @@ import { LocationConfiguredFieldsComponent } from '../location-configured-fields
                       <p class="text-zinc-500">Carregando localidades...</p>
                     }
                   </div>
-                }
+                } -->
                 @case ('properties'){
                   <app-location-configured-fields [location]="location"></app-location-configured-fields>
                 }

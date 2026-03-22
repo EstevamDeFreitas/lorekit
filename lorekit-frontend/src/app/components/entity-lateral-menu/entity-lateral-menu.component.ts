@@ -59,12 +59,17 @@ import { NavButtonComponent } from "../nav-button/nav-button.component";
             @if (item.SubDocuments && item.SubDocuments.length > 0){
               <app-tree-view-list
                 [entityId]="entityId()"
+                [entityTable]="entityTable()"
                 [openInDialog]="openInDialog()"
                 [allowCreate]="allowCreate()"
                 [fallbackIcon]="fallbackIcon()"
+                [emptyChildrenLabel]="emptyChildrenLabel()"
+                [createTitle]="createTitle()"
+                [createFieldLabel]="createFieldLabel()"
+                [useCustomCreate]="useCustomCreate()"
                 (onArrayChange)="emitChange()"
                 (onDocumentSelect)="emitDocumentSelection($event)"
-                [entityTable]="'Document'"
+                (onCreateChild)="emitCreateChild($event)"
                 [documentArray]="item.SubDocuments || []"
               ></app-tree-view-list>
             }
@@ -99,8 +104,6 @@ export class TreeViewListComponent {
   createTitle = input<string>('Criar Documento');
   createFieldLabel = input<string>('Título');
   useCustomCreate = input<boolean>(false);
-
-  private documentService = inject(DocumentService);
 
   private dialog = inject(Dialog);
 
@@ -149,25 +152,12 @@ export class TreeViewListComponent {
     this.onDocumentSelect.emit(item);
   }
 
-  createDocument(formData: Record<string, string>, parentDocumentId: string) {
-    if (formData['name'].trim() === '') {
-      return;
-    }
-
-    let newDoc = new Document('', formData['name'], '');
-
-    newDoc = this.documentService.saveDocument(newDoc, "Document", parentDocumentId);
-
-    this.emitChange();
+  emitCreateChild(event: { parentId: string, formData: Record<string, string> }) {
+    this.onCreateChild.emit(event);
   }
 
   createChild(parentId: string, formData: Record<string, string>) {
-    if (this.useCustomCreate()) {
-      this.onCreateChild.emit({ parentId, formData });
-      return;
-    }
-
-    this.createDocument(formData, parentId);
+    this.onCreateChild.emit({ parentId, formData });
   }
 }
 
@@ -231,7 +221,7 @@ export class TreeViewListComponent {
           ></app-button>
         </div>
         <div class="flex flex-col gap-2 h-[calc(100%-8rem)]  overflow-y-scroll scrollbar-dark">
-            <app-tree-view-list [entityId]="entityId()" [entityTable]="entityTable()" (onArrayChange)="loadDocuments()" [documentArray]="documentArray"></app-tree-view-list>
+          <app-tree-view-list [entityId]="entityId()" [entityTable]="entityTable()" [useCustomCreate]="true" (onArrayChange)="loadDocuments()" (onCreateChild)="createChildDocument($event)" [documentArray]="documentArray"></app-tree-view-list>
           <!-- @for (item of documentArray; track $index) {
             <button (click)="openDocument(item)" class=" cursor-pointer flex flex-row hover:font-bold items-center gap-2" [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(item, 'color'))}" >
               <i class="fa-solid" [ngClass]="getPersonalizationItem(item, 'icon') || 'fa-file'"></i>
@@ -308,6 +298,17 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
 
     newDoc = this.documentService.saveDocument(newDoc, this.entityTable(), this.entityId());
     this.documentArray.push(newDoc);
+  }
+
+  createChildDocument(event: { parentId: string, formData: Record<string, string> }) {
+    const name = event.formData['name']?.trim();
+    if (!name) {
+      return;
+    }
+
+    const newDoc = new Document('', name, '');
+    this.documentService.saveDocument(newDoc, this.entityTable(), event.parentId);
+    this.loadDocuments();
   }
 
   getReturnUrlQuery() {
