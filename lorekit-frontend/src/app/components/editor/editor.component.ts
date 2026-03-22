@@ -6,6 +6,7 @@ import Quote from '@editorjs/quote';
 import Table from '@editorjs/table';
 
 import TailwindHeader from '../../plugins/tailwindheader.plugin';
+import TailwindBold from '../../plugins/tailwindbold.plugin';
 import TailwindItalic from '../../plugins/tailwinditalic.plugin';
 import TailwindImage from '../../plugins/tailwindimage.plugin';
 import TailwindMentionPlugin from '../../plugins/tailwindmention.plugin';
@@ -78,6 +79,10 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
           config: {
             withHeadings: true
           }
+        },
+        bold: {
+          class: TailwindBold,
+          shortcut: 'CMD+B',
         },
         italic: {
           class: TailwindItalic,
