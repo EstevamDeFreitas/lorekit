@@ -21,6 +21,8 @@ import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DynamicField } from '../../../models/dynamicfields.model';
 import { ElectronService } from '../../../services/electron.service';
 import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-config-editor/ui-field-config-editor.component';
+import { EventType as TimelineEventType } from '../../../models/event-type.model';
+import { EventTypeService } from '../../../services/event-type.service';
 
 @Component({
   selector: 'app-settings',
@@ -35,6 +37,7 @@ import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-con
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('general_settings')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'general_settings'}">Configurações Gerais</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('location_categories')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'location_categories'}">Categorias de Localidade</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('organization_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'organization_types'}">Tipos de Organização</a>
+          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('event_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'event_types'}">Tipos de Evento</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('dynamic_fields')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'dynamic_fields'}">Campos Dinâmicos</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('global_field_config')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'global_field_config'}">Campos Globais</a>
         </div>
@@ -146,6 +149,48 @@ import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-con
               </div>
             </div>
           }
+          @case ("event_types") {
+            <div>
+              <div class="flex flex-row justify-between items-center mb-4">
+                <h3 class="text-base mb-2">Tipos de Evento</h3>
+                <app-button
+                  label="Adicionar"
+                  buttonType="primary"
+                  size="xs"
+                  icon="fa-solid fa-plus"
+                  appFormOverlay
+                  [title]="'Adicionar Tipo de Evento'"
+                  [fields]="eventTypeFormFields"
+                  (onSave)="createEventType($event)"
+                  ></app-button>
+              </div>
+              <div class="border border-zinc-700 rounded-md bg-zinc-900">
+                @for (item of eventTypes; track item.id) {
+                  <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
+                    <p>{{item.name}}</p>
+                    <div class="flex flex-row gap-2">
+                      <app-icon-button
+                        icon="fa-solid fa-pencil"
+                        size="sm"
+                        buttonType="secondary"
+                        appFormOverlay
+                        [title]="'Editar Tipo de Evento'"
+                        [fields]="[{ key: 'name', label: 'Nome do Tipo de Evento', value: item.name, type: 'text' }]"
+                        [saveLabel]="'Atualizar'"
+                        (onSave)="saveEventType($event, item.id)"
+                        ></app-icon-button>
+                      <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" (click)="deleteEventType(item)"></app-icon-button>
+                    </div>
+                  </div>
+                }
+                @empty {
+                  <div class="flex flex-row justify-between items-center p-2">
+                    <p>Nenhum tipo de evento encontrado.</p>
+                  </div>
+                }
+              </div>
+            </div>
+          }
           @case ("dynamic_fields") {
             <div>
               <h3 class="text-base mb-2">Campos Dinâmicos</h3>
@@ -247,6 +292,7 @@ export class SettingsComponent implements OnInit{
   confirm = inject<ConfirmService>(ConfirmService);
   globalParameterService = inject(GlobalParameterService);
   organizationTypeService = inject(OrganizationTypeService);
+  eventTypeService = inject(EventTypeService);
   dynamicFieldService = inject(DynamicFieldService);
   private dialog = inject(Dialog);
 
@@ -273,6 +319,15 @@ export class SettingsComponent implements OnInit{
     }
   ];
 
+  eventTypeFormFields : FormField[] = [
+    {
+      key: 'name',
+      label: 'Nome do Tipo de Evento',
+      value: '',
+      type: 'text'
+    }
+  ];
+
   exportTextFormat : 'md' | 'txt' = 'txt';
 
 
@@ -286,6 +341,10 @@ export class SettingsComponent implements OnInit{
                     'Relationship',
                     'GlobalParameter',
                     'OrganizationType',
+                    'Timeline',
+                    'GreatMark',
+                    'EventType',
+                    'Event',
                     'Link',
 
                   ];
@@ -316,6 +375,10 @@ export class SettingsComponent implements OnInit{
 
     if (tab === 'organization_types') {
       this.getOrganizationTypes();
+    }
+
+    if (tab === 'event_types') {
+      this.getEventTypes();
     }
 
     if (tab === 'general_settings') {
@@ -420,6 +483,51 @@ export class SettingsComponent implements OnInit{
 
   getOrganizationTypes() {
     this.organizationTypes = this.organizationTypeService.getOrganizationTypes();
+  }
+
+  eventTypes: TimelineEventType[] = [];
+  createEventType(formData: Record<string, string>) {
+    const typeName = formData['name'];
+
+    if (typeName.trim() === '') {
+      return;
+    }
+
+    const newType: TimelineEventType = {
+      id: '',
+      name: typeName.trim()
+    };
+
+    let eventType = this.eventTypeService.saveEventType(newType);
+    this.eventTypes.push(eventType);
+  }
+
+  saveEventType(formData: Record<string, string>, typeId: string) {
+    const typeName = formData['name'];
+
+    if (typeName.trim() === '') {
+      return;
+    }
+
+    const typeToUpdate = this.eventTypes.find(t => t.id === typeId);
+    if (typeToUpdate) {
+      typeToUpdate.name = typeName.trim();
+      this.eventTypeService.saveEventType(typeToUpdate);
+      this.getEventTypes();
+    }
+  }
+
+  deleteEventType(eventType: TimelineEventType) {
+    this.confirm.ask(`Tem certeza que deseja deletar o tipo de evento ${eventType.name}?`).then(confirmed => {
+      if (confirmed) {
+        this.eventTypeService.deleteEventType(eventType);
+        this.getEventTypes();
+      }
+    });
+  }
+
+  getEventTypes() {
+    this.eventTypes = this.eventTypeService.getEventTypes();
   }
 
   onTableSelected(event : any) {

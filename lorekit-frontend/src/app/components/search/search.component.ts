@@ -105,7 +105,7 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   currentTables = schema;
 
-  tablesToIgnore = input<string[]>(['Personalization', 'Image', 'Relationship', 'GlobalParameter', 'Link', 'LocationCategory', 'OrganizationType']);
+  tablesToIgnore = input<string[]>(['Personalization', 'Image', 'Relationship', 'GlobalParameter', 'Link', 'LocationCategory', 'OrganizationType', 'GreatMark', 'EventType', 'Event']);
 
   searchResults: { [tableName: string]: any[] } = {};
   searchResultKeys: string[] = [];
@@ -163,6 +163,9 @@ export class SearchComponent implements OnInit, OnDestroy {
     }
     if(tableName === 'World'){
       return `/app/world/info/${id}`;
+    }
+    if(tableName === 'Timeline'){
+      return `/app/timeline/edit/${id}`;
     }
     return `/app/${tableName.toLowerCase()}/edit/${id}`;
   }

@@ -160,6 +160,44 @@ export const schema: TableDef[] = [
     ]
   },
   {
+    name: "Timeline",
+    columns: [
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",        def: `"name" TEXT NOT NULL` },
+      { name: "concept",     def: `"concept" TEXT` },
+      { name: "description", def: `"description" TEXT NOT NULL` },
+    ]
+  },
+  {
+    name: "GreatMark",
+    columns: [
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",        def: `"name" TEXT NOT NULL` },
+      { name: "concept",     def: `"concept" TEXT` },
+      { name: "description", def: `"description" TEXT NOT NULL` },
+      { name: "sortOrder",   def: `"sortOrder" REAL NOT NULL DEFAULT 0` },
+    ]
+  },
+  {
+    name: "EventType",
+    columns: [
+      { name: "id",   def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name", def: `"name" TEXT NOT NULL` },
+    ]
+  },
+  {
+    name: "Event",
+    columns: [
+      { name: "id",              def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",            def: `"name" TEXT NOT NULL` },
+      { name: "concept",         def: `"concept" TEXT` },
+      { name: "date",            def: `"date" TEXT` },
+      { name: "description",     def: `"description" TEXT NOT NULL` },
+      { name: "sortOrder",       def: `"sortOrder" REAL NOT NULL DEFAULT 0` },
+      { name: "chronologyOrder", def: `"chronologyOrder" REAL NOT NULL DEFAULT 0` },
+    ]
+  },
+  {
     name:"Link",
     columns:[
       { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },

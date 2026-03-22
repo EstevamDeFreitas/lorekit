@@ -16,6 +16,7 @@ import { animate, query, style, transition, trigger } from '@angular/animations'
           <app-nav-button [label]="'Mundos'" [route]="'/app/world'" [icon]="'fa-solid fa-earth'" size="sm" [fullWidth]="true" [direction]="'right'"></app-nav-button>
           <app-nav-button [label]="'Localidades'" [route]="'/app/location'" [icon]="'fa-solid fa-location-dot'" size="sm" [fullWidth]="true" [direction]="'right'"></app-nav-button>
           <app-nav-button [label]="'Documentos'" [route]="'/app/document'" [icon]="'fa-solid fa-file'" size="sm" [fullWidth]="true" [direction]="'right'"></app-nav-button>
+          <app-nav-button [label]="'Linhas do Tempo'" [route]="'/app/timeline'" [icon]="'fa-solid fa-timeline'" size="sm" [fullWidth]="true" [direction]="'right'"></app-nav-button>
           <app-nav-button [label]="'Espécies'" [route]="'/app/specie'" [icon]="'fa-solid fa-paw'" size="sm" [fullWidth]="true" [direction]="'right'"></app-nav-button>
           <app-nav-button [label]="'Personagens'" [route]="'/app/character'" [icon]="'fa-solid fa-users'" size="sm" [fullWidth]="true" [direction]="'right'"></app-nav-button>
           <app-nav-button [label]="'Culturas'" [route]="'/app/culture'" [icon]="'fa-solid fa-mortar-pestle'" size="sm" [fullWidth]="true" [direction]="'right'"></app-nav-button>

@@ -82,7 +82,25 @@ export const routes: Routes = [
           },
           {path: 'edit/:organizationId', loadComponent: () =>
             import('./pages/organizations/organization-edit/organization-edit.component')
-              .then(m => m.OrganizationEditComponent),
+            .then(m => m.OrganizationEditComponent),
+          },
+        ]
+      },
+      {
+        path: 'timeline',
+        children: [
+          { path: '', redirectTo: 'list', pathMatch: 'full' },
+          {
+            path: 'list',
+            loadComponent: () =>
+              import('./pages/timelines/timeline-list/timeline-list.component')
+                .then(m => m.TimelineListComponent),
+          },
+          {
+            path: 'edit/:timelineId',
+            loadComponent: () =>
+              import('./pages/timelines/timeline-edit/timeline-edit.component')
+                .then(m => m.TimelineEditComponent),
           },
         ]
       },
