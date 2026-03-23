@@ -5,7 +5,6 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from "../../../components/button/button.component";
-import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { TreeViewListComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
 import { InputComponent } from "../../../components/input/input.component";
@@ -44,7 +43,7 @@ interface TimelineEventDocumentsDialogData {
 @Component({
   selector: 'app-timeline-event-documents-dialog',
   standalone: true,
-  imports: [ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, TreeViewListComponent],
+  imports: [ButtonComponent, FormsModule, IconButtonComponent, InputComponent, TreeViewListComponent],
   template: `
     <div class="w-[52rem] max-w-[95vw] flex flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
@@ -56,13 +55,29 @@ interface TimelineEventDocumentsDialogData {
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
-        <app-combo-box
-          label="Relacionar documento existente"
-          [items]="availableDocuments"
-          compareProp="id"
-          displayProp="title"
-          [(comboValue)]="selectedDocumentId">
-        </app-combo-box>
+        <div class="relative">
+          <label class="block text-xs font-medium">Relacionar documento existente</label>
+          <input
+            type="text"
+            [(ngModel)]="documentSearchTerm"
+            (ngModelChange)="onDocumentSearchChange($event)"
+            placeholder="Pesquisar documentos..."
+            class="mt-1 w-full rounded-lg px-3 py-2 bg-zinc-925 border border-zinc-800 text-sm focus:outline-none focus:border-zinc-100 placeholder:text-white/20"
+          />
+
+          @if (filteredDocuments.length > 0) {
+            <div class="absolute z-20 top-full mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 shadow-lg max-h-56 overflow-y-auto scrollbar-dark">
+              @for (document of filteredDocuments; track document.id) {
+                <button
+                  type="button"
+                  class="w-full text-left px-3 py-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-900 cursor-pointer"
+                  (click)="selectDocument(document)">
+                  <div class="font-medium">{{ document.title }}</div>
+                </button>
+              }
+            </div>
+          }
+        </div>
         <app-button label="Relacionar" buttonType="secondary" size="sm" (click)="attachSelectedDocument()"></app-button>
       </div>
 
@@ -98,7 +113,9 @@ export class TimelineEventDocumentsDialogComponent {
 
   documents: Document[] = [];
   availableDocuments: Document[] = [];
+  filteredDocuments: Document[] = [];
   selectedDocumentId: string | null = null;
+  documentSearchTerm = '';
   newDocumentTitle = '';
   changed = false;
 
@@ -112,6 +129,7 @@ export class TimelineEventDocumentsDialogComponent {
     this.availableDocuments = this.documentService.getAllDocuments()
       .filter(document => !relatedDocumentIds.has(document.id))
       .sort((a, b) => a.title.localeCompare(b.title));
+    this.onDocumentSearchChange(this.documentSearchTerm);
   }
 
   attachSelectedDocument() {
@@ -121,6 +139,7 @@ export class TimelineEventDocumentsDialogComponent {
 
     this.documentService.attachExistingDocument('Event', this.data.eventId, this.selectedDocumentId);
     this.selectedDocumentId = null;
+    this.documentSearchTerm = '';
     this.changed = true;
     this.loadDocuments();
   }
@@ -146,6 +165,26 @@ export class TimelineEventDocumentsDialogComponent {
     this.documentService.saveDocument(new Document('', title, ''), 'Document', event.parentId);
     this.changed = true;
     this.loadDocuments();
+  }
+
+  onDocumentSearchChange(term: string) {
+    this.documentSearchTerm = term;
+    const normalizedTerm = term.trim().toLocaleLowerCase();
+
+    if (!normalizedTerm) {
+      this.filteredDocuments = [];
+      return;
+    }
+
+    this.filteredDocuments = this.availableDocuments
+      .filter(document => document.title.toLocaleLowerCase().includes(normalizedTerm))
+      .slice(0, 8);
+  }
+
+  selectDocument(document: Document) {
+    this.selectedDocumentId = document.id;
+    this.documentSearchTerm = document.title;
+    this.filteredDocuments = [];
   }
 
   private collectDocumentIds(documents: Document[]) {
