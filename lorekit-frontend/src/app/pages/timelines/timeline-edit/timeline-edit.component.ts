@@ -5,15 +5,20 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from "../../../components/button/button.component";
+import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
+import { TreeViewListComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
+import { InputComponent } from "../../../components/input/input.component";
 import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { TextAreaComponent } from "../../../components/text-area/text-area.component";
+import { Document } from '../../../models/document.model';
 import { GreatMark } from '../../../models/great-mark.model';
 import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
 import { TimelineEvent } from '../../../models/timeline-event.model';
 import { Timeline } from '../../../models/timeline.model';
+import { DocumentService } from '../../../services/document.service';
 import { EventService } from '../../../services/event.service';
 import { GreatMarkService } from '../../../services/great-mark.service';
 import { TimelineService } from '../../../services/timeline.service';
@@ -24,10 +29,140 @@ type EventSide = 'left' | 'right';
 
 interface TimelineSectionViewModel {
   id: string;
+  kind: 'initial' | 'marked' | 'trailing';
   mark: GreatMark | null;
   events: TimelineEvent[];
   color: string | null;
   dropListId: string;
+}
+
+interface TimelineEventDocumentsDialogData {
+  eventId: string;
+  eventName: string;
+}
+
+@Component({
+  selector: 'app-timeline-event-documents-dialog',
+  standalone: true,
+  imports: [ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, TreeViewListComponent],
+  template: `
+    <div class="w-[52rem] max-w-[95vw] flex flex-col gap-4">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-bold">Documentos do Evento</h2>
+          <p class="text-sm text-zinc-400">Gerencie os documentos relacionados a {{ data.eventName }}.</p>
+        </div>
+        <app-icon-button icon="fa-solid fa-xmark" buttonType="secondary" size="lg" (click)="dialogRef.close({ updated: changed })"></app-icon-button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
+        <app-combo-box
+          label="Relacionar documento existente"
+          [items]="availableDocuments"
+          compareProp="id"
+          displayProp="title"
+          [(comboValue)]="selectedDocumentId">
+        </app-combo-box>
+        <app-button label="Relacionar" buttonType="secondary" size="sm" (click)="attachSelectedDocument()"></app-button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
+        <app-input label="Novo documento" [(value)]="newDocumentTitle"></app-input>
+        <app-button label="Criar novo documento" buttonType="primary" size="sm" (click)="createRootDocument()"></app-button>
+      </div>
+
+      <div class="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3 min-h-40 max-h-[60vh] overflow-y-auto scrollbar-dark">
+        <app-tree-view-list
+          [entityTable]="'Event'"
+          [entityId]="data.eventId"
+          [documentArray]="documents"
+          [allowCreate]="true"
+          [useCustomCreate]="true"
+          [createTitle]="'Criar Documento'"
+          [createFieldLabel]="'Título'"
+          (onCreateChild)="createChildDocument($event)">
+        </app-tree-view-list>
+      </div>
+
+      <div class="flex justify-end">
+        <app-button label="Fechar" buttonType="secondary" size="sm" (click)="dialogRef.close({ updated: changed })"></app-button>
+      </div>
+    </div>
+  `,
+  changeDetection: ChangeDetectionStrategy.Default,
+})
+export class TimelineEventDocumentsDialogComponent {
+  readonly dialogRef = inject<DialogRef<any>>(DialogRef<any>);
+  readonly data = inject<TimelineEventDocumentsDialogData>(DIALOG_DATA);
+  private readonly documentService = inject(DocumentService);
+
+  documents: Document[] = [];
+  availableDocuments: Document[] = [];
+  selectedDocumentId: string | null = null;
+  newDocumentTitle = '';
+  changed = false;
+
+  constructor() {
+    this.loadDocuments();
+  }
+
+  loadDocuments() {
+    this.documents = this.documentService.getDocumentsTree('Event', this.data.eventId);
+    const relatedDocumentIds = this.collectDocumentIds(this.documents);
+    this.availableDocuments = this.documentService.getAllDocuments()
+      .filter(document => !relatedDocumentIds.has(document.id))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }
+
+  attachSelectedDocument() {
+    if (!this.selectedDocumentId) {
+      return;
+    }
+
+    this.documentService.attachExistingDocument('Event', this.data.eventId, this.selectedDocumentId);
+    this.selectedDocumentId = null;
+    this.changed = true;
+    this.loadDocuments();
+  }
+
+  createRootDocument() {
+    const title = this.newDocumentTitle.trim();
+    if (!title) {
+      return;
+    }
+
+    this.documentService.saveDocument(new Document('', title, ''), 'Event', this.data.eventId);
+    this.newDocumentTitle = '';
+    this.changed = true;
+    this.loadDocuments();
+  }
+
+  createChildDocument(event: { parentId: string, formData: Record<string, string> }) {
+    const title = event.formData['name']?.trim();
+    if (!title) {
+      return;
+    }
+
+    this.documentService.saveDocument(new Document('', title, ''), 'Document', event.parentId);
+    this.changed = true;
+    this.loadDocuments();
+  }
+
+  private collectDocumentIds(documents: Document[]) {
+    const ids = new Set<string>();
+
+    const visit = (items: Document[]) => {
+      for (const item of items) {
+        ids.add(item.id);
+        if (item.SubDocuments?.length) {
+          visit(item.SubDocuments);
+        }
+      }
+    };
+
+    visit(documents);
+    return ids;
+  }
 }
 
 @Component({
@@ -149,8 +284,9 @@ interface TimelineSectionViewModel {
                     @let side = eventSides[event.id] || 'left';
                     <div cdkDrag class="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
                       @if (side === 'left') {
-                        <button
-                          type="button"
+                        <div
+                          role="button"
+                          tabindex="0"
                           class="group rounded-2xl border border-zinc-800 p-4 text-left cursor-pointer hover:border-zinc-600"
                           [style.border-left-width.px]="4"
                           [style.border-left-color]="section.color || '#71717A'"
@@ -160,9 +296,17 @@ interface TimelineSectionViewModel {
                           (click)="openEventDialog(event.chronologyOrder, event.id)">
                           <div class="flex items-center justify-between gap-3">
                             <div class="text-xs uppercase tracking-[0.2em] opacity-70">{{ event.date || 'Sem data' }}</div>
-                            @if (event.ParentEventType) {
-                              <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">{{ event.ParentEventType.name }}</span>
-                            }
+                            <div class="flex items-center gap-2">
+                              @if (event.ParentEventType) {
+                                <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">{{ event.ParentEventType.name }}</span>
+                              }
+                              <button
+                                type="button"
+                                class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white cursor-pointer hover:border-zinc-500"
+                                (click)="openEventDocuments(event, $event)">
+                                {{ getEventDocumentsLabel(event) }}
+                              </button>
+                            </div>
                           </div>
                           <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
                           <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.concept || event.description || 'Sem resumo definido.' }}</p>
@@ -173,7 +317,7 @@ interface TimelineSectionViewModel {
                               </span>
                             }
                           </div>
-                        </button>
+                        </div>
                       }
                       @else {
                         <div></div>
@@ -185,8 +329,9 @@ interface TimelineSectionViewModel {
                       </div>
 
                       @if (side === 'right') {
-                        <button
-                          type="button"
+                        <div
+                          role="button"
+                          tabindex="0"
                           class="group rounded-2xl border border-zinc-800 p-4 text-left cursor-pointer hover:border-zinc-600"
                           [style.border-left-width.px]="4"
                           [style.border-left-color]="section.color || '#71717A'"
@@ -196,9 +341,17 @@ interface TimelineSectionViewModel {
                           (click)="openEventDialog(event.chronologyOrder, event.id)">
                           <div class="flex items-center justify-between gap-3">
                             <div class="text-xs uppercase tracking-[0.2em] opacity-70">{{ event.date || 'Sem data' }}</div>
-                            @if (event.ParentEventType) {
-                              <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">{{ event.ParentEventType.name }}</span>
-                            }
+                            <div class="flex items-center gap-2">
+                              @if (event.ParentEventType) {
+                                <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">{{ event.ParentEventType.name }}</span>
+                              }
+                              <button
+                                type="button"
+                                class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white cursor-pointer hover:border-zinc-500"
+                                (click)="openEventDocuments(event, $event)">
+                                {{ getEventDocumentsLabel(event) }}
+                              </button>
+                            </div>
                           </div>
                           <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
                           <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.concept || event.description || 'Sem resumo definido.' }}</p>
@@ -209,7 +362,7 @@ interface TimelineSectionViewModel {
                               </span>
                             }
                           </div>
-                        </button>
+                        </div>
                       }
                       @else {
                         <div></div>
@@ -278,6 +431,7 @@ export class TimelineEditComponent {
   events: TimelineEvent[] = [];
   sections: TimelineSectionViewModel[] = [{
     id: 'section-initial',
+    kind: 'initial',
     mark: null,
     events: [],
     color: null,
@@ -331,6 +485,7 @@ export class TimelineEditComponent {
 
     const initialSection: TimelineSectionViewModel = {
       id: 'section-initial',
+      kind: 'initial',
       mark: null,
       events: [],
       color: null,
@@ -338,15 +493,18 @@ export class TimelineEditComponent {
     };
 
     const builtSections: TimelineSectionViewModel[] = [initialSection];
+    const trailingBaseOrder = (marks.length + 1) * this.MARK_SPACING;
 
     for (const [markIndex, mark] of marks.entries()) {
       const nextMark = marks[markIndex + 1];
+      const upperBound = nextMark?.sortOrder ?? trailingBaseOrder;
       builtSections.push({
         id: `section-${mark.id}`,
+        kind: 'marked',
         mark,
         events: sortedEvents.filter(event =>
           event.sortOrder > mark.sortOrder &&
-          (!nextMark || event.sortOrder < nextMark.sortOrder)
+          event.sortOrder < upperBound
         ),
         color: getPersonalizationValue(mark, 'color'),
         dropListId: `timeline-section-${mark.id}`,
@@ -357,6 +515,17 @@ export class TimelineEditComponent {
     initialSection.events = firstMark
       ? sortedEvents.filter(event => event.sortOrder < firstMark.sortOrder)
       : sortedEvents;
+
+    if (marks.length > 0) {
+      builtSections.push({
+        id: 'section-trailing',
+        kind: 'trailing',
+        mark: null,
+        events: sortedEvents.filter(event => event.sortOrder >= trailingBaseOrder),
+        color: null,
+        dropListId: 'timeline-section-trailing',
+      });
+    }
 
     this.sections = builtSections;
     this.connectedDropLists = builtSections.map(section => section.dropListId);
@@ -434,6 +603,26 @@ export class TimelineEditComponent {
     });
   }
 
+  openEventDocuments(event: TimelineEvent, domEvent: Event) {
+    domEvent.stopPropagation();
+
+    const dialogRef = this.dialog.open(TimelineEventDocumentsDialogComponent, {
+      panelClass: ['screen-dialog', 'overflow-visible'],
+      width: '90vw',
+      maxWidth: '960px',
+      data: {
+        eventId: event.id,
+        eventName: event.name,
+      },
+    });
+
+    dialogRef.closed.subscribe((result: any) => {
+      if (result?.updated) {
+        this.loadTimeline();
+      }
+    });
+  }
+
   persistLoadedEventOrdering() {
     this.events = [...this.events].sort((a, b) => a.chronologyOrder - b.chronologyOrder);
     this.buildSections();
@@ -457,7 +646,9 @@ export class TimelineEditComponent {
 
     for (let sectionIndex = 1; sectionIndex < this.sections.length; sectionIndex++) {
       const section = this.sections[sectionIndex];
-      const markOrder = sectionIndex * this.MARK_SPACING;
+      const markOrder = section.kind === 'trailing'
+        ? (this.greatMarks.length + 1) * this.MARK_SPACING
+        : sectionIndex * this.MARK_SPACING;
 
       if (section.mark) {
         section.mark.sortOrder = markOrder;
@@ -506,6 +697,14 @@ export class TimelineEditComponent {
     const lastEvent = section?.events.at(-1);
     const anchor = lastEvent?.sortOrder ?? section?.mark?.sortOrder ?? 0;
 
+    if (section?.kind === 'trailing') {
+      return this.getTrailingSectionInsertOrder();
+    }
+
+    if (nextSection?.kind === 'trailing') {
+      return this.getTrailingSectionInsertOrder();
+    }
+
     if (nextSection?.mark) {
       return Math.max(anchor + 1, nextSection.mark.sortOrder - 1);
     }
@@ -514,7 +713,22 @@ export class TimelineEditComponent {
   }
 
   getBetweenSectionsLabel(sectionIndex: number) {
+    if (this.sections[sectionIndex]?.kind === 'trailing') {
+      return 'Adicionar evento ao final desta seção';
+    }
+
+    if (this.sections[sectionIndex + 1]?.kind === 'trailing') {
+      return 'Adicionar evento após o último grande marco';
+    }
+
     return this.sections[sectionIndex + 1]?.mark ? 'Adicionar evento entre seções' : 'Adicionar evento no final da timeline';
+  }
+
+  getTrailingSectionInsertOrder() {
+    const trailingSection = this.sections.find(section => section.kind === 'trailing');
+    const lastTrailingEvent = trailingSection?.events.at(-1);
+    const trailingBase = (this.greatMarks.length + 1) * this.MARK_SPACING;
+    return lastTrailingEvent ? lastTrailingEvent.sortOrder + this.EVENT_SPACING : trailingBase + this.EVENT_SPACING;
   }
 
   getDefaultTailMarkOrder() {
@@ -528,6 +742,10 @@ export class TimelineEditComponent {
     const nextSection = this.sections[sectionIndex + 1];
     if (nextSection?.mark) {
       return nextSection.mark.sortOrder - 1;
+    }
+
+    if (nextSection?.kind === 'trailing') {
+      return (this.greatMarks.length + 2) * this.MARK_SPACING;
     }
 
     const section = this.sections[sectionIndex];
@@ -572,6 +790,11 @@ export class TimelineEditComponent {
     return {
       'background-color': color,
     };
+  }
+
+  getEventDocumentsLabel(event: TimelineEvent) {
+    const count = event.Documents?.length || 0;
+    return count > 0 ? `Documentos (${count})` : 'Documentos';
   }
 
   hasBackgroundImage(event: TimelineEvent) {

@@ -80,4 +80,24 @@ export class DocumentService {
     return this.crud.delete('Document', documentId, deleteRelatedItems);
   }
 
+  attachExistingDocument(entityTable: string, entityId: string, documentId: string) {
+    const existingRelationship = this.crud.findAll('Relationship', {
+      parentTable: entityTable,
+      parentId: entityId,
+      entityTable: 'Document',
+      entityId: documentId,
+    });
+
+    if ((existingRelationship || []).length > 0) {
+      return;
+    }
+
+    this.crud.create('Relationship', {
+      parentTable: entityTable,
+      parentId: entityId,
+      entityTable: 'Document',
+      entityId: documentId
+    });
+  }
+
 }

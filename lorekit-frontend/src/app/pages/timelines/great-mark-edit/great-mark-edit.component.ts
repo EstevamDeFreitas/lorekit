@@ -20,7 +20,7 @@ interface GreatMarkDialogData {
   standalone: true,
   imports: [ButtonComponent, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
   template: `
-    <div class="w-[36rem] max-w-[92vw] rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex flex-col gap-4">
+    <div class="w-[36rem] max-w-[92vw] flex flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-bold">{{ mark.id ? 'Editar Grande Marco' : 'Novo Grande Marco' }}</h2>

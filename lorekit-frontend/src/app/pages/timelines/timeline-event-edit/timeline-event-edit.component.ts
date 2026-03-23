@@ -32,7 +32,7 @@ interface TimelineEventDialogData {
   standalone: true,
   imports: [ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
   template: `
-    <div class="w-[52rem] max-w-[94vw] rounded-xl border border-zinc-800 bg-zinc-900 p-4 flex flex-col gap-4">
+    <div class="w-[52rem] max-w-[94vw] flex flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-bold">{{ event.id ? 'Editar Evento' : 'Novo Evento' }}</h2>
