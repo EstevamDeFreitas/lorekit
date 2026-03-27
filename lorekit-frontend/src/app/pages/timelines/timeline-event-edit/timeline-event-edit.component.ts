@@ -32,7 +32,7 @@ interface TimelineEventDialogData {
   standalone: true,
   imports: [ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
   template: `
-    <div class="w-[52rem] max-w-[94vw] flex flex-col gap-4">
+    <div class=" flex flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-bold">{{ event.id ? 'Editar Evento' : 'Novo Evento' }}</h2>
@@ -46,28 +46,27 @@ interface TimelineEventDialogData {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <app-input label="Nome" [(value)]="event.name"></app-input>
-        <app-input label="Conceito" [(value)]="event.concept"></app-input>
-        <app-input label="Data exibida" [(value)]="event.date"></app-input>
-        <app-input label="Ordem cronológica" type="number" [(value)]="event.chronologyOrder"></app-input>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <app-combo-box
-          label="Tipo do evento"
-          [items]="eventTypes"
-          compareProp="id"
-          displayProp="name"
-          [(comboValue)]="selectedEventTypeId">
-        </app-combo-box>
-        <app-combo-box
-          label="Local principal"
-          [items]="locations"
-          compareProp="id"
-          displayProp="name"
-          [(comboValue)]="selectedLocationId">
-        </app-combo-box>
+      <app-input label="Nome" [(value)]="event.name"></app-input>
+      <div class="grid grid-cols-2 gap-3">
+        <app-text-area label="Conceito" height="h-42" [(value)]="event.concept"></app-text-area>
+        <div class="flex flex-col gap-3">
+          <app-input label="Data exibida" [(value)]="event.date"></app-input>
+          <app-combo-box
+            label="Tipo do evento"
+            [items]="eventTypes"
+            compareProp="id"
+            displayProp="name"
+            [(comboValue)]="selectedEventTypeId">
+          </app-combo-box>
+          <app-combo-box
+            label="Local principal"
+            [items]="locations"
+            compareProp="id"
+            displayProp="name"
+            [(comboValue)]="selectedLocationId">
+          </app-combo-box>
+        </div>
+        <!-- <app-input label="Ordem cronológica" type="number" [(value)]="event.chronologyOrder"></app-input> -->
       </div>
 
       <app-text-area label="Descrição" [(value)]="event.description" height="h-32"></app-text-area>

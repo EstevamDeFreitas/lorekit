@@ -241,7 +241,7 @@ export class TimelineEventDocumentsDialogComponent {
       </div>
 
       <div class="mt-4 grid grid-cols-1 xl:grid-cols-[22rem_1fr] gap-6 items-start">
-        <div class="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sticky top-20 flex flex-col gap-4">
+        <div class="rounded-md border border-zinc-800 bg-zinc-900 p-4 sticky top-10 flex flex-col gap-4">
           <div>
             <h3 class="text-sm uppercase tracking-[0.2em] text-zinc-500">Resumo</h3>
             @if (timeline.ParentWorld) {
@@ -266,7 +266,7 @@ export class TimelineEventDocumentsDialogComponent {
           </div>
         </div>
 
-        <div class="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 min-h-[70vh]">
+        <div class="rounded-md border border-zinc-800 bg-zinc-900/40 p-4 min-h-[70vh]">
           <div class="relative min-h-[60vh] py-6">
             <div class="absolute left-1/2 top-0 bottom-0 w-[3px] -translate-x-1/2 rounded-full bg-zinc-800"></div>
 
