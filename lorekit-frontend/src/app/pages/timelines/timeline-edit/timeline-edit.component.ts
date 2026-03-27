@@ -28,7 +28,7 @@ type EventSide = 'left' | 'right';
 
 interface TimelineSectionViewModel {
   id: string;
-  kind: 'initial' | 'marked' | 'trailing';
+  kind: 'initial' | 'marked' | 'free' | 'trailing';
   mark: GreatMark | null;
   events: TimelineEvent[];
   color: string | null;
@@ -45,7 +45,7 @@ interface TimelineEventDocumentsDialogData {
   standalone: true,
   imports: [ButtonComponent, FormsModule, IconButtonComponent, InputComponent, TreeViewListComponent],
   template: `
-    <div class="w-[52rem] max-w-[95vw] flex flex-col gap-4">
+    <div class="flex flex-col gap-4">
       <div class="flex items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-bold">Documentos do Evento</h2>
@@ -537,17 +537,37 @@ export class TimelineEditComponent {
     for (const [markIndex, mark] of marks.entries()) {
       const nextMark = marks[markIndex + 1];
       const upperBound = nextMark?.sortOrder ?? trailingBaseOrder;
+      const freeSectionBase = nextMark ? this.getFreeSectionBaseOrder(mark.sortOrder, nextMark.sortOrder) : upperBound;
+      const markedEvents = sortedEvents.filter(event =>
+        event.sortOrder > mark.sortOrder &&
+        event.sortOrder < freeSectionBase
+      );
+      const freeEvents = nextMark
+        ? sortedEvents.filter(event =>
+            event.sortOrder >= freeSectionBase &&
+            event.sortOrder < upperBound
+          )
+        : [];
+
       builtSections.push({
         id: `section-${mark.id}`,
         kind: 'marked',
         mark,
-        events: sortedEvents.filter(event =>
-          event.sortOrder > mark.sortOrder &&
-          event.sortOrder < upperBound
-        ),
+        events: markedEvents,
         color: getPersonalizationValue(mark, 'color'),
         dropListId: `timeline-section-${mark.id}`,
       });
+
+      if (freeEvents.length > 0) {
+        builtSections.push({
+          id: `section-free-${mark.id}-${nextMark.id}`,
+          kind: 'free',
+          mark: null,
+          events: freeEvents,
+          color: null,
+          dropListId: `timeline-section-free-${mark.id}-${nextMark.id}`,
+        });
+      }
     }
 
     const firstMark = marks[0];
@@ -671,6 +691,7 @@ export class TimelineEditComponent {
   normalizeTimelineOrdering() {
     const markUpdates: Array<Pick<GreatMark, 'id' | 'sortOrder'>> = [];
     const eventUpdates: Array<Pick<TimelineEvent, 'id' | 'sortOrder' | 'chronologyOrder'>> = [];
+    let normalizedMarkIndex = 0;
 
     this.sections[0]?.events.forEach((timelineEvent, index) => {
       const order = (index + 1) * this.EVENT_SPACING;
@@ -685,28 +706,66 @@ export class TimelineEditComponent {
 
     for (let sectionIndex = 1; sectionIndex < this.sections.length; sectionIndex++) {
       const section = this.sections[sectionIndex];
-      const markOrder = section.kind === 'trailing'
-        ? (this.greatMarks.length + 1) * this.MARK_SPACING
-        : sectionIndex * this.MARK_SPACING;
 
       if (section.mark) {
+        normalizedMarkIndex++;
+        const markOrder = normalizedMarkIndex * this.MARK_SPACING;
         section.mark.sortOrder = markOrder;
         markUpdates.push({
           id: section.mark.id,
           sortOrder: markOrder,
         });
+        section.events.forEach((timelineEvent, eventIndex) => {
+          const order = markOrder + ((eventIndex + 1) * this.EVENT_SPACING);
+          timelineEvent.sortOrder = order;
+          timelineEvent.chronologyOrder = order;
+          eventUpdates.push({
+            id: timelineEvent.id,
+            sortOrder: order,
+            chronologyOrder: order,
+          });
+        });
+        continue;
       }
 
-      section.events.forEach((timelineEvent, eventIndex) => {
-        const order = markOrder + ((eventIndex + 1) * this.EVENT_SPACING);
-        timelineEvent.sortOrder = order;
-        timelineEvent.chronologyOrder = order;
-        eventUpdates.push({
-          id: timelineEvent.id,
-          sortOrder: order,
-          chronologyOrder: order,
+      if (section.kind === 'free') {
+        const previousMarkedSection = this.findPreviousMarkedSection(sectionIndex);
+        const nextMarkedSection = this.findNextMarkedSection(sectionIndex);
+
+        if (!previousMarkedSection?.mark || !nextMarkedSection?.mark) {
+          continue;
+        }
+
+        const previousMarkOrder = previousMarkedSection.mark.sortOrder;
+        const nextMarkOrder = (normalizedMarkIndex + 1) * this.MARK_SPACING;
+        const freeSectionBase = this.getFreeSectionBaseOrder(previousMarkOrder, nextMarkOrder);
+
+        section.events.forEach((timelineEvent, eventIndex) => {
+          const order = freeSectionBase + ((eventIndex + 1) * this.EVENT_SPACING);
+          timelineEvent.sortOrder = order;
+          timelineEvent.chronologyOrder = order;
+          eventUpdates.push({
+            id: timelineEvent.id,
+            sortOrder: order,
+            chronologyOrder: order,
+          });
         });
-      });
+        continue;
+      }
+
+      if (section.kind === 'trailing') {
+        const trailingBase = (this.greatMarks.length + 1) * this.MARK_SPACING;
+        section.events.forEach((timelineEvent, eventIndex) => {
+          const order = trailingBase + ((eventIndex + 1) * this.EVENT_SPACING);
+          timelineEvent.sortOrder = order;
+          timelineEvent.chronologyOrder = order;
+          eventUpdates.push({
+            id: timelineEvent.id,
+            sortOrder: order,
+            chronologyOrder: order,
+          });
+        });
+      }
     }
 
     if (markUpdates.length > 0) {
@@ -726,8 +785,32 @@ export class TimelineEditComponent {
   }
 
   getAfterMarkInsertOrder(sectionIndex: number) {
-    const mark = this.sections[sectionIndex]?.mark;
-    return mark ? mark.sortOrder + 1 : this.getInitialInsertOrder();
+    const section = this.sections[sectionIndex];
+    const mark = section?.mark;
+    if (!mark) {
+      return this.getInitialInsertOrder();
+    }
+
+    const lastMarkedEvent = section.events.at(-1);
+    if (lastMarkedEvent) {
+      return lastMarkedEvent.sortOrder + 1;
+    }
+
+    const nextSection = this.sections[sectionIndex + 1];
+    if (nextSection?.kind === 'free') {
+      const nextMarkedSection = this.findNextMarkedSection(sectionIndex + 1);
+      const nextMarkOrder = nextMarkedSection?.mark?.sortOrder;
+
+      if (nextMarkOrder) {
+        return Math.max(mark.sortOrder + 1, this.getFreeSectionBaseOrder(mark.sortOrder, nextMarkOrder) - 1);
+      }
+    }
+
+    if (nextSection?.mark) {
+      return Math.max(mark.sortOrder + 1, this.getFreeSectionBaseOrder(mark.sortOrder, nextSection.mark.sortOrder) - 1);
+    }
+
+    return mark.sortOrder + 1;
   }
 
   getBetweenSectionsInsertOrder(sectionIndex: number) {
@@ -744,6 +827,27 @@ export class TimelineEditComponent {
       return this.getTrailingSectionInsertOrder();
     }
 
+    if (section?.mark && nextSection?.kind === 'free') {
+      const nextMarkedSection = this.findNextMarkedSection(sectionIndex + 1);
+      const nextMarkOrder = nextMarkedSection?.mark?.sortOrder;
+
+      if (!nextMarkOrder) {
+        return this.getTrailingSectionInsertOrder();
+      }
+
+      const freeSectionBase = this.getFreeSectionBaseOrder(section.mark.sortOrder, nextMarkOrder) + this.EVENT_SPACING;
+      const firstFreeEvent = nextSection.events[0];
+      return firstFreeEvent ? Math.max(freeSectionBase, firstFreeEvent.sortOrder - 1) : freeSectionBase;
+    }
+
+    if (section?.kind === 'free') {
+      return lastEvent ? lastEvent.sortOrder + 1 : anchor + this.EVENT_SPACING;
+    }
+
+    if (section?.mark && nextSection?.mark) {
+      return this.getFreeSectionBaseOrder(section.mark.sortOrder, nextSection.mark.sortOrder) + this.EVENT_SPACING;
+    }
+
     if (nextSection?.mark) {
       return Math.max(anchor + 1, nextSection.mark.sortOrder - 1);
     }
@@ -754,6 +858,14 @@ export class TimelineEditComponent {
   getBetweenSectionsLabel(sectionIndex: number) {
     if (this.sections[sectionIndex]?.kind === 'trailing') {
       return 'Adicionar evento ao final desta seção';
+    }
+
+    if (this.sections[sectionIndex]?.kind === 'free' && this.sections[sectionIndex + 1]?.mark) {
+      return 'Adicionar evento entre seções';
+    }
+
+    if (this.sections[sectionIndex]?.mark && this.sections[sectionIndex + 1]?.kind === 'free') {
+      return 'Adicionar evento entre seções';
     }
 
     if (this.sections[sectionIndex + 1]?.kind === 'trailing') {
@@ -778,7 +890,25 @@ export class TimelineEditComponent {
   }
 
   getBoundaryMarkOrder(sectionIndex: number) {
+    const section = this.sections[sectionIndex];
     const nextSection = this.sections[sectionIndex + 1];
+
+    if (section?.kind === 'free') {
+      const lastFreeEvent = section.events.at(-1);
+      if (nextSection?.mark) {
+        return lastFreeEvent ? Math.min(lastFreeEvent.sortOrder + 1, nextSection.mark.sortOrder - 1) : nextSection.mark.sortOrder - 1;
+      }
+
+      return lastFreeEvent ? lastFreeEvent.sortOrder + 1 : this.getDefaultTailMarkOrder();
+    }
+
+    if (nextSection?.kind === 'free') {
+      const firstFreeEvent = nextSection.events[0];
+      if (firstFreeEvent) {
+        return Math.max((section?.mark?.sortOrder ?? 0) + 1, firstFreeEvent.sortOrder - 1);
+      }
+    }
+
     if (nextSection?.mark) {
       return nextSection.mark.sortOrder - 1;
     }
@@ -787,9 +917,32 @@ export class TimelineEditComponent {
       return (this.greatMarks.length + 2) * this.MARK_SPACING;
     }
 
-    const section = this.sections[sectionIndex];
     const anchor = section?.events.at(-1)?.sortOrder ?? section?.mark?.sortOrder ?? 0;
     return anchor + this.MARK_SPACING;
+  }
+
+  private getFreeSectionBaseOrder(previousMarkOrder: number, nextMarkOrder: number) {
+    return previousMarkOrder + Math.floor((nextMarkOrder - previousMarkOrder) / 2);
+  }
+
+  private findPreviousMarkedSection(sectionIndex: number) {
+    for (let index = sectionIndex - 1; index >= 0; index--) {
+      if (this.sections[index]?.mark) {
+        return this.sections[index];
+      }
+    }
+
+    return null;
+  }
+
+  private findNextMarkedSection(sectionIndex: number) {
+    for (let index = sectionIndex + 1; index < this.sections.length; index++) {
+      if (this.sections[index]?.mark) {
+        return this.sections[index];
+      }
+    }
+
+    return null;
   }
 
   buildGreatMarkStyle(mark: GreatMark) {
