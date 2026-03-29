@@ -1,5 +1,5 @@
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
-import { Component, computed, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, input, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { getImageByUsageKey } from '../../../models/image.model';
 import { getPersonalizationValue } from '../../../models/personalization.model';
@@ -125,7 +125,14 @@ export class OrganizationEditComponent implements OnInit{
       this.activatedRoute.component === OrganizationEditComponent;
   });
 
+  organizationIdInput = input<string | null>(null);
+
   readonly organizationId = computed(() => {
+    const inputId = this.organizationIdInput();
+    if (inputId) {
+      return inputId;
+    }
+
     if (this.data?.id) {
       return this.data.id as string;
     }

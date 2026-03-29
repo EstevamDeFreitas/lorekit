@@ -1,5 +1,5 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { Component, computed, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, input, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorldService } from '../../../services/world.service';
 import { SpecieService } from '../../../services/specie.service';
@@ -122,7 +122,14 @@ export class SpecieEditComponent implements OnInit {
       this.activatedRoute.component === SpecieEditComponent;
   });
 
+  specieIdInput = input<string | null>(null);
+
   readonly specieId = computed(() => {
+    const inputId = this.specieIdInput();
+    if (inputId) {
+      return inputId;
+    }
+
     if (this.data?.id) {
       return this.data.id as string;
     }

@@ -1,12 +1,8 @@
+import { CommonModule, NgClass } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { NgClass, NgStyle } from '@angular/common';
-import { Router } from '@angular/router';
-import { ButtonComponent } from "../../../components/button/button.component";
-import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
-import { FormField, FormOverlayDirective } from "../../../components/form-overlay/form-overlay.component";
-import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
-import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
+import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
+import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { Timeline } from '../../../models/timeline.model';
 import { World } from '../../../models/world.model';
 import { TimelineService } from '../../../services/timeline.service';
@@ -16,109 +12,105 @@ import { WorldStateService } from '../../../services/world-state.service';
 @Component({
   selector: 'app-timeline-list',
   standalone: true,
-  imports: [ButtonComponent, ComboBoxComponent, FormOverlayDirective, FormsModule, NgClass, NgStyle],
+  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective],
   template: `
     <div class="flex flex-col relative">
-      <div class="flex flex-row justify-between items-center mb-4 sticky top-0 z-50 bg-zinc-950 py-2">
-        <div>
-          <h3 class="text-xl font-bold">Linhas do Tempo</h3>
-          @if (selectedWorldName) {
-            <p class="text-xs text-zinc-400 mt-1">Filtrado pelo mundo atual: {{ selectedWorldName }}</p>
+      <div class="flex flex-row gap-4">
+        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+          <div class="flex flex-row justify-between mb-6">
+            <h2 class="text-base mb-4">Linhas do Tempo</h2>
+            <app-icon-button
+              size="sm"
+              buttonType="secondary"
+              icon="fa-solid fa-plus"
+              appFormOverlay
+              [title]="'Criar Linha do Tempo'"
+              [fields]="getFormFields()"
+              (onSave)="createTimeline($event)">
+            </app-icon-button>
+          </div>
+
+          @if (!selectedWorldId) {
+            <div class="mb-4">
+              <app-combo-box
+                class="w-full"
+                label="Filtro de mundo"
+                [items]="availableWorlds"
+                compareProp="id"
+                displayProp="name"
+                [(comboValue)]="manualWorldFilter"
+                (comboValueChange)="onWorldSelect()">
+              </app-combo-box>
+            </div>
+          }
+
+          <div class="flex flex-col gap-3 w-full">
+            @for (timeline of timelines; track timeline.id) {
+              <button
+                type="button"
+                class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
+                [ngClass]="selectedTimelineId === timeline.id ? 'text-yellow-300' : 'text-zinc-400'"
+                (click)="selectTimeline(timeline.id)">
+                <div class="flex flex-row items-center">
+                  <i class="fa-solid" [ngClass]="'fa-timeline'"></i>
+                </div>
+                <h2 [title]="timeline.name" class="text-xs">{{ timeline.name }}</h2>
+              </button>
+            }
+
+            @if (timelines.length === 0) {
+              <p class="text-xs text-zinc-500">Nenhuma linha do tempo encontrada.</p>
+            }
+          </div>
+        </div>
+
+        <div class="flex-1 min-h-[60vh]">
+          @if (selectedTimelineId) {
+            <div class="rounded-md px-2">
+              @if (showTimelineEditor && timelineEditComponent) {
+                <ng-container *ngComponentOutlet="timelineEditComponent; inputs: { timelineIdInput: selectedTimelineId }"></ng-container>
+              }
+              @else {
+                <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+                  Carregando linha do tempo...
+                </div>
+              }
+            </div>
           }
           @else {
-            <p class="text-xs text-zinc-400 mt-1">Mostrando timelines globais e de todos os mundos.</p>
+            <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+              Selecione uma linha do tempo para editar
+            </div>
           }
         </div>
-        <app-button
-          buttonType="white"
-          label="Nova"
-          size="sm"
-          appFormOverlay
-          [title]="'Criar Linha do Tempo'"
-          [fields]="getFormFields()"
-          (onSave)="createTimeline($event)">
-        </app-button>
       </div>
-
-      @if (!selectedWorldId) {
-        <div class="w-70 mb-4">
-          <app-combo-box
-            label="Associar novo item a um mundo"
-            [items]="availableWorlds"
-            compareProp="id"
-            displayProp="name"
-            [(comboValue)]="creationWorldId">
-          </app-combo-box>
-        </div>
-      }
-
-      @if (timelines.length === 0) {
-        <div class="text-center py-16 text-zinc-400 border border-dashed border-zinc-800 rounded-xl bg-zinc-900/30">
-          Nenhuma linha do tempo encontrada.
-        </div>
-      }
-      @else {
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          @for (timeline of timelines; track timeline.id) {
-            @let bgImage = getImageByUsageKey(timeline.Images, 'default');
-            <button
-              type="button"
-              (click)="openTimeline(timeline.id)"
-              class="rounded-xl border border-zinc-800 p-4 text-left selectable-jump cursor-pointer"
-              [ngStyle]="bgImage ? buildCardBgStyle(bgImage.filePath) : {'background-color': getPersonalizationValue(timeline, 'color') || 'var(--color-zinc-800)'}">
-              <div class="flex flex-col gap-4 min-h-52" [ngClass]="getTextClass(getPersonalizationValue(timeline, 'color'))">
-                <div class="flex items-center gap-2">
-                  <i class="fa-solid" [ngClass]="getPersonalizationValue(timeline, 'icon') || 'fa-timeline'"></i>
-                  <h4 class="text-lg font-bold line-clamp-2">{{ timeline.name }}</h4>
-                </div>
-
-                <p class="text-sm line-clamp-4 opacity-90">{{ timeline.concept || 'Sem conceito definido.' }}</p>
-
-                <div class="mt-auto flex flex-wrap gap-2">
-                  @if (timeline.ParentWorld) {
-                    <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/80 text-white border border-zinc-700">
-                      <i class="fa-solid fa-earth me-1"></i>{{ timeline.ParentWorld.name }}
-                    </span>
-                  }
-                  @else {
-                    <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/80 text-white border border-zinc-700">
-                      <i class="fa-solid fa-globe me-1"></i>Global
-                    </span>
-                  }
-                </div>
-              </div>
-            </button>
-          }
-        </div>
-      }
     </div>
   `,
   styleUrl: './timeline-list.component.css',
   changeDetection: ChangeDetectionStrategy.Default,
 })
 export class TimelineListComponent implements OnInit {
-  private readonly router = inject(Router);
-  private readonly timelineService = inject(TimelineService);
-  private readonly worldService = inject(WorldService);
-  private readonly worldStateService = inject(WorldStateService);
-
-  public readonly getPersonalizationValue = getPersonalizationValue;
-  public readonly getTextClass = getTextClass;
-  public readonly getImageByUsageKey = getImageByUsageKey;
+  private timelineService = inject(TimelineService);
+  private worldService = inject(WorldService);
+  private worldStateService = inject(WorldStateService);
 
   timelines: Timeline[] = [];
   availableWorlds: World[] = [];
   selectedWorldId = '';
-  selectedWorldName = '';
-  creationWorldId: string | null = null;
+  manualWorldFilter = '';
+
+  selectedTimelineId = '';
+  showTimelineEditor = false;
+  timelineEditComponent: any = null;
 
   ngOnInit() {
     this.availableWorlds = this.worldService.getWorlds();
 
     this.worldStateService.currentWorld$.subscribe(world => {
       this.selectedWorldId = world?.id || '';
-      this.selectedWorldName = world?.name || '';
-      this.creationWorldId = this.selectedWorldId || null;
+      if (this.selectedWorldId) {
+        this.manualWorldFilter = '';
+      }
       this.loadTimelines();
     });
 
@@ -126,13 +118,23 @@ export class TimelineListComponent implements OnInit {
   }
 
   loadTimelines() {
-    this.timelines = this.timelineService.getTimelines(this.selectedWorldId || undefined);
+    const activeWorldId = this.selectedWorldId || this.manualWorldFilter || undefined;
+    this.timelines = this.timelineService.getTimelines(activeWorldId);
+
+    if (this.selectedTimelineId && !this.timelines.some(timeline => timeline.id === this.selectedTimelineId)) {
+      this.selectedTimelineId = '';
+      this.showTimelineEditor = false;
+    }
+  }
+
+  onWorldSelect() {
+    this.loadTimelines();
   }
 
   getFormFields(): FormField[] {
     return [
       { key: 'name', label: 'Nome', value: '' },
-      { key: 'world', label: 'Mundo', value: this.selectedWorldId || this.creationWorldId || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
+      { key: 'world', label: 'Mundo', value: this.selectedWorldId || this.manualWorldFilter || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
     ];
   }
 
@@ -142,21 +144,26 @@ export class TimelineListComponent implements OnInit {
       return;
     }
 
-    const timeline = this.timelineService.saveTimeline(new Timeline('', name, ''), this.selectedWorldId || formData['world'] || null);
+    this.timelineService.saveTimeline(new Timeline('', name, ''), this.selectedWorldId || this.manualWorldFilter || formData['world'] || null);
     this.loadTimelines();
-    this.openTimeline(timeline.id);
   }
 
-  openTimeline(timelineId: string) {
-    this.router.navigate(['/app/timeline/edit', timelineId]);
-  }
+  async selectTimeline(timelineId: string) {
+    if (this.selectedTimelineId === timelineId) {
+      return;
+    }
 
-  buildCardBgStyle(filePath?: string | null) {
-    const url = buildImageUrl(filePath);
-    return url ? {
-      'background-image': `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.65)), url(${url})`,
-      'background-size': 'cover',
-      'background-position': 'center',
-    } : null;
+    this.showTimelineEditor = false;
+    this.selectedTimelineId = '';
+
+    if (!this.timelineEditComponent) {
+      const { TimelineEditComponent } = await import('../timeline-edit/timeline-edit.component');
+      this.timelineEditComponent = TimelineEditComponent;
+    }
+
+    setTimeout(() => {
+      this.selectedTimelineId = timelineId;
+      this.showTimelineEditor = true;
+    }, 0);
   }
 }

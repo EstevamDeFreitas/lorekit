@@ -1,7 +1,7 @@
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { Dialog, DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { NgClass, NgStyle } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from "../../../components/button/button.component";
@@ -482,6 +482,11 @@ export class TimelineEditComponent {
   public readonly getTextClass = getTextClass;
 
   readonly timelineId = computed(() => {
+    const inputId = this.timelineIdInput();
+    if (inputId) {
+      return inputId;
+    }
+
     if (this.data?.id) {
       return this.data.id as string;
     }
@@ -494,8 +499,21 @@ export class TimelineEditComponent {
       this.activatedRoute.component === TimelineEditComponent;
   });
 
+  timelineIdInput = input<string | null>(null);
+
   constructor() {
-    this.loadTimeline();
+    effect(() => {
+      const id = this.timelineId();
+      if (!id) {
+        return;
+      }
+
+      if (this.timeline.id === id) {
+        return;
+      }
+
+      this.loadTimeline();
+    });
   }
 
   loadTimeline() {

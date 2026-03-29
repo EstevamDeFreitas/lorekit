@@ -14,7 +14,7 @@ import { buildImageUrl } from '../../../models/image.model';
   selector: 'app-relation-graph',
   imports: [FormsModule, NgClass, SlicePipe, ButtonComponent, ComboBoxComponent, InputComponent],
   template: `
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-4 p-4">
       <div class="flex flex-row items-end gap-3">
         <app-combo-box
           class="w-56"

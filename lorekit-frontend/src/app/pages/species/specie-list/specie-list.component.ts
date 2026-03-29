@@ -1,101 +1,100 @@
-import { Component, computed, inject, input, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
-import { SpecieService } from '../../../services/specie.service';
-import { Dialog } from '@angular/cdk/dialog';
-import { Specie } from '../../../models/specie.model';
-import { WorldService } from '../../../services/world.service';
-import { World } from '../../../models/world.model';
-import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
-import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
-import { ButtonComponent } from '../../../components/button/button.component';
-import { NgClass, NgStyle } from '@angular/common';
-import { LocationService } from '../../../services/location.service';
-import { SearchComponent } from "../../../components/search/search.component";
-import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
+import { CommonModule } from '@angular/common';
+import { Component, inject, input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { TreeViewListComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
+import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
+import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
+import { Document } from '../../../models/document.model';
+import { Specie } from '../../../models/specie.model';
+import { World } from '../../../models/world.model';
+import { Location } from '../../../models/location.model';
+import { LocationService } from '../../../services/location.service';
+import { SpecieService } from '../../../services/specie.service';
+import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
 
 @Component({
   selector: 'app-specie-list',
-  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, ComboBoxComponent, FormsModule],
+  imports: [CommonModule, FormsModule, ComboBoxComponent, TreeViewListComponent, IconButtonComponent, FormOverlayDirective],
   template: `
     <div class="flex flex-col relative">
-      <div class="flex flex-row justify-between items-center sticky z-25 top-0 bg-zinc-950 py-2" >
-        @if (isRouteComponent()){
-          <h2 class="text-xl font-bold">Espécies</h2>
-        }
-        @else {
-          <div></div>
-        }
-        <app-button
-          label="Novo"
-          size="sm"
-          buttonType="white"
-          appFormOverlay
-          [title]="'Criar Espécie'"
-          [fields]="getFormFields()"
-          (onSave)="createSpecie($event)"
-          ></app-button>
-      </div>
-      @if(!specieId()){
-        <div class="flex flex-row items-center gap-4 top-13 z-50 py-2 sticky bg-zinc-950">
-          @if(!worldId()){
-            <app-combo-box class="w-60" label="Filtro de mundo" [items]="getSelectableWorlds()" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="onWorldSelect()"></app-combo-box>
-          }
-          <div>
-            <input type="checkbox" name="ignoreSubspecies" id="ignoreSubspecies" [(ngModel)]="ignoreSubspecies" (ngModelChange)="getSpecies()">
-            <label for="ignoreSubspecies" class="ml-2 text-sm text-white" >Ignorar Variações</label>
+      <div class="flex flex-row gap-4">
+        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+          <div class="flex flex-row justify-between mb-6">
+            <h2 class="text-base mb-4">Espécies</h2>
+            <app-icon-button
+              size="sm"
+              buttonType="secondary"
+              icon="fa-solid fa-plus"
+              appFormOverlay
+              [title]="'Criar Espécie'"
+              [fields]="getFormFields()"
+              (onSave)="createSpecie($event)">
+            </app-icon-button>
           </div>
+
+          @if (!worldId()) {
+            <div class="mb-4">
+              <app-combo-box
+                class="w-full"
+                label="Filtro de mundo"
+                [items]="availableWorlds"
+                compareProp="id"
+                displayProp="name"
+                [(comboValue)]="selectedWorld"
+                (comboValueChange)="onWorldSelect()">
+              </app-combo-box>
+            </div>
+          }
+
+          <div class="flex flex-row items-center gap-1 mb-4">
+            <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white">
+              <div class="w-8 h-5 flex flex-row justify-center items-center">
+                <i class="fa fa-search"></i>
+              </div>
+              <input
+                type="text"
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="onSpecieFilter()"
+                placeholder="Pesquisar..."
+                class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10"
+              />
+            </div>
+          </div>
+
+          <app-tree-view-list
+            [openInDialog]="false"
+            [allowCreate]="true"
+            [useCustomCreate]="true"
+            [createTitle]="'Criar Subespécie'"
+            [createFieldLabel]="'Nome'"
+            [fallbackIcon]="'fa-paw'"
+            [emptyChildrenLabel]="'Não há subespécies relacionadas'"
+            (onDocumentSelect)="selectSpecie($event.id)"
+            (onCreateChild)="createSubSpecie($event)"
+            [documentArray]="filteredSpecieTreeDocuments">
+          </app-tree-view-list>
         </div>
-      }
-      <div>
-        <div class=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-           @if (species.length === 0){
-            <div class="text-center">
-              <p>Nenhuma espécie disponível.</p>
+
+        <div class="flex-1 min-h-[60vh]">
+          @if (selectedSpecieId) {
+            <div class="rounded-md px-2">
+              @if (showSpecieEditor && specieEditComponent) {
+                <ng-container *ngComponentOutlet="specieEditComponent; inputs: { specieIdInput: selectedSpecieId }"></ng-container>
+              }
+              @else {
+                <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+                  Carregando espécie...
+                </div>
+              }
             </div>
           }
           @else {
-            @for (specie of species; track specie.id) {
-              @let img = getImageByUsageKey(specie.Images, 'default');
-              @let fullBodyImg = getImageByUsageKey(specie.Images, 'fullBody');
-              <div (click)="selectSpecie(specie.id!)" [ngClass]="[
-                  'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2',
-
-                ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(specie, 'color') || 'var(--color-zinc-800)'}">
-                <div class="flex h-35 flex-row gap-2 items-top">
-                  <div class="w-20 h-full flex items-center justify-center bg-zinc-800 rounded-md border border-zinc-500'">
-                    @if (fullBodyImg) {
-                      <img class="w-full h-full object-cover rounded-md" [src]="fullBodyImg.filePath" alt="">
-                    }
-                    @else {
-                      <i class="fa fa-image text-2xl"></i>
-                    }
-                  </div>
-                  <div class="flex-1 flex flex-col overflow-hidden justify-between" [ngClass]="getTextClass(getPersonalizationValue(specie, 'color'))">
-                    <div class="flex flex-row items-center gap-2">
-                      <i class="fa" [ngClass]="getPersonalizationValue(specie, 'icon') || 'fa-paw'"></i>
-                      <div class="text-base font-bold">{{ specie.name }}</div>
-                    </div>
-                    <div class="text-xs font-bold overflow-hidden text-ellipsis text-justify line-clamp-3">{{specie.concept}}</div>
-                    <div class="flex flex-row gap-1">
-                      <div class="text-xs flex text-nowrap flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
-                        <i class="fa fa-earth"></i>
-                        <div class="">{{specie.ParentWorld?.name}}</div>
-                      </div>
-                      <div class="text-xs text-nowrap overflow-ellipsis flex flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
-                        <i class="fa fa-location-dot"></i>
-                        <div class="">{{specie.ParentLocation?.name}}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            }
-
+            <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+              Selecione uma espécie para editar
+            </div>
           }
-
         </div>
       </div>
     </div>
@@ -103,40 +102,43 @@ import { WorldStateService } from '../../../services/world-state.service';
   styleUrl: './specie-list.component.css',
 })
 export class SpecieListComponent implements OnInit {
-  private router = inject(Router);
-  private activatedRoute = inject(ActivatedRoute);
   private specieService = inject(SpecieService);
   private locationService = inject(LocationService);
   private worldService = inject(WorldService);
-  public buildImageUrl = buildImageUrl;
-  public getPersonalizationValue = getPersonalizationValue;
-  public getImageByUsageKey = getImageByUsageKey;
-  public getTextClass = getTextClass;
   private worldStateService = inject(WorldStateService);
 
   worldId = input<string>();
   specieId = input<string>();
 
-  selectedWorld : string = '';
-  ignoreSubspecies : boolean = false;
+  selectedWorld = '';
+  searchTerm = '';
+  species: Specie[] = [];
+  availableWorlds: World[] = [];
+  availableLocations: Location[] = [];
 
-  species : Specie[] = [];
+  specieTree: TreeSpecieNode[] = [];
+  filteredSpecieTree: TreeSpecieNode[] = [];
+  filteredSpecieTreeDocuments: Document[] = [];
 
-  availableWorlds : World[] = [];
-
-  dialog = inject(Dialog);
-
-  protected readonly isRouteComponent = computed(() => {
-    return this.router.routerState.root.firstChild?.component === SpecieListComponent ||
-      this.activatedRoute.component === SpecieListComponent;
-  });
-
+  selectedSpecieId = '';
+  showSpecieEditor = false;
+  specieEditComponent: any = null;
 
   ngOnInit() {
     this.worldStateService.currentWorld$.subscribe(world => {
-      this.selectedWorld = world ? world.id : '';
+      const nextWorldId = world ? world.id : '';
+
+      if (this.selectedWorld === nextWorldId) {
+        return;
+      }
+
+      this.selectedWorld = nextWorldId;
+      this.getAvailableLocations();
+      this.getSpecies();
     });
+
     this.getAvailableWorlds();
+    this.getAvailableLocations();
     this.getSpecies();
   }
 
@@ -144,82 +146,156 @@ export class SpecieListComponent implements OnInit {
     this.availableWorlds = this.worldService.getWorlds();
   }
 
-  getSpecies(){
-    this.species = this.specieService.getSpecies(this.specieId(), this.selectedWorld);
+  getAvailableLocations() {
+    const activeWorldId = this.worldId() || this.selectedWorld;
+    this.availableLocations = activeWorldId
+      ? this.locationService.getLocationByWorldId(activeWorldId)
+      : this.locationService.getLocations();
+  }
 
-    if (this.ignoreSubspecies) {
-      this.species = this.species.filter(s => !s.ParentSpecies);
+  getSpecies() {
+    this.species = this.specieService.getSpecies(null, this.worldId() || this.selectedWorld || null);
+    this.specieTree = this.buildSpecieTree(this.species, this.specieId() || null);
+    this.onSpecieFilter();
+
+    if (this.selectedSpecieId && !this.species.some(specie => specie.id === this.selectedSpecieId)) {
+      this.selectedSpecieId = '';
+      this.showSpecieEditor = false;
     }
   }
 
-  getLocations(){
-    return this.locationService.getLocations();
-  }
-
-  getSelectableWorlds(){
-    let worlds = [];
-
-    worlds.push(...this.availableWorlds);
-
-    return worlds;
-  }
-
-  onWorldSelect(){
+  onWorldSelect() {
+    this.getAvailableLocations();
     this.getSpecies();
   }
 
   getFormFields(): FormField[] {
     return [
       { key: 'name', label: 'Nome', value: '' },
-      { key: 'world', label: 'Mundo', value: this.worldId() || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
-      { key: 'location', label: 'Localidade Pai', value: '', options: this.getLocations(), optionCompareProp: 'id', optionDisplayProp: 'name' },
-
+      { key: 'world', label: 'Mundo', value: this.worldId() || this.selectedWorld || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
+      { key: 'location', label: 'Localidade Pai', value: '', options: this.availableLocations, optionCompareProp: 'id', optionDisplayProp: 'name' },
     ];
   }
 
-  selectSpecie(specieId: string) {
-    if (this.isRouteComponent()) {
-      this.router.navigate(['app/specie/edit', specieId]);
+  async selectSpecie(specieId: string) {
+    if (this.selectedSpecieId === specieId) {
+      return;
     }
-    else {
-      import('../specie-edit/specie-edit.component').then(({ SpecieEditComponent }) => {
-        const dialogRef = this.dialog.open(SpecieEditComponent, {
-          data: { id: specieId },
-          panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
-          height: '80vh',
-          width: '80vw',
-        });
 
-        dialogRef.closed.subscribe(() => {
-          this.getSpecies();
-        });
-      });
+    this.showSpecieEditor = false;
+    this.selectedSpecieId = '';
+
+    if (!this.specieEditComponent) {
+      const { SpecieEditComponent } = await import('../specie-edit/specie-edit.component');
+      this.specieEditComponent = SpecieEditComponent;
     }
-  }
 
-  getColor(specie: Specie): string {
-    const color = this.getPersonalizationValue(specie, 'color');
-    return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
+    setTimeout(() => {
+      this.selectedSpecieId = specieId;
+      this.showSpecieEditor = true;
+    }, 0);
   }
 
   createSpecie(formData: Record<string, string>) {
-    let newSpecie = new Specie('', formData['name']);
+    const name = formData['name']?.trim();
+    if (!name) {
+      return;
+    }
 
-    newSpecie = this.specieService.saveSpecie(newSpecie, formData['world'] || null, formData['location'] || null, this.specieId() || null);
-
-    this.species.push(newSpecie);
+    const newSpecie = new Specie('', name);
+    this.specieService.saveSpecie(newSpecie, formData['world'] || this.worldId() || this.selectedWorld || null, formData['location'] || null, this.specieId() || null);
+    this.getSpecies();
   }
 
-  buildCardBgStyle(filePath?: string | null) {
-    const url = this.buildImageUrl(filePath);
-    return url
-      ? {
-          'background-image':
-            `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${url})`,
-          'background-size': 'cover',
-          'background-position': 'center',
-        }
-      : null;
+  createSubSpecie(event: { parentId: string, formData: Record<string, string> }) {
+    const name = event.formData['name']?.trim();
+    if (!name) {
+      return;
+    }
+
+    const parentSpecie = this.species.find(specie => specie.id === event.parentId);
+    const worldId = this.worldId() || this.selectedWorld || parentSpecie?.ParentWorld?.id || null;
+    const locationId = parentSpecie?.ParentLocation?.id || null;
+
+    const newSpecie = new Specie('', name);
+    this.specieService.saveSpecie(newSpecie, worldId, locationId, event.parentId);
+    this.getSpecies();
   }
 
+  onSpecieFilter() {
+    const search = this.searchTerm.trim().toLowerCase();
+
+    if (!search) {
+      this.filteredSpecieTree = this.specieTree;
+      this.filteredSpecieTreeDocuments = this.filteredSpecieTree as unknown as Document[];
+      return;
+    }
+
+    this.filteredSpecieTree = this.filterSpecieTree(this.specieTree, search);
+    this.filteredSpecieTreeDocuments = this.filteredSpecieTree as unknown as Document[];
+  }
+
+  private buildSpecieTree(species: Specie[], rootParentId: string | null): TreeSpecieNode[] {
+    const nodeMap = new Map<string, TreeSpecieNode>();
+
+    for (const specie of species) {
+      nodeMap.set(specie.id, {
+        ...specie,
+        title: specie.name,
+        SubDocuments: [],
+      });
+    }
+
+    const roots: TreeSpecieNode[] = [];
+
+    for (const specie of species) {
+      const node = nodeMap.get(specie.id)!;
+      const parentId = specie.ParentSpecies?.id || null;
+
+      if (parentId && nodeMap.has(parentId)) {
+        nodeMap.get(parentId)!.SubDocuments.push(node);
+      }
+      else if ((rootParentId && parentId === rootParentId) || (!rootParentId && !parentId)) {
+        roots.push(node);
+      }
+    }
+
+    this.sortTreeByTitle(roots);
+    return roots;
+  }
+
+  private sortTreeByTitle(nodes: TreeSpecieNode[]) {
+    nodes.sort((a, b) => a.title.localeCompare(b.title));
+
+    for (const node of nodes) {
+      if (node.SubDocuments.length > 0) {
+        this.sortTreeByTitle(node.SubDocuments);
+      }
+    }
+  }
+
+  private filterSpecieTree(nodes: TreeSpecieNode[], search: string): TreeSpecieNode[] {
+    const filtered: TreeSpecieNode[] = [];
+
+    for (const node of nodes) {
+      const titleMatches = node.title.toLowerCase().includes(search);
+      const filteredChildren = node.SubDocuments?.length
+        ? this.filterSpecieTree(node.SubDocuments, search)
+        : [];
+
+      if (titleMatches || filteredChildren.length > 0) {
+        filtered.push({
+          ...node,
+          SubDocuments: filteredChildren,
+        });
+      }
+    }
+
+    return filtered;
+  }
+}
+
+interface TreeSpecieNode extends Specie {
+  title: string;
+  SubDocuments: TreeSpecieNode[];
 }

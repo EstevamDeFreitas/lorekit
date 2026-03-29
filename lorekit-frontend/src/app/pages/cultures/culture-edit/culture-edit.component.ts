@@ -1,5 +1,5 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorldService } from '../../../services/world.service';
 import { LocationService } from '../../../services/location.service';
@@ -112,7 +112,14 @@ export class CultureEditComponent {
       this.activatedRoute.component === CultureEditComponent;
   });
 
+  cultureIdInput = input<string | null>(null);
+
   readonly cultureId = computed(() => {
+    const inputId = this.cultureIdInput();
+    if (inputId) {
+      return inputId;
+    }
+
     if (this.data?.id) {
       return this.data.id as string;
     }

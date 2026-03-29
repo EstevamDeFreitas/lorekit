@@ -1,84 +1,87 @@
-import { Component, computed, inject, input, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
-import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
-import { CharacterService } from '../../../services/character.service';
-import { SpecieService } from '../../../services/specie.service';
-import { WorldService } from '../../../services/world.service';
+import { CommonModule, NgClass } from '@angular/common';
+import { Component, inject, input, OnInit } from '@angular/core';
+import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
+import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
+import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { Culture } from '../../../models/culture.model';
+import { Location } from '../../../models/location.model';
+import { World } from '../../../models/world.model';
 import { CultureService } from '../../../services/culture.service';
 import { LocationService } from '../../../services/location.service';
-import { Dialog } from '@angular/cdk/dialog';
-import { World } from '../../../models/world.model';
-import { Location } from '../../../models/location.model';
-import { Culture } from '../../../models/culture.model';
-import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
-import { NgClass, NgStyle } from '@angular/common';
-import { ButtonComponent } from '../../../components/button/button.component';
-import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
 
 @Component({
   selector: 'app-culture-list',
-  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, ComboBoxComponent],
+  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective],
   template: `
-    <div class="flex flex-col relative" >
-      <div class="flex flex-row justify-between items-center sticky z-25 bg-zinc-950 py-2" [ngClass]="{'top-0': isRouteComponent(), 'top-13': !isRouteComponent()}">
-        @if (isRouteComponent()){
-          <h2 class="text-xl font-bold">Culturas</h2>
-        }
-        @else {
-          <div></div>
-        }
-        <app-button
-          label="Novo"
-          size="sm"
-          buttonType="white"
-          appFormOverlay
-          [title]="'Criar Cultura'"
-          [fields]="getFormFields()"
-          (onSave)="createCulture($event)"
-          ></app-button>
-      </div>
-      @if(!worldId()){
-        <div class="flex flex-row top-13 py-2 sticky bg-zinc-950">
-          <app-combo-box class="w-60" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="onWorldSelect()"></app-combo-box>
+    <div class="flex flex-col relative">
+      <div class="flex flex-row gap-4">
+        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+          <div class="flex flex-row justify-between mb-6">
+            <h2 class="text-base mb-4">Culturas</h2>
+            <app-icon-button
+              size="sm"
+              buttonType="secondary"
+              icon="fa-solid fa-plus"
+              appFormOverlay
+              [title]="'Criar Cultura'"
+              [fields]="getFormFields()"
+              (onSave)="createCulture($event)">
+            </app-icon-button>
+          </div>
+
+          @if (!worldId()) {
+            <div class="mb-4">
+              <app-combo-box
+                class="w-full"
+                label="Filtro de mundo"
+                [items]="availableWorlds"
+                compareProp="id"
+                displayProp="name"
+                [(comboValue)]="selectedWorld"
+                (comboValueChange)="onWorldSelect()">
+              </app-combo-box>
+            </div>
+          }
+
+          <div class="flex flex-col gap-3 w-full">
+            @for (culture of cultures; track culture.id) {
+              <button
+                type="button"
+                class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
+                [ngClass]="selectedCultureId === culture.id ? 'text-yellow-300' : 'text-zinc-400'"
+                (click)="selectCulture(culture.id)">
+                <div class="flex flex-row items-center">
+                  <i class="fa-solid" [ngClass]="'fa-mortar-pestle'"></i>
+                </div>
+                <h2 [title]="culture.name" class="text-xs">{{ culture.name }}</h2>
+              </button>
+            }
+
+            @if (cultures.length === 0) {
+              <p class="text-xs text-zinc-500">Nenhuma cultura encontrada.</p>
+            }
+          </div>
         </div>
-      }
-      <div>
-        <div class=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          @if (cultures.length === 0){
-            <div class="text-center">
-              <p>Nenhuma cultura disponível.</p>
+
+        <div class="flex-1 min-h-[60vh]">
+          @if (selectedCultureId) {
+            <div class="rounded-md px-2">
+              @if (showCultureEditor && cultureEditComponent) {
+                <ng-container *ngComponentOutlet="cultureEditComponent; inputs: { cultureIdInput: selectedCultureId }"></ng-container>
+              }
+              @else {
+                <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+                  Carregando cultura...
+                </div>
+              }
             </div>
           }
           @else {
-            @for (culture of cultures; track culture.id) {
-              @let img = getImageByUsageKey(culture.Images, 'default');
-              <div (click)="selectCulture(culture.id!)" [ngClass]="[
-                  'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2',
-
-                ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(culture, 'color') || 'var(--color-zinc-800)'}">
-                <div class="flex h-35 flex-row gap-2 items-top">
-                  <div class="flex-1 flex flex-col overflow-hidden justify-between" [ngClass]="getTextClass(getPersonalizationValue(culture, 'color'))">
-                    <div class="flex flex-row items-center gap-2">
-                      <i class="fa" [ngClass]="getPersonalizationValue(culture, 'icon') || 'fa-paw'"></i>
-                      <div class="text-base font-bold">{{ culture.name }}</div>
-                    </div>
-                    <div class="text-xs font-bold overflow-hidden text-ellipsis text-justify line-clamp-3">{{culture.concept}}</div>
-                    <div class="flex flex-row gap-1">
-                      <div class="text-xs flex text-nowrap flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
-                        <i class="fa fa-earth"></i>
-                        <div class="">{{culture.ParentWorld?.name}}</div>
-                      </div>
-                      <div class="text-xs flex text-nowrap flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
-                        <i class="fa fa-paw"></i>
-                        <div class="">{{culture.ParentLocation?.name}}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            }
+            <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+              Selecione uma cultura para editar
+            </div>
           }
         </div>
       </div>
@@ -86,37 +89,35 @@ import { WorldStateService } from '../../../services/world-state.service';
   `,
   styleUrl: './culture-list.component.css',
 })
-export class CultureListComponent implements OnInit{
-  private router = inject(Router);
-  private activatedRoute = inject(ActivatedRoute);
+export class CultureListComponent implements OnInit {
   private cultureService = inject(CultureService);
   private worldService = inject(WorldService);
   private locationService = inject(LocationService);
-  public buildImageUrl = buildImageUrl;
-  public getPersonalizationValue = getPersonalizationValue;
-  public getImageByUsageKey = getImageByUsageKey;
-  public getTextClass = getTextClass;
   private worldStateService = inject(WorldStateService);
 
-  dialog = inject(Dialog);
-
-  protected readonly isRouteComponent = computed(() => {
-    return this.router.routerState.root.firstChild?.component === CultureListComponent ||
-      this.activatedRoute.component === CultureListComponent;
-  });
-
   worldId = input<string>();
-  availableWorlds : World[] = [];
-  availableLocations : Location[] = [];
+  availableWorlds: World[] = [];
+  availableLocations: Location[] = [];
+  selectedWorld = '';
+  cultures: Culture[] = [];
 
-  selectedWorld : string = '';
-
-  cultures:Culture[] = [];
+  selectedCultureId = '';
+  showCultureEditor = false;
+  cultureEditComponent: any = null;
 
   ngOnInit(): void {
     this.worldStateService.currentWorld$.subscribe(world => {
-      this.selectedWorld = world ? world.id : '';
+      const nextWorldId = world ? world.id : '';
+
+      if (this.selectedWorld === nextWorldId) {
+        return;
+      }
+
+      this.selectedWorld = nextWorldId;
+      this.getAvailableLocations();
+      this.getCultures();
     });
+
     this.getAvailableWorlds();
     this.getAvailableLocations();
     this.getCultures();
@@ -126,71 +127,62 @@ export class CultureListComponent implements OnInit{
     this.availableWorlds = this.worldService.getWorlds();
   }
 
-  getAvailableLocations(){
-    this.availableLocations = this.worldId() ? this.locationService.getLocationByWorldId(this.worldId() || this.selectedWorld) : this.locationService.getLocations();
+  getAvailableLocations() {
+    const activeWorldId = this.worldId() || this.selectedWorld;
+    this.availableLocations = activeWorldId
+      ? this.locationService.getLocationByWorldId(activeWorldId)
+      : this.locationService.getLocations();
   }
 
-  getCultures(){
+  getCultures() {
     this.cultures = this.cultureService.getCultures(this.worldId() || this.selectedWorld || null);
+
+    if (this.selectedCultureId && !this.cultures.some(culture => culture.id === this.selectedCultureId)) {
+      this.selectedCultureId = '';
+      this.showCultureEditor = false;
+    }
   }
 
-  onWorldSelect(){
+  onWorldSelect() {
+    this.getAvailableLocations();
     this.getCultures();
   }
 
   getFormFields(): FormField[] {
     return [
       { key: 'name', label: 'Nome', value: '' },
-      { key: 'world', label: 'Mundo', value: this.worldId() || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
+      { key: 'world', label: 'Mundo', value: this.worldId() || this.selectedWorld || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
       { key: 'location', label: 'Localidade de Origem', value: '', options: this.availableLocations, optionCompareProp: 'id', optionDisplayProp: 'name' },
-
     ];
   }
 
-  selectCulture(cultureId: string) {
-    if (this.isRouteComponent()) {
-      this.router.navigate(['app/culture/edit', cultureId]);
+  async selectCulture(cultureId: string) {
+    if (this.selectedCultureId === cultureId) {
+      return;
     }
-    else {
-      import('../culture-edit/culture-edit.component').then(({ CultureEditComponent }) => {
-        const dialogRef = this.dialog.open(CultureEditComponent, {
-          data: { id: cultureId },
-          panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
-          height: '80vh',
-          width: '80vw',
-        });
 
-        dialogRef.closed.subscribe(() => {
-          this.getCultures();
-        });
-      });
+    this.showCultureEditor = false;
+    this.selectedCultureId = '';
+
+    if (!this.cultureEditComponent) {
+      const { CultureEditComponent } = await import('../culture-edit/culture-edit.component');
+      this.cultureEditComponent = CultureEditComponent;
     }
-  }
 
-  getColor(culture: Culture): string {
-    const color = this.getPersonalizationValue(culture, 'color');
-    return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
+    setTimeout(() => {
+      this.selectedCultureId = cultureId;
+      this.showCultureEditor = true;
+    }, 0);
   }
 
   createCulture(formData: Record<string, string>) {
-    let newCulture = new Culture('', formData['name'], '');
+    const name = formData['name']?.trim();
+    if (!name) {
+      return;
+    }
 
-    newCulture = this.cultureService.saveCulture(newCulture, formData['world'] || null, formData['location'] || null);
-
-    this.cultures.push(newCulture);
+    const newCulture = new Culture('', name, '');
+    this.cultureService.saveCulture(newCulture, formData['world'] || null, formData['location'] || null);
+    this.getCultures();
   }
-
-  buildCardBgStyle(filePath?: string | null) {
-    const url = this.buildImageUrl(filePath);
-    return url
-      ? {
-          'background-image':
-            `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${url})`,
-          'background-size': 'cover',
-          'background-position': 'center',
-        }
-      : null;
-  }
-
-
 }

@@ -1,138 +1,126 @@
-import { Component, computed, inject, input, OnInit } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
-import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
-import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
+import { CommonModule, NgClass } from '@angular/common';
+import { Component, inject, input, OnInit } from '@angular/core';
+import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
+import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
+import { Location } from '../../../models/location.model';
+import { Organization, OrganizationType } from '../../../models/organization.model';
+import { World } from '../../../models/world.model';
 import { LocationService } from '../../../services/location.service';
 import { OrganizationService } from '../../../services/organization.service';
-import { WorldService } from '../../../services/world.service';
-import { Dialog } from '@angular/cdk/dialog';
-import { World } from '../../../models/world.model';
-import { Organization, OrganizationType } from '../../../models/organization.model';
-import { Location } from '../../../models/location.model';
-import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
-import { NgClass, NgStyle } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ButtonComponent } from '../../../components/button/button.component';
-import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
-import { SearchComponent } from '../../../components/search/search.component';
 import { OrganizationTypeService } from '../../../services/organization-type.service';
+import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
 
 @Component({
   selector: 'app-organization-list',
-  imports: [ButtonComponent, FormOverlayDirective, NgClass, NgStyle, SearchComponent, ComboBoxComponent, FormsModule],
+  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective],
   template: `
     <div class="flex flex-col relative">
-      <div class="flex flex-row justify-between items-center mb-4 sticky top-0 z-50 bg-zinc-950 py-2">
-        @if (isRouteComponent()){
-          <h2 class="text-xl font-bold">Organizações</h2>
-        }
-        @else {
-          <div></div>
-        }
-        <app-button
-          label="Novo"
-          size="sm"
-          buttonType="white"
-          appFormOverlay
-          [title]="'Criar Organização'"
-          [fields]="getFormFields()"
-          (onSave)="createOrganization($event)"
-          ></app-button>
-      </div>
-      @if(!worldId()){
-        <div class="flex flex-row items-center gap-4 top-13 py-2 sticky bg-zinc-950">
-          <app-combo-box class="w-60" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name"  [(comboValue)]="selectedWorld" (comboValueChange)="onWorldSelect()"></app-combo-box>
+      <div class="flex flex-row gap-4">
+        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+          <div class="flex flex-row justify-between mb-6">
+            <h2 class="text-base mb-4">Organizações</h2>
+            <app-icon-button
+              size="sm"
+              buttonType="secondary"
+              icon="fa-solid fa-plus"
+              appFormOverlay
+              [title]="'Criar Organização'"
+              [fields]="getFormFields()"
+              (onSave)="createOrganization($event)">
+            </app-icon-button>
+          </div>
+
+          @if (!worldId()) {
+            <div class="mb-4">
+              <app-combo-box
+                class="w-full"
+                label="Filtro de mundo"
+                [items]="availableWorlds"
+                compareProp="id"
+                displayProp="name"
+                [(comboValue)]="selectedWorld"
+                (comboValueChange)="onWorldSelect()">
+              </app-combo-box>
+            </div>
+          }
+
+          <div class="flex flex-col gap-3 w-full">
+            @for (organization of organizations; track organization.id) {
+              <button
+                type="button"
+                class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
+                [ngClass]="selectedOrganizationId === organization.id ? 'text-yellow-300' : 'text-zinc-400'"
+                (click)="selectOrganization(organization.id)">
+                <div class="flex flex-row items-center">
+                  <i class="fa-solid" [ngClass]="'fa-building'"></i>
+                </div>
+                <h2 [title]="organization.name" class="text-xs">{{ organization.name }}</h2>
+              </button>
+            }
+
+            @if (organizations.length === 0) {
+              <p class="text-xs text-zinc-500">Nenhuma organização encontrada.</p>
+            }
+          </div>
         </div>
-      }
-      <div>
-        <br>
-        <div class=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-           @if (organizations.length === 0){
-            <div class="text-center">
-              <p>Nenhuma organização disponível.</p>
+
+        <div class="flex-1 min-h-[60vh]">
+          @if (selectedOrganizationId) {
+            <div class="rounded-md px-2">
+              @if (showOrganizationEditor && organizationEditComponent) {
+                <ng-container *ngComponentOutlet="organizationEditComponent; inputs: { organizationIdInput: selectedOrganizationId }"></ng-container>
+              }
+              @else {
+                <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+                  Carregando organização...
+                </div>
+              }
             </div>
           }
           @else {
-            @for (organization of organizations; track organization.id) {
-              @let img = getImageByUsageKey(organization.Images, 'default');
-              @let profileImg = getImageByUsageKey(organization.Images, 'profile');
-              <div (click)="selectOrganization(organization.id!)" [ngClass]="[
-                  'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border border-zinc-800 p-3 mb-2',
-
-                ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(organization, 'color') || 'var(--color-zinc-800)'}">
-                <div class="flex h-35 flex-row gap-2 items-top">
-                  <div class="w-20 h-20 flex items-center justify-center bg-zinc-800 rounded-md border border-zinc-500'">
-                    @if (profileImg) {
-                      <img class="w-20 h-20 object-cover rounded-md" [src]="profileImg.filePath" alt="">
-                    }
-                    @else {
-                      <i class="fa fa-image text-2xl"></i>
-                    }
-                  </div>
-                  <div class="flex-1 flex flex-col overflow-hidden justify-between" [ngClass]="getTextClass(getPersonalizationValue(organization, 'color'))">
-                    <div class="flex flex-row items-center gap-2">
-                      <i class="fa" [ngClass]="getPersonalizationValue(organization, 'icon') || 'fa-paw'"></i>
-                      <div class="text-base font-bold">{{ organization.name }}</div>
-                    </div>
-                    <div class="text-xs font-bold overflow-hidden text-ellipsis text-justify line-clamp-3">{{organization.concept}}</div>
-                    <div class="flex flex-row gap-1">
-                      <div class="text-xs flex text-nowrap flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
-                        <i class="fa fa-earth"></i>
-                        <div class="">{{organization.ParentWorld?.name}}</div>
-                      </div>
-                      <div class="text-xs text-nowrap overflow-ellipsis flex flex-row gap-1 items-center p-1 rounded-md bg-zinc-900 text-white w-min">
-                        <i class="fa fa-location-dot"></i>
-                        <div class="">{{organization.ParentLocation?.name}}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            }
-
+            <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+              Selecione uma organização para editar
+            </div>
           }
-
         </div>
       </div>
     </div>
   `,
   styleUrl: './organization-list.component.css',
 })
-export class OrganizationListComponent implements OnInit
-{
-  private router = inject(Router);
-  private activatedRoute = inject(ActivatedRoute);
+export class OrganizationListComponent implements OnInit {
   private organizationService = inject(OrganizationService);
   private organizationTypeService = inject(OrganizationTypeService);
   private worldService = inject(WorldService);
   private locationService = inject(LocationService);
-  public buildImageUrl = buildImageUrl;
-  public getPersonalizationValue = getPersonalizationValue;
-  public getImageByUsageKey = getImageByUsageKey;
-  public getTextClass = getTextClass;
   private worldStateService = inject(WorldStateService);
 
-  dialog = inject(Dialog);
-
-  protected readonly isRouteComponent = computed(() => {
-    return this.router.routerState.root.firstChild?.component === OrganizationListComponent ||
-      this.activatedRoute.component === OrganizationListComponent;
-  });
-
   worldId = input<string>();
-  availableWorlds : World[] = [];
-  availableLocations : Location[] = [];
-  availableOrganizationTypes : OrganizationType[] = [];
+  availableWorlds: World[] = [];
+  availableLocations: Location[] = [];
+  availableOrganizationTypes: OrganizationType[] = [];
+  selectedWorld = '';
+  organizations: Organization[] = [];
 
-  selectedWorld : string = '';
-
-  organizations : Organization[] = [];
+  selectedOrganizationId = '';
+  showOrganizationEditor = false;
+  organizationEditComponent: any = null;
 
   ngOnInit(): void {
     this.worldStateService.currentWorld$.subscribe(world => {
-      this.selectedWorld = world ? world.id : '';
+      const nextWorldId = world ? world.id : '';
+
+      if (this.selectedWorld === nextWorldId) {
+        return;
+      }
+
+      this.selectedWorld = nextWorldId;
+      this.getAvailableLocations();
+      this.getOrganizations();
     });
+
     this.getAvailableWorlds();
     this.getAvailableLocations();
     this.getAvailableOrganizationTypes();
@@ -143,19 +131,28 @@ export class OrganizationListComponent implements OnInit
     this.availableWorlds = this.worldService.getWorlds();
   }
 
-  getAvailableLocations(){
-    this.availableLocations = this.worldId() ? this.locationService.getLocationByWorldId(this.worldId() || this.selectedWorld) : this.locationService.getLocations();
-  }
-
-  getOrganizations() {
-    this.organizations = this.organizationService.getOrganizations(this.worldId() || this.selectedWorld);
+  getAvailableLocations() {
+    const activeWorldId = this.worldId() || this.selectedWorld;
+    this.availableLocations = activeWorldId
+      ? this.locationService.getLocationByWorldId(activeWorldId)
+      : this.locationService.getLocations();
   }
 
   getAvailableOrganizationTypes() {
     this.availableOrganizationTypes = this.organizationTypeService.getOrganizationTypes();
   }
 
-  onWorldSelect(){
+  getOrganizations() {
+    this.organizations = this.organizationService.getOrganizations(this.worldId() || this.selectedWorld || null);
+
+    if (this.selectedOrganizationId && !this.organizations.some(organization => organization.id === this.selectedOrganizationId)) {
+      this.selectedOrganizationId = '';
+      this.showOrganizationEditor = false;
+    }
+  }
+
+  onWorldSelect() {
+    this.getAvailableLocations();
     this.getOrganizations();
   }
 
@@ -163,56 +160,38 @@ export class OrganizationListComponent implements OnInit
     return [
       { key: 'name', label: 'Nome', value: '' },
       { key: 'organizationType', label: 'Tipo de Organização', value: '', options: this.availableOrganizationTypes, optionCompareProp: 'id', optionDisplayProp: 'name' },
-      { key: 'world', label: 'Mundo', value: this.worldId() || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
+      { key: 'world', label: 'Mundo', value: this.worldId() || this.selectedWorld || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
       { key: 'location', label: 'Local de Origem', value: '', options: this.availableLocations, optionCompareProp: 'id', optionDisplayProp: 'name' },
     ];
   }
 
-  selectOrganization(organizationId: string) {
-    if (this.isRouteComponent()) {
-      this.router.navigate(['app/organization/edit', organizationId]);
+  async selectOrganization(organizationId: string) {
+    if (this.selectedOrganizationId === organizationId) {
+      return;
     }
-    else {
-      import('../organization-edit/organization-edit.component').then(({ OrganizationEditComponent }) => {
-        const dialogRef = this.dialog.open(OrganizationEditComponent, {
-          data: { id: organizationId },
-          panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
-          height: '80vh',
-          width: '80vw',
-        });
 
-        dialogRef.closed.subscribe(() => {
-          this.getOrganizations();
-        });
-      });
+    this.showOrganizationEditor = false;
+    this.selectedOrganizationId = '';
+
+    if (!this.organizationEditComponent) {
+      const { OrganizationEditComponent } = await import('../organization-edit/organization-edit.component');
+      this.organizationEditComponent = OrganizationEditComponent;
     }
-  }
 
-  getColor(organization: Organization): string {
-    const color = this.getPersonalizationValue(organization, 'color');
-    return color ? `bg-${color}-500 text-zinc-900` : 'bg-zinc-900 border-zinc-700';
+    setTimeout(() => {
+      this.selectedOrganizationId = organizationId;
+      this.showOrganizationEditor = true;
+    }, 0);
   }
 
   createOrganization(formData: Record<string, string>) {
-    let newOrganization = new Organization('', formData['name']);
+    const name = formData['name']?.trim();
+    if (!name) {
+      return;
+    }
 
-    newOrganization = this.organizationService.saveOrganization(newOrganization, formData['world'] || null, formData['location'] || null, formData['organizationType'] || null);
-
-    this.organizations.push(newOrganization);
+    const newOrganization = new Organization('', name);
+    this.organizationService.saveOrganization(newOrganization, formData['world'] || null, formData['location'] || null, formData['organizationType'] || null);
+    this.getOrganizations();
   }
-
-  buildCardBgStyle(filePath?: string | null) {
-    const url = this.buildImageUrl(filePath);
-    return url
-      ? {
-          'background-image':
-            `linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(${url})`,
-          'background-size': 'cover',
-          'background-position': 'center',
-        }
-      : null;
-  }
-
-
-
 }
