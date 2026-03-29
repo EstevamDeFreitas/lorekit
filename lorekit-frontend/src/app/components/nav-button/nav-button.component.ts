@@ -8,27 +8,31 @@ import { NgClass } from '@angular/common';
   imports: [NgClass, RouterLink, RouterLinkActive],
   template: `
     @if (this.route() == null){
-      <a [ngClass]="getButtonClasses()">
+      <a [ngClass]="getButtonClasses()" [title]="label()">
         <div [ngClass]="getContentClasses()">
           @if (icon()) {
             <div [ngClass]="getIconWrapperClasses()">
               <i [class]="icon()"></i>
             </div>
           }
-          <span>{{label()}}</span>
+          @if (showLabel()) {
+            <span>{{label()}}</span>
+          }
         </div>
         <div [ngClass]="getBarClasses()"></div>
       </a>
     }
     @else {
-      <a [routerLink]="this.route()" [queryParams]="this.params()" [routerLinkActive]="getRouterLinkActiveClasses()" #rla="routerLinkActive" [ngClass]="getButtonClasses(rla.isActive)">
-        <div [ngClass]="getContentClasses()">
+      <a [routerLink]="this.route()" [title]="label()" [queryParams]="this.params()" [routerLinkActive]="getRouterLinkActiveClasses()" #rla="routerLinkActive" [ngClass]="getButtonClasses(rla.isActive)">
+        <div [ngClass]="getContentClasses()" >
           @if (icon()) {
             <div [ngClass]="getIconWrapperClasses()">
               <i [class]="icon()"></i>
             </div>
           }
-          <span>{{label()}}</span>
+          @if (showLabel()) {
+            <span>{{label()}}</span>
+          }
         </div>
         <div [ngClass]="getBarClasses(rla.isActive)"></div>
       </a>
@@ -47,18 +51,19 @@ export class NavButtonComponent {
   size = input<TextSizeType>('base');
   direction = input<'down' | 'up' | 'left' | 'right'>('down');
   fullWidth = input<boolean>(false);
+  showLabel = input<boolean>(true);
 
   getButtonClasses(routeIsActive: boolean = false):string {
-    let layout = this.fullWidth() ? 'w-full flex flex-row items-center rounded-md px-1 py-1' : 'inline-block px-2 py-3';
+    let layout = this.fullWidth() ? 'w-full flex flex-row items-center rounded-md px-1 py-1 h-7' : 'inline-block px-2 py-3';
     const isActive = this.active() || routeIsActive;
 
-    let base = `${layout} cursor-pointer hover:font-bold relative group text-${this.size()}`;
+    let base = `${layout} cursor-pointer relative group text-${this.size()}`;
 
     const types = {
-        primary: 'text-white',
-        secondary: 'text-white',
-        white: 'text-zinc-900',
-        danger: 'text-white'
+        primary: 'text-zinc-400 hover:text-zinc-200',
+        secondary: 'text-zinc-400 hover:text-zinc-200',
+        white: 'text-zinc-900 hover:text-zinc-700',
+        danger: 'text-zinc-400 hover:text-zinc-200'
     }
 
     const activeTypes = {

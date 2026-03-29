@@ -44,6 +44,19 @@
   --c1: var(--color-emerald-800);
   --c2: var(--color-emerald-900);
   --c3: var(--color-emerald-950);
+
+  //new colors
+  --color-primary-50:#fefbe8;
+  --color-primary-100:#fff6c2;
+  --color-primary-200: #ffea89;
+  --color-primary-300: #ffd333;
+  --color-primary-400: #fdc112;
+  --color-primary-500: #eca706;
+  --color-primary-600: #cc7f02;
+  --color-primary-700: #a35905;
+  --color-primary-800: #86460d;
+  --color-primary-900: #723911;
+  --color-primary-950: #431c05;
 }
 
 html, body, app-root {
