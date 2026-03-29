@@ -26,7 +26,7 @@ export class IconButtonComponent {
 
     switch (this.buttonType()) {
       case 'primary':
-        currentTypeStyle = 'bg-emerald-600' + (this.disabled() ? ' text-zinc-600' : ' text-white ');
+        currentTypeStyle = 'bg-yellow-300' + (this.disabled() ? ' text-zinc-600' : ' text-white ');
         break;
       case 'secondary':
         currentTypeStyle = 'bg-zinc-800' + (this.disabled() ? ' text-zinc-600' : ' text-white ');
@@ -38,7 +38,7 @@ export class IconButtonComponent {
         currentTypeStyle = 'bg-red-500' + (this.disabled() ? ' text-zinc-600' : ' text-white ');
         break;
       case 'primaryActive':
-        currentTypeStyle = (this.disabled() ? ' text-zinc-600' : ' text-emerald-600');
+        currentTypeStyle = (this.disabled() ? ' text-zinc-600' : ' text-yellow-600');
         break;
       case 'secondaryActive':
         currentTypeStyle = (this.disabled() ? ' text-zinc-600' : ' text-zinc-600');

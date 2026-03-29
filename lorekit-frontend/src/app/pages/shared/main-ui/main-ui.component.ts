@@ -9,8 +9,8 @@ import { animate, query, style, transition, trigger } from '@angular/animations'
   selector: 'app-main-ui',
   imports: [RouterOutlet, NavButtonComponent],
   template: `
-  <div class="h-screen w-screen overflow-hidden flex flex-row gap-4">
-    <div class="flex flex-col bg-zinc-900 justify-between ps-4 w-15 border-r pt-4 pb-4 border-zinc-800 top-0" >
+  <div class="h-screen w-screen overflow-hidden flex flex-row">
+    <div class="flex flex-col bg-zinc-900 justify-between ps-4 w-15 border-r pt-4 pb-4 border-zinc-700 top-0" >
 
       <div>
         <div class="pr-3 mb-8">
@@ -33,7 +33,7 @@ import { animate, query, style, transition, trigger } from '@angular/animations'
         <app-nav-button [label]="'Configurações'" (click)="openSettings()" [showLabel]="false" [icon]="'fa-solid fa-gears'" size="xl" [fullWidth]="true" [direction]="'right'"></app-nav-button>
       </div>
     </div>
-    <div class="px-4  h-[calc(100vh-2.5rem)] mt-10 overflow-y-auto scrollbar-dark flex-1" [@routeTransition]="routeAnimationState">
+    <div class="pr-4  h-[calc(100vh-2.5rem)] mt-10 overflow-y-auto scrollbar-dark flex-1" [@routeTransition]="routeAnimationState">
       <router-outlet (activate)="onRouteActivate()" />
     </div>
   </div>

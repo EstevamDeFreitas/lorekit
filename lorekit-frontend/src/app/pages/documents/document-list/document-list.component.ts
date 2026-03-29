@@ -21,16 +21,12 @@ import { FormOverlayDirective } from '../../../components/form-overlay/form-over
   imports: [NgClass, TreeViewListComponent, DocumentEditComponent, FormsModule, IconButtonComponent, FormOverlayDirective],
   template: `
     <div class="flex flex-col relative">
-      <div class="flex flex-row justify-between items-center mb-4 sticky  z-25 bg-zinc-950 py-2" [ngClass]="{'top-0': isRouteComponent(), 'top-13': !isRouteComponent()}">
-        @if (isRouteComponent()){
-          <h2 class="text-xl font-bold">Documentos</h2>
-        }
-        @else {
-          <div></div>
-        }
-      </div>
-      <div class="flex flex-row gap-4 items-start">
-        <div class="w-80 bg-zinc-900 p-3 rounded-md sticky top-16 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-dark">
+
+      <div class="flex flex-row gap-4 ">
+        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+          <div>
+              <h2 class="text-base mb-4">Documentos</h2>
+            </div>
           <div class="flex flex-row items-center gap-1 mb-4">
             <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white">
               <div class="w-8 h-5 flex flex-row justify-center items-center">
@@ -71,7 +67,7 @@ import { FormOverlayDirective } from '../../../components/form-overlay/form-over
             </div>
           }
           @else {
-            <div class="h-full rounded-md border border-zinc-800 bg-zinc-900/30 flex items-center justify-center text-zinc-500">
+            <div class="h-full  flex items-center justify-center text-zinc-500">
               Selecione um documento na árvore para editar
             </div>
           }

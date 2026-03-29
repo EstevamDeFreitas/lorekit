@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, OnInit } from '@angular/core';
 import { WorldStateService } from '../../../services/world-state.service';
 import { World } from '../../../models/world.model';
-import { Router, RouterOutlet, RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
-import { NgStyle } from '@angular/common';
+import { Router, ActivatedRoute } from '@angular/router';
+import { NgComponentOutlet, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { WorldService } from '../../../services/world.service';
@@ -12,7 +12,6 @@ import { Dialog } from '@angular/cdk/dialog';
 import { PersonalizationComponent } from '../../../components/personalization/personalization.component';
 import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
 import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
-import { LocationListComponent } from "../../locations/location-list/location-list.component";
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { ImageUploaderComponent } from "../../../components/ImageUploader/image-uploader.component";
 import { getImageByUsageKey, Image } from '../../../models/image.model';
@@ -27,8 +26,8 @@ import { UiFieldConfigButtonComponent } from '../../../components/ui-field-confi
 import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world-configured-fields.component';
 
 @Component({
-  standalone: true,
-  imports: [NgStyle, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, LocationListComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, WorldConfiguredFieldsComponent],
+  selector: 'app-world-info',
+  imports: [NgStyle, NgComponentOutlet, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, WorldConfiguredFieldsComponent],
   template: `
     <div class="flex flex-col">
       @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
@@ -62,7 +61,7 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
           <div class="flex flex-row gap-4 ms-1">
             <app-nav-button [label]="'Detalhes do mundo'" size="sm" [active]="currentTab === 'details'" (click)="currentTab = 'details'"></app-nav-button>
             <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
-            <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="currentTab = 'localities'"></app-nav-button>
+            <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button>
             <!-- <app-nav-button [label]="'Personagens'" size="sm" [active]="currentTab === 'characters'" (click)="currentTab = 'characters'"></app-nav-button>
             <app-nav-button [label]="'Objetos'" size="sm" [active]="currentTab === 'objects'" (click)="currentTab = 'objects'"></app-nav-button> -->
           </div>
@@ -76,7 +75,12 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
                 }
                 @case ('localities') {
                   <div class="w-full flex-1">
-                    <app-location-list [worldId]="currentWorld.id"></app-location-list>
+                    @if (locationListComponent) {
+                      <ng-container *ngComponentOutlet="locationListComponent; inputs: { worldId: currentWorld.id }"></ng-container>
+                    }
+                    @else {
+                      <p class="text-zinc-500">Carregando localidades...</p>
+                    }
                   </div>
                 }
                 @case ('characters') {
@@ -111,6 +115,7 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
 export class WorldInfoComponent implements OnInit {
   dialogref = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
+  worldIdInput = input<string>('');
 
   currentWorld: World = new World();
   currentWorldId: string | null = null;
@@ -119,6 +124,7 @@ export class WorldInfoComponent implements OnInit {
   public getImageByUsageKey = getImageByUsageKey;
 
   currentTab : string = 'details';
+  locationListComponent: any = null;
 
   isLoading: boolean = false;
 
@@ -130,6 +136,10 @@ export class WorldInfoComponent implements OnInit {
   });
 
   readonly worldId = computed(() => {
+    if(this.worldIdInput()) {
+      return this.worldIdInput();
+    }
+
     if (this.data?.id) {
       return this.data.id as string;
     }
@@ -137,12 +147,33 @@ export class WorldInfoComponent implements OnInit {
     return this.currentRoute.snapshot.paramMap.get('worldId') ?? this.currentWorldId ?? '';
   });
 
-  constructor(private router:Router, private currentRoute : ActivatedRoute, private worldService : WorldService, private cdr: ChangeDetectorRef) {
+  constructor(private router:Router, private currentRoute : ActivatedRoute, private worldService : WorldService) {
     this.isLoading = true;
+
+    effect(() => {
+      const inputWorldId = this.worldIdInput();
+
+      if (!inputWorldId) {
+        return;
+      }
+
+      if (this.currentWorld?.id === inputWorldId) {
+        return;
+      }
+
+      this.currentWorldId = inputWorldId;
+      this.getWorld();
+    });
+
     if (this.data?.id) {
       this.currentWorldId = this.data.id;
       this.getWorld();
-    } else {
+    }
+    else if (this.worldIdInput()) {
+      this.currentWorldId = this.worldIdInput();
+      this.getWorld();
+    }
+    else {
       this.currentRoute.params.subscribe(params => {
         this.currentWorldId = params['worldId'];
         this.getWorld();
@@ -191,6 +222,18 @@ export class WorldInfoComponent implements OnInit {
     this.fields = [
       { key: 'concept', label: 'Conceito', value: this.currentWorld.concept || '', type: 'text-area' },
     ];
+  }
+
+  openLocalitiesTab() {
+    this.currentTab = 'localities';
+
+    if (this.locationListComponent) {
+      return;
+    }
+
+    import('../../locations/location-list/location-list.component').then(({ LocationListComponent }) => {
+      this.locationListComponent = LocationListComponent;
+    });
   }
 
 }

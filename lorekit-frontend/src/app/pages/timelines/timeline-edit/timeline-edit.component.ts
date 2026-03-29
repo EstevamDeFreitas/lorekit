@@ -348,7 +348,7 @@ export class TimelineEventDocumentsDialogComponent {
                             </div>
                           </div>
                           <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
-                          <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.concept || event.description || 'Sem resumo definido.' }}</p>
+                          <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.concept || event.description || 'Sem conceito definido.' }}</p>
                           <div class="mt-3 flex flex-wrap gap-2">
                             @if (event.ParentLocation) {
                               <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">
@@ -393,7 +393,7 @@ export class TimelineEventDocumentsDialogComponent {
                             </div>
                           </div>
                           <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
-                          <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.concept || event.description || 'Sem resumo definido.' }}</p>
+                          <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.concept || event.description || 'Sem conceito definido.' }}</p>
                           <div class="mt-3 flex flex-wrap gap-2">
                             @if (event.ParentLocation) {
                               <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">

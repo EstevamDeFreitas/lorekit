@@ -22,68 +22,64 @@ import { LocationEditComponent } from '../location-edit/location-edit.component'
   standalone: true,
   template: `
     <div class="flex flex-col relative">
-      <div class="flex flex-row justify-between items-center mb-4 sticky z-25 bg-zinc-950 py-2" [ngClass]="{'top-0': isRouteComponent(), 'top-13': !isRouteComponent()}">
-        @if (isRouteComponent()){
-          <h2 class="text-xl font-bold">Localidades</h2>
-        }
-        @else {
-          <div></div>
-        }
-      </div>
-      <div class="flex flex-row gap-4 items-start">
-        <div class="w-80 bg-zinc-900 p-3 rounded-md sticky top-16 max-h-[calc(100vh-6rem)] overflow-y-auto scrollbar-dark">
-          @if(!worldId() && !locationId()){
-            <div class="mb-4">
-              <app-combo-box class="w-full" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name" [(comboValue)]="selectedWorld" (comboValueChange)="getLocations()"></app-combo-box>
-            </div>
-          }
 
-          <div class="flex flex-row items-center gap-1 mb-4">
-            <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white">
-              <div class="w-8 h-5 flex flex-row justify-center items-center">
-                <i class="fa fa-search"></i>
+      <div class="flex flex-row gap-4">
+        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+            <div>
+              <h2 class="text-base mb-4">Localidades</h2>
+            </div>
+            @if(!worldId() && !locationId()){
+              <div class="mb-4">
+                <app-combo-box class="w-full" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name" [(comboValue)]="selectedWorld" (comboValueChange)="getLocations()"></app-combo-box>
               </div>
-              <input
-                type="text"
-                [(ngModel)]="searchTerm"
-                (ngModelChange)="onLocationFilter()"
-                placeholder="Pesquisar..."
-                class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10"
-              />
-            </div>
-            <app-icon-button
-              size="sm"
-              buttonType="secondary"
-              icon="fa-solid fa-plus"
-              appFormOverlay
-              [title]="'Criar Localidade'"
-              [fields]="locationFormFields"
-              (onSave)="createLocation($event)"
-              ></app-icon-button>
-          </div>
+            }
 
-          <app-tree-view-list
-            [openInDialog]="false"
-            [allowCreate]="true"
-            [useCustomCreate]="true"
-            [createTitle]="'Criar Localidade'"
-            [createFieldLabel]="'Nome'"
-            [fallbackIcon]="'fa-paw'"
-            [emptyChildrenLabel]="'Não há Localidades Relacionadas'"
-            (onDocumentSelect)="selectLocation($event.id)"
-            (onCreateChild)="createSubLocation($event)"
-            [documentArray]="filteredLocationTreeDocuments"
-          ></app-tree-view-list>
-        </div>
+            <div class="flex flex-row items-center gap-1 mb-4">
+              <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white">
+                <div class="w-8 h-5 flex flex-row justify-center items-center">
+                  <i class="fa fa-search"></i>
+                </div>
+                <input
+                  type="text"
+                  [(ngModel)]="searchTerm"
+                  (ngModelChange)="onLocationFilter()"
+                  placeholder="Pesquisar..."
+                  class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10"
+                />
+              </div>
+              <app-icon-button
+                size="sm"
+                buttonType="secondary"
+                icon="fa-solid fa-plus"
+                appFormOverlay
+                [title]="'Criar Localidade'"
+                [fields]="locationFormFields"
+                (onSave)="createLocation($event)"
+                ></app-icon-button>
+            </div>
+
+            <app-tree-view-list
+              [openInDialog]="false"
+              [allowCreate]="true"
+              [useCustomCreate]="true"
+              [createTitle]="'Criar Localidade'"
+              [createFieldLabel]="'Nome'"
+              [fallbackIcon]="'fa-location-dot'"
+              [emptyChildrenLabel]="'Não há Localidades Relacionadas'"
+              (onDocumentSelect)="selectLocation($event.id)"
+              (onCreateChild)="createSubLocation($event)"
+              [documentArray]="filteredLocationTreeDocuments"
+            ></app-tree-view-list>
+          </div>
 
         <div class="flex-1 min-h-[60vh]">
           @if (selectedLocationId && showLocationEditor) {
-            <div class="rounded-md p-8">
+            <div class="rounded-md px-2">
               <app-location-edit [locationIdInput]="selectedLocationId" [showLateralMenu]="false"></app-location-edit>
             </div>
           }
           @else {
-            <div class="h-full rounded-md border border-zinc-800 bg-zinc-900/30 flex items-center justify-center text-zinc-500">
+            <div class="h-full rounded-md  flex items-center justify-center text-zinc-500">
               Selecione uma localidade na árvore para editar
             </div>
           }
