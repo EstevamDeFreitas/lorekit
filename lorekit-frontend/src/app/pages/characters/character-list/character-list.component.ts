@@ -11,6 +11,7 @@ import { CharacterService } from '../../../services/character.service';
 import { SpecieService } from '../../../services/specie.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
+import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../../models/personalization.model';
 
 @Component({
   selector: 'app-character-list',
@@ -52,9 +53,10 @@ import { WorldStateService } from '../../../services/world-state.service';
                 type="button"
                 class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
                 [ngClass]="selectedCharacterId === character.id ? 'text-yellow-300' : 'text-zinc-400'"
+                [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(character, 'color'))}"
                 (click)="selectCharacter(character.id)">
                 <div class="flex flex-row items-center">
-                  <i class="fa-solid" [ngClass]="'fa-user'"></i>
+                  <i class="fa-solid" [ngClass]="getPersonalizationValue(character, 'icon') || 'fa-user'"></i>
                 </div>
                 <h2 [title]="character.name" class="text-xs">{{ character.name }}</h2>
               </button>
@@ -107,6 +109,10 @@ export class CharacterListComponent implements OnInit {
   selectedCharacterId = '';
   showCharacterEditor = false;
   characterEditComponent: any = null;
+
+  public getPersonalizationValue = getPersonalizationValue;
+  public getTextClass = getTextClass;
+  public getTextColorStyle = getTextColorStyle;
 
   ngOnInit() {
     this.worldStateService.currentWorld$.subscribe(world => {

@@ -14,7 +14,7 @@ import { animate, query, style, transition, trigger } from '@angular/animations'
 
       <div>
         <div class="pr-3 mb-8">
-          <img src="../../../../assets/lorekit-logo.png"  alt="">
+          <img src="assets/lorekit-logo.png" alt="Lorekit">
         </div>
         <div class="flex flex-col gap-4 mb-4">
           <app-nav-button [label]="'Mundos'" [showLabel]="false" [route]="'/app/world'" [icon]="'fa-solid fa-earth'" size="xl" [fullWidth]="true" [direction]="'right'"></app-nav-button>

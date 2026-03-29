@@ -11,6 +11,7 @@ import { OrganizationService } from '../../../services/organization.service';
 import { OrganizationTypeService } from '../../../services/organization-type.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
+import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../../models/personalization.model';
 
 @Component({
   selector: 'app-organization-list',
@@ -52,9 +53,10 @@ import { WorldStateService } from '../../../services/world-state.service';
                 type="button"
                 class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
                 [ngClass]="selectedOrganizationId === organization.id ? 'text-yellow-300' : 'text-zinc-400'"
+                [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(organization, 'color'))}"
                 (click)="selectOrganization(organization.id)">
                 <div class="flex flex-row items-center">
-                  <i class="fa-solid" [ngClass]="'fa-building'"></i>
+                  <i class="fa-solid" [ngClass]="getPersonalizationValue(organization, 'icon') || 'fa-building'"></i>
                 </div>
                 <h2 [title]="organization.name" class="text-xs">{{ organization.name }}</h2>
               </button>
@@ -103,6 +105,9 @@ export class OrganizationListComponent implements OnInit {
   availableOrganizationTypes: OrganizationType[] = [];
   selectedWorld = '';
   organizations: Organization[] = [];
+  public getPersonalizationValue = getPersonalizationValue;
+  public getTextClass = getTextClass;
+  public getTextColorStyle = getTextColorStyle;
 
   selectedOrganizationId = '';
   showOrganizationEditor = false;

@@ -10,6 +10,7 @@ import { CultureService } from '../../../services/culture.service';
 import { LocationService } from '../../../services/location.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
+import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../../models/personalization.model';
 
 @Component({
   selector: 'app-culture-list',
@@ -51,9 +52,10 @@ import { WorldStateService } from '../../../services/world-state.service';
                 type="button"
                 class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
                 [ngClass]="selectedCultureId === culture.id ? 'text-yellow-300' : 'text-zinc-400'"
+                [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(culture, 'color'))}"
                 (click)="selectCulture(culture.id)">
                 <div class="flex flex-row items-center">
-                  <i class="fa-solid" [ngClass]="'fa-mortar-pestle'"></i>
+                  <i class="fa-solid" [ngClass]="getPersonalizationValue(culture, 'icon') || 'fa-mortar-pestle'"></i>
                 </div>
                 <h2 [title]="culture.name" class="text-xs">{{ culture.name }}</h2>
               </button>
@@ -104,6 +106,10 @@ export class CultureListComponent implements OnInit {
   selectedCultureId = '';
   showCultureEditor = false;
   cultureEditComponent: any = null;
+
+  public getPersonalizationValue = getPersonalizationValue;
+  public getTextClass = getTextClass;
+  public getTextColorStyle = getTextColorStyle;
 
   ngOnInit(): void {
     this.worldStateService.currentWorld$.subscribe(world => {
