@@ -2,23 +2,21 @@ import { Component, computed, inject, input, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
-import { LocationService } from '../../../services/location.service';
 import { WorldService } from '../../../services/world.service';
 import { DocumentService } from '../../../services/document.service';
 import { World } from '../../../models/world.model';
 import { Document } from '../../../models/document.model';
-import { Location } from '../../../models/location.model';
-import { NgClass } from '@angular/common';
 import { WorldStateService } from '../../../services/world-state.service';
 import { TreeViewListComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 import { DocumentEditComponent } from '../document-edit/document-edit.component';
 import { FormsModule } from '@angular/forms';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
-import { FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
+import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
+import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 
 @Component({
   selector: 'app-document-list',
-  imports: [NgClass, TreeViewListComponent, DocumentEditComponent, FormsModule, IconButtonComponent, FormOverlayDirective],
+  imports: [TreeViewListComponent, DocumentEditComponent, FormsModule, IconButtonComponent, FormOverlayDirective, ComboBoxComponent],
   template: `
     <div class="flex flex-col relative">
 
@@ -27,6 +25,21 @@ import { FormOverlayDirective } from '../../../components/form-overlay/form-over
           <div>
               <h2 class="text-base mb-4">Documentos</h2>
             </div>
+
+          @if (!worldId()) {
+            <div class="mb-4">
+              <app-combo-box
+                class="w-full"
+                label="Filtro de mundo"
+                [items]="availableWorlds"
+                compareProp="id"
+                displayProp="name"
+                [(comboValue)]="selectedWorld"
+                (comboValueChange)="onWorldSelect()">
+              </app-combo-box>
+            </div>
+          }
+
           <div class="flex flex-row items-center gap-1 mb-4">
             <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white">
               <div class="w-8 h-5 flex flex-row justify-center items-center">
@@ -46,7 +59,7 @@ import { FormOverlayDirective } from '../../../components/form-overlay/form-over
               icon="fa-solid fa-plus"
               appFormOverlay
               [title]="'Criar Documento'"
-              [fields]="[{ key: 'name', label: 'Título', value: '' }]"
+              [fields]="getFormFields()"
               (onSave)="createDocument($event)"
               ></app-icon-button>
           </div>
@@ -81,7 +94,6 @@ export class DocumentListComponent implements OnInit {
   private activatedRoute = inject(ActivatedRoute);
   private documentService = inject(DocumentService);
   private worldService = inject(WorldService);
-  private locationService = inject(LocationService);
   public buildImageUrl = buildImageUrl;
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
@@ -95,7 +107,6 @@ export class DocumentListComponent implements OnInit {
 
   worldId = input<string>();
   availableWorlds : World[] = [];
-  availableLocations : Location[] = [];
   documents : Document[] = [];
   filteredDocuments : Document[] = [];
   selectedDocumentId = '';
@@ -107,10 +118,16 @@ export class DocumentListComponent implements OnInit {
 
   ngOnInit(): void {
     this.worldStateService.currentWorld$.subscribe(world => {
-      this.selectedWorld = world ? world.id : '';
+      const nextWorldId = world ? world.id : '';
+
+      if (this.selectedWorld === nextWorldId) {
+        return;
+      }
+
+      this.selectedWorld = nextWorldId;
+      this.getDocuments();
     });
     this.getAvailableWorlds();
-    this.getAvailableLocations();
     this.getDocuments();
   }
 
@@ -118,22 +135,23 @@ export class DocumentListComponent implements OnInit {
     this.availableWorlds = this.worldService.getWorlds();
   }
 
-  getAvailableLocations(){
-    this.availableLocations = this.worldId() || this.selectedWorld ? this.locationService.getLocationByWorldId(this.worldId() || this.selectedWorld) : this.locationService.getLocations();
-  }
-
   getDocuments() {
-    this.documents = this.documentService.getDocumentsTree(null, null).filter(doc => !doc.ParentDocument).sort((a, b) => a.title.localeCompare(b.title));
+    const activeWorldId = this.worldId() || this.selectedWorld || null;
+    const rootDocuments = this.documentService
+      .getDocumentsTree(null, null)
+      .filter(doc => !doc.ParentDocument)
+      .sort((a, b) => a.title.localeCompare(b.title));
+
+    this.documents = activeWorldId
+      ? this.filterDocumentsTreeByWorld(rootDocuments, activeWorldId)
+      : rootDocuments;
 
     this.onDocumentFilter();
-    // if (!this.selectedDocumentId && this.documents.length > 0) {
-    //   this.selectedDocumentId = this.documents[0].id;
-    //   return;
-    // }
 
-    // if (this.selectedDocumentId && !this.hasDocumentInTree(this.documents, this.selectedDocumentId)) {
-    //   this.selectedDocumentId = this.documents.length > 0 ? this.documents[0].id : '';
-    // }
+    if (this.selectedDocumentId && !this.hasDocumentInTree(this.documents, this.selectedDocumentId)) {
+      this.selectedDocumentId = '';
+      this.showDocumentEditor = false;
+    }
   }
 
   private hasDocumentInTree(docs: Document[], id: string): boolean {
@@ -215,14 +233,46 @@ export class DocumentListComponent implements OnInit {
     return filtered;
   }
 
+  private filterDocumentsTreeByWorld(docs: Document[], worldId: string): Document[] {
+    const filtered: Document[] = [];
+
+    for (const doc of docs) {
+      const filteredChildren = doc.SubDocuments?.length
+        ? this.filterDocumentsTreeByWorld(doc.SubDocuments, worldId)
+        : [];
+      const documentWorldId = this.getDocumentWorldId(doc);
+
+      if (documentWorldId === worldId || filteredChildren.length > 0) {
+        filtered.push({
+          ...doc,
+          SubDocuments: filteredChildren,
+        });
+      }
+    }
+
+    return filtered;
+  }
+
+  private getDocumentWorldId(document: Document): string | null {
+    return document.ParentWorld?.id || this.documentService.getDocumentWorldId(document.id);
+  }
+
+  getFormFields(): FormField[] {
+    return [
+      { key: 'name', label: 'Título', value: '' },
+      { key: 'world', label: 'Mundo', value: this.worldId() || this.selectedWorld || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
+    ];
+  }
+
   createDocument(formData: Record<string, string>) {
     if (formData['name'].trim() === '') {
       return;
     }
 
-    let newDoc = new Document('', formData['name'], '');
+    const newDoc = new Document('', formData['name'], '');
+    const selectedWorldId = formData['world'] || this.worldId() || this.selectedWorld || null;
 
-    newDoc = this.documentService.saveDocument(newDoc, "Document", null);
+    this.documentService.saveDocument(newDoc, null, null, selectedWorldId);
 
     this.getDocuments();
   }
@@ -237,6 +287,4 @@ export class DocumentListComponent implements OnInit {
     this.documentService.saveDocument(newDoc, 'Document', event.parentId);
     this.getDocuments();
   }
-
-
 }

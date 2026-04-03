@@ -307,7 +307,7 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
     }
 
     const newDoc = new Document('', name, '');
-    this.documentService.saveDocument(newDoc, this.entityTable(), event.parentId);
+    this.documentService.saveDocument(newDoc, 'Document', event.parentId);
     this.loadDocuments();
   }
 

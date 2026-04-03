@@ -9,6 +9,9 @@ import { EditorComponent } from "../../../components/editor/editor.component";
 import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
+import { FormField } from '../../../components/form-overlay/form-overlay.component';
+import { WorldService } from '../../../services/world.service';
+import { World } from '../../../models/world.model';
 
 @Component({
   selector: 'app-document-edit',
@@ -33,15 +36,13 @@ import { EntityLateralMenuComponent } from "../../../components/entity-lateral-m
           <app-editor [entityId]="document.id" entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full"></app-editor>
         }
       </div>
-      @if (showLateralMenu()) {
-        <div class="flex-1">
+        <div class="w-70">
           @if (!isLoading) {
             <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
-              <app-entity-lateral-menu entityTable="Document" [entityId]="document.id"></app-entity-lateral-menu>
+              <app-entity-lateral-menu [fields]="getFormFields()" (onSave)="onFieldsSave($event)" entityTable="Document" [entityId]="document.id"></app-entity-lateral-menu>
             </div>
           }
         </div>
-      }
     </div>
   </div>`,
   styleUrl: './document-edit.component.css',
@@ -55,11 +56,14 @@ export class DocumentEditComponent {
   private currentRoute = inject(ActivatedRoute);
   private documentService = inject(DocumentService);
   private router = inject(Router);
+  private worldService = inject(WorldService);
 
   returnUrl?: string;
   document:Document = new Document();
   isLoading = true;
   documentArray:Array<Document> = [];
+  availableWorlds: World[] = [];
+  selectedWorldId: string | null = null;
   documentIdInput = input<string | null>(null);
   showLateralMenu = input<boolean>(true);
 
@@ -107,6 +111,8 @@ export class DocumentEditComponent {
   loadDocument() {
     this.isLoading = true;
     this.document = this.documentService.getDocument(this.documentId());
+    this.availableWorlds = this.worldService.getWorlds();
+    this.selectedWorldId = this.document.ParentWorld?.id || this.documentService.getDocumentWorldId(this.document.id);
     this.isLoading = false;
   }
 
@@ -119,7 +125,7 @@ export class DocumentEditComponent {
       this.document.content = JSON.stringify(content);
     }
 
-    this.documentService.saveDocument(this.document, this.data?.entityTable, this.data?.entityId);
+    this.document = this.documentService.saveDocument(this.document, this.data?.entityTable, this.data?.entityId, this.selectedWorldId);
   }
 
   getReturnUrl(){
@@ -153,4 +159,14 @@ export class DocumentEditComponent {
     return null;
   }
 
+  onFieldsSave(formData: Record<string, string>) {
+    this.selectedWorldId = formData['world'] || null;
+    this.saveDocument();
+  }
+
+  getFormFields(): FormField[] {
+    return [
+      { key: 'world', label: 'Mundo', value: this.selectedWorldId || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
+    ];
+  }
 }
