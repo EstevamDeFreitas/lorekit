@@ -1,5 +1,6 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, inject, input, OnChanges, OnInit, output, SimpleChanges } from '@angular/core';
 import { NgClass, NgStyle } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { Dialog } from '@angular/cdk/dialog';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -343,7 +344,7 @@ export class TreeViewListComponent {
 
 @Component({
   selector: 'app-entity-lateral-menu',
-  imports: [ButtonComponent, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, ComboBoxComponent, TextAreaComponent, TreeViewListComponent, NavButtonComponent],
+  imports: [ButtonComponent, FormsModule, OverlayModule, InputComponent, RouterModule, FormOverlayDirective, ComboBoxComponent, TextAreaComponent, TreeViewListComponent, NavButtonComponent],
   template: `
   <div class="flex flex-col gap-4 w-full h-full">
     <div class="flex flex-row justify-around items-center">
@@ -397,6 +398,30 @@ export class TreeViewListComponent {
             (onSave)="createDocument($event)">
           </app-button>
         </div>
+        <div class="relative flex flex-col gap-1">
+          <input
+            type="text"
+            [(ngModel)]="documentSearchTerm"
+            (ngModelChange)="onDocumentSearchChange($event)"
+            placeholder="Relacionar documento existente..."
+            class="w-full rounded-lg px-3 py-2 bg-zinc-925 border border-zinc-800 text-xs focus:outline-none focus:border-zinc-100 placeholder:text-white/20"
+          />
+          @if (filteredDocuments.length > 0) {
+            <div class="absolute z-20 top-full mt-1 w-full rounded-lg border border-zinc-700 bg-zinc-950 shadow-lg max-h-48 overflow-y-auto scrollbar-dark">
+              @for (doc of filteredDocuments; track doc.id) {
+                <button
+                  type="button"
+                  class="w-full text-left px-3 py-2 text-xs border-b border-zinc-800 last:border-b-0 hover:bg-zinc-900 cursor-pointer"
+                  (click)="selectDocument(doc)">
+                  {{ doc.title }}
+                </button>
+              }
+            </div>
+          }
+          @if (selectedDocumentId) {
+            <app-button label="Relacionar" buttonType="secondary" size="xs" (click)="attachSelectedDocument()"></app-button>
+          }
+        </div>
         <div class="flex flex-col gap-2 h-[calc(100%-8rem)] overflow-y-scroll scrollbar-dark">
           <app-tree-view-list
             [entityId]="entityId()"
@@ -417,6 +442,10 @@ export class TreeViewListComponent {
 })
 export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewInit {
   documentArray: Document[] = [];
+  availableDocuments: Document[] = [];
+  filteredDocuments: Document[] = [];
+  selectedDocumentId: string | null = null;
+  documentSearchTerm = '';
 
   entityTable = input.required<string>();
   entityId = input.required<string>();
@@ -457,6 +486,58 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
 
   loadDocuments() {
     this.documentArray = this.documentService.getDocumentsTree(this.entityTable(), this.entityId());
+    this.loadAvailableDocuments();
+  }
+
+  private loadAvailableDocuments() {
+    const relatedIds = this.collectDocumentIds(this.documentArray);
+    this.availableDocuments = this.documentService.getAllDocuments()
+      .filter(doc => !relatedIds.has(doc.id))
+      .sort((a, b) => a.title.localeCompare(b.title));
+    this.onDocumentSearchChange(this.documentSearchTerm);
+  }
+
+  private collectDocumentIds(docs: Document[]): Set<string> {
+    const ids = new Set<string>();
+    const visit = (items: Document[]) => {
+      for (const item of items) {
+        ids.add(item.id);
+        if (item.SubDocuments) {
+          visit(item.SubDocuments);
+        }
+      }
+    };
+    visit(docs);
+    return ids;
+  }
+
+  onDocumentSearchChange(term: string) {
+    this.documentSearchTerm = term;
+    const normalized = term.trim().toLocaleLowerCase();
+    if (!normalized) {
+      this.filteredDocuments = [];
+      return;
+    }
+    this.filteredDocuments = this.availableDocuments
+      .filter(doc => doc.title.toLocaleLowerCase().includes(normalized))
+      .slice(0, 8);
+  }
+
+  selectDocument(doc: Document) {
+    this.selectedDocumentId = doc.id;
+    this.documentSearchTerm = doc.title;
+    this.filteredDocuments = [];
+  }
+
+  attachSelectedDocument() {
+    if (!this.selectedDocumentId) {
+      return;
+    }
+    this.documentService.attachExistingDocument(this.entityTable(), this.entityId(), this.selectedDocumentId);
+    this.selectedDocumentId = null;
+    this.documentSearchTerm = '';
+    this.filteredDocuments = [];
+    this.loadDocuments();
   }
 
   ngOnChanges(changes: SimpleChanges): void {

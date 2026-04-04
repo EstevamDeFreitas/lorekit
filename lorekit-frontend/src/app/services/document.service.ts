@@ -113,16 +113,12 @@ export class DocumentService {
   reparentDocument(documentId: string, parentDocumentId: string | null): Document {
     this.assertCanReparentDocument(documentId, parentDocumentId);
 
-    const documentContext = this.getDocumentContext(documentId);
-    const worldId = documentContext.worldId || this.getDocumentWorldId(documentId);
+    const worldId = this.getDocumentWorldId(documentId);
 
     this.deleteRelationship(documentId, 'Document');
-    this.deleteDocumentOwnerRelationships(documentId);
 
     if (parentDocumentId) {
       this.ensureRelationship('Document', parentDocumentId, 'Document', documentId);
-    } else if (documentContext.owner) {
-      this.ensureRelationship(documentContext.owner.table, documentContext.owner.id, 'Document', documentId);
     }
 
     this.syncWorldRelationship(documentId, worldId);
