@@ -11,6 +11,16 @@ type RelationshipRow = {
   entityId: string;
 };
 
+type DocumentOwnerReference = {
+  table: string;
+  id: string;
+} | null;
+
+type DocumentContext = {
+  owner: DocumentOwnerReference;
+  worldId: string | null;
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -91,6 +101,34 @@ export class DocumentService {
     return this.getInheritedWorldId('Document', documentId);
   }
 
+  canReparentDocument(documentId: string, parentDocumentId: string | null): boolean {
+    try {
+      this.assertCanReparentDocument(documentId, parentDocumentId);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  reparentDocument(documentId: string, parentDocumentId: string | null): Document {
+    this.assertCanReparentDocument(documentId, parentDocumentId);
+
+    const documentContext = this.getDocumentContext(documentId);
+    const worldId = documentContext.worldId || this.getDocumentWorldId(documentId);
+
+    this.deleteRelationship(documentId, 'Document');
+    this.deleteDocumentOwnerRelationships(documentId);
+
+    if (parentDocumentId) {
+      this.ensureRelationship('Document', parentDocumentId, 'Document', documentId);
+    } else if (documentContext.owner) {
+      this.ensureRelationship(documentContext.owner.table, documentContext.owner.id, 'Document', documentId);
+    }
+
+    this.syncWorldRelationship(documentId, worldId);
+    return this.getDocument(documentId);
+  }
+
   private ensureRelationship(parentTable: string, parentId: string, entityTable: string, entityId: string) {
     const existingRelationship = this.crud.findAll('Relationship', {
       parentTable,
@@ -121,6 +159,141 @@ export class DocumentService {
     if (worldId) {
       this.ensureRelationship('World', worldId, 'Document', documentId);
     }
+  }
+
+  private assertCanReparentDocument(documentId: string, parentDocumentId: string | null) {
+    if (!documentId) {
+      throw new Error('Documento inválido para mover.');
+    }
+
+    if (documentId === parentDocumentId) {
+      throw new Error('Um documento não pode ser filho de si mesmo.');
+    }
+
+    const document = this.getDocument(documentId);
+    if (!document) {
+      throw new Error('Documento de origem não encontrado.');
+    }
+
+    if (!parentDocumentId) {
+      return;
+    }
+
+    const parentDocument = this.getDocument(parentDocumentId);
+    if (!parentDocument) {
+      throw new Error('Documento de destino não encontrado.');
+    }
+
+    if (this.isDocumentAncestor(documentId, parentDocumentId)) {
+      throw new Error('Não é possível mover um documento para dentro de um descendente.');
+    }
+
+    const sourceContext = this.getDocumentContext(documentId);
+    const targetContext = this.getDocumentContext(parentDocumentId);
+
+    if ((sourceContext.worldId || null) !== (targetContext.worldId || null)) {
+      throw new Error('O documento precisa continuar no mesmo mundo.');
+    }
+
+    if (!this.isSameOwner(sourceContext.owner, targetContext.owner)) {
+      throw new Error('O documento precisa continuar no mesmo contexto raiz.');
+    }
+  }
+
+  private getDocumentContext(documentId: string, visited = new Set<string>()): DocumentContext {
+    if (!documentId || visited.has(documentId)) {
+      return { owner: null, worldId: null };
+    }
+
+    visited.add(documentId);
+
+    const relationships = this.getEntityRelationships('Document', documentId);
+    const parentDocument = relationships.find(relationship => relationship.parentTable === 'Document');
+    if (parentDocument) {
+      return this.getDocumentContext(parentDocument.parentId, visited);
+    }
+
+    const ownerRelationship = relationships.find(relationship => relationship.parentTable !== 'Document' && relationship.parentTable !== 'World');
+    const worldRelationship = relationships.find(relationship => relationship.parentTable === 'World');
+
+    return {
+      owner: ownerRelationship
+        ? {
+            table: ownerRelationship.parentTable,
+            id: ownerRelationship.parentId,
+          }
+        : null,
+      worldId: worldRelationship?.parentId || (ownerRelationship ? this.getInheritedWorldId(ownerRelationship.parentTable, ownerRelationship.parentId) : null),
+    };
+  }
+
+  private isDocumentAncestor(ancestorId: string, documentId: string): boolean {
+    let currentParentId = this.getParentDocumentId(documentId);
+
+    while (currentParentId) {
+      if (currentParentId === ancestorId) {
+        return true;
+      }
+
+      currentParentId = this.getParentDocumentId(currentParentId);
+    }
+
+    return false;
+  }
+
+  private getParentDocumentId(documentId: string): string | null {
+    const relationship = this.crud.findFirst('Relationship', {
+      parentTable: 'Document',
+      entityTable: 'Document',
+      entityId: documentId
+    }) as RelationshipRow | null;
+
+    return relationship?.parentId || null;
+  }
+
+  private getEntityRelationships(entityTable: string, entityId: string): RelationshipRow[] {
+    return this.crud.findAll('Relationship', {
+      entityTable,
+      entityId,
+    }) as RelationshipRow[];
+  }
+
+  private deleteDocumentOwnerRelationships(documentId: string) {
+    const relationships = this.getEntityRelationships('Document', documentId);
+
+    for (const relationship of relationships) {
+      if (relationship.parentTable === 'World' || relationship.parentTable === 'Document') {
+        continue;
+      }
+
+      this.deleteRelationship(documentId, relationship.parentTable, relationship.parentId);
+    }
+  }
+
+  private deleteRelationship(documentId: string, parentTable: string, parentId?: string) {
+    const relationships = this.getEntityRelationships('Document', documentId)
+      .filter(relationship => relationship.parentTable === parentTable && (!parentId || relationship.parentId === parentId));
+
+    for (const relationship of relationships) {
+      this.crud.deleteWhen('Relationship', {
+        parentTable: relationship.parentTable,
+        parentId: relationship.parentId,
+        entityTable: relationship.entityTable,
+        entityId: relationship.entityId
+      });
+    }
+  }
+
+  private isSameOwner(sourceOwner: DocumentOwnerReference, targetOwner: DocumentOwnerReference) {
+    if (!sourceOwner && !targetOwner) {
+      return true;
+    }
+
+    if (!sourceOwner || !targetOwner) {
+      return false;
+    }
+
+    return sourceOwner.table === targetOwner.table && sourceOwner.id === targetOwner.id;
   }
 
   private getInheritedWorldId(entityTable: string | null, entityId: string | null, visited = new Set<string>()): string | null {

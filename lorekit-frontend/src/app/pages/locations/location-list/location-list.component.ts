@@ -13,8 +13,8 @@ import { WorldStateService } from '../../../services/world-state.service';
 import { FormsModule } from '@angular/forms';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { TreeViewListComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
-import { Document } from '../../../models/document.model';
 import { LocationEditComponent } from '../location-edit/location-edit.component';
+import { TreeViewNode, TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
 
 @Component({
   selector: 'app-location-list',
@@ -62,13 +62,17 @@ import { LocationEditComponent } from '../location-edit/location-edit.component'
               [openInDialog]="false"
               [allowCreate]="true"
               [useCustomCreate]="true"
+              [dragEnabled]="!searchTerm.trim()"
+              [dragContextId]="'location-list:' + (locationId() || worldId() || selectedWorld || 'root')"
+              [canReparent]="canReparentLocation"
               [createTitle]="'Criar Localidade'"
               [createFieldLabel]="'Nome'"
               [fallbackIcon]="'fa-location-dot'"
               [emptyChildrenLabel]="'Não há Localidades Relacionadas'"
               (onDocumentSelect)="selectLocation($event.id)"
               (onCreateChild)="createSubLocation($event)"
-              [documentArray]="filteredLocationTreeDocuments"
+              (onReparentRequested)="reparentLocation($event)"
+              [documentArray]="filteredLocationTreeNodes"
             ></app-tree-view-list>
           </div>
 
@@ -116,10 +120,13 @@ export class LocationListComponent implements OnInit {
   locations: Location[] = [];
   locationTree: TreeLocationNode[] = [];
   filteredLocationTree: TreeLocationNode[] = [];
-  filteredLocationTreeDocuments: Document[] = [];
+  filteredLocationTreeNodes: TreeViewNode[] = [];
   searchTerm : string = '';
   selectedLocationId = '';
   showLocationEditor = true;
+
+  readonly canReparentLocation = (draggedId: string, newParentId: string | null) =>
+    this.locationService.canReparentLocation(draggedId, newParentId ?? this.locationId() ?? null);
 
   ngOnInit() {
     this.worldStateService.currentWorld$.subscribe(world => {
@@ -204,12 +211,23 @@ export class LocationListComponent implements OnInit {
 
     if (!search) {
       this.filteredLocationTree = this.locationTree;
-      this.filteredLocationTreeDocuments = this.filteredLocationTree as unknown as Document[];
+      this.filteredLocationTreeNodes = this.filteredLocationTree;
       return;
     }
 
     this.filteredLocationTree = this.filterLocationTree(this.locationTree, search);
-    this.filteredLocationTreeDocuments = this.filteredLocationTree as unknown as Document[];
+    this.filteredLocationTreeNodes = this.filteredLocationTree;
+  }
+
+  reparentLocation(event: TreeViewReparentRequest) {
+    const resolvedParentId = event.newParentId ?? this.locationId() ?? null;
+
+    try {
+      this.locationService.reparentLocation(event.draggedId, resolvedParentId);
+      this.getLocations();
+    } catch (error: any) {
+      alert(error?.message || 'Falha ao reorganizar a localidade.');
+    }
   }
 
   private buildLocationTree(locations: Location[]): TreeLocationNode[] {

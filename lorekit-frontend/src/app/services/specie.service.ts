@@ -125,4 +125,93 @@ export class SpecieService {
   deleteSpecie(specieId: string, deleteRelatedItems: boolean = false) {
     return this.crud.delete('Species', specieId, deleteRelatedItems);
   }
+
+  canReparentSpecie(specieId: string, parentSpecieId: string | null): boolean {
+    try {
+      this.assertCanReparentSpecie(specieId, parentSpecieId);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  reparentSpecie(specieId: string, parentSpecieId: string | null): Specie {
+    this.assertCanReparentSpecie(specieId, parentSpecieId);
+
+    this.crud.deleteWhen('Relationship', {
+      parentTable: 'Species',
+      entityTable: 'Species',
+      entityId: specieId
+    });
+
+    if (parentSpecieId) {
+      this.crud.create('Relationship', {
+        parentTable: 'Species',
+        parentId: parentSpecieId,
+        entityTable: 'Species',
+        entityId: specieId
+      });
+    }
+
+    return this.getSpecie(specieId);
+  }
+
+  private assertCanReparentSpecie(specieId: string, parentSpecieId: string | null) {
+    if (!specieId) {
+      throw new Error('Espécie inválida para mover.');
+    }
+
+    if (specieId === parentSpecieId) {
+      throw new Error('Uma espécie não pode ser filha de si mesma.');
+    }
+
+    const specie = this.getSpecie(specieId);
+    if (!specie) {
+      throw new Error('Espécie de origem não encontrada.');
+    }
+
+    if (!parentSpecieId) {
+      return;
+    }
+
+    const parentSpecie = this.getSpecie(parentSpecieId);
+    if (!parentSpecie) {
+      throw new Error('Espécie de destino não encontrada.');
+    }
+
+    const specieWorldId = specie.ParentWorld?.id || null;
+    const parentWorldId = parentSpecie.ParentWorld?.id || null;
+
+    if (specieWorldId !== parentWorldId) {
+      throw new Error('A espécie precisa continuar no mesmo mundo.');
+    }
+
+    if (this.isSpecieAncestor(specieId, parentSpecieId)) {
+      throw new Error('Não é possível mover uma espécie para dentro de um descendente.');
+    }
+  }
+
+  private isSpecieAncestor(ancestorId: string, specieId: string): boolean {
+    let currentParentId = this.getParentSpecieId(specieId);
+
+    while (currentParentId) {
+      if (currentParentId === ancestorId) {
+        return true;
+      }
+
+      currentParentId = this.getParentSpecieId(currentParentId);
+    }
+
+    return false;
+  }
+
+  private getParentSpecieId(specieId: string): string | null {
+    const relationship = this.crud.findFirst('Relationship', {
+      parentTable: 'Species',
+      entityTable: 'Species',
+      entityId: specieId
+    }) as { parentId?: string } | null;
+
+    return relationship?.parentId || null;
+  }
 }

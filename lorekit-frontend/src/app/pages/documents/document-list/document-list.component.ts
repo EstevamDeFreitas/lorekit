@@ -8,6 +8,7 @@ import { World } from '../../../models/world.model';
 import { Document } from '../../../models/document.model';
 import { WorldStateService } from '../../../services/world-state.service';
 import { TreeViewListComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
+import { TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
 import { DocumentEditComponent } from '../document-edit/document-edit.component';
 import { FormsModule } from '@angular/forms';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
@@ -66,9 +67,13 @@ import { ComboBoxComponent } from "../../../components/combo-box/combo-box.compo
           <app-tree-view-list
             [openInDialog]="false"
             [useCustomCreate]="true"
+            [dragEnabled]="!searchTerm.trim()"
+            [dragContextId]="'document-list:' + (worldId() || selectedWorld || 'all')"
+            [canReparent]="canReparentDocument"
             (onArrayChange)="getDocuments()"
             (onDocumentSelect)="selectDocument($event.id)"
             (onCreateChild)="createSubDocument($event)"
+            (onReparentRequested)="reparentDocument($event)"
             [documentArray]="filteredDocuments"
           ></app-tree-view-list>
         </div>
@@ -115,6 +120,9 @@ export class DocumentListComponent implements OnInit {
   selectedWorld : string = '';
 
   searchTerm : string = '';
+
+  readonly canReparentDocument = (draggedId: string, newParentId: string | null) =>
+    this.documentService.canReparentDocument(draggedId, newParentId);
 
   ngOnInit(): void {
     this.worldStateService.currentWorld$.subscribe(world => {
@@ -286,5 +294,14 @@ export class DocumentListComponent implements OnInit {
     const newDoc = new Document('', name, '');
     this.documentService.saveDocument(newDoc, 'Document', event.parentId);
     this.getDocuments();
+  }
+
+  reparentDocument(event: TreeViewReparentRequest) {
+    try {
+      this.documentService.reparentDocument(event.draggedId, event.newParentId);
+      this.getDocuments();
+    } catch (error: any) {
+      alert(error?.message || 'Falha ao reorganizar o documento.');
+    }
   }
 }

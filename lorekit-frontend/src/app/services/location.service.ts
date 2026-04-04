@@ -121,4 +121,93 @@ export class LocationService {
     return <Location[]>this.crud.findAll('Location', {}, [{"table": "LocationCategory", "firstOnly": true}, {"table": "Image", "firstOnly": false}, {"table": "Personalization", "firstOnly": true}, {"table": "Location", "firstOnly": true, "isParent":true}, {"table": "World", "firstOnly": true, "isParent":true}], {parentTable: 'World', parentId: worldId});
   }
 
+  canReparentLocation(locationId: string, parentLocationId: string | null): boolean {
+    try {
+      this.assertCanReparentLocation(locationId, parentLocationId);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  reparentLocation(locationId: string, parentLocationId: string | null): Location {
+    this.assertCanReparentLocation(locationId, parentLocationId);
+
+    this.crud.deleteWhen('Relationship', {
+      parentTable: 'Location',
+      entityTable: 'Location',
+      entityId: locationId
+    });
+
+    if (parentLocationId) {
+      this.crud.create('Relationship', {
+        parentTable: 'Location',
+        parentId: parentLocationId,
+        entityTable: 'Location',
+        entityId: locationId
+      });
+    }
+
+    return this.getLocationById(locationId);
+  }
+
+  private assertCanReparentLocation(locationId: string, parentLocationId: string | null) {
+    if (!locationId) {
+      throw new Error('Localidade inválida para mover.');
+    }
+
+    if (locationId === parentLocationId) {
+      throw new Error('Uma localidade não pode ser filha de si mesma.');
+    }
+
+    const location = this.getLocationById(locationId);
+    if (!location) {
+      throw new Error('Localidade de origem não encontrada.');
+    }
+
+    if (!parentLocationId) {
+      return;
+    }
+
+    const parentLocation = this.getLocationById(parentLocationId);
+    if (!parentLocation) {
+      throw new Error('Localidade de destino não encontrada.');
+    }
+
+    const locationWorldId = location.ParentWorld?.id || null;
+    const parentWorldId = parentLocation.ParentWorld?.id || null;
+
+    if (locationWorldId !== parentWorldId) {
+      throw new Error('A localidade precisa continuar no mesmo mundo.');
+    }
+
+    if (this.isLocationAncestor(locationId, parentLocationId)) {
+      throw new Error('Não é possível mover uma localidade para dentro de um descendente.');
+    }
+  }
+
+  private isLocationAncestor(ancestorId: string, locationId: string): boolean {
+    let currentParentId = this.getParentLocationId(locationId);
+
+    while (currentParentId) {
+      if (currentParentId === ancestorId) {
+        return true;
+      }
+
+      currentParentId = this.getParentLocationId(currentParentId);
+    }
+
+    return false;
+  }
+
+  private getParentLocationId(locationId: string): string | null {
+    const relationship = this.crud.findFirst('Relationship', {
+      parentTable: 'Location',
+      entityTable: 'Location',
+      entityId: locationId
+    }) as { parentId?: string } | null;
+
+    return relationship?.parentId || null;
+  }
+
 }

@@ -1,93 +1,143 @@
 import { AfterViewInit, ChangeDetectionStrategy, Component, inject, input, OnChanges, OnInit, output, SimpleChanges } from '@angular/core';
-import { ButtonComponent } from "../button/button.component";
-import { DocumentService } from '../../services/document.service';
-import { Document } from '../../models/document.model';
-import {OverlayModule} from '@angular/cdk/overlay';
-import { InputComponent } from "../input/input.component";
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { FormOverlayDirective, FormField } from '../form-overlay/form-overlay.component';
 import { NgClass, NgStyle } from '@angular/common';
+import { OverlayModule } from '@angular/cdk/overlay';
 import { Dialog } from '@angular/cdk/dialog';
-import { DocumentEditComponent } from '../../pages/documents/document-edit/document-edit.component';
-import { ComboBoxComponent } from "../combo-box/combo-box.component";
-import { TextAreaComponent } from "../text-area/text-area.component";
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { debounceTime, Subject } from 'rxjs';
-import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../models/personalization.model';
-import { getImageByUsageKey } from '../../models/image.model';
+import { ButtonComponent } from '../button/button.component';
+import { ComboBoxComponent } from '../combo-box/combo-box.component';
+import { FormOverlayDirective, FormField } from '../form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../icon-button/icon-button.component';
-import { NavButtonComponent } from "../nav-button/nav-button.component";
+import { InputComponent } from '../input/input.component';
+import { NavButtonComponent } from '../nav-button/nav-button.component';
+import { TextAreaComponent } from '../text-area/text-area.component';
+import { DocumentEditComponent } from '../../pages/documents/document-edit/document-edit.component';
+import { Document } from '../../models/document.model';
+import { getImageByUsageKey } from '../../models/image.model';
+import { getPersonalizationValue, getTextColorStyle } from '../../models/personalization.model';
+import { DocumentService } from '../../services/document.service';
+import { TreeViewDragDropService } from './tree-view-drag-drop.service';
+import { TreeViewNode, TreeViewReparentRequest } from './tree-view.models';
 
 @Component({
   selector: 'app-tree-view-list',
   standalone: true,
   imports: [OverlayModule, RouterModule, FormOverlayDirective, NgClass, NgStyle, IconButtonComponent],
   template: `
-    <div class="flex flex-col gap-2">
+    <div
+      class="flex flex-col gap-2 rounded-lg border border-transparent p-1 transition-colors"
+      [attr.data-tree-root-context]="isRecursive() ? null : dragContextId()"
+      [ngClass]="{
+        'border-emerald-500 bg-emerald-950/40': isRootDropActive(),
+        'border-red-500 bg-red-950/30': isRootDropInvalid()
+      }">
       @for (item of documentArray(); track item.id) {
-        <div class="grid overflow-hidden overflow-ellipsis gap-1" style="grid-template-columns: 1.5rem 1fr 1.5rem;">
-          <span class="w-6 flex flex-row items-center">
-            @if (!isOpen(item)){
-              <app-icon-button (click)="showSubDocuments(item)" size="xs" buttonType="secondaryActive" icon="fa-solid fa-angle-right"></app-icon-button>
+        <div class="flex flex-col gap-1">
+          <div
+            class="grid items-center gap-1 rounded-md border px-1 py-1 transition-colors"
+            style="grid-template-columns: 1.5rem 1.25rem 1fr 1.5rem;"
+            data-tree-node-row
+            [attr.data-tree-context]="dragContextId()"
+            [attr.data-tree-node-id]="item.id"
+            [ngClass]="{
+              'border-zinc-800': !isDraggedItem(item) && !isNodeDropActive(item) && !isNodeDropInvalid(item),
+              'border-emerald-500 bg-emerald-950/40': isNodeDropActive(item),
+              'border-red-500 bg-red-950/30': isNodeDropInvalid(item),
+              'opacity-50': isDraggedItem(item)
+            }">
+            <span class="w-6 flex flex-row items-center">
+              @if (hasChildren(item)) {
+                @if (!isOpen(item.id)) {
+                  <app-icon-button (click)="showSubDocuments(item.id)" size="xs" buttonType="secondaryActive" icon="fa-solid fa-angle-right"></app-icon-button>
+                }
+                @else {
+                  <app-icon-button (click)="hideSubDocuments(item.id)" size="xs" buttonType="secondaryActive" icon="fa-solid fa-angle-down"></app-icon-button>
+                }
+              }
+              @else {
+                <span class="block h-5 w-5"></span>
+              }
+            </span>
+
+            <button
+              type="button"
+              class="flex h-6 w-5 items-center justify-center rounded text-zinc-500 transition-colors hover:text-white"
+              [class.cursor-grab]="dragEnabled()"
+              [class.cursor-not-allowed]="!dragEnabled()"
+              [disabled]="!dragEnabled()"
+              title="Arrastar para reorganizar"
+              (pointerdown)="startDrag($event, item)">
+              <i class="fa-solid fa-grip-lines text-xs"></i>
+            </button>
+
+            <button
+              (click)="openDocument(item)"
+              class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2"
+              [ngStyle]="{'color': getTextColorStyle(getPersonalizationValue(item, 'color'))}">
+              <div class="flex flex-row items-center">
+                <i class="fa-solid" [ngClass]="getPersonalizationItem(item, 'icon') || fallbackIcon()"></i>
+              </div>
+              <h2 [title]="item.title" class="text-xs">{{ item.title }}</h2>
+            </button>
+
+            @if (allowCreate()) {
+              <app-icon-button
+                size="xss"
+                buttonType="secondary"
+                icon="fa-solid fa-plus"
+                appFormOverlay
+                [title]="createTitle()"
+                [fields]="[{ key: 'name', label: createFieldLabel(), value: '' }]"
+                (onSave)="createChild(item.id, $event)">
+              </app-icon-button>
             }
             @else {
-              <app-icon-button (click)="hideSubDocuments(item)" size="xs" buttonType="secondaryActive" icon="fa-solid fa-angle-down"></app-icon-button>
+              <span></span>
             }
-          </span>
-          <button (click)="openDocument(item)" class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2" [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(item, 'color'))}" >
-            <div class="flex flex-row items-center">
-              <i class="fa-solid " [ngClass]="getPersonalizationItem(item, 'icon') || fallbackIcon()"></i>
-            </div>
-            <h2 [title]="item.title" class=" text-xs">{{ item.title }}</h2>
-          </button>
-          @if (allowCreate()) {
-            <app-icon-button
-              size="xss"
-              buttonType="secondary"
-              icon="fa-solid fa-plus"
-              appFormOverlay
-              [title]="createTitle()"
-              [fields]="[{ key: 'name', label: createFieldLabel(), value: '' }]"
-              (onSave)="createChild(item.id, $event)"
-              ></app-icon-button>
-          }
-          @else {
-            <span></span>
+          </div>
+
+          @if (isOpen(item.id)) {
+            <span class="pl-4">
+              @if (hasChildren(item)) {
+                <app-tree-view-list
+                  [entityId]="entityId()"
+                  [entityTable]="entityTable()"
+                  [openInDialog]="openInDialog()"
+                  [allowCreate]="allowCreate()"
+                  [fallbackIcon]="fallbackIcon()"
+                  [emptyChildrenLabel]="emptyChildrenLabel()"
+                  [createTitle]="createTitle()"
+                  [createFieldLabel]="createFieldLabel()"
+                  [useCustomCreate]="useCustomCreate()"
+                  [dragEnabled]="dragEnabled()"
+                  [dragContextId]="dragContextId()"
+                  [canReparent]="canReparent()"
+                  [isRecursive]="true"
+                  (onArrayChange)="emitChange()"
+                  (onDocumentSelect)="emitDocumentSelection($event)"
+                  (onCreateChild)="emitCreateChild($event)"
+                  (onReparentRequested)="emitReparentRequested($event)"
+                  [documentArray]="item.SubDocuments || []">
+                </app-tree-view-list>
+              }
+              @else {
+                <p class="text-xs text-zinc-600">{{ emptyChildrenLabel() }}</p>
+              }
+            </span>
           }
         </div>
-        @if (isOpen(item)){
-          <span class="pl-4">
-            @if (item.SubDocuments && item.SubDocuments.length > 0){
-              <app-tree-view-list
-                [entityId]="entityId()"
-                [entityTable]="entityTable()"
-                [openInDialog]="openInDialog()"
-                [allowCreate]="allowCreate()"
-                [fallbackIcon]="fallbackIcon()"
-                [emptyChildrenLabel]="emptyChildrenLabel()"
-                [createTitle]="createTitle()"
-                [createFieldLabel]="createFieldLabel()"
-                [useCustomCreate]="useCustomCreate()"
-                (onArrayChange)="emitChange()"
-                (onDocumentSelect)="emitDocumentSelection($event)"
-                (onCreateChild)="emitCreateChild($event)"
-                [documentArray]="item.SubDocuments || []"
-              ></app-tree-view-list>
-            }
-            @else{
-              <p class="text-xs text-zinc-600">{{ emptyChildrenLabel() }}</p>
-            }
-          </span>
-        }
       }
     </div>
-  `
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TreeViewListComponent {
-  documentArray = input.required<Array<Document>>();
+  documentArray = input.required<Array<TreeViewNode>>();
 
   onArrayChange = output<void>();
-  onDocumentSelect = output<Document>();
+  onDocumentSelect = output<TreeViewNode>();
   onCreateChild = output<{ parentId: string, formData: Record<string, string> }>();
+  onReparentRequested = output<TreeViewReparentRequest>();
 
   openDocuments = new Set<string>();
 
@@ -100,33 +150,102 @@ export class TreeViewListComponent {
   openInDialog = input<boolean>(true);
   allowCreate = input<boolean>(true);
   fallbackIcon = input<string>('fa-file');
-  emptyChildrenLabel = input<string>('Não há Documentos Relacionados');
+  emptyChildrenLabel = input<string>('NÃ£o hÃ¡ Documentos Relacionados');
   createTitle = input<string>('Criar Documento');
-  createFieldLabel = input<string>('Título');
+  createFieldLabel = input<string>('TÃ­tulo');
   useCustomCreate = input<boolean>(false);
+  dragEnabled = input<boolean>(true);
+  dragContextId = input<string>('tree-view');
+  canReparent = input<(draggedId: string, newParentId: string | null) => boolean>(() => true);
+  isRecursive = input<boolean>(false);
 
-  private dialog = inject(Dialog);
+  private readonly dialog = inject(Dialog);
+  private readonly treeDragDropService = inject(TreeViewDragDropService);
 
-  getPersonalizationItem(item: any, key: string): string | null {
-    if (item.Personalization && item.Personalization.contentJson != null && item.Personalization.contentJson != '') {
-      return JSON.parse(item.Personalization.contentJson)[key] || null;
+  getPersonalizationItem(item: TreeViewNode, key: string): string | null {
+    if (item['Personalization'] && (item['Personalization'] as any).contentJson != null && (item['Personalization'] as any).contentJson !== '') {
+      return JSON.parse((item['Personalization'] as any).contentJson)[key] || null;
     }
+
     return null;
   }
 
-  isOpen(document: Document): boolean {
-    return this.openDocuments.has(document.id);
+  hasChildren(item: TreeViewNode): boolean {
+    return (item.SubDocuments?.length || 0) > 0;
   }
 
-  showSubDocuments(document: Document) {
-    this.openDocuments.add(document.id);
+  isOpen(documentId: string): boolean {
+    return this.openDocuments.has(documentId);
   }
 
-  hideSubDocuments(document: Document) {
-    this.openDocuments.delete(document.id);
+  showSubDocuments(documentId: string) {
+    this.openDocuments.add(documentId);
   }
 
-  openDocument(item: Document) {
+  hideSubDocuments(documentId: string) {
+    this.openDocuments.delete(documentId);
+  }
+
+  startDrag(event: PointerEvent, item: TreeViewNode) {
+    if (!this.dragEnabled()) {
+      return;
+    }
+
+    this.treeDragDropService.startDrag(event, {
+      contextId: this.dragContextId(),
+      draggedId: item.id,
+      title: item.title,
+    }, result => {
+      if (!this.canDropTo(result.draggedId, result.newParentId)) {
+        return;
+      }
+
+      this.onReparentRequested.emit(result);
+    });
+  }
+
+  isDraggedItem(item: TreeViewNode): boolean {
+    const activeDrag = this.treeDragDropService.activeDrag();
+    return !!activeDrag && activeDrag.contextId === this.dragContextId() && activeDrag.draggedId === item.id;
+  }
+
+  isNodeDropActive(item: TreeViewNode): boolean {
+    const dropTarget = this.treeDragDropService.dropTarget();
+    return !!dropTarget
+      && dropTarget.contextId === this.dragContextId()
+      && dropTarget.type === 'node'
+      && dropTarget.nodeId === item.id
+      && this.canDropTo(this.getDraggedId(), item.id);
+  }
+
+  isNodeDropInvalid(item: TreeViewNode): boolean {
+    const dropTarget = this.treeDragDropService.dropTarget();
+    return !!dropTarget
+      && dropTarget.contextId === this.dragContextId()
+      && dropTarget.type === 'node'
+      && dropTarget.nodeId === item.id
+      && !this.canDropTo(this.getDraggedId(), item.id);
+  }
+
+  isRootDropActive(): boolean {
+    const dropTarget = this.treeDragDropService.dropTarget();
+    return !this.isRecursive()
+      && !!dropTarget
+      && dropTarget.contextId === this.dragContextId()
+      && dropTarget.type === 'root'
+      && this.canDropTo(this.getDraggedId(), null);
+  }
+
+  isRootDropInvalid(): boolean {
+    const dropTarget = this.treeDragDropService.dropTarget();
+    return !this.isRecursive()
+      && !!dropTarget
+      && dropTarget.contextId === this.dragContextId()
+      && dropTarget.type === 'root'
+      && !this.canDropTo(this.getDraggedId(), null);
+  }
+
+  openDocument(item: TreeViewNode) {
     if (!this.openInDialog()) {
       this.onDocumentSelect.emit(item);
       return;
@@ -137,7 +256,7 @@ export class TreeViewListComponent {
         id: item.id,
         entityTable: this.entityTable(),
         entityId: this.entityId()
-       },
+      },
       panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
       height: '80vh',
       width: '80vw',
@@ -148,7 +267,7 @@ export class TreeViewListComponent {
     this.onArrayChange.emit();
   }
 
-  emitDocumentSelection(item: Document) {
+  emitDocumentSelection(item: TreeViewNode) {
     this.onDocumentSelect.emit(item);
   }
 
@@ -156,8 +275,69 @@ export class TreeViewListComponent {
     this.onCreateChild.emit(event);
   }
 
+  emitReparentRequested(event: TreeViewReparentRequest) {
+    this.onReparentRequested.emit(event);
+  }
+
   createChild(parentId: string, formData: Record<string, string>) {
     this.onCreateChild.emit({ parentId, formData });
+  }
+
+  private canDropTo(draggedId: string | null, newParentId: string | null): boolean {
+    if (!draggedId) {
+      return false;
+    }
+
+    if (draggedId === newParentId) {
+      return false;
+    }
+
+    if (newParentId) {
+      const candidateParent = this.findNodeById(this.documentArray(), newParentId);
+      if (candidateParent && this.nodeContainsId(candidateParent, draggedId)) {
+        return false;
+      }
+    }
+
+    return this.canReparent()(draggedId, newParentId);
+  }
+
+  private getDraggedId(): string | null {
+    const activeDrag = this.treeDragDropService.activeDrag();
+    if (!activeDrag || activeDrag.contextId !== this.dragContextId()) {
+      return null;
+    }
+
+    return activeDrag.draggedId;
+  }
+
+  private findNodeById(nodes: TreeViewNode[], nodeId: string): TreeViewNode | null {
+    for (const node of nodes) {
+      if (node.id === nodeId) {
+        return node;
+      }
+
+      const nestedMatch = this.findNodeById(node.SubDocuments || [], nodeId);
+      if (nestedMatch) {
+        return nestedMatch;
+      }
+    }
+
+    return null;
+  }
+
+  private nodeContainsId(node: TreeViewNode, nodeId: string): boolean {
+    if (node.id === nodeId) {
+      return true;
+    }
+
+    for (const child of node.SubDocuments || []) {
+      if (this.nodeContainsId(child, nodeId)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
 
@@ -172,7 +352,7 @@ export class TreeViewListComponent {
     </div>
     @switch (currentTab) {
       @case ('properties') {
-        <div class="flex flex-col gap-2 h-[calc(100%-8rem)]  overflow-y-scroll scrollbar-dark">
+        <div class="flex flex-col gap-2 h-[calc(100%-8rem)] overflow-y-scroll scrollbar-dark">
           @for (field of fieldValues; track field.key) {
             @if (field.options && field.options.length > 0) {
               <app-combo-box
@@ -181,8 +361,7 @@ export class TreeViewListComponent {
                 [(comboValue)]="field.value"
                 (comboValueChange)="onFieldValueChange(field)"
                 [compareProp]="field.optionCompareProp || ''"
-                [displayProp]="field.optionDisplayProp || ''"
-                >
+                [displayProp]="field.optionDisplayProp || ''">
               </app-combo-box>
             }
             @else if (field.type === 'text-area') {
@@ -190,8 +369,7 @@ export class TreeViewListComponent {
                 [label]="field.label"
                 [(value)]="field.value"
                 (valueChange)="onFieldValueChange(field)"
-                height="h-24"
-                >
+                height="h-24">
               </app-text-area>
             }
             @else {
@@ -199,8 +377,7 @@ export class TreeViewListComponent {
                 [label]="field.label"
                 [type]="field.type || 'text'"
                 [(value)]="field.value"
-                (valueChange)="onFieldValueChange(field)"
-                >
+                (valueChange)="onFieldValueChange(field)">
               </app-input>
             }
           }
@@ -216,21 +393,22 @@ export class TreeViewListComponent {
             buttonType="white"
             appFormOverlay
             [title]="'Criar Documento'"
-            [fields]="[{ key: 'name', label: 'Título', value: '' }]"
-            (onSave)="createDocument($event)"
-          ></app-button>
+            [fields]="[{ key: 'name', label: 'TÃ­tulo', value: '' }]"
+            (onSave)="createDocument($event)">
+          </app-button>
         </div>
-        <div class="flex flex-col gap-2 h-[calc(100%-8rem)]  overflow-y-scroll scrollbar-dark">
-          <app-tree-view-list [entityId]="entityId()" [entityTable]="entityTable()" [useCustomCreate]="true" (onArrayChange)="loadDocuments()" (onCreateChild)="createChildDocument($event)" [documentArray]="documentArray"></app-tree-view-list>
-          <!-- @for (item of documentArray; track $index) {
-            <button (click)="openDocument(item)" class=" cursor-pointer flex flex-row hover:font-bold items-center gap-2" [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(item, 'color'))}" >
-              <i class="fa-solid" [ngClass]="getPersonalizationItem(item, 'icon') || 'fa-file'"></i>
-              <h2 [title]="item.title" class="whitespace-nowrap overflow-hidden overflow-ellipsis">{{ item.title }}</h2>
-            </button>
-          }
-          @empty {
-            <p class="text-sm text-zinc-500">Nenhum documento encontrado.</p>
-          } -->
+        <div class="flex flex-col gap-2 h-[calc(100%-8rem)] overflow-y-scroll scrollbar-dark">
+          <app-tree-view-list
+            [entityId]="entityId()"
+            [entityTable]="entityTable()"
+            [useCustomCreate]="true"
+            [dragContextId]="'entity-documents:' + entityTable() + ':' + entityId()"
+            [canReparent]="canReparentDocument"
+            (onArrayChange)="loadDocuments()"
+            (onCreateChild)="createChildDocument($event)"
+            (onReparentRequested)="reparentDocument($event)"
+            [documentArray]="documentArray">
+          </app-tree-view-list>
         </div>
       }
     }
@@ -238,31 +416,33 @@ export class TreeViewListComponent {
   styleUrl: './entity-lateral-menu.component.css',
 })
 export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewInit {
-  documentArray:Array<Document> = [];
+  documentArray: Document[] = [];
 
   entityTable = input.required<string>();
   entityId = input.required<string>();
 
   fields = input<FormField[]>([]);
-  onSave = output<Record<string, any>>(); // <-- aceitar qualquer tipo (strings, objetos, etc.)
+  onSave = output<Record<string, any>>();
 
   fieldValues: FormField[] = [];
 
   public getPersonalizationValue = getPersonalizationValue;
-    public getImageByUsageKey = getImageByUsageKey;
-    public getTextColorStyle = getTextColorStyle;
+  public getImageByUsageKey = getImageByUsageKey;
+  public getTextColorStyle = getTextColorStyle;
 
-  private fieldValueChanges = new Subject<FormField>();
+  private readonly fieldValueChanges = new Subject<FormField>();
   private initialized = false;
 
   currentTab = 'properties';
 
   returnUrl?: string;
 
-  private dialog = inject(Dialog);
-  private documentService = inject(DocumentService);
-  private currentRoute = inject(ActivatedRoute);
-  private router = inject(Router);
+  private readonly documentService = inject(DocumentService);
+  private readonly currentRoute = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  readonly canReparentDocument = (draggedId: string, newParentId: string | null) =>
+    this.documentService.canReparentDocument(draggedId, newParentId);
 
   ngOnInit() {
     this.loadDocuments();
@@ -311,44 +491,37 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
     this.loadDocuments();
   }
 
+  reparentDocument(event: TreeViewReparentRequest) {
+    try {
+      this.documentService.reparentDocument(event.draggedId, event.newParentId);
+      this.loadDocuments();
+    } catch (error: any) {
+      alert(error?.message || 'Falha ao reorganizar o documento.');
+    }
+  }
+
   getReturnUrlQuery() {
     const tree = this.router.createUrlTree([], { relativeTo: this.currentRoute, queryParams: { returnUrl: this.returnUrl } });
     const baseUrl = this.router.serializeUrl(tree);
     return encodeURIComponent(baseUrl || this.router.url);
   }
 
-  getPersonalizationItem(item: any, key: string): string | null {
-    if (item.Personalization && item.Personalization.contentJson != null && item.Personalization.contentJson != '') {
-      return JSON.parse(item.Personalization.contentJson)[key] || null;
-    }
-    return null;
-  }
-
-  openDocument(item: Document) {
-    this.dialog.open(DocumentEditComponent, {
-      data: {
-        id: item.id,
-        entityTable: this.entityTable(),
-        entityId: this.entityId()
-       },
-      panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
-      height: '80vh',
-      width: '80vw',
-    });
-  }
-
   onFieldValueChange(field: FormField) {
+    const index = this.fieldValues.findIndex(existingField => existingField.key === field.key);
 
-    const idx = this.fieldValues.findIndex(f => f.key === field.key);
+    if (index >= 0) {
+      this.fieldValues[index].value = field.value;
+    }
 
-    if (idx >= 0) this.fieldValues[idx].value = field.value;
+    if (!this.initialized) {
+      return;
+    }
 
-    if (!this.initialized) return; // evita emitir no init
     this.fieldValueChanges.next(field);
   }
 
   onFieldChange() {
-    const formData: Record<string, any> = {}; // <-- não restringir a string
+    const formData: Record<string, any> = {};
     this.fieldValues.forEach(field => {
       formData[field.key] = field.value;
     });
@@ -357,22 +530,17 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
   }
 
   private syncFieldsFromInput() {
-    const src = this.fields() || [];
+    const sourceFields = this.fields() || [];
 
-    // Primeira carga: copia valores iniciais
     if (!this.fieldValues || this.fieldValues.length === 0) {
-      this.fieldValues = src.map(f => ({ ...f, value: f.value ?? '' }));
+      this.fieldValues = sourceFields.map(field => ({ ...field, value: field.value ?? '' }));
       return;
     }
 
-    // Merge: preserva valores já editados por key
-    const currentByKey = new Map(this.fieldValues.map(f => [f.key, f.value]));
-    this.fieldValues = src.map(f => {
-      const existing = currentByKey.get(f.key);
-      return { ...f, value: existing !== undefined ? existing : (f.value ?? '') };
+    const currentValuesByKey = new Map(this.fieldValues.map(field => [field.key, field.value]));
+    this.fieldValues = sourceFields.map(field => {
+      const existingValue = currentValuesByKey.get(field.key);
+      return { ...field, value: existingValue !== undefined ? existingValue : (field.value ?? '') };
     });
   }
-
 }
-
-

@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { TreeViewListComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
+import { TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
 import { InputComponent } from "../../../components/input/input.component";
 import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
@@ -93,9 +94,12 @@ interface TimelineEventDocumentsDialogData {
           [documentArray]="documents"
           [allowCreate]="true"
           [useCustomCreate]="true"
+          [dragContextId]="'event-documents:' + data.eventId"
+          [canReparent]="canReparentDocument"
           [createTitle]="'Criar Documento'"
           [createFieldLabel]="'Título'"
-          (onCreateChild)="createChildDocument($event)">
+          (onCreateChild)="createChildDocument($event)"
+          (onReparentRequested)="reparentDocument($event)">
         </app-tree-view-list>
       </div>
 
@@ -118,6 +122,9 @@ export class TimelineEventDocumentsDialogComponent {
   documentSearchTerm = '';
   newDocumentTitle = '';
   changed = false;
+
+  readonly canReparentDocument = (draggedId: string, newParentId: string | null) =>
+    this.documentService.canReparentDocument(draggedId, newParentId);
 
   constructor() {
     this.loadDocuments();
@@ -165,6 +172,16 @@ export class TimelineEventDocumentsDialogComponent {
     this.documentService.saveDocument(new Document('', title, ''), 'Document', event.parentId);
     this.changed = true;
     this.loadDocuments();
+  }
+
+  reparentDocument(event: TreeViewReparentRequest) {
+    try {
+      this.documentService.reparentDocument(event.draggedId, event.newParentId);
+      this.changed = true;
+      this.loadDocuments();
+    } catch (error: any) {
+      alert(error?.message || 'Falha ao reorganizar o documento.');
+    }
   }
 
   onDocumentSearchChange(term: string) {

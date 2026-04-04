@@ -3,9 +3,9 @@ import { Component, inject, input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { TreeViewListComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
+import { TreeViewNode, TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
-import { Document } from '../../../models/document.model';
 import { Specie } from '../../../models/specie.model';
 import { World } from '../../../models/world.model';
 import { Location } from '../../../models/location.model';
@@ -67,12 +67,16 @@ import { WorldStateService } from '../../../services/world-state.service';
             [openInDialog]="false"
             [allowCreate]="true"
             [useCustomCreate]="true"
+            [dragEnabled]="!searchTerm.trim()"
+            [dragContextId]="'specie-list:' + (specieId() || worldId() || selectedWorld || 'root')"
+            [canReparent]="canReparentSpecie"
             [createTitle]="'Criar Subespécie'"
             [createFieldLabel]="'Nome'"
             [fallbackIcon]="'fa-paw'"
             [emptyChildrenLabel]="'Não há subespécies relacionadas'"
             (onDocumentSelect)="selectSpecie($event.id)"
             (onCreateChild)="createSubSpecie($event)"
+            (onReparentRequested)="reparentSpecie($event)"
             [documentArray]="filteredSpecieTreeDocuments">
           </app-tree-view-list>
         </div>
@@ -118,11 +122,14 @@ export class SpecieListComponent implements OnInit {
 
   specieTree: TreeSpecieNode[] = [];
   filteredSpecieTree: TreeSpecieNode[] = [];
-  filteredSpecieTreeDocuments: Document[] = [];
+  filteredSpecieTreeDocuments: TreeViewNode[] = [];
 
   selectedSpecieId = '';
   showSpecieEditor = false;
   specieEditComponent: any = null;
+
+  readonly canReparentSpecie = (draggedId: string, newParentId: string | null) =>
+    this.specieService.canReparentSpecie(draggedId, newParentId ?? this.specieId() ?? null);
 
   ngOnInit() {
     this.worldStateService.currentWorld$.subscribe(world => {
@@ -227,12 +234,23 @@ export class SpecieListComponent implements OnInit {
 
     if (!search) {
       this.filteredSpecieTree = this.specieTree;
-      this.filteredSpecieTreeDocuments = this.filteredSpecieTree as unknown as Document[];
+      this.filteredSpecieTreeDocuments = this.filteredSpecieTree;
       return;
     }
 
     this.filteredSpecieTree = this.filterSpecieTree(this.specieTree, search);
-    this.filteredSpecieTreeDocuments = this.filteredSpecieTree as unknown as Document[];
+    this.filteredSpecieTreeDocuments = this.filteredSpecieTree;
+  }
+
+  reparentSpecie(event: TreeViewReparentRequest) {
+    const resolvedParentId = event.newParentId ?? this.specieId() ?? null;
+
+    try {
+      this.specieService.reparentSpecie(event.draggedId, resolvedParentId);
+      this.getSpecies();
+    } catch (error: any) {
+      alert(error?.message || 'Falha ao reorganizar a espécie.');
+    }
   }
 
   private buildSpecieTree(species: Specie[], rootParentId: string | null): TreeSpecieNode[] {
