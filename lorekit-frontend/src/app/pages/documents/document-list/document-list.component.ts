@@ -11,72 +11,78 @@ import { TreeViewListComponent } from "../../../components/entity-lateral-menu/e
 import { TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
 import { DocumentEditComponent } from '../document-edit/document-edit.component';
 import { FormsModule } from '@angular/forms';
+import { NgClass } from '@angular/common';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 
 @Component({
   selector: 'app-document-list',
-  imports: [TreeViewListComponent, DocumentEditComponent, FormsModule, IconButtonComponent, FormOverlayDirective, ComboBoxComponent],
+  imports: [TreeViewListComponent, DocumentEditComponent, FormsModule, NgClass, IconButtonComponent, FormOverlayDirective, ComboBoxComponent],
   template: `
     <div class="flex flex-col relative">
 
-      <div class="flex flex-row gap-4 ">
-        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
-          <div>
-              <h2 class="text-base mb-4">Documentos</h2>
-            </div>
+      <div class="flex flex-row gap-4 relative">
+        <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
+          <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+            <div>
+                <h2 class="text-base mb-4">Documentos</h2>
+              </div>
 
-          @if (!worldId()) {
-            <div class="mb-4">
-              <app-combo-box
-                class="w-full"
-                label="Filtro de mundo"
-                [items]="availableWorlds"
-                compareProp="id"
-                displayProp="name"
-                [(comboValue)]="selectedWorld"
-                (comboValueChange)="onWorldSelect()">
-              </app-combo-box>
-            </div>
-          }
+            @if (!worldId()) {
+              <div class="mb-4">
+                <app-combo-box
+                  class="w-full"
+                  label="Filtro de mundo"
+                  [items]="availableWorlds"
+                  compareProp="id"
+                  displayProp="name"
+                  [(comboValue)]="selectedWorld"
+                  (comboValueChange)="onWorldSelect()">
+                </app-combo-box>
+              </div>
+            }
 
-          <div class="flex flex-row items-center gap-1 mb-4">
-            <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white">
-              <div class="w-8 h-5 flex flex-row justify-center items-center">
-                  <i class="fa fa-search "></i>
-                </div>
-                <input
-                  type="text"
-                  [(ngModel)]="searchTerm"
-                  (ngModelChange)="onDocumentFilter()"
-                  placeholder="Pesquisar..."
-                  class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10"
-                />
+            <div class="flex flex-row items-center gap-1 mb-4">
+              <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white">
+                <div class="w-8 h-5 flex flex-row justify-center items-center">
+                    <i class="fa fa-search "></i>
+                  </div>
+                  <input
+                    type="text"
+                    [(ngModel)]="searchTerm"
+                    (ngModelChange)="onDocumentFilter()"
+                    placeholder="Pesquisar..."
+                    class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10"
+                  />
+              </div>
+              <app-icon-button
+                size="sm"
+                buttonType="secondary"
+                icon="fa-solid fa-plus"
+                appFormOverlay
+                [title]="'Criar Documento'"
+                [fields]="getFormFields()"
+                (onSave)="createDocument($event)"
+                ></app-icon-button>
             </div>
-            <app-icon-button
-              size="sm"
-              buttonType="secondary"
-              icon="fa-solid fa-plus"
-              appFormOverlay
-              [title]="'Criar Documento'"
-              [fields]="getFormFields()"
-              (onSave)="createDocument($event)"
-              ></app-icon-button>
+            <app-tree-view-list
+              [openInDialog]="false"
+              [useCustomCreate]="true"
+              [dragEnabled]="!searchTerm.trim()"
+              [dragContextId]="'document-list:' + (worldId() || selectedWorld || 'all')"
+              [canReparent]="canReparentDocument"
+              (onArrayChange)="getDocuments()"
+              (onDocumentSelect)="selectDocument($event.id)"
+              (onCreateChild)="createSubDocument($event)"
+              (onReparentRequested)="reparentDocument($event)"
+              [documentArray]="filteredDocuments"
+            ></app-tree-view-list>
           </div>
-          <app-tree-view-list
-            [openInDialog]="false"
-            [useCustomCreate]="true"
-            [dragEnabled]="!searchTerm.trim()"
-            [dragContextId]="'document-list:' + (worldId() || selectedWorld || 'all')"
-            [canReparent]="canReparentDocument"
-            (onArrayChange)="getDocuments()"
-            (onDocumentSelect)="selectDocument($event.id)"
-            (onCreateChild)="createSubDocument($event)"
-            (onReparentRequested)="reparentDocument($event)"
-            [documentArray]="filteredDocuments"
-          ></app-tree-view-list>
         </div>
+        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
+          <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+        </small>
 
         <div class="flex-1 min-h-[60vh]">
           @if (selectedDocumentId && showDocumentEditor) {
@@ -104,6 +110,8 @@ export class DocumentListComponent implements OnInit {
   public getImageByUsageKey = getImageByUsageKey;
   public getTextClass = getTextClass;
   private worldStateService = inject(WorldStateService);
+
+  showsidebar = true;
 
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === DocumentListComponent ||

@@ -18,7 +18,7 @@ import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../
   imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective],
   template: `
     <div class="flex flex-col relative">
-      <div class="flex flex-row gap-4">
+      <div class="flex flex-row gap-4 relative">
         <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
           <div class="flex flex-row justify-between mb-6">
             <h2 class="text-base mb-4">Personagens</h2>
@@ -68,6 +68,10 @@ import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../
           </div>
         </div>
 
+        <small class="border absolute rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-2 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-77' : 'start-0']" (click)="showsidebar = !showsidebar">
+          <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+        </small>
+
         <div class="flex-1 min-h-[60vh]">
           @if (selectedCharacterId) {
             <div class="rounded-md px-2">
@@ -105,6 +109,8 @@ export class CharacterListComponent implements OnInit {
   availableSpecies: Specie[] = [];
   selectedWorld = '';
   characters: Character[] = [];
+
+  showsidebar = true;
 
   selectedCharacterId = '';
   showCharacterEditor = false;
