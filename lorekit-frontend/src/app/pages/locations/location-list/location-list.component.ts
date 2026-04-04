@@ -126,7 +126,7 @@ export class LocationListComponent implements OnInit {
   showLocationEditor = true;
 
   readonly canReparentLocation = (draggedId: string, newParentId: string | null) =>
-    this.locationService.canReparentLocation(draggedId, newParentId ?? this.locationId() ?? null);
+    this.locationService.canReparentLocation(draggedId, newParentId);
 
   ngOnInit() {
     this.worldStateService.currentWorld$.subscribe(world => {
@@ -220,10 +220,8 @@ export class LocationListComponent implements OnInit {
   }
 
   reparentLocation(event: TreeViewReparentRequest) {
-    const resolvedParentId = event.newParentId ?? this.locationId() ?? null;
-
     try {
-      this.locationService.reparentLocation(event.draggedId, resolvedParentId);
+      this.locationService.reparentLocation(event.draggedId, event.newParentId);
       this.getLocations();
     } catch (error: any) {
       alert(error?.message || 'Falha ao reorganizar a localidade.');

@@ -129,7 +129,7 @@ export class SpecieListComponent implements OnInit {
   specieEditComponent: any = null;
 
   readonly canReparentSpecie = (draggedId: string, newParentId: string | null) =>
-    this.specieService.canReparentSpecie(draggedId, newParentId ?? this.specieId() ?? null);
+    this.specieService.canReparentSpecie(draggedId, newParentId);
 
   ngOnInit() {
     this.worldStateService.currentWorld$.subscribe(world => {
@@ -243,10 +243,8 @@ export class SpecieListComponent implements OnInit {
   }
 
   reparentSpecie(event: TreeViewReparentRequest) {
-    const resolvedParentId = event.newParentId ?? this.specieId() ?? null;
-
     try {
-      this.specieService.reparentSpecie(event.draggedId, resolvedParentId);
+      this.specieService.reparentSpecie(event.draggedId, event.newParentId);
       this.getSpecies();
     } catch (error: any) {
       alert(error?.message || 'Falha ao reorganizar a espécie.');
