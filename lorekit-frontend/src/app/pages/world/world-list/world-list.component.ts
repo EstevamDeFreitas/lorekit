@@ -20,36 +20,42 @@ import { IconButtonComponent } from '../../../components/icon-button/icon-button
   template: `
   <div class="flex flex-col relative" >
     <div class="flex flex-row gap-4">
-      <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
-        <div class="flex flex-row justify-between mb-6">
-          <h2 class="text-base mb-4">Mundos</h2>
-          <app-icon-button
-            size="sm"
-            buttonType="secondary"
-            icon="fa-solid fa-plus"
-            appFormOverlay
-            [title]="'Criar Mundo'"
-            [fields]="getFormFields()"
-            (onSave)="createWorld($event)"
-            ></app-icon-button>
-        </div>
-        <div class="flex flex-row items-center gap-1 mb-4 w-full">
-          <div class="flex flex-col gap-3 w-full">
-            @for (world of worlds; track world.id) {
-              <div class="grid w-full" style="grid-template-columns: 1fr 1.5rem;" (click)="selectEntity(world.id)">
-                <button  class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2" [ngClass]="[getTextClass(getPersonalizationValue(world, 'color')), currentWorldId === world.id ? 'text-yellow-300' : 'text-zinc-400']" >
-                  <div class="flex flex-row items-center">
-                    <i class="fa-solid " [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-earth'"></i>
-                  </div>
-                  <h2 [title]="world.name" class=" text-xs">{{ world.name }}</h2>
-                </button>
-                <app-icon-button [title]="currentWorldId === world.id ? 'Mundo Padrão' : 'Definir como Mundo Padrão'" size="xs" [buttonType]="currentWorldId === world.id ? 'primary' : 'secondary'" icon="fa-solid fa-star" (click)="setWorldAsDefault(world)"></app-icon-button>
-              </div>
-            }
+      <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
+        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+          <div class="flex flex-row justify-between mb-6">
+            <h2 class="text-base mb-4">Mundos</h2>
+            <app-icon-button
+              size="sm"
+              buttonType="secondary"
+              icon="fa-solid fa-plus"
+              appFormOverlay
+              [title]="'Criar Mundo'"
+              [fields]="getFormFields()"
+              (onSave)="createWorld($event)"
+              ></app-icon-button>
           </div>
+          <div class="flex flex-row items-center gap-1 mb-4 w-full">
+            <div class="flex flex-col gap-3 w-full">
+              @for (world of worlds; track world.id) {
+                <div class="grid w-full" style="grid-template-columns: 1fr 1.5rem;" (click)="selectEntity(world.id)">
+                  <button  class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2" [ngClass]="[getTextClass(getPersonalizationValue(world, 'color')), currentWorldId === world.id ? 'text-yellow-300' : 'text-zinc-400']" >
+                    <div class="flex flex-row items-center">
+                      <i class="fa-solid " [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-earth'"></i>
+                    </div>
+                    <h2 [title]="world.name" class=" text-xs">{{ world.name }}</h2>
+                  </button>
+                  <app-icon-button [title]="currentWorldId === world.id ? 'Mundo Padrão' : 'Definir como Mundo Padrão'" size="xs" [buttonType]="currentWorldId === world.id ? 'primary' : 'secondary'" icon="fa-solid fa-star" (click)="setWorldAsDefault(world)"></app-icon-button>
+                </div>
+              }
+            </div>
 
+          </div>
         </div>
       </div>
+        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
+          <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+        </small>
+
       <div class="flex-1 min-h-[60vh]">
           @if (selectedEntityId && showEntityEditor) {
             <div class="rounded-md px-2">
@@ -128,7 +134,7 @@ export class WorldListComponent {
   public getPersonalizationValue = getPersonalizationValue;
   public getTextClass = getTextClass;
   public getImageByUsageKey = getImageByUsageKey;
-
+  showsidebar = true;
 
   worlds: World[] = [];
 

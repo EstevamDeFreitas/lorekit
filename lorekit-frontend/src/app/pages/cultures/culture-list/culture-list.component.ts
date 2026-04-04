@@ -18,54 +18,60 @@ import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4">
-        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
-          <div class="flex flex-row justify-between mb-6">
-            <h2 class="text-base mb-4">Culturas</h2>
-            <app-icon-button
-              size="sm"
-              buttonType="secondary"
-              icon="fa-solid fa-plus"
-              appFormOverlay
-              [title]="'Criar Cultura'"
-              [fields]="getFormFields()"
-              (onSave)="createCulture($event)">
-            </app-icon-button>
-          </div>
-
-          @if (!worldId()) {
-            <div class="mb-4">
-              <app-combo-box
-                class="w-full"
-                label="Filtro de mundo"
-                [items]="availableWorlds"
-                compareProp="id"
-                displayProp="name"
-                [(comboValue)]="selectedWorld"
-                (comboValueChange)="onWorldSelect()">
-              </app-combo-box>
+        <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
+          <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+            <div class="flex flex-row justify-between mb-6">
+              <h2 class="text-base mb-4">Culturas</h2>
+              <app-icon-button
+                size="sm"
+                buttonType="secondary"
+                icon="fa-solid fa-plus"
+                appFormOverlay
+                [title]="'Criar Cultura'"
+                [fields]="getFormFields()"
+                (onSave)="createCulture($event)">
+              </app-icon-button>
             </div>
-          }
 
-          <div class="flex flex-col gap-3 w-full">
-            @for (culture of cultures; track culture.id) {
-              <button
-                type="button"
-                class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
-                [ngClass]="selectedCultureId === culture.id ? 'text-yellow-300' : 'text-zinc-400'"
-                [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(culture, 'color'))}"
-                (click)="selectCulture(culture.id)">
-                <div class="flex flex-row items-center">
-                  <i class="fa-solid" [ngClass]="getPersonalizationValue(culture, 'icon') || 'fa-mortar-pestle'"></i>
-                </div>
-                <h2 [title]="culture.name" class="text-xs">{{ culture.name }}</h2>
-              </button>
+            @if (!worldId()) {
+              <div class="mb-4">
+                <app-combo-box
+                  class="w-full"
+                  label="Filtro de mundo"
+                  [items]="availableWorlds"
+                  compareProp="id"
+                  displayProp="name"
+                  [(comboValue)]="selectedWorld"
+                  (comboValueChange)="onWorldSelect()">
+                </app-combo-box>
+              </div>
             }
 
-            @if (cultures.length === 0) {
-              <p class="text-xs text-zinc-500">Nenhuma cultura encontrada.</p>
-            }
+            <div class="flex flex-col gap-3 w-full">
+              @for (culture of cultures; track culture.id) {
+                <button
+                  type="button"
+                  class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
+                  [ngClass]="selectedCultureId === culture.id ? 'text-yellow-300' : 'text-zinc-400'"
+                  [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(culture, 'color'))}"
+                  (click)="selectCulture(culture.id)">
+                  <div class="flex flex-row items-center">
+                    <i class="fa-solid" [ngClass]="getPersonalizationValue(culture, 'icon') || 'fa-mortar-pestle'"></i>
+                  </div>
+                  <h2 [title]="culture.name" class="text-xs">{{ culture.name }}</h2>
+                </button>
+              }
+
+              @if (cultures.length === 0) {
+                <p class="text-xs text-zinc-500">Nenhuma cultura encontrada.</p>
+              }
+            </div>
           </div>
         </div>
+
+        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
+          <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+        </small>
 
         <div class="flex-1 min-h-[60vh]">
           @if (selectedCultureId) {
@@ -106,6 +112,8 @@ export class CultureListComponent implements OnInit {
   selectedCultureId = '';
   showCultureEditor = false;
   cultureEditComponent: any = null;
+
+  showsidebar = true;
 
   public getPersonalizationValue = getPersonalizationValue;
   public getTextClass = getTextClass;

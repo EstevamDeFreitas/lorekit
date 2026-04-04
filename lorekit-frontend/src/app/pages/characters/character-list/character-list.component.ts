@@ -19,56 +19,58 @@ import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4 relative">
-        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
-          <div class="flex flex-row justify-between mb-6">
-            <h2 class="text-base mb-4">Personagens</h2>
-            <app-icon-button
-              size="sm"
-              buttonType="secondary"
-              icon="fa-solid fa-plus"
-              appFormOverlay
-              [title]="'Criar Personagem'"
-              [fields]="getFormFields()"
-              (onSave)="createCharacter($event)">
-            </app-icon-button>
-          </div>
-
-          @if (!worldId()) {
-            <div class="mb-4">
-              <app-combo-box
-                class="w-full"
-                label="Filtro de mundo"
-                [items]="availableWorlds"
-                compareProp="id"
-                displayProp="name"
-                [(comboValue)]="selectedWorld"
-                (comboValueChange)="onWorldSelect()">
-              </app-combo-box>
+        <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
+          <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+            <div class="flex flex-row justify-between mb-6">
+              <h2 class="text-base mb-4">Personagens</h2>
+              <app-icon-button
+                size="sm"
+                buttonType="secondary"
+                icon="fa-solid fa-plus"
+                appFormOverlay
+                [title]="'Criar Personagem'"
+                [fields]="getFormFields()"
+                (onSave)="createCharacter($event)">
+              </app-icon-button>
             </div>
-          }
 
-          <div class="flex flex-col gap-3 w-full">
-            @for (character of characters; track character.id) {
-              <button
-                type="button"
-                class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
-                [ngClass]="selectedCharacterId === character.id ? 'text-yellow-300' : 'text-zinc-400'"
-                [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(character, 'color'))}"
-                (click)="selectCharacter(character.id)">
-                <div class="flex flex-row items-center">
-                  <i class="fa-solid" [ngClass]="getPersonalizationValue(character, 'icon') || 'fa-user'"></i>
-                </div>
-                <h2 [title]="character.name" class="text-xs">{{ character.name }}</h2>
-              </button>
+            @if (!worldId()) {
+              <div class="mb-4">
+                <app-combo-box
+                  class="w-full"
+                  label="Filtro de mundo"
+                  [items]="availableWorlds"
+                  compareProp="id"
+                  displayProp="name"
+                  [(comboValue)]="selectedWorld"
+                  (comboValueChange)="onWorldSelect()">
+                </app-combo-box>
+              </div>
             }
 
-            @if (characters.length === 0) {
-              <p class="text-xs text-zinc-500">Nenhum personagem encontrado.</p>
-            }
+            <div class="flex flex-col gap-3 w-full">
+              @for (character of characters; track character.id) {
+                <button
+                  type="button"
+                  class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
+                  [ngClass]="selectedCharacterId === character.id ? 'text-yellow-300' : 'text-zinc-400'"
+                  [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(character, 'color'))}"
+                  (click)="selectCharacter(character.id)">
+                  <div class="flex flex-row items-center">
+                    <i class="fa-solid" [ngClass]="getPersonalizationValue(character, 'icon') || 'fa-user'"></i>
+                  </div>
+                  <h2 [title]="character.name" class="text-xs">{{ character.name }}</h2>
+                </button>
+              }
+
+              @if (characters.length === 0) {
+                <p class="text-xs text-zinc-500">Nenhum personagem encontrado.</p>
+              }
+            </div>
           </div>
         </div>
 
-        <small class="border absolute rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-2 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-77' : 'start-0']" (click)="showsidebar = !showsidebar">
+        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
           <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
         </small>
 

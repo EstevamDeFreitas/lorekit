@@ -24,7 +24,8 @@ import { TreeViewNode, TreeViewReparentRequest } from '../../../components/entit
     <div class="flex flex-col relative">
 
       <div class="flex flex-row gap-4">
-        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+        <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
+          <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
             <div>
               <h2 class="text-base mb-4">Localidades</h2>
             </div>
@@ -75,6 +76,11 @@ import { TreeViewNode, TreeViewReparentRequest } from '../../../components/entit
               [documentArray]="filteredLocationTreeNodes"
             ></app-tree-view-list>
           </div>
+        </div>
+
+        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
+          <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+        </small>
 
         <div class="flex-1 min-h-[60vh]">
           @if (selectedLocationId && showLocationEditor) {
@@ -105,6 +111,7 @@ export class LocationListComponent implements OnInit {
   locationId = input<string>();
 
   dialog = inject(Dialog);
+  showsidebar = true;
 
   private worldStateService = inject(WorldStateService);
 

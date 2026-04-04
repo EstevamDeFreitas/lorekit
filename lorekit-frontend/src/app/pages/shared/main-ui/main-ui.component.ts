@@ -44,8 +44,8 @@ import { animate, query, style, transition, trigger } from '@angular/animations'
     trigger('routeTransition', [
       transition('* => *', [
         query(':enter', [
-          style({ opacity: 0, transform: 'translateY(6px)' }),
-          animate('180ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+          style({ opacity: 0 }),
+          animate('180ms ease-out', style({ opacity: 1 }))
         ], { optional: true }),
       ])
     ])

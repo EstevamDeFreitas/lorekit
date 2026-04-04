@@ -22,7 +22,7 @@ import { ComboBoxComponent } from "../../../components/combo-box/combo-box.compo
   template: `
     <div class="flex flex-col relative">
 
-      <div class="flex flex-row gap-4 relative">
+      <div class="flex flex-row gap-4">
         <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
           <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
             <div>

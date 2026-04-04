@@ -20,66 +20,72 @@ import { WorldStateService } from '../../../services/world-state.service';
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4">
-        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
-          <div class="flex flex-row justify-between mb-6">
-            <h2 class="text-base mb-4">Espécies</h2>
-            <app-icon-button
-              size="sm"
-              buttonType="secondary"
-              icon="fa-solid fa-plus"
-              appFormOverlay
-              [title]="'Criar Espécie'"
-              [fields]="getFormFields()"
-              (onSave)="createSpecie($event)">
-            </app-icon-button>
-          </div>
-
-          @if (!worldId()) {
-            <div class="mb-4">
-              <app-combo-box
-                class="w-full"
-                label="Filtro de mundo"
-                [items]="availableWorlds"
-                compareProp="id"
-                displayProp="name"
-                [(comboValue)]="selectedWorld"
-                (comboValueChange)="onWorldSelect()">
-              </app-combo-box>
+        <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
+          <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+            <div class="flex flex-row justify-between mb-6">
+              <h2 class="text-base mb-4">Espécies</h2>
+              <app-icon-button
+                size="sm"
+                buttonType="secondary"
+                icon="fa-solid fa-plus"
+                appFormOverlay
+                [title]="'Criar Espécie'"
+                [fields]="getFormFields()"
+                (onSave)="createSpecie($event)">
+              </app-icon-button>
             </div>
-          }
 
-          <div class="flex flex-row items-center gap-1 mb-4">
-            <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white">
-              <div class="w-8 h-5 flex flex-row justify-center items-center">
-                <i class="fa fa-search"></i>
+            @if (!worldId()) {
+              <div class="mb-4">
+                <app-combo-box
+                  class="w-full"
+                  label="Filtro de mundo"
+                  [items]="availableWorlds"
+                  compareProp="id"
+                  displayProp="name"
+                  [(comboValue)]="selectedWorld"
+                  (comboValueChange)="onWorldSelect()">
+                </app-combo-box>
               </div>
-              <input
-                type="text"
-                [(ngModel)]="searchTerm"
-                (ngModelChange)="onSpecieFilter()"
-                placeholder="Pesquisar..."
-                class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10"
-              />
-            </div>
-          </div>
+            }
 
-          <app-tree-view-list
-            [openInDialog]="false"
-            [allowCreate]="true"
-            [useCustomCreate]="true"
-            [dragEnabled]="!searchTerm.trim()"
-            [dragContextId]="'specie-list:' + (specieId() || worldId() || selectedWorld || 'root')"
-            [canReparent]="canReparentSpecie"
-            [createTitle]="'Criar Subespécie'"
-            [createFieldLabel]="'Nome'"
-            [fallbackIcon]="'fa-paw'"
-            [emptyChildrenLabel]="'Não há subespécies relacionadas'"
-            (onDocumentSelect)="selectSpecie($event.id)"
-            (onCreateChild)="createSubSpecie($event)"
-            (onReparentRequested)="reparentSpecie($event)"
-            [documentArray]="filteredSpecieTreeDocuments">
-          </app-tree-view-list>
+            <div class="flex flex-row items-center gap-1 mb-4">
+              <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white">
+                <div class="w-8 h-5 flex flex-row justify-center items-center">
+                  <i class="fa fa-search"></i>
+                </div>
+                <input
+                  type="text"
+                  [(ngModel)]="searchTerm"
+                  (ngModelChange)="onSpecieFilter()"
+                  placeholder="Pesquisar..."
+                  class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10"
+                />
+              </div>
+            </div>
+
+            <app-tree-view-list
+              [openInDialog]="false"
+              [allowCreate]="true"
+              [useCustomCreate]="true"
+              [dragEnabled]="!searchTerm.trim()"
+              [dragContextId]="'specie-list:' + (specieId() || worldId() || selectedWorld || 'root')"
+              [canReparent]="canReparentSpecie"
+              [createTitle]="'Criar Subespécie'"
+              [createFieldLabel]="'Nome'"
+              [fallbackIcon]="'fa-paw'"
+              [emptyChildrenLabel]="'Não há subespécies relacionadas'"
+              (onDocumentSelect)="selectSpecie($event.id)"
+              (onCreateChild)="createSubSpecie($event)"
+              (onReparentRequested)="reparentSpecie($event)"
+              [documentArray]="filteredSpecieTreeDocuments">
+            </app-tree-view-list>
+          </div>
         </div>
+
+        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
+          <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+        </small>
 
         <div class="flex-1 min-h-[60vh]">
           @if (selectedSpecieId) {
@@ -113,6 +119,8 @@ export class SpecieListComponent implements OnInit {
 
   worldId = input<string>();
   specieId = input<string>();
+
+  showsidebar = true;
 
   selectedWorld = '';
   searchTerm = '';
