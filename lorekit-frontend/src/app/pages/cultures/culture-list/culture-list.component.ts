@@ -149,7 +149,7 @@ export class CultureListComponent implements OnInit {
   }
 
   getCultures() {
-    this.cultures = this.cultureService.getCultures(this.worldId() || this.selectedWorld || null);
+    this.cultures = this.cultureService.getCultures(this.worldId() || this.selectedWorld || null).sort((a, b) => a.name.localeCompare(b.name));
 
     if (this.selectedCultureId && !this.cultures.some(culture => culture.id === this.selectedCultureId)) {
       this.selectedCultureId = '';

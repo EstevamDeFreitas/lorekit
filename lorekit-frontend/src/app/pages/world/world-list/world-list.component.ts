@@ -160,7 +160,7 @@ export class WorldListComponent {
   }
 
   loadWorlds() {
-    this.worlds = this.worldService.getWorlds();
+    this.worlds = this.worldService.getWorlds().sort((a, b) => a.name.localeCompare(b.name));
   }
 
   onWorldSelected(worldId : string) {

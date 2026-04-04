@@ -149,7 +149,7 @@ export class CharacterListComponent implements OnInit {
   }
 
   getCharacters() {
-    this.characters = this.characterService.getCharacters(this.worldId() || this.selectedWorld || null);
+    this.characters = this.characterService.getCharacters(this.worldId() || this.selectedWorld || null).sort((a, b) => a.name.localeCompare(b.name));
 
     if (this.selectedCharacterId && !this.characters.some(character => character.id === this.selectedCharacterId)) {
       this.selectedCharacterId = '';

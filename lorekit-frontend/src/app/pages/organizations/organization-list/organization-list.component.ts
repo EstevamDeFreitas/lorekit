@@ -156,7 +156,7 @@ export class OrganizationListComponent implements OnInit {
   }
 
   getOrganizations() {
-    this.organizations = this.organizationService.getOrganizations(this.worldId() || this.selectedWorld || null);
+    this.organizations = this.organizationService.getOrganizations(this.worldId() || this.selectedWorld || null).sort((a, b) => a.name.localeCompare(b.name));
 
     if (this.selectedOrganizationId && !this.organizations.some(organization => organization.id === this.selectedOrganizationId)) {
       this.selectedOrganizationId = '';
