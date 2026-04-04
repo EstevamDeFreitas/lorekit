@@ -188,15 +188,12 @@ export class DocumentService {
       throw new Error('Não é possível mover um documento para dentro de um descendente.');
     }
 
-    const sourceContext = this.getDocumentContext(documentId);
-    const targetContext = this.getDocumentContext(parentDocumentId);
+    // Validação simplificada - comparar worldId diretamente
+    const documentWorldId = this.getDocumentWorldId(documentId);
+    const parentWorldId = this.getDocumentWorldId(parentDocumentId);
 
-    if ((sourceContext.worldId || null) !== (targetContext.worldId || null)) {
+    if (documentWorldId !== parentWorldId) {
       throw new Error('O documento precisa continuar no mesmo mundo.');
-    }
-
-    if (!this.isSameOwner(sourceContext.owner, targetContext.owner)) {
-      throw new Error('O documento precisa continuar no mesmo contexto raiz.');
     }
   }
 
