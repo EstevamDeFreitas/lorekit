@@ -9,6 +9,7 @@ import { LocationService } from '../../services/location.service';
 import { SpecieService } from '../../services/specie.service';
 import { DbProvider } from '../../app.config';
 import { CrudHelper } from '../../database/database.helper';
+import { EntityChangeService } from '../../services/entity-change.service';
 
 @Component({
   imports: [InputComponent, ButtonComponent, FormsModule],
@@ -45,6 +46,7 @@ export class SafeDeleteComponent {
 
   dbProvider = inject<DbProvider>(DbProvider);
   private crud : CrudHelper;
+  private entityChangeService = inject(EntityChangeService);
 
   constructor() {
     this.crud = this.dbProvider.getCrudHelper();
@@ -59,9 +61,8 @@ export class SafeDeleteComponent {
 
   onDelete() {
     if (this.namesMatch()) {
-
       this.crud.delete(this.dialogData.entityTable, this.dialogData.entityId, this.removeRelatedItems);
-
+      this.entityChangeService.notifyDelete(this.dialogData.entityTable, this.dialogData.entityId);
       this.dialogref.close(true);
     }
   }

@@ -11,6 +11,7 @@ import { LocationService } from '../../../services/location.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
 import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../../models/personalization.model';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-culture-list',
@@ -102,6 +103,7 @@ export class CultureListComponent implements OnInit {
   private worldService = inject(WorldService);
   private locationService = inject(LocationService);
   private worldStateService = inject(WorldStateService);
+  private entityChangeService = inject(EntityChangeService);
 
   worldId = input<string>();
   availableWorlds: World[] = [];
@@ -130,6 +132,12 @@ export class CultureListComponent implements OnInit {
       this.selectedWorld = nextWorldId;
       this.getAvailableLocations();
       this.getCultures();
+    });
+
+    this.entityChangeService.changes$.subscribe(event => {
+      if (event.table === 'Culture') {
+        this.getCultures();
+      }
     });
 
     this.getAvailableWorlds();

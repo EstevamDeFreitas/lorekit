@@ -22,6 +22,7 @@ import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { ObjectConfiguredFieldsComponent } from '../object-configured-fields/object-configured-fields.component';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-object-edit',
@@ -111,6 +112,7 @@ export class ObjectEditComponent implements OnInit {
   private worldService = inject(WorldService);
   private locationService = inject(LocationService);
   private objectService = inject(ObjectService);
+  private entityChangeService = inject(EntityChangeService);
   private objectTypeService = inject(ObjectTypeService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
@@ -180,6 +182,7 @@ export class ObjectEditComponent implements OnInit {
     clearTimeout(this.saveTimeout);
     this.saveTimeout = setTimeout(() => {
       this.objectService.saveObject(this.object, this.selectedWorldId, this.selectedLocationId, this.selectedObjectTypeId);
+      this.entityChangeService.notifySave('Object', this.object.id);
     }, 500);
   }
 

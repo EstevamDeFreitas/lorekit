@@ -24,6 +24,7 @@ import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { OrganizationConfiguredFieldsComponent } from '../organization-configured-fields/organization-configured-fields.component';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-organization-edit',
@@ -108,6 +109,7 @@ export class OrganizationEditComponent implements OnInit{
   private worldService = inject(WorldService);
   private locationService = inject(LocationService);
   private organizationService = inject(OrganizationService);
+  private entityChangeService = inject(EntityChangeService);
   private organizationTypeService = inject(OrganizationTypeService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
@@ -178,6 +180,7 @@ export class OrganizationEditComponent implements OnInit{
     clearTimeout(this.saveTimeout);
     this.saveTimeout = setTimeout(() => {
       this.organizationService.saveOrganization(this.organization, this.selectedWorldId, this.selectedLocationId, this.selectedOrganizationTypeId);
+      this.entityChangeService.notifySave('Organization', this.organization.id);
     }, 500);
   }
 

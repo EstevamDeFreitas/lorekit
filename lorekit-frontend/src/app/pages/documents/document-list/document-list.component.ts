@@ -15,6 +15,7 @@ import { NgClass } from '@angular/common';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-document-list',
@@ -110,6 +111,7 @@ export class DocumentListComponent implements OnInit {
   public getImageByUsageKey = getImageByUsageKey;
   public getTextClass = getTextClass;
   private worldStateService = inject(WorldStateService);
+  private entityChangeService = inject(EntityChangeService);
 
   showsidebar = true;
 
@@ -143,6 +145,13 @@ export class DocumentListComponent implements OnInit {
       this.selectedWorld = nextWorldId;
       this.getDocuments();
     });
+
+    this.entityChangeService.changes$.subscribe(event => {
+      if (event.table === 'Document') {
+        this.getDocuments();
+      }
+    });
+
     this.getAvailableWorlds();
     this.getDocuments();
   }

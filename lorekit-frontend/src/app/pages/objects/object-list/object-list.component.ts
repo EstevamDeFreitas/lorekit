@@ -12,6 +12,7 @@ import { ObjectTypeService } from '../../../services/object-type.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
 import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../../models/personalization.model';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-object-list',
@@ -104,6 +105,7 @@ export class ObjectListComponent implements OnInit {
   private worldService = inject(WorldService);
   private locationService = inject(LocationService);
   private worldStateService = inject(WorldStateService);
+  private entityChangeService = inject(EntityChangeService);
 
   worldId = input<string>();
   availableWorlds: World[] = [];
@@ -132,6 +134,12 @@ export class ObjectListComponent implements OnInit {
       this.selectedWorld = nextWorldId;
       this.getAvailableLocations();
       this.getObjects();
+    });
+
+    this.entityChangeService.changes$.subscribe(event => {
+      if (event.table === 'Object') {
+        this.getObjects();
+      }
     });
 
     this.getAvailableWorlds();

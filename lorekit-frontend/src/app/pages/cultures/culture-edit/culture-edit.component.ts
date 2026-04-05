@@ -20,6 +20,7 @@ import { SafeDeleteButtonComponent } from '../../../components/safe-delete-butto
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { CultureConfiguredFieldsComponent } from '../culture-configured-fields/culture-configured-fields.component';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-culture-edit',
@@ -100,6 +101,7 @@ export class CultureEditComponent {
   private worldService = inject(WorldService);
   private locationService = inject(LocationService);
   private cultureService = inject(CultureService);
+  private entityChangeService = inject(EntityChangeService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
 
@@ -175,6 +177,7 @@ export class CultureEditComponent {
     clearTimeout(this.saveTimeout);
     this.saveTimeout = setTimeout(() => {
       this.cultureService.saveCulture(this.culture, this.selectedWorldId, this.selectedLocationId);
+      this.entityChangeService.notifySave('Culture', this.culture.id);
     }, 500);
   }
 

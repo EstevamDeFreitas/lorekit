@@ -15,6 +15,7 @@ import { IconButtonComponent } from '../../../components/icon-button/icon-button
 import { TreeViewListComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
 import { LocationEditComponent } from '../location-edit/location-edit.component';
 import { TreeViewNode, TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-location-list',
@@ -114,6 +115,7 @@ export class LocationListComponent implements OnInit {
   showsidebar = true;
 
   private worldStateService = inject(WorldStateService);
+  private entityChangeService = inject(EntityChangeService);
 
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === LocationListComponent ||
@@ -146,6 +148,13 @@ export class LocationListComponent implements OnInit {
       this.selectedWorld = worldId;
       this.getLocations();
     });
+
+    this.entityChangeService.changes$.subscribe(event => {
+      if (event.table === 'Location') {
+        this.getLocations();
+      }
+    });
+
     this.getAvailableWorlds();
     this.getLocationCategories();
     this.getLocations();
@@ -166,6 +175,11 @@ export class LocationListComponent implements OnInit {
 
     this.locationTree = this.buildLocationTree(this.locations);
     this.onLocationFilter();
+
+    if (this.selectedLocationId && !this.locations.some(l => l.id === this.selectedLocationId)) {
+      this.selectedLocationId = '';
+      this.showLocationEditor = false;
+    }
   }
 
   getFormFields(): FormField[] {

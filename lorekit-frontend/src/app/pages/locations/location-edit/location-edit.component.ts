@@ -20,6 +20,7 @@ import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { LocationConfiguredFieldsComponent } from '../location-configured-fields/location-configured-fields.component';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-location-edit',
@@ -111,6 +112,7 @@ export class LocationEditComponent implements OnInit {
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
   private locationService = inject(LocationService);
+  private entityChangeService = inject(EntityChangeService);
   private worldService = inject(WorldService);
   private locationCategoryService = inject(LocationCategoriesService);
   public getPersonalizationValue = getPersonalizationValue;
@@ -179,6 +181,7 @@ export class LocationEditComponent implements OnInit {
 
   saveLocation() {
     this.locationService.saveLocation(this.location, this.selectedCategoryId, this.selectedWorldId || undefined, this.selectedParentLocationId || undefined);
+    this.entityChangeService.notifySave('Location', this.location.id);
   }
 
   onDocumentSave($event: any) {

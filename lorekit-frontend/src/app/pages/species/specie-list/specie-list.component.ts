@@ -13,6 +13,7 @@ import { LocationService } from '../../../services/location.service';
 import { SpecieService } from '../../../services/specie.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-specie-list',
@@ -116,6 +117,7 @@ export class SpecieListComponent implements OnInit {
   private locationService = inject(LocationService);
   private worldService = inject(WorldService);
   private worldStateService = inject(WorldStateService);
+  private entityChangeService = inject(EntityChangeService);
 
   worldId = input<string>();
   specieId = input<string>();
@@ -150,6 +152,12 @@ export class SpecieListComponent implements OnInit {
       this.selectedWorld = nextWorldId;
       this.getAvailableLocations();
       this.getSpecies();
+    });
+
+    this.entityChangeService.changes$.subscribe(event => {
+      if (event.table === 'Species') {
+        this.getSpecies();
+      }
     });
 
     this.getAvailableWorlds();

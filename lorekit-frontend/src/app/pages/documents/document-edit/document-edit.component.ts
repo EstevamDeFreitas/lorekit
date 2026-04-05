@@ -8,6 +8,7 @@ import { Document } from '../../../models/document.model';
 import { EditorComponent } from "../../../components/editor/editor.component";
 import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
+import { EntityChangeService } from '../../../services/entity-change.service';
 import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { WorldService } from '../../../services/world.service';
@@ -55,6 +56,7 @@ export class DocumentEditComponent {
 
   private currentRoute = inject(ActivatedRoute);
   private documentService = inject(DocumentService);
+  private entityChangeService = inject(EntityChangeService);
   private router = inject(Router);
   private worldService = inject(WorldService);
 
@@ -126,6 +128,7 @@ export class DocumentEditComponent {
     }
 
     this.document = this.documentService.saveDocument(this.document, this.data?.entityTable, this.data?.entityId, this.selectedWorldId);
+    this.entityChangeService.notifySave('Document', this.document.id);
   }
 
   getReturnUrl(){

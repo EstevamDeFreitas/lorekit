@@ -12,6 +12,7 @@ import { SpecieService } from '../../../services/specie.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
 import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../../models/personalization.model';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-character-list',
@@ -105,6 +106,7 @@ export class CharacterListComponent implements OnInit {
   private worldService = inject(WorldService);
   private specieService = inject(SpecieService);
   private worldStateService = inject(WorldStateService);
+  private entityChangeService = inject(EntityChangeService);
 
   worldId = input<string>();
   availableWorlds: World[] = [];
@@ -133,6 +135,12 @@ export class CharacterListComponent implements OnInit {
       this.selectedWorld = nextWorldId;
       this.getAvailableSpecies();
       this.getCharacters();
+    });
+
+    this.entityChangeService.changes$.subscribe(event => {
+      if (event.table === 'Character') {
+        this.getCharacters();
+      }
     });
 
     this.getAvailableWorlds();

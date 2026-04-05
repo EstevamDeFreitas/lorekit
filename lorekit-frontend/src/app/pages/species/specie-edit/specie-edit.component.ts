@@ -20,6 +20,7 @@ import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { SpecieConfiguredFieldsComponent } from '../specie-configured-fields/specie-configured-fields.component';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-specie-edit',
@@ -109,6 +110,7 @@ export class SpecieEditComponent implements OnInit {
   private activatedRoute = inject(ActivatedRoute);
   private worldService = inject(WorldService);
   private specieService = inject(SpecieService);
+  private entityChangeService = inject(EntityChangeService);
   private locationService = inject(LocationService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
@@ -185,6 +187,7 @@ export class SpecieEditComponent implements OnInit {
     clearTimeout(this.saveTimeout);
     this.saveTimeout = setTimeout(() => {
       this.specieService.saveSpecie(this.specie, this.selectedWorldId, this.selectedParentLocationId, this.selectedMainSpecieId);
+      this.entityChangeService.notifySave('Species', this.specie.id);
     }, 500);
   }
 

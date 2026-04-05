@@ -22,6 +22,7 @@ import { SpecieListComponent } from '../../species/specie-list/specie-list.compo
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { CharacterConfiguredFieldsComponent } from '../character-configured-fields/character-configured-fields.component';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-character-edit',
@@ -107,6 +108,7 @@ export class CharacterEditComponent implements OnInit {
   private worldService = inject(WorldService);
   private specieService = inject(SpecieService);
   private characterService = inject(CharacterService);
+  private entityChangeService = inject(EntityChangeService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
 
@@ -182,6 +184,7 @@ export class CharacterEditComponent implements OnInit {
     clearTimeout(this.saveTimeout);
     this.saveTimeout = setTimeout(() => {
       this.characterService.saveCharacter(this.character, this.selectedWorldId, this.selectedSpecieId);
+      this.entityChangeService.notifySave('Character', this.character.id);
     }, 500);
   }
 
