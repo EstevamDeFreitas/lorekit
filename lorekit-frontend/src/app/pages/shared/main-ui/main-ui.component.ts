@@ -25,6 +25,7 @@ import { animate, query, style, transition, trigger } from '@angular/animations'
           <app-nav-button [label]="'Personagens'" [showLabel]="false" [route]="'/app/character'" [icon]="'fa-solid fa-users'" size="xl" [fullWidth]="true" [direction]="'right'"></app-nav-button>
           <app-nav-button [label]="'Culturas'" [showLabel]="false" [route]="'/app/culture'" [icon]="'fa-solid fa-mortar-pestle'" size="xl" [fullWidth]="true" [direction]="'right'"></app-nav-button>
           <app-nav-button [label]="'Organizações'" [showLabel]="false" [route]="'/app/organization'" [icon]="'fa-solid fa-building'" size="xl" [fullWidth]="true" [direction]="'right'"></app-nav-button>
+          <app-nav-button [label]="'Objetos'" [showLabel]="false" [route]="'/app/object'" [icon]="'fa-solid fa-cube'" size="xl" [fullWidth]="true" [direction]="'right'"></app-nav-button>
           <app-nav-button [label]="'Relações'" [showLabel]="false" [route]="'/app/relations'" [icon]="'fa-solid fa-share-nodes'" size="xl" [fullWidth]="true" [direction]="'right'"></app-nav-button>
         </div>
       </div>

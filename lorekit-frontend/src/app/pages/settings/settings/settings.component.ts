@@ -15,6 +15,8 @@ import { GlobalParameterService } from '../../../services/global-parameter.servi
 import { FormsModule } from '@angular/forms';
 import { OrganizationType } from '../../../models/organization.model';
 import { OrganizationTypeService } from '../../../services/organization-type.service';
+import { ObjectType } from '../../../models/object.model';
+import { ObjectTypeService } from '../../../services/object-type.service';
 import { schema } from '../../../database/schema';
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
@@ -37,6 +39,7 @@ import { EventTypeService } from '../../../services/event-type.service';
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('general_settings')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'general_settings'}">Configurações Gerais</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('location_categories')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'location_categories'}">Categorias de Localidade</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('organization_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'organization_types'}">Tipos de Organização</a>
+          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('object_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'object_types'}">Tipos de Objeto</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('event_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'event_types'}">Tipos de Evento</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('dynamic_fields')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'dynamic_fields'}">Campos Dinâmicos</a>
           <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('global_field_config')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'global_field_config'}">Campos Globais</a>
@@ -144,6 +147,48 @@ import { EventTypeService } from '../../../services/event-type.service';
                 @empty {
                   <div class="flex flex-row justify-between items-center p-2">
                     <p>Nenhum tipo de organização encontrado.</p>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          @case ("object_types") {
+            <div>
+              <div class="flex flex-row justify-between items-center mb-4">
+                <h3 class="text-base mb-2">Tipos de Objeto</h3>
+                <app-button
+                  label="Adicionar"
+                  buttonType="primary"
+                  size="xs"
+                  icon="fa-solid fa-plus"
+                  appFormOverlay
+                  [title]="'Adicionar Tipo de Objeto'"
+                  [fields]="objectTypeFormFields"
+                  (onSave)="createObjectType($event)"
+                  ></app-button>
+              </div>
+              <div class="border border-zinc-700 rounded-md bg-zinc-900">
+                @for (item of objectTypes; track item.id) {
+                  <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
+                    <p>{{item.name}}</p>
+                    <div class="flex flex-row gap-2">
+                      <app-icon-button
+                        icon="fa-solid fa-pencil"
+                        size="sm"
+                        buttonType="secondary"
+                        appFormOverlay
+                        [title]="'Editar Tipo de Objeto'"
+                        [fields]="[{ key: 'name', label: 'Nome do Tipo de Objeto', value: item.name, type: 'text' }]"
+                        [saveLabel]="'Atualizar'"
+                        (onSave)="saveObjectType($event, item.id)"
+                        ></app-icon-button>
+                      <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" (click)="deleteObjectType(item)"></app-icon-button>
+                    </div>
+                  </div>
+                }
+                @empty {
+                  <div class="flex flex-row justify-between items-center p-2">
+                    <p>Nenhum tipo de objeto encontrado.</p>
                   </div>
                 }
               </div>
@@ -292,6 +337,7 @@ export class SettingsComponent implements OnInit{
   confirm = inject<ConfirmService>(ConfirmService);
   globalParameterService = inject(GlobalParameterService);
   organizationTypeService = inject(OrganizationTypeService);
+  objectTypeService = inject(ObjectTypeService);
   eventTypeService = inject(EventTypeService);
   dynamicFieldService = inject(DynamicFieldService);
   private dialog = inject(Dialog);
@@ -319,6 +365,15 @@ export class SettingsComponent implements OnInit{
     }
   ];
 
+  objectTypeFormFields : FormField[] = [
+    {
+      key: 'name',
+      label: 'Nome do Tipo de Objeto',
+      value: '',
+      type: 'text'
+    }
+  ];
+
   eventTypeFormFields : FormField[] = [
     {
       key: 'name',
@@ -341,6 +396,7 @@ export class SettingsComponent implements OnInit{
                     'Relationship',
                     'GlobalParameter',
                     'OrganizationType',
+                    'ObjectType',
                     'Timeline',
                     'GreatMark',
                     'EventType',
@@ -375,6 +431,10 @@ export class SettingsComponent implements OnInit{
 
     if (tab === 'organization_types') {
       this.getOrganizationTypes();
+    }
+
+    if (tab === 'object_types') {
+      this.getObjectTypes();
     }
 
     if (tab === 'event_types') {
@@ -483,6 +543,52 @@ export class SettingsComponent implements OnInit{
 
   getOrganizationTypes() {
     this.organizationTypes = this.organizationTypeService.getOrganizationTypes();
+  }
+
+  //Object Types
+  objectTypes: ObjectType[] = [];
+  createObjectType(formData: Record<string, string>) {
+    const typeName = formData['name'];
+
+    if (typeName.trim() === '') {
+      return;
+    }
+
+    const newType: ObjectType = {
+      id: '',
+      name: typeName.trim()
+    };
+
+    let objType = this.objectTypeService.saveObjectType(newType);
+    this.objectTypes.push(objType);
+  }
+
+  saveObjectType(formData: Record<string, string>, typeId: string) {
+    const typeName = formData['name'];
+
+    if (typeName.trim() === '') {
+      return;
+    }
+
+    const typeToUpdate = this.objectTypes.find(t => t.id === typeId);
+    if (typeToUpdate) {
+      typeToUpdate.name = typeName.trim();
+      this.objectTypeService.saveObjectType(typeToUpdate);
+      this.getObjectTypes();
+    }
+  }
+
+  deleteObjectType(objType: ObjectType) {
+    this.confirm.ask(`Tem certeza que deseja deletar o tipo de objeto ${objType.name}?`).then(confirmed => {
+      if (confirmed) {
+        this.objectTypeService.deleteObjectType(objType);
+        this.getObjectTypes();
+      }
+    });
+  }
+
+  getObjectTypes() {
+    this.objectTypes = this.objectTypeService.getObjectTypes();
   }
 
   eventTypes: TimelineEventType[] = [];

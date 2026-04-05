@@ -105,6 +105,19 @@ export const routes: Routes = [
         ]
       },
       {
+        path: 'object', children: [
+          {path: '', redirectTo: 'list', pathMatch: 'full'},
+          {path: 'list', loadComponent: () =>
+            import('./pages/objects/object-list/object-list.component')
+              .then(m => m.ObjectListComponent),
+          },
+          {path: 'edit/:objectId', loadComponent: () =>
+            import('./pages/objects/object-edit/object-edit.component')
+              .then(m => m.ObjectEditComponent),
+          },
+        ]
+      },
+      {
         path: 'relations',
         loadComponent: () =>
           import('./pages/relations/relation-graph/relation-graph.component')

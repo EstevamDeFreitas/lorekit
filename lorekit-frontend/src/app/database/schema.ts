@@ -160,6 +160,32 @@ export const schema: TableDef[] = [
     ]
   },
   {
+    name: "Object",
+    columns: [
+      { name: "id",         def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",       def: `"name" TEXT NOT NULL` },
+      { name: "concept",    def: `"concept" TEXT` },
+      { name: "age",        def: `"age" TEXT` },
+      { name: "properties", def: `"properties" TEXT` },
+      { name: "history",    def: `"history" TEXT` },
+    ]
+  },
+  {
+    name: "ObjectType",
+    columns: [
+      { name: "id",   def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name", def: `"name" TEXT NOT NULL` }
+    ],
+    insertCommands: [
+      `INSERT INTO "ObjectType" (id, name) VALUES ('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'Veículo')`,
+      `INSERT INTO "ObjectType" (id, name) VALUES ('b2c3d4e5-f6a7-8901-bcde-f12345678901', 'Artefato')`,
+      `INSERT INTO "ObjectType" (id, name) VALUES ('c3d4e5f6-a7b8-9012-cdef-123456789012', 'Arma')`,
+      `INSERT INTO "ObjectType" (id, name) VALUES ('d4e5f6a7-b8c9-0123-defa-234567890123', 'Nave')`,
+      `INSERT INTO "ObjectType" (id, name) VALUES ('e5f6a7b8-c9d0-1234-efab-345678901234', 'Ferramenta')`,
+      `INSERT INTO "ObjectType" (id, name) VALUES ('f6a7b8c9-d0e1-2345-fabc-456789012345', 'Equipamento')`,
+    ]
+  },
+  {
     name: "Timeline",
     columns: [
       { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
