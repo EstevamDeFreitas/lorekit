@@ -36,7 +36,7 @@ import { TreeViewNode, TreeViewReparentRequest } from './tree-view.models';
         <div class="flex flex-col gap-1">
           <div
             class="grid items-center gap-1 rounded-md border px-1 py-1 transition-colors"
-            style="grid-template-columns: 1.5rem 1.25rem 1fr 1.5rem;"
+            [style.grid-template-columns]="allowDetach() && !isRecursive() ? '1.5rem 1.25rem 1fr 1.5rem 1.5rem' : '1.5rem 1.25rem 1fr 1.5rem'"
             data-tree-node-row
             [attr.data-tree-context]="dragContextId()"
             [attr.data-tree-node-id]="item.id"
@@ -95,6 +95,16 @@ import { TreeViewNode, TreeViewReparentRequest } from './tree-view.models';
             @else {
               <span></span>
             }
+
+            @if (allowDetach() && !isRecursive()) {
+              <app-icon-button
+                size="xss"
+                buttonType="secondary"
+                icon="fa-solid fa-link-slash"
+                title="Desvincular"
+                (click)="onDetach.emit(item.id)">
+              </app-icon-button>
+            }
           </div>
 
           @if (isOpen(item.id)) {
@@ -113,11 +123,13 @@ import { TreeViewNode, TreeViewReparentRequest } from './tree-view.models';
                   [dragEnabled]="dragEnabled()"
                   [dragContextId]="dragContextId()"
                   [canReparent]="canReparent()"
+                  [allowDetach]="allowDetach()"
                   [isRecursive]="true"
                   (onArrayChange)="emitChange()"
                   (onDocumentSelect)="emitDocumentSelection($event)"
                   (onCreateChild)="emitCreateChild($event)"
                   (onReparentRequested)="emitReparentRequested($event)"
+                  (onDetach)="onDetach.emit($event)"
                   [documentArray]="item.SubDocuments || []">
                 </app-tree-view-list>
               }
@@ -139,6 +151,7 @@ export class TreeViewListComponent {
   onDocumentSelect = output<TreeViewNode>();
   onCreateChild = output<{ parentId: string, formData: Record<string, string> }>();
   onReparentRequested = output<TreeViewReparentRequest>();
+  onDetach = output<string>();
 
   openDocuments = new Set<string>();
 
@@ -159,6 +172,7 @@ export class TreeViewListComponent {
   dragContextId = input<string>('tree-view');
   canReparent = input<(draggedId: string, newParentId: string | null) => boolean>(() => true);
   isRecursive = input<boolean>(false);
+  allowDetach = input<boolean>(false);
 
   private readonly dialog = inject(Dialog);
   private readonly treeDragDropService = inject(TreeViewDragDropService);
@@ -429,9 +443,11 @@ export class TreeViewListComponent {
             [useCustomCreate]="true"
             [dragContextId]="'entity-documents:' + entityTable() + ':' + entityId()"
             [canReparent]="canReparentDocument"
+            [allowDetach]="true"
             (onArrayChange)="loadDocuments()"
             (onCreateChild)="createChildDocument($event)"
             (onReparentRequested)="reparentDocument($event)"
+            (onDetach)="detachDocument($event)"
             [documentArray]="documentArray">
           </app-tree-view-list>
         </div>
@@ -537,6 +553,11 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
     this.selectedDocumentId = null;
     this.documentSearchTerm = '';
     this.filteredDocuments = [];
+    this.loadDocuments();
+  }
+
+  detachDocument(documentId: string) {
+    this.documentService.detachDocument(this.entityTable(), this.entityId(), documentId);
     this.loadDocuments();
   }
 

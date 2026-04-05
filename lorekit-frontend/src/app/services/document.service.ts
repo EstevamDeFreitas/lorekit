@@ -97,6 +97,15 @@ export class DocumentService {
     this.syncWorldRelationship(documentId, this.getInheritedWorldId(entityTable, entityId));
   }
 
+  detachDocument(entityTable: string, entityId: string, documentId: string) {
+    this.crud.deleteWhen('Relationship', {
+      parentTable: entityTable,
+      parentId: entityId,
+      entityTable: 'Document',
+      entityId: documentId,
+    });
+  }
+
   getDocumentWorldId(documentId: string): string | null {
     return this.getInheritedWorldId('Document', documentId);
   }
