@@ -65,7 +65,7 @@ import { EntityChangeService } from '../../../services/entity-change.service';
       <div class="flex flex-row gap-4 flex-1 mt-10">
         <div class="flex-4 h-auto flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
-            <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
+            <!-- <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button> -->
             <app-nav-button [label]="'História'" size="sm" [active]="currentTab === 'history'" (click)="currentTab = 'history'"></app-nav-button>
             @if(hasDynamicFields) {
               <app-nav-button [label]="'Campos Configurados'" size="sm" [active]="currentTab === 'configured'" (click)="currentTab = 'configured'"></app-nav-button>
@@ -74,11 +74,11 @@ import { EntityChangeService } from '../../../services/entity-change.service';
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
             @if (!isLoading) {
               @switch (currentTab) {
-                @case ('properties') {
+                <!-- @case ('properties') {
                   <div class="w-full">
                     <app-editor [entityId]="object.id" docTitle="Propriedades" entityTable="Object" [entityName]="object.name" [document]="object.properties || ''" (saveDocument)="onEditorSave($event, 'properties')" class="w-full"></app-editor>
                   </div>
-                }
+                } -->
                 @case ('history') {
                   <div class="w-full">
                     <app-editor [entityId]="object.id + '_history'" docTitle="História" entityTable="Object" [entityName]="object.name" [document]="object.history || ''" (saveDocument)="onEditorSave($event, 'history')" class="w-full"></app-editor>
@@ -117,7 +117,7 @@ export class ObjectEditComponent implements OnInit {
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
 
-  currentTab: string = 'properties';
+  currentTab: string = 'history';
 
   isInDialog = computed(() => !!this.dialogref);
 
