@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { DbProvider } from '../app.config';
 import { CrudHelper } from '../database/database.helper';
 
-export type MentionEntityTable = 'World' | 'Document' | 'Location' | 'Species' | 'Character' | 'Culture' | 'Organization';
+export type MentionEntityTable = 'World' | 'Document' | 'Location' | 'Species' | 'Character' | 'Culture' | 'Organization' | 'Object';
 
 export type MentionEntity = {
   entityTable: MentionEntityTable;
@@ -35,6 +35,7 @@ export class EntityMentionService {
     { table: 'Character', column: 'name', subtitle: 'Personagem' },
     { table: 'Culture', column: 'name', subtitle: 'Cultura' },
     { table: 'Organization', column: 'name', subtitle: 'Organização' },
+    { table: 'Object', column: 'name', subtitle: 'Objeto' },
   ];
 
   constructor() {
@@ -147,6 +148,11 @@ export class EntityMentionService {
       case 'Organization': {
         const { OrganizationEditComponent } = await import('../pages/organizations/organization-edit/organization-edit.component');
         this.dialog.open(OrganizationEditComponent, config);
+        return;
+      }
+      case 'Object': {
+        const { ObjectEditComponent } = await import('../pages/objects/object-edit/object-edit.component');
+        this.dialog.open(ObjectEditComponent, config);
         return;
       }
       default:

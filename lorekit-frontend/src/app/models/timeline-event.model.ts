@@ -9,6 +9,7 @@ import { Personalization } from "./personalization.model";
 import { Specie } from "./specie.model";
 import { Timeline } from "./timeline.model";
 import { World } from "./world.model";
+import { WorldObject} from "./object.model";
 
 export const timelineEventRelationTables = [
   'World',
@@ -18,6 +19,7 @@ export const timelineEventRelationTables = [
   'Character',
   'Culture',
   'Organization',
+  'Object',
 ] as const;
 
 export type TimelineEventRelationTable = typeof timelineEventRelationTables[number];
@@ -51,7 +53,7 @@ export class TimelineEvent {
   Characters?: Character[];
   Cultures?: Culture[];
   Organizations?: Organization[];
-
+  Objects?: WorldObject[];
   constructor(
     id: string = '',
     name: string = '',
@@ -95,6 +97,6 @@ export function buildTimelineEventRelatedEntities(event: TimelineEvent): Timelin
   pushItems(event.Characters, 'Character', item => item.name, 'Personagem');
   pushItems(event.Cultures, 'Culture', item => item.name, 'Cultura');
   pushItems(event.Organizations, 'Organization', item => item.name, 'Organização');
-
+  pushItems(event.Objects, 'Object', item => item.name, 'Objeto');
   return refs;
 }
