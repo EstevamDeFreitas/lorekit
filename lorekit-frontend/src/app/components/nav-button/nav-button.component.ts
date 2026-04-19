@@ -63,14 +63,16 @@ export class NavButtonComponent {
         primary: 'text-zinc-400 hover:text-zinc-200',
         secondary: 'text-zinc-400 hover:text-zinc-200',
         white: 'text-zinc-900 hover:text-zinc-700',
-        danger: 'text-zinc-400 hover:text-zinc-200'
+        danger: 'text-zinc-400 hover:text-zinc-200',
+        pink: 'text-zinc-400 hover:text-zinc-200'
     }
 
     const activeTypes = {
       primary: 'text-yellow-300 font-bold',
       secondary: 'text-zinc-800 font-bold',
       white: 'text-zinc-50 font-bold',
-      danger: 'text-red-600 font-bold'
+      danger: 'text-red-600 font-bold',
+      pink: 'text-pink-400 font-bold'
     }
 
     return base + ' ' + (isActive ? activeTypes[this.buttonType()] : types[this.buttonType()]) ;
@@ -93,7 +95,8 @@ export class NavButtonComponent {
       primary: 'text-yellow-300 font-bold',
       secondary: 'text-zinc-800 font-bold',
       white: 'text-zinc-50 font-bold',
-      danger: 'text-red-600 font-bold'
+      danger: 'text-red-600 font-bold',
+      pink: 'text-pink-400 font-bold'
     }
 
     return activeTypes[this.buttonType()];
@@ -122,7 +125,8 @@ export class NavButtonComponent {
       primary: 'bg-yellow-300',
       secondary: 'bg-zinc-800',
       white: 'bg-zinc-50',
-      danger: 'bg-red-600'
+      danger: 'bg-red-600',
+      pink: 'bg-pink-400'
     }
 
     return base + ' ' + (isActive ? activeColors[this.buttonType()] : 'bg-white') + ' ' + positions[this.direction()];

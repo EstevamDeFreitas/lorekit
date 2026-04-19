@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+
+.circle-checkbox {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #555;
+  border-radius: 50%;
+  outline: none;
+  cursor: pointer;
+  background: transparent;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.circle-checkbox:checked {
+  background-color: currentColor;
+  border-color: currentColor;
+}
+
+.circle-checkbox.level-0 {
+  color: #71717a;
+}
+
+.circle-checkbox.level-1 {
+  color: #eab308;
+}
+
+.circle-checkbox.level-2 {
+  color: #f97316;
+}
+
+.circle-checkbox.level-3 {
+  color: #ec4899;
+}

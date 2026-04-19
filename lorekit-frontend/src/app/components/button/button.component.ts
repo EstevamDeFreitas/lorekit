@@ -59,7 +59,8 @@ export class ButtonComponent {
           primary: 'bg-yellow-500 text-zinc-800 ',
           secondary: 'bg-zinc-800 text-white',
           white: 'bg-zinc-50 text-zinc-900',
-          danger: 'bg-red-500 text-white'
+          danger: 'bg-red-500 text-white',
+          pink: 'bg-pink-400 text-white'
       }
 
       return `${base} ${types[this.buttonType()]} ${this.disabled() ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:brightness-85 active:brightness-70'}`;
@@ -69,7 +70,8 @@ export class ButtonComponent {
         primary: 'bg-amber-600 text-white',
         secondary: 'bg-zinc-800 text-white',
         white: 'bg-zinc-50 text-zinc-900',
-        danger: 'bg-red-500 text-white'
+        danger: 'bg-red-500 text-white',
+        pink: 'bg-pink-400 text-white'
     }
 
 
@@ -82,7 +84,8 @@ export class ButtonComponent {
         primary: 'bg-amber-600 text-white',
         secondary: 'bg-zinc-800 text-white',
         white: 'bg-zinc-50 text-zinc-900',
-        danger: 'bg-red-500 text-white'
+        danger: 'bg-red-500 text-white',
+        pink: 'bg-pink-400 text-white'
     }
 
     return types[this.buttonType()];

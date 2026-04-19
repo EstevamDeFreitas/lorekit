@@ -266,5 +266,59 @@ export const schema: TableDef[] = [
       `CREATE INDEX IF NOT EXISTS "idx_ui_field_config_entity" ON "UiFieldConfig" ("entityTable", "entityId")`,
       `CREATE INDEX IF NOT EXISTS "idx_ui_field_config_parent" ON "UiFieldConfig" ("entityTable", "parentEntityTable", "parentEntityId")`,
     ]
-  }
+  },
+
+  /////////////////////////////////////// IRONPAW INTEGRATION ///////////////////////////////////////
+  {
+    name:"IRPWCharacterSheet",
+    columns:[
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "perceptions", def: `"perceptions" TEXT` },
+      { name: "attributes", def: `"attributes" TEXT` },
+      { name: "lifepoints", def: `"lifepoints" TEXT` },
+      { name: "defensepoints", def: `"defensepoints" TEXT` },
+      { name: "stress", def: `"stress" TEXT` },
+      { name: "mana", def: `"mana" TEXT` },
+      { name: "vigor", def: `"vigor" TEXT` },
+      { name: "inventory", def: `"inventory" TEXT` },
+      { name: "habilities", def: `"habilities" TEXT` },
+      { name: "marks", def: `"marks" TEXT` },
+    ]
+  },
+  {
+    name:"IRPWSpecie",
+    columns:[
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "perceptions", def: `"perceptions" TEXT` },
+      { name: "basehealth", def: `"basehealth" TEXT` },
+      { name: "passive", def: `"passive" TEXT` },
+      { name: "weakness", def: `"weakness" TEXT` },
+    ]
+  },
+  {
+    name:"IRPWItem",
+    columns:[
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "effects",          def: `"effects" TEXT` },
+    ]
+  },
+  {
+    name:"IRPWVocation",
+    columns:[
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",          def: `"name" TEXT` },
+      { name: "description",          def: `"description" TEXT` },
+      { name: "habilities",          def: `"habilities" TEXT` },
+      { name: "passive",          def: `"passive" TEXT` },
+      { name: "basehealth",          def: `"basehealth" TEXT` },
+      { name: "basedefense",          def: `"basedefense" TEXT` },
+      { name: "attributes",          def: `"attributes" TEXT` },
+    ]
+  },
+  {
+    name:"",
+    columns:[
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+    ]
+  },
 ];

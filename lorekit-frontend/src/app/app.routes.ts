@@ -134,6 +134,20 @@ export const routes: Routes = [
           },
         ]
       },
+
+      //Ironpaw specific routes
+      {
+        path: 'character-sheet',
+        loadComponent: () =>
+          import('./pages/ironpaw/irpw-character-sheet/irpw-character-sheet.component')
+            .then(m => m.IrpwCharacterSheetComponent),
+      },
+      {
+        path: 'content-manager',
+        loadComponent: () =>
+          import('./pages/ironpaw/irpw-content-manager/irpw-content-manager.component')
+            .then(m => m.IrpwContentManagerComponent),
+      }
     ]
   }
 
