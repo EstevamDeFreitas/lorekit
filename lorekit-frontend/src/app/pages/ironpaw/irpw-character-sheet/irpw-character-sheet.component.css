@@ -38,3 +38,47 @@
 .circle-checkbox.level-3 {
   color: #ec4899;
 }
+
+.life-square {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  border: 1px solid #3f3f46;
+  border-radius: 0.375rem;
+  background: #18181b;
+  transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.life-square:hover {
+  border-color: #71717a;
+  transform: translateY(-1px);
+}
+
+.life-square.is-half,
+.life-square.is-full {
+  box-shadow: 0 0 0 1px var(--color-zinc-800);
+}
+
+.life-square-half {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.life-square-half.left {
+  border-right: 1px solid #27272a;
+}
+
+.life-square-half.is-active {
+  background: var(--color-red-500);
+}
+
+.life-square-half:hover {
+  background-color: var(--color-red-900);
+}
