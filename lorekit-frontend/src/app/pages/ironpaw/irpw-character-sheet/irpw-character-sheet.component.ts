@@ -108,7 +108,7 @@ import { getImageByUsageKey } from '../../../models/image.model';
                     </div>
                     <button
                       type="button"
-                      class="h-6 w-6 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
+                      class="px-1 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
                       cdkOverlayOrigin
                       #lifeSettingsOrigin="cdkOverlayOrigin"
                       (click)="toggleLifeSettingsOverlay()"
@@ -263,14 +263,20 @@ import { getImageByUsageKey } from '../../../models/image.model';
                               @for (skill of entry[1]; track skill) {
                                 <div class="flex items-center justify-between">
                                   <span class="text-xs text-zinc-400">{{ skillLabel[skill] }}</span>
-                                  <div class="flex gap-1.5">
+                                  <div class="flex items-center gap-3">
+                                    <span class="text-[11px] text-zinc-500 whitespace-nowrap">
+                                      {{ getSkillRollSummary(entry[0], skill) }}
+                                    </span>
+                                    <div class="flex gap-1.5">
                                     @for (level of [0,1,2,3]; track level) {
                                       <input
                                         type="checkbox"
                                         class="circle-checkbox level-{{level}}"
                                         [checked]="getSkillLevel(entry[0], skill) >= level"
+                                        [title]="getSkillLevelLabel(level)"
                                         (click)="onCircleClick($event, entry[0], skill, level)">
                                     }
+                                    </div>
                                   </div>
                                 </div>
                               }
@@ -436,7 +442,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     for (const group of Object.keys(ATTRIBUTE_GROUP_SKILLS) as AttributeGroupCode[]) {
       result[group] = { value: parsed[group]?.value ?? null, skills: {} };
       for (const skill of ATTRIBUTE_GROUP_SKILLS[group]) {
-        result[group].skills[skill] = parsed[group]?.skills?.[skill] ?? -1;
+        result[group].skills[skill] = this.normalizeSkillLevel(parsed[group]?.skills?.[skill]);
       }
     }
     this.attributesData = result;
@@ -450,14 +456,43 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   getSkillLevel(group: string, skill: string): number {
-    return this.attributesData[group]?.skills[skill] ?? -1;
+    return this.normalizeSkillLevel(this.attributesData[group]?.skills[skill]);
   }
 
   onCircleClick(event: Event, group: string, skill: string, level: number) {
     event.preventDefault();
     const current = this.getSkillLevel(group, skill);
-    this.attributesData[group].skills[skill] = current === level ? -1 : level;
+    this.attributesData[group].skills[skill] = current === level ? 0 : this.normalizeSkillLevel(level);
     this.onAttributesChange();
+  }
+
+  getSkillLevelLabel(level: number): string {
+    return ['Sem habilidade', 'Treinado', 'Intermediario', 'Mestre'][this.normalizeSkillLevel(level)];
+  }
+
+  getSkillRollSummary(group: string, skill: string): string {
+    const level = this.getSkillLevel(group, skill);
+    const attributeValue = Number(this.attributesData[group]?.value ?? 0);
+    const diceCount = level >= 2 ? level : 1;
+    const flatBonus = level >= 1 ? 1 : 0;
+    const modifiers: string[] = [];
+
+    if (flatBonus > 0) {
+      modifiers.push('+ 1');
+    }
+
+    if (attributeValue !== 0) {
+      modifiers.push(attributeValue > 0 ? `+ ${attributeValue}` : `- ${Math.abs(attributeValue)}`);
+    }
+
+    return `${diceCount}d10${modifiers.length ? ' ' + modifiers.join(' ') : ''}`;
+  }
+
+  private normalizeSkillLevel(value: number | null | undefined): number {
+    if (value == null) return 0;
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return 0;
+    return Math.min(3, Math.max(0, Math.trunc(numericValue)));
   }
 
   parseLifepoints() {
