@@ -21,6 +21,7 @@ export class CharacterService {
       {"table": "Image", "firstOnly": false},
       {"table": "World", "firstOnly":true, "isParent": true},
       {"table": "Species", "firstOnly":true, "isParent": true},
+      {"table": "IRPWVocation", "firstOnly":true, "isParent": true},
       {"table": "Location", "firstOnly":true, "isParent": true}
     ], existsRelation);
   }
@@ -31,8 +32,26 @@ export class CharacterService {
       {"table": "Image", "firstOnly": false},
       {"table": "World", "firstOnly":true, "isParent": true},
       {"table": "Species", "firstOnly":true, "isParent": true},
+      {"table": "IRPWVocation", "firstOnly":true, "isParent": true},
       {"table": "Location", "firstOnly":true, "isParent": true}
     ]);
+  }
+
+  saveCharacterVocation(characterId: string, vocationId: string | null): void {
+    this.crud.deleteWhen('Relationship', {
+      parentTable: 'IRPWVocation',
+      entityTable: 'Character',
+      entityId: characterId,
+    });
+
+    if (vocationId) {
+      this.crud.create('Relationship', {
+        parentTable: 'IRPWVocation',
+        parentId: vocationId,
+        entityTable: 'Character',
+        entityId: characterId,
+      });
+    }
   }
 
   saveCharacter(character: any, worldId: string | null, specieId: string | null) : Character {

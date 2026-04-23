@@ -1,4 +1,5 @@
 import { Image } from "./image.model";
+import { IrpwVocation } from "./irpw-vocation.model";
 import { Specie } from "./specie.model";
 import { World } from "./world.model";
 
@@ -19,6 +20,7 @@ export class Character{
 
   ParentWorld?:World | null;
   ParentSpecies?:Specie | null;
+  ParentIRPWVocation?: IrpwVocation | null;
   Images?: Image[];
 
   constructor(

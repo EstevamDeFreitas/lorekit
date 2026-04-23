@@ -147,6 +147,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/ironpaw/irpw-content-manager/irpw-content-manager.component')
             .then(m => m.IrpwContentManagerComponent),
+      },
+      {
+        path: 'vocations',
+        loadComponent: () =>
+          import('./pages/ironpaw/irpw-vocations/irpw-vocations.component')
+            .then(m => m.IrpwVocationsComponent),
       }
     ]
   }

@@ -14,6 +14,8 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
 import { ATTRIBUTE_GROUP_SKILLS, ATTRIBUTE_GROUP_LABEL, SKILL_LABEL, AttributeGroupCode, SkillCode } from '../../../models/irpw-attributes-skills.model';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { getImageByUsageKey } from '../../../models/image.model';
+import { IrpwVocation } from '../../../models/irpw-vocation.model';
+import { IrpwVocationService } from '../../../services/irpw-vocation.service';
 
 @Component({
   selector: 'irpw-character-sheet',
@@ -94,7 +96,19 @@ import { getImageByUsageKey } from '../../../models/image.model';
                       <i class="fa-solid fa-user text-2xl"></i>
                     </div>
                   }
-                  <p class="text-sm mb-1">{{ selectedCharacter.name }}</p>
+                  <div class="flex-1 flex flex-col gap-2">
+                    <p class="text-sm mb-1">{{ selectedCharacter.name }}</p>
+                    <app-combo-box
+                      class="w-full"
+                      label="Vocação"
+                      [items]="availableVocations"
+                      compareProp="id"
+                      displayProp="name"
+                      [clearable]="true"
+                      [(comboValue)]="selectedVocationId"
+                      (comboValueChange)="onVocationSelect()">
+                    </app-combo-box>
+                  </div>
                 </div>
 
               </div>
@@ -194,7 +208,7 @@ import { getImageByUsageKey } from '../../../models/image.model';
                 </div>
                 <div class="flex flex-row gap-6">
                   <div>
-                    <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Defesa</h2>
+                    <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Resistência</h2>
                     <div class="flex items-center gap-2">
                       <div class="flex flex-col items-center">
                         <span class="text-[10px] text-zinc-500 mb-0.5">Atual</span>
@@ -304,16 +318,19 @@ import { getImageByUsageKey } from '../../../models/image.model';
 })
 export class IrpwCharacterSheetComponent implements OnInit {
   private characterService = inject(CharacterService);
+  private vocationService = inject(IrpwVocationService);
   private worldService = inject(WorldService);
   private worldStateService = inject(WorldStateService);
   private entityChangeService = inject(EntityChangeService);
   private sheetService = inject(IrpwCharacterSheetService);
 
   availableWorlds: World[] = [];
+  availableVocations: IrpwVocation[] = [];
   characters: Character[] = [];
   filteredCharacters: Character[] = [];
 
   selectedWorldId = '';
+  selectedVocationId = '';
   searchTerm = '';
   showSidebar = true;
 
@@ -358,13 +375,21 @@ export class IrpwCharacterSheetComponent implements OnInit {
     });
 
     this.entityChangeService.changes$.subscribe(event => {
-      if (event.table === 'Character') {
+      if (event.table === 'Character' || event.table === 'IRPWVocation' || event.table === 'Relationship') {
         this.loadCharacters();
+        this.loadVocations();
       }
     });
 
     this.availableWorlds = this.worldService.getWorlds();
+    this.loadVocations();
     this.loadCharacters();
+  }
+
+  loadVocations() {
+    this.availableVocations = this.vocationService
+      .getVocations()
+      .sort((left, right) => (left.name || 'Vocação sem nome').localeCompare(right.name || 'Vocação sem nome'));
   }
 
   loadCharacters() {
@@ -376,6 +401,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
     if (this.selectedCharacterId && !this.characters.some(c => c.id === this.selectedCharacterId)) {
       this.selectedCharacterId = '';
+      this.selectedVocationId = '';
       this.selectedCharacter = null;
       this.currentSheet = null;
     }
@@ -401,6 +427,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
     this.selectedCharacterId = characterId;
     this.selectedCharacter = this.characters.find(c => c.id === characterId) ?? null;
+    this.selectedVocationId = this.selectedCharacter?.ParentIRPWVocation?.id ?? '';
     this.currentSheet = this.sheetService.getSheet(characterId);
 
     if (!this.currentSheet) {
@@ -413,6 +440,34 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.parseLifepoints();
     this.parseDefensepoints();
     this.parseResources();
+  }
+
+  onVocationSelect() {
+    if (!this.selectedCharacterId || !this.selectedCharacter) return;
+
+    const normalizedVocationId = this.selectedVocationId || null;
+    this.characterService.saveCharacterVocation(this.selectedCharacterId, normalizedVocationId);
+
+    const parentVocation = normalizedVocationId
+      ? this.availableVocations.find(vocation => vocation.id === normalizedVocationId) ?? null
+      : null;
+
+    this.selectedCharacter = {
+      ...this.selectedCharacter,
+      ParentIRPWVocation: parentVocation,
+    };
+
+    this.characters = this.characters.map(character =>
+      character.id === this.selectedCharacterId
+        ? { ...character, ParentIRPWVocation: parentVocation }
+        : character
+    );
+
+    this.filteredCharacters = this.filteredCharacters.map(character =>
+      character.id === this.selectedCharacterId
+        ? { ...character, ParentIRPWVocation: parentVocation }
+        : character
+    );
   }
 
   parsePerceptions() {
