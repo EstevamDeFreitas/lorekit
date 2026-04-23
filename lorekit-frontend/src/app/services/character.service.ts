@@ -37,6 +37,23 @@ export class CharacterService {
     ]);
   }
 
+  saveCharacterSpecie(characterId: string, specieId: string | null): void {
+    this.crud.deleteWhen('Relationship', {
+      parentTable: 'Species',
+      entityTable: 'Character',
+      entityId: characterId,
+    });
+
+    if (specieId) {
+      this.crud.create('Relationship', {
+        parentTable: 'Species',
+        parentId: specieId,
+        entityTable: 'Character',
+        entityId: characterId,
+      });
+    }
+  }
+
   saveCharacterVocation(characterId: string, vocationId: string | null): void {
     this.crud.deleteWhen('Relationship', {
       parentTable: 'IRPWVocation',

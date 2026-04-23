@@ -15,8 +15,11 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
 import { ATTRIBUTE_GROUP_SKILLS, ATTRIBUTE_GROUP_LABEL, SKILL_LABEL, AttributeGroupCode, SkillCode } from '../../../models/irpw-attributes-skills.model';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { getImageByUsageKey } from '../../../models/image.model';
+import { Specie } from '../../../models/specie.model';
 import { IrpwVocation } from '../../../models/irpw-vocation.model';
+import { IrpwSpecieService } from '../../../services/irpw-specie.service';
 import { IrpwVocationService } from '../../../services/irpw-vocation.service';
+import { SpecieService } from '../../../services/specie.service';
 
 @Component({
   selector: 'irpw-character-sheet',
@@ -104,6 +107,16 @@ import { IrpwVocationService } from '../../../services/irpw-vocation.service';
                       (click)="openCharacterEditor()">
                       {{ selectedCharacter.name }}
                     </button>
+                    <app-combo-box
+                      class="w-full"
+                      label="Espécie"
+                      [items]="availableSpecies"
+                      compareProp="id"
+                      displayProp="name"
+                      [clearable]="true"
+                      [(comboValue)]="selectedSpecieId"
+                      (comboValueChange)="onSpecieSelect()">
+                    </app-combo-box>
                     <app-combo-box
                       class="w-full"
                       label="Vocação"
@@ -325,6 +338,8 @@ import { IrpwVocationService } from '../../../services/irpw-vocation.service';
 export class IrpwCharacterSheetComponent implements OnInit {
   private dialog = inject(Dialog);
   private characterService = inject(CharacterService);
+  private specieService = inject(SpecieService);
+  private irpwSpecieService = inject(IrpwSpecieService);
   private vocationService = inject(IrpwVocationService);
   private worldService = inject(WorldService);
   private worldStateService = inject(WorldStateService);
@@ -332,11 +347,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private sheetService = inject(IrpwCharacterSheetService);
 
   availableWorlds: World[] = [];
+  availableSpecies: Specie[] = [];
   availableVocations: IrpwVocation[] = [];
   characters: Character[] = [];
   filteredCharacters: Character[] = [];
 
   selectedWorldId = '';
+  selectedSpecieId = '';
   selectedVocationId = '';
   searchTerm = '';
   showSidebar = true;
@@ -382,15 +399,24 @@ export class IrpwCharacterSheetComponent implements OnInit {
     });
 
     this.entityChangeService.changes$.subscribe(event => {
-      if (event.table === 'Character' || event.table === 'IRPWVocation' || event.table === 'Relationship') {
+      if (event.table === 'Character' || event.table === 'Species' || event.table === 'IRPWSpecie' || event.table === 'IRPWVocation' || event.table === 'Relationship') {
         this.loadCharacters();
+        this.loadSpecies();
         this.loadVocations();
       }
     });
 
     this.availableWorlds = this.worldService.getWorlds();
+    this.loadSpecies();
     this.loadVocations();
     this.loadCharacters();
+  }
+
+  loadSpecies() {
+    this.availableSpecies = this.specieService
+      .getSpecies(null, this.selectedWorldId || null)
+      .filter(specie => !!this.irpwSpecieService.getConfig(specie.id))
+      .sort((left, right) => (left.name || 'Espécie sem nome').localeCompare(right.name || 'Espécie sem nome'));
   }
 
   loadVocations() {
@@ -408,16 +434,19 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
     if (this.selectedCharacterId && !this.characters.some(c => c.id === this.selectedCharacterId)) {
       this.selectedCharacterId = '';
+      this.selectedSpecieId = '';
       this.selectedVocationId = '';
       this.selectedCharacter = null;
       this.currentSheet = null;
     } else if (this.selectedCharacterId) {
       this.selectedCharacter = this.characters.find(c => c.id === this.selectedCharacterId) ?? this.selectedCharacter;
+      this.selectedSpecieId = this.selectedCharacter?.ParentSpecies?.id ?? '';
       this.selectedVocationId = this.selectedCharacter?.ParentIRPWVocation?.id ?? '';
     }
   }
 
   onWorldSelect() {
+    this.loadSpecies();
     this.loadCharacters();
   }
 
@@ -437,6 +466,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
     this.selectedCharacterId = characterId;
     this.selectedCharacter = this.characters.find(c => c.id === characterId) ?? null;
+    this.selectedSpecieId = this.selectedCharacter?.ParentSpecies?.id ?? '';
     this.selectedVocationId = this.selectedCharacter?.ParentIRPWVocation?.id ?? '';
     this.currentSheet = this.sheetService.getSheet(characterId);
 
@@ -450,6 +480,34 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.parseLifepoints();
     this.parseDefensepoints();
     this.parseResources();
+  }
+
+  onSpecieSelect() {
+    if (!this.selectedCharacterId || !this.selectedCharacter) return;
+
+    const normalizedSpecieId = this.selectedSpecieId || null;
+    this.characterService.saveCharacterSpecie(this.selectedCharacterId, normalizedSpecieId);
+
+    const parentSpecie = normalizedSpecieId
+      ? this.availableSpecies.find(specie => specie.id === normalizedSpecieId) ?? null
+      : null;
+
+    this.selectedCharacter = {
+      ...this.selectedCharacter,
+      ParentSpecies: parentSpecie,
+    };
+
+    this.characters = this.characters.map(character =>
+      character.id === this.selectedCharacterId
+        ? { ...character, ParentSpecies: parentSpecie }
+        : character
+    );
+
+    this.filteredCharacters = this.filteredCharacters.map(character =>
+      character.id === this.selectedCharacterId
+        ? { ...character, ParentSpecies: parentSpecie }
+        : character
+    );
   }
 
   onVocationSelect() {

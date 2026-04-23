@@ -1,4 +1,4 @@
-import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { Component, computed, inject, input, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorldService } from '../../../services/world.service';
@@ -57,6 +57,7 @@ import { EntityChangeService } from '../../../services/entity-change.service';
             [parentLabel]="specie.ParentWorld ? ('Mundo: ' + specie.ParentWorld.name) : null"
             [backRoute]="'/app/specie/edit/' + specie.id">
           </app-ui-field-config-button>
+          <app-icon-button buttonType="white" icon="fa-solid fa-shield-cat" [size]="'xl'" title="Configurar IRPW" (click)="openIrpwSpecieConfig()"></app-icon-button>
           <app-personalization-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'" (onClose)="getSpecie()"></app-personalization-button>
           <app-safe-delete-button [entityName]="specie.name" [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-safe-delete-button>
         </div>
@@ -106,6 +107,7 @@ export class SpecieEditComponent implements OnInit {
   dialogref = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
 
+  private dialog = inject(Dialog);
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
   private worldService = inject(WorldService);
@@ -214,6 +216,16 @@ export class SpecieEditComponent implements OnInit {
 
 
     this.saveSpecie();
+  }
+
+  async openIrpwSpecieConfig() {
+    const { IrpwSpecieConfigComponent } = await import('../../ironpaw/irpw-specie-config/irpw-specie-config.component');
+    this.dialog.open(IrpwSpecieConfigComponent, {
+      data: { id: this.specie.id },
+      panelClass: 'screen-dialog',
+      autoFocus: false,
+      restoreFocus: false,
+    });
   }
 
 }
