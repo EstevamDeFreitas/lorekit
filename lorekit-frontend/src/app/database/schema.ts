@@ -280,6 +280,7 @@ export const schema: TableDef[] = [
       { name: "stress", def: `"stress" TEXT` },
       { name: "mana", def: `"mana" TEXT` },
       { name: "vigor", def: `"vigor" TEXT` },
+      { name: "subspecialization", def: `"subspecialization" TEXT` },
       { name: "inventory", def: `"inventory" TEXT` },
       { name: "habilities", def: `"habilities" TEXT` },
       { name: "marks", def: `"marks" TEXT` },

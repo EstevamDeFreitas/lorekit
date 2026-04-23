@@ -16,10 +16,11 @@ import { ATTRIBUTE_GROUP_SKILLS, ATTRIBUTE_GROUP_LABEL, SKILL_LABEL, AttributeGr
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { getImageByUsageKey } from '../../../models/image.model';
 import { Specie } from '../../../models/specie.model';
-import { IrpwVocation } from '../../../models/irpw-vocation.model';
+import { IrpwVocation, IrpwVocationAttributes, IrpwVocationHability } from '../../../models/irpw-vocation.model';
 import { IrpwSpecieService } from '../../../services/irpw-specie.service';
 import { IrpwVocationService } from '../../../services/irpw-vocation.service';
 import { SpecieService } from '../../../services/specie.service';
+import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
 
 type RollBonusSourceType = 'attribute' | 'perception';
 type RollFormulaMode = 'auto' | 'manual';
@@ -52,9 +53,18 @@ interface RollResult {
   status: RollStatus;
 }
 
+interface IrpwCharacterMark {
+  name?: string | null;
+  description: string;
+  narrativeType?: string | null;
+  weaknesses: IrpwVocationHability[];
+  habilities: IrpwVocationHability[];
+  attributes: IrpwVocationAttributes;
+}
+
 @Component({
   selector: 'irpw-character-sheet',
-  imports: [CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent],
+  imports: [CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent],
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4 relative">
@@ -311,7 +321,7 @@ interface RollResult {
                         </div>
                       </div>
                     </div>
-                    <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3 flex-1 overflow-y-auto">
+                    <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3  overflow-y-auto mb-2">
                       <h1 class="text-center mb-3">Atributos</h1>
                       <div class="flex flex-col gap-4">
                         @for (entry of attributeGroupEntries; track entry[0]) {
@@ -349,9 +359,294 @@ interface RollResult {
                         }
                       </div>
                     </div>
+                    <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3">
+                      <h1 class="text-center mb-3">Subespecializações</h1>
+                      <div class="flex flex-col gap-2">
+                        @for (subspecialization of subspecializationsData; track $index; let subspecializationIndex = $index) {
+                          <input
+                            type="text"
+                            class="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+                            [ngModel]="subspecialization"
+                            (ngModelChange)="onSubspecializationChange(subspecializationIndex, $event)"
+                            [placeholder]="subspecializationIndex === subspecializationsData.length - 1 ? 'Adicionar subespecialização...' : 'Subespecialização'">
+                        }
+                      </div>
+                    </div>
                   </div>
                   <div class="col-span-2 p-3">
+                    <div class="flex-4 flex flex-col">
+                      <div class="flex flex-row gap-4 ms-1">
+                        <app-nav-button buttonType="pink" [label]="'Geral'" size="sm" [active]="currentTab === 'general'" (click)="currentTab = 'general'"></app-nav-button>
+                        <app-nav-button buttonType="pink" [label]="'Marcos'" size="sm" [active]="currentTab === 'marks'" (click)="currentTab = 'marks'"></app-nav-button>
+                        <app-nav-button buttonType="pink" [label]="'Inventário'" size="sm" [active]="currentTab === 'inventory'" (click)="currentTab = 'inventory'"></app-nav-button>
+                        <app-nav-button buttonType="pink" [label]="'Habilidades'" size="sm" [active]="currentTab === 'skills'" (click)="currentTab = 'skills'"></app-nav-button>
+                      </div>
+                      <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
+                          @switch (currentTab) {
+                            @case ('general') {
+                              <p>Geral</p>
+                            }
+                            @case ('marks') {
+                              <div class="flex items-center justify-between gap-3 mb-4">
+                                <div>
+                                  <h2 class="text-sm text-zinc-100">Marcos narrativos</h2>
+                                  <p class="text-xs text-zinc-500">Cada marco usa JSON próprio com tipo, habilidades e atributos/perícias.</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  class="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-500 hover:text-white"
+                                  (click)="addMark()">
+                                  Adicionar marco
+                                </button>
+                              </div>
 
+                              <div class="flex flex-col gap-4">
+                                @for (mark of marksData; track $index; let markIndex = $index) {
+                                  <div class="rounded-md border border-zinc-800 bg-zinc-925/80 p-4">
+                                    <div class="flex items-start justify-between gap-3">
+                                      <button
+                                        type="button"
+                                        class="flex-1 text-left"
+                                        (click)="toggleMarkExpanded(markIndex)">
+                                        <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                          <h3 class="text-sm text-zinc-100">{{ mark.name || ('Marco ' + (markIndex + 1)) }}</h3>
+                                          <span class="text-[10px] uppercase tracking-wide text-zinc-500">{{ mark.narrativeType || 'Sem tipo' }}</span>
+                                        </div>
+                                        <p class="text-xs text-zinc-400 line-clamp-2">{{ mark.description || 'Sem descrição.' }}</p>
+                                        <div class="mt-3 flex flex-wrap gap-2">
+                                          @for (skillSummary of getMarkActiveSkillsSummary(mark); track skillSummary) {
+                                            <span class="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-[11px] text-zinc-300">
+                                              {{ skillSummary }}
+                                            </span>
+                                          }
+
+                                          @if (getMarkActiveSkillsSummary(mark).length === 0) {
+                                            <span class="rounded-full border border-dashed border-zinc-700 px-2 py-1 text-[11px] text-zinc-500">
+                                              Sem perícias treinadas
+                                            </span>
+                                          }
+                                        </div>
+                                      </button>
+
+                                      <div class="flex items-center gap-2 shrink-0">
+                                        <button
+                                          type="button"
+                                          class="rounded-md border border-zinc-700 bg-zinc-900/70 px-2.5 py-1 text-xs text-zinc-200 transition hover:border-zinc-500 hover:text-white"
+                                          (click)="toggleMarkExpanded(markIndex)">
+                                          {{ isMarkExpanded(markIndex) ? 'Recolher' : 'Expandir' }}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          class="rounded-md border border-red-900/70 bg-red-950/40 px-2.5 py-1 text-xs text-red-200 transition hover:bg-red-950/70"
+                                          (click)="removeMark(markIndex)">
+                                          Remover
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    @if (isMarkExpanded(markIndex)) {
+                                      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4 border-t border-zinc-800 pt-4">
+                                        <div class="xl:col-span-2 flex flex-col gap-4">
+                                          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <label class="flex flex-col gap-1 text-xs text-zinc-400">
+                                              Nome
+                                              <input
+                                                type="text"
+                                                class="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+                                                [(ngModel)]="mark.name"
+                                                (ngModelChange)="onMarksChange()"
+                                                placeholder="Ex.: Juramento da Vigília">
+                                            </label>
+
+                                            <label class="flex flex-col gap-1 text-xs text-zinc-400">
+                                              Tipo de marco narrativo
+                                              <input
+                                                type="text"
+                                                class="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+                                                [(ngModel)]="mark.narrativeType"
+                                                (ngModelChange)="onMarksChange()"
+                                                placeholder="Ex.: Revelação, Trauma, Ascensão">
+                                            </label>
+
+                                            <label class="md:col-span-2 flex flex-col gap-1 text-xs text-zinc-400">
+                                              Descrição
+                                              <textarea
+                                                class="min-h-28 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+                                                [(ngModel)]="mark.description"
+                                                (ngModelChange)="onMarksChange()"
+                                                placeholder="Descreva o impacto narrativo deste marco."></textarea>
+                                            </label>
+
+                                          </div>
+
+                                          <div class="rounded-md border border-zinc-800 bg-zinc-950/40 p-3">
+                                            <div class="flex items-center justify-between gap-3 mb-3">
+                                              <h4 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Habilidades</h4>
+                                              <button
+                                                type="button"
+                                                class="rounded-md border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 transition hover:border-zinc-500 hover:text-white"
+                                                (click)="addMarkHability(markIndex)">
+                                                Adicionar habilidade
+                                              </button>
+                                            </div>
+
+                                            <div class="flex flex-col gap-3">
+                                              @for (hability of mark.habilities; track $index; let habilityIndex = $index) {
+                                                <div class="rounded-md border border-zinc-800 bg-zinc-900/80 p-3">
+                                                  <div class="flex items-center justify-between gap-2 mb-3">
+                                                    <span class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Habilidade {{ habilityIndex + 1 }}</span>
+                                                    <button
+                                                      type="button"
+                                                      class="rounded-md border border-red-900/70 bg-red-950/40 px-2 py-1 text-[11px] text-red-200 transition hover:bg-red-950/70"
+                                                      (click)="removeMarkHability(markIndex, habilityIndex)">
+                                                      Remover
+                                                    </button>
+                                                  </div>
+
+                                                  <div class="grid grid-cols-1 gap-3">
+                                                    <label class="flex flex-col gap-1 text-xs text-zinc-400">
+                                                      Nome
+                                                      <input
+                                                        type="text"
+                                                        class="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+                                                        [(ngModel)]="hability.name"
+                                                        (ngModelChange)="onMarksChange()"
+                                                        placeholder="Opcional">
+                                                    </label>
+
+                                                    <label class="flex flex-col gap-1 text-xs text-zinc-400">
+                                                      Descrição
+                                                      <textarea
+                                                        class="min-h-24 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+                                                        [(ngModel)]="hability.description"
+                                                        (ngModelChange)="onMarksChange()"
+                                                        placeholder="Efeito da habilidade."></textarea>
+                                                    </label>
+                                                  </div>
+                                                </div>
+                                              }
+
+                                              @if (mark.habilities.length === 0) {
+                                                <div class="rounded-md border border-dashed border-zinc-700 px-4 py-4 text-center text-xs text-zinc-500">
+                                                  Nenhuma habilidade cadastrada para este marco.
+                                                </div>
+                                              }
+                                            </div>
+                                          </div>
+
+                                          <div class="rounded-md border border-zinc-800 bg-zinc-950/40 p-3">
+                                            <div class="flex items-center justify-between gap-3 mb-3">
+                                              <h4 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Fraquezas</h4>
+                                              <button
+                                                type="button"
+                                                class="rounded-md border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 transition hover:border-zinc-500 hover:text-white"
+                                                (click)="addMarkWeakness(markIndex)">
+                                                Adicionar fraqueza
+                                              </button>
+                                            </div>
+
+                                            <div class="flex flex-col gap-3">
+                                              @for (weakness of mark.weaknesses; track $index; let weaknessIndex = $index) {
+                                                <div class="rounded-md border border-zinc-800 bg-zinc-900/80 p-3">
+                                                  <div class="flex items-center justify-between gap-2 mb-3">
+                                                    <span class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Fraqueza {{ weaknessIndex + 1 }}</span>
+                                                    <button
+                                                      type="button"
+                                                      class="rounded-md border border-red-900/70 bg-red-950/40 px-2 py-1 text-[11px] text-red-200 transition hover:bg-red-950/70"
+                                                      (click)="removeMarkWeakness(markIndex, weaknessIndex)">
+                                                      Remover
+                                                    </button>
+                                                  </div>
+
+                                                  <div class="grid grid-cols-1 gap-3">
+                                                    <label class="flex flex-col gap-1 text-xs text-zinc-400">
+                                                      Nome
+                                                      <input
+                                                        type="text"
+                                                        class="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+                                                        [(ngModel)]="weakness.name"
+                                                        (ngModelChange)="onMarksChange()"
+                                                        placeholder="Opcional">
+                                                    </label>
+
+                                                    <label class="flex flex-col gap-1 text-xs text-zinc-400">
+                                                      Descrição
+                                                      <textarea
+                                                        class="min-h-24 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+                                                        [(ngModel)]="weakness.description"
+                                                        (ngModelChange)="onMarksChange()"
+                                                        placeholder="Limitação, custo ou vulnerabilidade."></textarea>
+                                                    </label>
+                                                  </div>
+                                                </div>
+                                              }
+
+                                              @if (mark.weaknesses.length === 0) {
+                                                <div class="rounded-md border border-dashed border-zinc-700 px-4 py-4 text-center text-xs text-zinc-500">
+                                                  Nenhuma fraqueza cadastrada para este marco.
+                                                </div>
+                                              }
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div class="rounded-md border border-zinc-800 bg-zinc-950/30 p-3 overflow-y-auto">
+                                          <h4 class="text-center mb-3 text-sm text-zinc-100">Atributos e perícias</h4>
+                                          <div class="flex flex-col gap-4">
+                                            @for (entry of attributeGroupEntries; track entry[0]) {
+                                              <div>
+                                                <div class="flex items-center justify-between mb-2">
+                                                  <span class="text-xs font-semibold text-zinc-200 uppercase tracking-wide">{{ attributeGroupLabel[entry[0]] }}</span>
+                                                  <input
+                                                    type="number"
+                                                    class="w-12 text-center bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5 text-xs text-white outline-none focus:border-zinc-500"
+                                                    [(ngModel)]="mark.attributes[entry[0]].value"
+                                                    (ngModelChange)="onMarksChange()">
+                                                </div>
+                                                <div class="flex flex-col gap-1.5 pl-1">
+                                                  @for (skill of entry[1]; track skill) {
+                                                    <div class="flex items-center justify-between gap-3">
+                                                      <span class="text-xs text-zinc-400">{{ skillLabel[skill] }}</span>
+                                                      <div class="flex gap-1.5">
+                                                        @for (level of [0,1,2,3]; track level) {
+                                                          <input
+                                                            type="checkbox"
+                                                            class="circle-checkbox level-{{level}}"
+                                                            [checked]="getMarkSkillLevel(mark, entry[0], skill) >= level"
+                                                            [title]="getSkillLevelLabel(level)"
+                                                            (click)="onMarkCircleClick($event, mark, entry[0], skill, level)">
+                                                        }
+                                                      </div>
+                                                    </div>
+                                                  }
+                                                </div>
+                                              </div>
+                                            }
+                                          </div>
+                                        </div>
+                                      </div>
+                                    }
+                                  </div>
+                                }
+
+                                @if (marksData.length === 0) {
+                                  <div class="rounded-md border border-dashed border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
+                                    Nenhum marco cadastrado para este personagem.
+                                  </div>
+                                }
+                              </div>
+                            }
+                            @case ('inventory') {
+                              <p>Inventário</p>
+                            }
+                            @case ('skills') {
+                              <p>Habilidades</p>
+                            }
+                          }
+
+                      </div>
+
+                    </div>
                   </div>
             </div>
           } @else {
@@ -571,6 +866,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
   searchTerm = '';
   showSidebar = true;
 
+  currentTab = 'general';
+
   selectedCharacterId = '';
   selectedCharacter: Character | null = null;
   currentSheet: IrpwCharacterSheet | null = null;
@@ -583,6 +880,9 @@ export class IrpwCharacterSheetComponent implements OnInit {
   perceptionsData: { smell: number | null; vision: number | null; hearing: number | null } = { smell: null, vision: null, hearing: null };
 
   attributesData: Record<string, { value: number | null; skills: Record<string, number> }> = {};
+  subspecializationsData: string[] = [''];
+  marksData: IrpwCharacterMark[] = [];
+  expandedMarkIndexes = new Set<number>();
   readonly attributeGroupEntries = Object.entries(ATTRIBUTE_GROUP_SKILLS) as [AttributeGroupCode, SkillCode[]][];
   readonly attributeGroupLabel = ATTRIBUTE_GROUP_LABEL;
   readonly skillLabel = SKILL_LABEL;
@@ -683,6 +983,9 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.selectedVocationId = '';
       this.selectedCharacter = null;
       this.currentSheet = null;
+      this.subspecializationsData = [''];
+      this.marksData = [];
+      this.expandedMarkIndexes.clear();
     } else if (this.selectedCharacterId) {
       this.selectedCharacter = this.characters.find(c => c.id === this.selectedCharacterId) ?? this.selectedCharacter;
       this.selectedSpecieId = this.selectedCharacter?.ParentSpecies?.id ?? '';
@@ -722,9 +1025,11 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
     this.parsePerceptions();
     this.parseAttributes();
+    this.parseSubspecializations();
     this.parseLifepoints();
     this.parseDefensepoints();
     this.parseResources();
+    this.parseMarks();
     this.syncRollFormula();
   }
 
@@ -842,6 +1147,32 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.scheduleAutoSave();
     }
     this.updateRollFormulaIfAuto();
+  }
+
+  parseSubspecializations() {
+    if (!this.currentSheet?.subspecialization) {
+      this.subspecializationsData = [''];
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(this.currentSheet.subspecialization);
+      this.subspecializationsData = this.normalizeSubspecializations(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      this.subspecializationsData = [''];
+    }
+  }
+
+  onSubspecializationChange(index: number, value: string) {
+    const nextValues = [...this.subspecializationsData];
+    nextValues[index] = value;
+    this.subspecializationsData = this.normalizeSubspecializations(nextValues);
+
+    if (this.currentSheet) {
+      const filledValues = this.subspecializationsData.filter(item => item.trim().length > 0);
+      this.currentSheet.subspecialization = filledValues.length ? JSON.stringify(filledValues) : null;
+      this.scheduleAutoSave();
+    }
   }
 
   getSkillLevel(group: string, skill: string): number {
@@ -976,6 +1307,104 @@ export class IrpwCharacterSheetComponent implements OnInit {
     return clampedValue === 0 ? 0 : clampedValue;
   }
 
+  private createEmptyMark(): IrpwCharacterMark {
+    return {
+      name: null,
+      description: '',
+      narrativeType: null,
+      weaknesses: [],
+      habilities: [],
+      attributes: this.createDefaultMarkAttributes(),
+    };
+  }
+
+  private createEmptyHability(): IrpwVocationHability {
+    return { name: null, description: '' };
+  }
+
+  private createDefaultMarkAttributes(): IrpwVocationAttributes {
+    const result = {} as IrpwVocationAttributes;
+
+    for (const group of Object.keys(ATTRIBUTE_GROUP_SKILLS) as AttributeGroupCode[]) {
+      result[group] = { value: null, skills: {} };
+      for (const skill of ATTRIBUTE_GROUP_SKILLS[group]) {
+        result[group].skills[skill] = 0;
+      }
+    }
+
+    return result;
+  }
+
+  private normalizeMark(value: unknown): IrpwCharacterMark {
+    if (!value || typeof value !== 'object') {
+      return this.createEmptyMark();
+    }
+
+    const source = value as Partial<IrpwCharacterMark>;
+    const rawWeaknesses = (value as { weaknesses?: unknown }).weaknesses;
+    const normalizedWeaknesses = Array.isArray(rawWeaknesses)
+      ? rawWeaknesses.map(weakness => this.normalizeHability(weakness))
+      : (typeof rawWeaknesses === 'string' && rawWeaknesses.trim())
+        ? [{ name: null, description: rawWeaknesses.trim() }]
+        : [];
+
+    return {
+      name: this.normalizeOptionalText(source.name),
+      description: typeof source.description === 'string' ? source.description : '',
+      narrativeType: this.normalizeOptionalText(source.narrativeType),
+      weaknesses: normalizedWeaknesses,
+      habilities: Array.isArray(source.habilities)
+        ? source.habilities.map(hability => this.normalizeHability(hability))
+        : [],
+      attributes: this.normalizeMarkAttributes(source.attributes),
+    };
+  }
+
+  private normalizeHability(value: unknown): IrpwVocationHability {
+    if (!value || typeof value !== 'object') {
+      return this.createEmptyHability();
+    }
+
+    const source = value as Partial<IrpwVocationHability>;
+    return {
+      name: this.normalizeOptionalText(source.name),
+      description: typeof source.description === 'string' ? source.description : '',
+    };
+  }
+
+  private normalizeMarkAttributes(value: Partial<IrpwVocationAttributes> | undefined): IrpwVocationAttributes {
+    const attributes = this.createDefaultMarkAttributes();
+
+    for (const group of Object.keys(ATTRIBUTE_GROUP_SKILLS) as AttributeGroupCode[]) {
+      attributes[group].value = this.normalizeAttributeValue(value?.[group]?.value);
+      for (const skill of ATTRIBUTE_GROUP_SKILLS[group]) {
+        attributes[group].skills[skill] = this.normalizeSkillLevel(value?.[group]?.skills?.[skill]);
+      }
+    }
+
+    return attributes;
+  }
+
+  private normalizeAttributeValue(value: number | null | undefined): number | null {
+    if (value == null) return null;
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return null;
+    return Math.trunc(numericValue);
+  }
+
+  private normalizeOptionalText(value: string | null | undefined): string | null {
+    const normalizedValue = typeof value === 'string' ? value.trim() : '';
+    return normalizedValue ? normalizedValue : null;
+  }
+
+  private normalizeSubspecializations(values: unknown[]): string[] {
+    const normalizedValues = values
+      .map(value => typeof value === 'string' ? value.trim() : '')
+      .filter(value => value.length > 0);
+
+    return [...normalizedValues, ''];
+  }
+
   parseDefensepoints() {
     try {
       this.defensepointsData = this.currentSheet?.defensepoints
@@ -1011,6 +1440,122 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.currentSheet.vigor = JSON.stringify(this.resourceData['vigor']);
       this.scheduleAutoSave();
     }
+  }
+
+  parseMarks() {
+    if (!this.currentSheet?.marks) {
+      this.marksData = [];
+      this.expandedMarkIndexes.clear();
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(this.currentSheet.marks);
+      this.marksData = Array.isArray(parsed)
+        ? parsed.map(mark => this.normalizeMark(mark))
+        : [];
+    } catch {
+      this.marksData = [];
+    }
+
+    this.expandedMarkIndexes = new Set(this.marksData.map((_, index) => index));
+  }
+
+  onMarksChange() {
+    this.marksData = this.marksData.map(mark => this.normalizeMark(mark));
+
+    if (this.currentSheet) {
+      this.currentSheet.marks = this.marksData.length ? JSON.stringify(this.marksData) : null;
+      this.scheduleAutoSave();
+    }
+  }
+
+  addMark() {
+    this.marksData = [...this.marksData, this.createEmptyMark()];
+    this.expandedMarkIndexes.add(this.marksData.length - 1);
+    this.onMarksChange();
+  }
+
+  removeMark(index: number) {
+    this.marksData = this.marksData.filter((_, currentIndex) => currentIndex !== index);
+    this.expandedMarkIndexes = new Set(
+      [...this.expandedMarkIndexes]
+        .filter(currentIndex => currentIndex !== index)
+        .map(currentIndex => currentIndex > index ? currentIndex - 1 : currentIndex)
+    );
+    this.onMarksChange();
+  }
+
+  isMarkExpanded(index: number): boolean {
+    return this.expandedMarkIndexes.has(index);
+  }
+
+  toggleMarkExpanded(index: number) {
+    if (this.expandedMarkIndexes.has(index)) {
+      this.expandedMarkIndexes.delete(index);
+      return;
+    }
+
+    this.expandedMarkIndexes.add(index);
+  }
+
+  addMarkHability(markIndex: number) {
+    const mark = this.marksData[markIndex];
+    if (!mark) return;
+
+    mark.habilities = [...mark.habilities, this.createEmptyHability()];
+    this.onMarksChange();
+  }
+
+  addMarkWeakness(markIndex: number) {
+    const mark = this.marksData[markIndex];
+    if (!mark) return;
+
+    mark.weaknesses = [...mark.weaknesses, this.createEmptyHability()];
+    this.onMarksChange();
+  }
+
+  removeMarkHability(markIndex: number, habilityIndex: number) {
+    const mark = this.marksData[markIndex];
+    if (!mark) return;
+
+    mark.habilities = mark.habilities.filter((_, currentIndex) => currentIndex !== habilityIndex);
+    this.onMarksChange();
+  }
+
+  removeMarkWeakness(markIndex: number, weaknessIndex: number) {
+    const mark = this.marksData[markIndex];
+    if (!mark) return;
+
+    mark.weaknesses = mark.weaknesses.filter((_, currentIndex) => currentIndex !== weaknessIndex);
+    this.onMarksChange();
+  }
+
+  getMarkSkillLevel(mark: IrpwCharacterMark, group: string, skill: string): number {
+    return this.normalizeSkillLevel(mark.attributes[group as AttributeGroupCode]?.skills[skill]);
+  }
+
+  getMarkActiveSkillsSummary(mark: IrpwCharacterMark): string[] {
+    const summaries: string[] = [];
+
+    for (const [group, skills] of this.attributeGroupEntries) {
+      for (const skill of skills) {
+        const level = this.getMarkSkillLevel(mark, group, skill);
+        if (level > 0) {
+          summaries.push(`${this.skillLabel[skill]} ${level}`);
+        }
+      }
+    }
+
+    return summaries;
+  }
+
+  onMarkCircleClick(event: Event, mark: IrpwCharacterMark, group: string, skill: string, level: number) {
+    event.preventDefault();
+    const attributeGroup = mark.attributes[group as AttributeGroupCode];
+    const currentLevel = this.getMarkSkillLevel(mark, group, skill);
+    attributeGroup.skills[skill] = currentLevel === level ? 0 : this.normalizeSkillLevel(level);
+    this.onMarksChange();
   }
 
   scheduleAutoSave() {

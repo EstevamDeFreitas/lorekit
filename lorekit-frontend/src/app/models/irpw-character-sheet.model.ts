@@ -7,6 +7,7 @@ export class IrpwCharacterSheet {
   stress?: string | null;
   mana?: string | null;
   vigor?: string | null;
+  subspecialization?: string | null;
   inventory?: string | null;
   habilities?: string | null;
   marks?: string | null;
