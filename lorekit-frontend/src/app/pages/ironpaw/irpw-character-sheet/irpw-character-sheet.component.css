@@ -82,3 +82,101 @@
 .life-square-half:hover {
   background-color: var(--color-red-900);
 }
+
+.roll-fab {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background:
+    radial-gradient(circle at top, rgba(251, 191, 36, 0.18), transparent 58%),
+    linear-gradient(135deg, rgba(24, 24, 27, 0.96), rgba(9, 9, 11, 0.98));
+  padding: 0.85rem 1.1rem;
+  color: #fde68a;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.32);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.roll-fab:hover {
+  transform: translateY(-2px);
+  border-color: rgba(251, 191, 36, 0.6);
+  box-shadow: 0 26px 48px rgba(0, 0, 0, 0.38);
+}
+
+.roll-fab.is-open {
+  border-color: rgba(244, 114, 182, 0.45);
+  color: #fbcfe8;
+}
+
+.roll-panel {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 6.25rem;
+  z-index: 39;
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 7.5rem);
+  overflow-y: auto;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(63, 63, 70, 0.9);
+  background:
+    radial-gradient(circle at top right, rgba(251, 191, 36, 0.1), transparent 30%),
+    linear-gradient(180deg, rgba(24, 24, 27, 0.98), rgba(9, 9, 11, 0.98));
+  padding: 1rem;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(14px);
+}
+
+.roll-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+.roll-result-card {
+  border-radius: 1rem;
+  border: 1px solid #27272a;
+  background: rgba(17, 24, 39, 0.55);
+  padding: 0.9rem;
+  color: #e4e4e7;
+}
+
+.roll-result-card.is-success {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: linear-gradient(180deg, rgba(20, 83, 45, 0.32), rgba(10, 10, 10, 0.9));
+  color: #dcfce7;
+}
+
+.roll-result-card.is-near {
+  border-color: rgba(250, 204, 21, 0.45);
+  background: linear-gradient(180deg, rgba(113, 63, 18, 0.3), rgba(10, 10, 10, 0.9));
+  color: #fef3c7;
+}
+
+.roll-result-card.is-fail {
+  border-color: rgba(239, 68, 68, 0.42);
+  background: linear-gradient(180deg, rgba(127, 29, 29, 0.28), rgba(10, 10, 10, 0.9));
+  color: #fecaca;
+}
+
+.roll-result-card.is-neutral {
+  border-color: rgba(82, 82, 91, 0.9);
+}
+
+@media (max-width: 768px) {
+  .roll-fab {
+    right: 1rem;
+    bottom: 1rem;
+  }
+
+  .roll-panel {
+    right: 1rem;
+    bottom: 5.5rem;
+    width: calc(100vw - 2rem);
+    max-height: calc(100vh - 6.5rem);
+  }
+}

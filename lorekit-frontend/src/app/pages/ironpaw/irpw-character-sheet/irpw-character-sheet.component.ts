@@ -21,6 +21,37 @@ import { IrpwSpecieService } from '../../../services/irpw-specie.service';
 import { IrpwVocationService } from '../../../services/irpw-vocation.service';
 import { SpecieService } from '../../../services/specie.service';
 
+type RollBonusSourceType = 'attribute' | 'perception';
+type RollFormulaMode = 'auto' | 'manual';
+type PerceptionKey = 'smell' | 'vision' | 'hearing';
+type RollStatus = 'success' | 'near' | 'fail' | 'neutral';
+
+interface RollOption<TValue extends string> {
+  id: TValue;
+  name: string;
+}
+
+interface RollModifier {
+  key: string;
+  label: string;
+  value: number;
+  category: 'skill' | 'source' | 'manual' | 'condition';
+}
+
+interface RollPreview {
+  attempts: number;
+  modifiers: RollModifier[];
+  totalModifier: number;
+}
+
+interface RollResult {
+  index: number;
+  dieValue: number;
+  modifier: number;
+  total: number;
+  status: RollStatus;
+}
+
 @Component({
   selector: 'irpw-character-sheet',
   imports: [CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent],
@@ -332,6 +363,182 @@ import { SpecieService } from '../../../services/specie.service';
 
       </div>
     </div>
+
+    <button
+      type="button"
+      class="roll-fab"
+      [class.is-open]="isRollPanelOpen"
+      (click)="toggleRollPanel()"
+      [attr.aria-expanded]="isRollPanelOpen"
+      aria-label="Abrir painel de rolagem">
+      <i class="fa-solid" [ngClass]="isRollPanelOpen ? 'fa-xmark' : 'fa-dice-d10'"></i>
+      <span>Rolagens</span>
+    </button>
+
+    @if (isRollPanelOpen) {
+      <section class="roll-panel">
+        <div class="flex items-start justify-between gap-3 mb-4">
+          <div>
+            <p class="text-[11px] uppercase tracking-[0.24em] text-amber-300/70 mb-1">Rolagem tática</p>
+            <h2 class="text-sm font-semibold text-zinc-100">d10 simultâneos</h2>
+          </div>
+          <button
+            type="button"
+            class="text-zinc-500 transition hover:text-zinc-100"
+            (click)="toggleRollPanel()"
+            aria-label="Fechar painel de rolagem">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+          <app-combo-box
+            class="w-full"
+            label="Perícia"
+            [items]="rollSkillOptions"
+            compareProp="id"
+            displayProp="name"
+            [clearable]="true"
+            [(comboValue)]="selectedRollSkill"
+            (comboValueChange)="onRollSkillChange()">
+          </app-combo-box>
+
+          <app-combo-box
+            class="w-full"
+            label="Bônus base"
+            [items]="rollBonusSourceOptions"
+            compareProp="id"
+            displayProp="name"
+            [(comboValue)]="selectedRollBonusSource"
+            (comboValueChange)="onRollBonusSourceChange()">
+          </app-combo-box>
+        </div>
+
+        @if (selectedRollBonusSource === 'perception') {
+          <div class="mb-3">
+            <app-combo-box
+              class="w-full"
+              label="Percepção usada no bônus"
+              [items]="rollPerceptionOptions"
+              compareProp="id"
+              displayProp="name"
+              [clearable]="true"
+              [(comboValue)]="selectedRollPerception"
+              (comboValueChange)="onRollPerceptionChange()">
+            </app-combo-box>
+          </div>
+        }
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <label class="flex flex-col gap-1 text-xs text-zinc-400">
+            Ajuste manual
+            <input
+              type="number"
+              class="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+              [(ngModel)]="rollManualModifier"
+              (ngModelChange)="onRollManualModifierChange()">
+          </label>
+          <label class="flex flex-col gap-1 text-xs text-zinc-400">
+            Valor para passar
+            <input
+              type="number"
+              class="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+              [(ngModel)]="rollTargetValue">
+          </label>
+        </div>
+
+        <div class="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3 mb-3">
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <div>
+              <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Fórmula</h3>
+              <p class="text-[11px] text-zinc-500">Formato: <span class="font-mono">3d10+3</span></p>
+            </div>
+            <button
+              type="button"
+              class="rounded-full border px-2.5 py-1 text-[11px] transition"
+              [ngClass]="rollFormulaMode === 'auto'
+                ? 'border-amber-500/50 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
+                : 'border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100'"
+              (click)="resetRollFormulaToAuto()">
+              {{ rollFormulaMode === 'auto' ? 'Automática ativa' : 'Usar automática' }}
+            </button>
+          </div>
+
+          <input
+            type="text"
+            class="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500 font-mono"
+            [ngModel]="rollFormula"
+            (ngModelChange)="onRollFormulaInputChange($event)"
+            placeholder="1d10+0">
+
+          @if (rollFormulaError) {
+            <p class="mt-2 text-[11px] text-red-300">{{ rollFormulaError }}</p>
+          } @else {
+            <div class="mt-3 flex flex-wrap gap-2">
+              @for (modifier of rollPreview.modifiers; track modifier.key) {
+                <span class="rounded-full border border-zinc-700 bg-zinc-900/80 px-2.5 py-1 text-[11px] text-zinc-300">
+                  {{ modifier.label }}: {{ formatSignedValue(modifier.value) }}
+                </span>
+              }
+
+              @if (rollPreview.modifiers.length === 0) {
+                <span class="rounded-full border border-dashed border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-500">
+                  Sem bônus configurado
+                </span>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="flex items-center justify-between gap-3 mb-3">
+          <div class="text-[11px] text-zinc-500">
+            {{ rollPreview.attempts }} tentativa(s) com modificador total {{ formatSignedValue(rollPreview.totalModifier) }}
+          </div>
+          <button
+            type="button"
+            class="rounded-xl border border-emerald-700 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
+            (click)="rollDice()">
+            Rolar agora
+          </button>
+        </div>
+
+        @if (lastRollFormula) {
+          <div class="mb-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-xs text-zinc-400">
+            Última rolagem: <span class="font-mono text-zinc-200">{{ lastRollFormula }}</span>
+            @if (rollTargetValue != null) {
+              <span class="text-zinc-500"> · alvo {{ rollTargetValue }}</span>
+            }
+          </div>
+        }
+
+        <div class="roll-results">
+          @for (result of rollResults; track result.index) {
+            <article class="roll-result-card" [ngClass]="getRollResultCardClass(result.status)">
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="text-[11px] uppercase tracking-wide opacity-80">Rolagem {{ result.index }}</span>
+                <span class="text-[11px] opacity-70">d10 {{ formatSignedValue(result.modifier) }}</span>
+              </div>
+              <div class="flex items-end justify-between gap-3">
+                <div>
+                  <p class="text-[11px] opacity-75">Dado</p>
+                  <p class="text-xl font-semibold leading-none">{{ result.dieValue }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-[11px] opacity-75">Total</p>
+                  <p class="text-2xl font-bold leading-none">{{ result.total }}</p>
+                </div>
+              </div>
+            </article>
+          }
+
+          @if (rollResults.length === 0) {
+            <div class="rounded-2xl border border-dashed border-zinc-800 px-4 py-6 text-center text-xs text-zinc-500">
+              Configure a rolagem e execute para ver os resultados aqui.
+            </div>
+          }
+        </div>
+      </section>
+    }
   `,
   styleUrl: './irpw-character-sheet.component.css',
 })
@@ -373,6 +580,24 @@ export class IrpwCharacterSheetComponent implements OnInit {
   readonly attributeGroupEntries = Object.entries(ATTRIBUTE_GROUP_SKILLS) as [AttributeGroupCode, SkillCode[]][];
   readonly attributeGroupLabel = ATTRIBUTE_GROUP_LABEL;
   readonly skillLabel = SKILL_LABEL;
+  readonly rollBonusSourceOptions: RollOption<RollBonusSourceType>[] = [
+    { id: 'attribute', name: 'Atributo da perícia' },
+    { id: 'perception', name: 'Percepção específica' },
+  ];
+  readonly rollPerceptionOptions: RollOption<PerceptionKey>[] = [
+    { id: 'smell', name: 'Olfato' },
+    { id: 'vision', name: 'Visão' },
+    { id: 'hearing', name: 'Audição' },
+  ];
+  readonly rollSkillOptions = this.attributeGroupEntries.flatMap(([group, skills]) =>
+    skills.map(skill => ({ id: skill, name: `${this.skillLabel[skill]} · ${this.attributeGroupLabel[group]}` }))
+  );
+  private readonly skillToAttributeGroup = this.attributeGroupEntries.reduce((accumulator, [group, skills]) => {
+    for (const skill of skills) {
+      accumulator[skill] = group;
+    }
+    return accumulator;
+  }, {} as Record<SkillCode, AttributeGroupCode>);
 
   lifepointsData: { maxPoints: number | null; currentPoints: number | null } = { maxPoints: null, currentPoints: null };
   defensepointsData: { currentPoints: number | null } = { currentPoints: null };
@@ -389,6 +614,19 @@ export class IrpwCharacterSheetComponent implements OnInit {
   public getPersonalizationValue = getPersonalizationValue;
   public getTextColorStyle = getTextColorStyle;
   public getImageByUsageKey = getImageByUsageKey;
+
+  isRollPanelOpen = false;
+  selectedRollSkill: SkillCode | null = null;
+  selectedRollBonusSource: RollBonusSourceType = 'attribute';
+  selectedRollPerception: PerceptionKey | null = null;
+  rollManualModifier: number | null = 0;
+  rollTargetValue: number | null = null;
+  rollFormula = '1d10';
+  rollFormulaMode: RollFormulaMode = 'auto';
+  rollFormulaError = '';
+  rollPreview: RollPreview = { attempts: 1, modifiers: [], totalModifier: 0 };
+  rollResults: RollResult[] = [];
+  lastRollFormula = '';
 
   ngOnInit() {
     this.worldStateService.currentWorld$.subscribe(world => {
@@ -410,6 +648,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.loadSpecies();
     this.loadVocations();
     this.loadCharacters();
+    this.syncRollFormula();
   }
 
   loadSpecies() {
@@ -480,6 +719,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.parseLifepoints();
     this.parseDefensepoints();
     this.parseResources();
+    this.syncRollFormula();
   }
 
   onSpecieSelect() {
@@ -571,6 +811,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.currentSheet.perceptions = JSON.stringify(this.perceptionsData);
       this.scheduleAutoSave();
     }
+    this.updateRollFormulaIfAuto();
   }
 
   parseAttributes() {
@@ -594,6 +835,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.currentSheet.attributes = JSON.stringify(this.attributesData);
       this.scheduleAutoSave();
     }
+    this.updateRollFormulaIfAuto();
   }
 
   getSkillLevel(group: string, skill: string): number {
@@ -774,6 +1016,232 @@ export class IrpwCharacterSheetComponent implements OnInit {
       }
       this.isSaving = false;
     }, 600);
+  }
+
+  toggleRollPanel() {
+    this.isRollPanelOpen = !this.isRollPanelOpen;
+    this.updateRollFormulaIfAuto();
+  }
+
+  onRollSkillChange() {
+    this.rollResults = [];
+    this.updateRollFormulaIfAuto();
+  }
+
+  onRollBonusSourceChange() {
+    if (this.selectedRollBonusSource !== 'perception') {
+      this.selectedRollPerception = null;
+    }
+    this.rollResults = [];
+    this.updateRollFormulaIfAuto();
+  }
+
+  onRollPerceptionChange() {
+    this.rollResults = [];
+    this.updateRollFormulaIfAuto();
+  }
+
+  onRollManualModifierChange() {
+    this.rollResults = [];
+    this.updateRollFormulaIfAuto();
+  }
+
+  onRollFormulaInputChange(value: string) {
+    this.rollFormulaMode = 'manual';
+    this.rollFormula = value;
+    this.rollFormulaError = '';
+    this.refreshRollPreviewFromFormula();
+  }
+
+  resetRollFormulaToAuto() {
+    this.rollFormulaMode = 'auto';
+    this.syncRollFormula();
+  }
+
+  rollDice() {
+    this.refreshRollPreviewFromFormula();
+    if (this.rollFormulaError) {
+      this.rollResults = [];
+      return;
+    }
+
+    const parsedFormula = this.parseRollFormula(this.rollFormula);
+    if (!parsedFormula) {
+      this.rollFormulaError = 'Use o formato Xd10+Y, por exemplo 3d10+3.';
+      this.rollResults = [];
+      return;
+    }
+
+    this.rollResults = Array.from({ length: parsedFormula.attempts }, (_, index) => {
+      const dieValue = this.rollDie(10);
+      const total = dieValue + parsedFormula.modifier;
+      return {
+        index: index + 1,
+        dieValue,
+        modifier: parsedFormula.modifier,
+        total,
+        status: this.getRollStatus(total),
+      };
+    });
+    this.lastRollFormula = this.rollFormula;
+  }
+
+  formatSignedValue(value: number): string {
+    return value >= 0 ? `+${value}` : `${value}`;
+  }
+
+  getRollResultCardClass(status: RollStatus): string {
+    switch (status) {
+      case 'success':
+        return 'is-success';
+      case 'near':
+        return 'is-near';
+      case 'fail':
+        return 'is-fail';
+      default:
+        return 'is-neutral';
+    }
+  }
+
+  private syncRollFormula() {
+    this.rollPreview = this.buildAutoRollPreview();
+    if (this.rollFormulaMode === 'auto') {
+      this.rollFormula = this.buildRollFormula(this.rollPreview);
+      this.rollFormulaError = '';
+    } else {
+      this.refreshRollPreviewFromFormula();
+    }
+  }
+
+  private updateRollFormulaIfAuto() {
+    this.rollPreview = this.buildAutoRollPreview();
+    if (this.rollFormulaMode === 'auto') {
+      this.rollFormula = this.buildRollFormula(this.rollPreview);
+      this.rollFormulaError = '';
+    }
+  }
+
+  private refreshRollPreviewFromFormula() {
+    const parsedFormula = this.parseRollFormula(this.rollFormula);
+    if (!parsedFormula) {
+      this.rollPreview = { attempts: 1, modifiers: [], totalModifier: 0 };
+      this.rollFormulaError = 'Use o formato Xd10+Y, por exemplo 3d10+3.';
+      return;
+    }
+
+    this.rollPreview = {
+      attempts: parsedFormula.attempts,
+      modifiers: [{ key: 'manual-formula', label: 'Fórmula manual', value: parsedFormula.modifier, category: 'manual' }],
+      totalModifier: parsedFormula.modifier,
+    };
+    this.rollFormulaError = '';
+  }
+
+  private buildAutoRollPreview(): RollPreview {
+    const modifiers: RollModifier[] = [];
+    const attempts = this.getAutoRollAttempts();
+    const skillModifier = this.getSkillTrainingModifier();
+    if (skillModifier !== 0) {
+      modifiers.push({ key: 'skill-training', label: 'Treino da perícia', value: skillModifier, category: 'skill' });
+    }
+
+    const sourceModifier = this.getSelectedSourceModifier();
+    if (sourceModifier) {
+      modifiers.push(sourceModifier);
+    }
+
+    const manualModifier = this.normalizeIntegerValue(this.rollManualModifier);
+    if (manualModifier !== 0) {
+      modifiers.push({ key: 'manual-adjustment', label: 'Ajuste manual', value: manualModifier, category: 'manual' });
+    }
+
+    const totalModifier = modifiers.reduce((sum, modifier) => sum + modifier.value, 0);
+    return { attempts, modifiers, totalModifier };
+  }
+
+  private buildRollFormula(preview: RollPreview): string {
+    const modifierText = preview.totalModifier === 0 ? '' : this.formatSignedValue(preview.totalModifier);
+    return `${preview.attempts}d10${modifierText}`;
+  }
+
+  private getAutoRollAttempts(): number {
+    if (!this.selectedRollSkill) return 1;
+    const group = this.skillToAttributeGroup[this.selectedRollSkill];
+    if (!group) return 1;
+    const skillLevel = this.getSkillLevel(group, this.selectedRollSkill);
+    return skillLevel >= 2 ? skillLevel : 1;
+  }
+
+  private getSkillTrainingModifier(): number {
+    if (!this.selectedRollSkill) return 0;
+    const group = this.skillToAttributeGroup[this.selectedRollSkill];
+    if (!group) return 0;
+    return this.getSkillLevel(group, this.selectedRollSkill) >= 1 ? 1 : 0;
+  }
+
+  private getSelectedSourceModifier(): RollModifier | null {
+    if (this.selectedRollBonusSource === 'perception') {
+      if (!this.selectedRollPerception) return null;
+      return {
+        key: `perception-${this.selectedRollPerception}`,
+        label: `Percepção: ${this.getPerceptionLabel(this.selectedRollPerception)}`,
+        value: this.normalizeIntegerValue(this.perceptionsData[this.selectedRollPerception]),
+        category: 'source',
+      };
+    }
+
+    if (!this.selectedRollSkill) return null;
+    const group = this.skillToAttributeGroup[this.selectedRollSkill];
+    if (!group) return null;
+    return {
+      key: `attribute-${group}`,
+      label: `Atributo: ${this.attributeGroupLabel[group]}`,
+      value: this.normalizeIntegerValue(this.attributesData[group]?.value),
+      category: 'source',
+    };
+  }
+
+  private getPerceptionLabel(perception: PerceptionKey): string {
+    return this.rollPerceptionOptions.find(option => option.id === perception)?.name ?? perception;
+  }
+
+  private parseRollFormula(formula: string): { attempts: number; modifier: number } | null {
+    const match = formula.trim().match(/^(\d+)\s*d\s*10\s*([+-]\s*\d+)?$/i);
+    if (!match) return null;
+
+    const attempts = Number(match[1]);
+    if (!Number.isInteger(attempts) || attempts < 1 || attempts > 50) return null;
+
+    const modifier = match[2] ? Number(match[2].replace(/\s+/g, '')) : 0;
+    if (!Number.isFinite(modifier)) return null;
+
+    return { attempts, modifier };
+  }
+
+  private normalizeIntegerValue(value: number | null | undefined): number {
+    const numericValue = Number(value ?? 0);
+    return Number.isFinite(numericValue) ? Math.trunc(numericValue) : 0;
+  }
+
+  private getRollStatus(total: number): RollStatus {
+    if (this.rollTargetValue == null || !Number.isFinite(Number(this.rollTargetValue))) {
+      return 'neutral';
+    }
+
+    const target = Number(this.rollTargetValue);
+    if (total >= target) return 'success';
+    if (total === target - 1) return 'near';
+    return 'fail';
+  }
+
+  private rollDie(sides: number): number {
+    if (globalThis.crypto?.getRandomValues) {
+      const values = new Uint32Array(1);
+      globalThis.crypto.getRandomValues(values);
+      return (values[0] % sides) + 1;
+    }
+
+    return Math.floor(Math.random() * sides) + 1;
   }
 }
 
