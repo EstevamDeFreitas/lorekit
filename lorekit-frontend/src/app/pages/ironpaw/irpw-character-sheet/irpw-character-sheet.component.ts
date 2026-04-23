@@ -1,4 +1,5 @@
 import { CommonModule, NgClass } from '@angular/common';
+import { Dialog } from '@angular/cdk/dialog';
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { OverlayModule } from '@angular/cdk/overlay';
@@ -97,7 +98,12 @@ import { IrpwVocationService } from '../../../services/irpw-vocation.service';
                     </div>
                   }
                   <div class="flex-1 flex flex-col gap-2">
-                    <p class="text-sm mb-1">{{ selectedCharacter.name }}</p>
+                    <button
+                      type="button"
+                      class="w-fit text-sm mb-1 text-left transition hover:text-yellow-300 hover:underline cursor-pointer"
+                      (click)="openCharacterEditor()">
+                      {{ selectedCharacter.name }}
+                    </button>
                     <app-combo-box
                       class="w-full"
                       label="Vocação"
@@ -317,6 +323,7 @@ import { IrpwVocationService } from '../../../services/irpw-vocation.service';
   styleUrl: './irpw-character-sheet.component.css',
 })
 export class IrpwCharacterSheetComponent implements OnInit {
+  private dialog = inject(Dialog);
   private characterService = inject(CharacterService);
   private vocationService = inject(IrpwVocationService);
   private worldService = inject(WorldService);
@@ -404,6 +411,9 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.selectedVocationId = '';
       this.selectedCharacter = null;
       this.currentSheet = null;
+    } else if (this.selectedCharacterId) {
+      this.selectedCharacter = this.characters.find(c => c.id === this.selectedCharacterId) ?? this.selectedCharacter;
+      this.selectedVocationId = this.selectedCharacter?.ParentIRPWVocation?.id ?? '';
     }
   }
 
@@ -468,6 +478,24 @@ export class IrpwCharacterSheetComponent implements OnInit {
         ? { ...character, ParentIRPWVocation: parentVocation }
         : character
     );
+  }
+
+  async openCharacterEditor() {
+    if (!this.selectedCharacterId) return;
+
+    const { CharacterEditComponent } = await import('../../characters/character-edit/character-edit.component');
+    const dialogRef = this.dialog.open(CharacterEditComponent, {
+      data: { id: this.selectedCharacterId },
+      panelClass: ['screen-dialog', 'h-[100vh]', 'overflow-y-auto', 'scrollbar-dark'],
+      height: '80vh',
+      width: '80vw',
+      autoFocus: false,
+      restoreFocus: false,
+    });
+
+    dialogRef.closed.subscribe(() => {
+      this.loadCharacters();
+    });
   }
 
   parsePerceptions() {
