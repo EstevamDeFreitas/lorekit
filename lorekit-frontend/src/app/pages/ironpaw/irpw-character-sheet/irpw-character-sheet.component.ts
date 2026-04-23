@@ -366,17 +366,21 @@ interface RollResult {
 
     <button
       type="button"
-      class="roll-fab"
-      [class.is-open]="isRollPanelOpen"
+      class="fixed cursor-pointer right-4 bottom-4 z-40 inline-flex items-center gap-1 rounded-md border px-1 py-0.5 text-sm shadow-2xl transition-all duration-200 hover:-translate-y-0.5 md:right-6 md:bottom-6"
+      [ngClass]="isRollPanelOpen
+        ? 'border-rose-500/40 bg-zinc-950 '
+        : 'border-zinc-800 bg-zinc-925  hover:border-white '"
       (click)="toggleRollPanel()"
       [attr.aria-expanded]="isRollPanelOpen"
       aria-label="Abrir painel de rolagem">
-      <i class="fa-solid" [ngClass]="isRollPanelOpen ? 'fa-xmark' : 'fa-dice-d10'"></i>
-      <span>Rolagens</span>
+      <span class="flex h-9 w-9 items-center justify-center">
+        <i class="fa-solid text-sm" [ngClass]="isRollPanelOpen ? 'fa-xmark' : 'fa-dice'"></i>
+      </span>
+      <span class="text-xs font-semibold uppercase tracking-[0.22em]">Rolagens</span>
     </button>
 
     @if (isRollPanelOpen) {
-      <section class="roll-panel">
+      <section class="fixed right-4 bottom-[5.5rem] z-[39] w-[calc(100vw-2rem)] max-h-[calc(100vh-6.5rem)] overflow-y-auto rounded-md border border-zinc-800 bg-zinc-925 p-4 shadow-2xl backdrop-blur md:right-6 md:bottom-[6.25rem] md:w-[min(32rem,calc(100vw-3rem))] md:max-h-[calc(100vh-7.5rem)]">
         <div class="flex items-start justify-between gap-3 mb-4">
           <div>
             <p class="text-[11px] uppercase tracking-[0.24em] text-amber-300/70 mb-1">Rolagem tática</p>
@@ -447,7 +451,7 @@ interface RollResult {
           </label>
         </div>
 
-        <div class="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3 mb-3">
+        <div class="mb-3 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3">
           <div class="flex items-center justify-between gap-3 mb-2">
             <div>
               <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Fórmula</h3>
@@ -511,9 +515,11 @@ interface RollResult {
           </div>
         }
 
-        <div class="roll-results">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-3">
           @for (result of rollResults; track result.index) {
-            <article class="roll-result-card" [ngClass]="getRollResultCardClass(result.status)">
+            <article
+              class="rounded-2xl border p-3 text-zinc-200"
+              [ngClass]="getRollResultCardClass(result.status)">
               <div class="flex items-center justify-between gap-2 mb-2">
                 <span class="text-[11px] uppercase tracking-wide opacity-80">Rolagem {{ result.index }}</span>
                 <span class="text-[11px] opacity-70">d10 {{ formatSignedValue(result.modifier) }}</span>
@@ -1093,13 +1099,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
   getRollResultCardClass(status: RollStatus): string {
     switch (status) {
       case 'success':
-        return 'is-success';
+        return 'border-emerald-500/45 bg-emerald-950/40 text-emerald-100';
       case 'near':
-        return 'is-near';
+        return 'border-amber-400/45 bg-amber-950/30 text-amber-100';
       case 'fail':
-        return 'is-fail';
+        return 'border-red-500/40 bg-red-950/35 text-red-100';
       default:
-        return 'is-neutral';
+        return 'border-zinc-700 bg-zinc-900/70 text-zinc-200';
     }
   }
 
