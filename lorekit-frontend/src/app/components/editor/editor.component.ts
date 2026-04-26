@@ -4,6 +4,8 @@ import EditorJS from '@editorjs/editorjs';
 import List from '@editorjs/list';
 import Quote from '@editorjs/quote';
 import Table from '@editorjs/table';
+import TailwindColor from '../../plugins/tailwindcolor.plugin';
+import TailwindMarker from '../../plugins/tailwindmarker.plugin';
 
 import TailwindHeader from '../../plugins/tailwindheader.plugin';
 import TailwindBold from '../../plugins/tailwindbold.plugin';
@@ -59,6 +61,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
       holder: this.editorId,
       placeholder: 'Comece a escrever aqui, use "/" para comandos...',
       autofocus: true,
+      inlineToolbar: ['bold', 'italic', 'color', 'marker'],
       onChange: () => {
         this.handleChange();
       },
@@ -71,8 +74,14 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
             defaultLevel: 2
           }
         },
-        list: List,
-        quote: Quote,
+        list: {
+          class: List,
+          inlineToolbar: ['bold', 'italic', 'color', 'marker'],
+        },
+        quote: {
+          class: Quote,
+          inlineToolbar: ['bold', 'italic', 'color', 'marker'],
+        },
         table: {
           class: Table as any,
           inlineToolbar: true,
@@ -87,6 +96,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
         italic: {
           class: TailwindItalic,
           shortcut: 'CMD+I',
+        },
+        color: {
+          class: TailwindColor,
+        },
+        marker: {
+          class: TailwindMarker,
         },
         image: {
           class: TailwindImage,

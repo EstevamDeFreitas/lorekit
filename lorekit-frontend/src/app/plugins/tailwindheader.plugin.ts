@@ -183,8 +183,12 @@ export default class TailwindHeader {
     return {
       level: false,
       text: {
-        br: true
-      }
+        br: true,
+        font: { color: true, style: true },
+        mark: { style: true, class: true },
+        strong: { class: true },
+        em: { class: true },
+      } as any
     };
   }
 
