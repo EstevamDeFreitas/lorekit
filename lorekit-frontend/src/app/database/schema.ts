@@ -284,6 +284,7 @@ export const schema: TableDef[] = [
       { name: "inventory", def: `"inventory" TEXT` },
       { name: "habilities", def: `"habilities" TEXT` },
       { name: "marks", def: `"marks" TEXT` },
+      { name: "conditions", def: `"conditions" TEXT` },
     ]
   },
   {

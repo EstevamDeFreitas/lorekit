@@ -21,11 +21,24 @@ import { IrpwSpecieService } from '../../../services/irpw-specie.service';
 import { IrpwVocationService } from '../../../services/irpw-vocation.service';
 import { SpecieService } from '../../../services/specie.service';
 import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
+import {
+  ActiveConditionState,
+  CONDITION_CATEGORY,
+  CONDITION_CATEGORY_LABEL,
+  CONDITION_SEVERITY,
+  CONDITION_SEVERITY_LABEL,
+  CONDITIONS,
+  ConditionCategoryCode,
+  ConditionCode,
+  ConditionDefinition,
+  ConditionSeverityCode,
+} from '../../../models/irpw-conditions.model';
 
 type RollBonusSourceType = 'attribute' | 'perception';
 type RollFormulaMode = 'auto' | 'manual';
 type PerceptionKey = 'smell' | 'vision' | 'hearing';
 type RollStatus = 'success' | 'near' | 'fail' | 'neutral';
+type RollResolutionMode = 'normal' | 'disadvantage';
 
 interface RollOption<TValue extends string> {
   id: TValue;
@@ -37,20 +50,32 @@ interface RollModifier {
   label: string;
   value: number;
   category: 'skill' | 'source' | 'manual' | 'condition';
+  displayValue?: string;
 }
 
 interface RollPreview {
   attempts: number;
   modifiers: RollModifier[];
   totalModifier: number;
+  resolutionMode: RollResolutionMode;
 }
 
 interface RollResult {
   index: number;
   dieValue: number;
+  rolls: number[];
   modifier: number;
   total: number;
   status: RollStatus;
+  resolutionLabel: string;
+}
+
+interface ParsedConditionImpact {
+  key: string;
+  label: string;
+  type: 'modifier' | 'minus-dice' | 'disadvantage';
+  value: number;
+  displayValue: string;
 }
 
 interface IrpwCharacterMark {
@@ -295,9 +320,124 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                   }
                 </div>
               </div>
-              <!-- Stress, Mana & Vigor -->
+              <!-- Condições -->
               <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Condições</h2>
+                    <p class="text-[10px] text-zinc-500">{{ activeConditionsData.length }} ativa(s)</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="px-1 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
+                    cdkOverlayOrigin
+                    #conditionSettingsOrigin="cdkOverlayOrigin"
+                    (click)="toggleConditionSettingsOverlay()"
+                    aria-label="Configurar condições"
+                    title="Configurar condições">
+                    <i class="fa-solid fa-gear text-xs"></i>
+                  </button>
+                </div>
 
+                <div class="flex flex-wrap gap-2">
+                  @for (condition of getSortedActiveConditions(); track condition.code) {
+                    <div
+                      class="condition-chip"
+                      [ngClass]="getConditionSeverityClass(condition.severity)"
+                      [title]="getConditionTooltip(condition)">
+                      <span class="font-medium">{{ getConditionDefinition(condition.code).label }}</span>
+                      <span class="text-[10px] uppercase tracking-wide opacity-80">{{ getConditionSeverityText(condition) }}</span>
+                    </div>
+                  }
+
+                  @if (activeConditionsData.length === 0) {
+                    <p class="text-[11px] text-zinc-500">Nenhuma condição ativa.</p>
+                  }
+                </div>
+
+                <ng-template
+                  cdkConnectedOverlay
+                  [cdkConnectedOverlayOrigin]="conditionSettingsOrigin"
+                  [cdkConnectedOverlayOpen]="isConditionSettingsOpen"
+                  [cdkConnectedOverlayHasBackdrop]="true"
+                  [cdkConnectedOverlayOffsetY]="8"
+                  (backdropClick)="closeConditionSettingsOverlay()"
+                  (overlayOutsideClick)="closeConditionSettingsOverlay()">
+                  <div class="w-[28rem] max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-md border border-zinc-700 bg-zinc-900 p-3 shadow-xl scrollbar-dark">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                      <div>
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Condições ativas</h3>
+                        <p class="text-[11px] text-zinc-500">Selecione as condições e a severidade vigente.</p>
+                      </div>
+                      <button
+                        type="button"
+                        class="text-zinc-500 transition hover:text-zinc-200"
+                        (click)="closeConditionSettingsOverlay()"
+                        aria-label="Fechar">
+                        <i class="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+
+                    <div class="flex flex-col gap-4">
+                      @for (category of conditionCategories; track category) {
+                        <section class="rounded-md border border-zinc-800 bg-zinc-950/30 p-3">
+                          <h4 class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 mb-2">{{ conditionCategoryLabel[category] }}</h4>
+                          <div class="flex flex-col gap-2">
+                            @for (definition of getConditionDefinitionsByCategory(category); track definition.code) {
+                              <div class="rounded-md border border-zinc-800 bg-zinc-900/80 p-2.5">
+                                <div class="flex items-start gap-3">
+                                  <input
+                                    type="checkbox"
+                                    class="mt-0.5 h-4 w-4 accent-yellow-400"
+                                    [checked]="isPendingConditionActive(definition.code)"
+                                    (change)="onPendingConditionToggle(definition.code, $any($event.target).checked)">
+
+                                  <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between gap-3">
+                                      <div>
+                                        <p class="text-sm text-zinc-100">{{ definition.label }}</p>
+                                        <p class="text-[11px] leading-5 text-zinc-500">{{ getConditionDefinitionSummary(definition) }}</p>
+                                      </div>
+
+                                      <select
+                                        class="rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-white outline-none focus:border-zinc-500"
+                                        [ngModel]="getPendingConditionSeverity(definition.code)"
+                                        (ngModelChange)="onPendingConditionSeverityChange(definition.code, $event)"
+                                        [disabled]="!isPendingConditionActive(definition.code)">
+                                        @for (severity of getAvailableConditionSeverities(definition); track severity) {
+                                          <option [ngValue]="severity">{{ getConditionSeverityText({ code: definition.code, severity }) }}</option>
+                                        }
+                                      </select>
+                                    </div>
+
+                                    @if (isPendingConditionActive(definition.code)) {
+                                      <p class="mt-2 text-[11px] leading-5 text-zinc-300">{{ getConditionEffectDescription({ code: definition.code, severity: getPendingConditionSeverity(definition.code) }) }}</p>
+                                    }
+                                  </div>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        </section>
+                      }
+                    </div>
+
+                    <div class="flex justify-end gap-2 mt-4">
+                      <button
+                        type="button"
+                        class="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+                        (click)="closeConditionSettingsOverlay()">
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        class="rounded-md border border-yellow-700 bg-yellow-500/10 px-2 py-1 text-xs text-yellow-200 transition hover:bg-yellow-500/20"
+                        (click)="saveConditions()">
+                        Salvar
+                      </button>
+                    </div>
+                  </div>
+                </ng-template>
               </div>
             </div>
             <div class="grid grid-cols-3 gap-2 mt-2 flex-1">
@@ -867,7 +1007,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
             <div class="mt-3 flex flex-wrap gap-2">
               @for (modifier of rollPreview.modifiers; track modifier.key) {
                 <span class="rounded-full border border-zinc-700 bg-zinc-900/80 px-2.5 py-1 text-[11px] text-zinc-300">
-                  {{ modifier.label }}: {{ formatSignedValue(modifier.value) }}
+                  {{ modifier.label }}: {{ modifier.displayValue ?? formatSignedValue(modifier.value) }}
                 </span>
               }
 
@@ -882,7 +1022,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
 
         <div class="flex items-center justify-between gap-3 mb-3">
           <div class="text-[11px] text-zinc-500">
-            {{ rollPreview.attempts }} tentativa(s) com modificador total {{ formatSignedValue(rollPreview.totalModifier) }}
+            {{ getRollPreviewDescription() }}
           </div>
           <button
             type="button"
@@ -908,7 +1048,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
               [ngClass]="getRollResultCardClass(result.status)">
               <div class="flex items-center justify-between gap-2 mb-2">
                 <span class="text-[11px] uppercase tracking-wide opacity-80">Rolagem {{ result.index }}</span>
-                <span class="text-[11px] opacity-70">d10 {{ formatSignedValue(result.modifier) }}</span>
+                <span class="text-[11px] opacity-70">{{ result.resolutionLabel }} {{ formatSignedValue(result.modifier) }}</span>
               </div>
               <div class="flex items-end justify-between gap-3">
                 <div>
@@ -920,6 +1060,9 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                   <p class="text-2xl font-bold leading-none">{{ result.total }}</p>
                 </div>
               </div>
+              @if (result.rolls.length > 1) {
+                <p class="mt-2 text-[11px] opacity-70">Dados: {{ result.rolls.join(', ') }}</p>
+              }
             </article>
           }
 
@@ -967,6 +1110,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private saveTimeout?: ReturnType<typeof setTimeout>;
   isLifeSettingsOpen = false;
   pendingLifeMaxPoints: number | null = null;
+  isConditionSettingsOpen = false;
 
   perceptionsData: { smell: number | null; vision: number | null; hearing: number | null } = { smell: null, vision: null, hearing: null };
 
@@ -975,10 +1119,21 @@ export class IrpwCharacterSheetComponent implements OnInit {
   habilitiesData: IrpwVocationHability[] = [];
   inheritedHabilitiesData: InheritedCharacterHability[] = [];
   marksData: IrpwCharacterMark[] = [];
+  activeConditionsData: ActiveConditionState[] = [];
+  pendingConditionsData: ActiveConditionState[] = [];
   expandedMarkIndexes = new Set<number>();
   readonly attributeGroupEntries = Object.entries(ATTRIBUTE_GROUP_SKILLS) as [AttributeGroupCode, SkillCode[]][];
   readonly attributeGroupLabel = ATTRIBUTE_GROUP_LABEL;
   readonly skillLabel = SKILL_LABEL;
+  readonly conditionCategories: ConditionCategoryCode[] = [
+    CONDITION_CATEGORY.ATTRIBUTE,
+    CONDITION_CATEGORY.SPECIAL,
+    CONDITION_CATEGORY.PERSISTENT_DAMAGE,
+    CONDITION_CATEGORY.CRITICAL_STATE,
+  ];
+  readonly conditionCategoryLabel = CONDITION_CATEGORY_LABEL;
+  readonly conditionSeverityLabel = CONDITION_SEVERITY_LABEL;
+  readonly conditionDefinitions = Object.values(CONDITIONS).sort((left, right) => left.label.localeCompare(right.label));
   readonly rollBonusSourceOptions: RollOption<RollBonusSourceType>[] = [
     { id: 'attribute', name: 'Atributo da perícia' },
     { id: 'perception', name: 'Percepção específica' },
@@ -1023,7 +1178,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   rollFormula = '1d10';
   rollFormulaMode: RollFormulaMode = 'auto';
   rollFormulaError = '';
-  rollPreview: RollPreview = { attempts: 1, modifiers: [], totalModifier: 0 };
+  rollPreview: RollPreview = { attempts: 1, modifiers: [], totalModifier: 0, resolutionMode: 'normal' };
   rollResults: RollResult[] = [];
   lastRollFormula = '';
 
@@ -1079,6 +1234,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.subspecializationsData = [''];
       this.habilitiesData = [];
       this.inheritedHabilitiesData = [];
+      this.activeConditionsData = [];
+      this.pendingConditionsData = [];
       this.marksData = [];
       this.expandedMarkIndexes.clear();
     } else if (this.selectedCharacterId) {
@@ -1126,6 +1283,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.parseLifepoints();
     this.parseDefensepoints();
     this.parseResources();
+    this.parseConditions();
     this.parseMarks();
     this.refreshInheritedHabilities();
     this.syncRollFormula();
@@ -1442,6 +1600,169 @@ export class IrpwCharacterSheetComponent implements OnInit {
     const roundedToHalf = Math.round(numericValue * 2) / 2;
     const clampedValue = Math.max(0, maxPoints == null ? roundedToHalf : Math.min(roundedToHalf, maxPoints));
     return clampedValue === 0 ? 0 : clampedValue;
+  }
+
+  toggleConditionSettingsOverlay() {
+    if (this.isConditionSettingsOpen) {
+      this.closeConditionSettingsOverlay();
+      return;
+    }
+
+    this.openConditionSettingsOverlay();
+  }
+
+  openConditionSettingsOverlay() {
+    this.pendingConditionsData = this.activeConditionsData.map(condition => ({ ...condition }));
+    this.isConditionSettingsOpen = true;
+  }
+
+  closeConditionSettingsOverlay() {
+    this.isConditionSettingsOpen = false;
+  }
+
+  saveConditions() {
+    this.activeConditionsData = this.normalizeActiveConditions(this.pendingConditionsData);
+    this.onConditionsChange();
+    this.closeConditionSettingsOverlay();
+  }
+
+  parseConditions() {
+    if (!this.currentSheet?.conditions) {
+      this.activeConditionsData = [];
+      this.pendingConditionsData = [];
+      return;
+    }
+
+    try {
+      this.activeConditionsData = this.normalizeActiveConditions(JSON.parse(this.currentSheet.conditions));
+    } catch {
+      this.activeConditionsData = [];
+    }
+
+    this.pendingConditionsData = this.activeConditionsData.map(condition => ({ ...condition }));
+  }
+
+  onConditionsChange() {
+    this.activeConditionsData = this.normalizeActiveConditions(this.activeConditionsData);
+    this.pendingConditionsData = this.activeConditionsData.map(condition => ({ ...condition }));
+    this.rollResults = [];
+
+    if (this.currentSheet) {
+      this.currentSheet.conditions = this.activeConditionsData.length
+        ? JSON.stringify(this.activeConditionsData)
+        : null;
+      this.scheduleAutoSave();
+    }
+
+    this.updateRollFormulaIfAuto();
+  }
+
+  getConditionDefinitionsByCategory(category: ConditionCategoryCode): ConditionDefinition[] {
+    return this.conditionDefinitions.filter(definition => definition.category === category);
+  }
+
+  getSortedActiveConditions(): ActiveConditionState[] {
+    return [...this.activeConditionsData].sort((left, right) => {
+      const leftDefinition = this.getConditionDefinition(left.code);
+      const rightDefinition = this.getConditionDefinition(right.code);
+      return leftDefinition.label.localeCompare(rightDefinition.label);
+    });
+  }
+
+  getConditionDefinition(code: ConditionCode): ConditionDefinition {
+    return CONDITIONS[code];
+  }
+
+  getConditionDefinitionSummary(definition: ConditionDefinition): string {
+    return definition.description ?? 'Escolha a severidade para ver o efeito atual.';
+  }
+
+  getConditionEffectDescription(condition: ActiveConditionState): string {
+    const definition = this.getConditionDefinition(condition.code);
+    return definition.effects?.[condition.severity]?.description
+      ?? definition.description
+      ?? 'Sem descrição adicional.';
+  }
+
+  getConditionSeverityText(condition: ActiveConditionState): string {
+    const definition = this.getConditionDefinition(condition.code);
+    const availableSeverities = this.getAvailableConditionSeverities(definition);
+    if (availableSeverities.length === 1 && !definition.effects?.[availableSeverities[0]]) {
+      return 'Ativa';
+    }
+
+    return this.conditionSeverityLabel[condition.severity];
+  }
+
+  getConditionTooltip(condition: ActiveConditionState): string {
+    const definition = this.getConditionDefinition(condition.code);
+    return `${definition.label} - ${this.getConditionSeverityText(condition)}\n${this.getConditionEffectDescription(condition)}`;
+  }
+
+  getConditionSeverityClass(severity: ConditionSeverityCode): string {
+    switch (severity) {
+      case CONDITION_SEVERITY.MODERATE:
+        return 'border-orange-500/35 bg-orange-950/35 text-orange-100';
+      case CONDITION_SEVERITY.SEVERE:
+        return 'border-rose-500/35 bg-rose-950/35 text-rose-100';
+      default:
+        return 'border-amber-500/35 bg-amber-950/35 text-amber-100';
+    }
+  }
+
+  isPendingConditionActive(code: ConditionCode): boolean {
+    return this.pendingConditionsData.some(condition => condition.code === code);
+  }
+
+  getPendingConditionSeverity(code: ConditionCode): ConditionSeverityCode {
+    const pendingCondition = this.pendingConditionsData.find(condition => condition.code === code);
+    if (pendingCondition) {
+      return pendingCondition.severity;
+    }
+
+    return this.getAvailableConditionSeverities(this.getConditionDefinition(code))[0];
+  }
+
+  onPendingConditionToggle(code: ConditionCode, isActive: boolean) {
+    if (isActive) {
+      if (this.isPendingConditionActive(code)) {
+        return;
+      }
+
+      const severity = this.getAvailableConditionSeverities(this.getConditionDefinition(code))[0];
+      this.pendingConditionsData = this.normalizeActiveConditions([
+        ...this.pendingConditionsData,
+        { code, severity },
+      ]);
+      return;
+    }
+
+    this.pendingConditionsData = this.pendingConditionsData.filter(condition => condition.code !== code);
+  }
+
+  onPendingConditionSeverityChange(code: ConditionCode, severity: ConditionSeverityCode) {
+    this.pendingConditionsData = this.normalizeActiveConditions(
+      this.pendingConditionsData.map(condition =>
+        condition.code === code
+          ? { ...condition, severity }
+          : condition
+      )
+    );
+  }
+
+  getAvailableConditionSeverities(definition: ConditionDefinition): ConditionSeverityCode[] {
+    const severities = definition.effects
+      ? (Object.keys(definition.effects) as ConditionSeverityCode[])
+      : [];
+    const order: ConditionSeverityCode[] = [
+      CONDITION_SEVERITY.LIGHT,
+      CONDITION_SEVERITY.MODERATE,
+      CONDITION_SEVERITY.SEVERE,
+    ];
+
+    return severities.length
+      ? order.filter(severity => severities.includes(severity))
+      : [CONDITION_SEVERITY.LIGHT];
   }
 
   private createEmptyMark(): IrpwCharacterMark {
@@ -1790,6 +2111,44 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   rollDice() {
+    if (this.rollFormulaMode === 'auto') {
+      this.rollPreview = this.buildAutoRollPreview();
+      const preview = this.rollPreview;
+
+      if (preview.resolutionMode === 'disadvantage') {
+        const rolls = [this.rollDie(10), this.rollDie(10)];
+        const dieValue = Math.min(...rolls);
+        const total = dieValue + preview.totalModifier;
+        this.rollResults = [{
+          index: 1,
+          dieValue,
+          rolls,
+          modifier: preview.totalModifier,
+          total,
+          status: this.getRollStatus(total),
+          resolutionLabel: '2d10 pior',
+        }];
+        this.lastRollFormula = this.rollFormula;
+        return;
+      }
+
+      this.rollResults = Array.from({ length: preview.attempts }, (_, index) => {
+        const dieValue = this.rollDie(10);
+        const total = dieValue + preview.totalModifier;
+        return {
+          index: index + 1,
+          dieValue,
+          rolls: [dieValue],
+          modifier: preview.totalModifier,
+          total,
+          status: this.getRollStatus(total),
+          resolutionLabel: '1d10',
+        };
+      });
+      this.lastRollFormula = this.rollFormula;
+      return;
+    }
+
     this.refreshRollPreviewFromFormula();
     if (this.rollFormulaError) {
       this.rollResults = [];
@@ -1809,12 +2168,22 @@ export class IrpwCharacterSheetComponent implements OnInit {
       return {
         index: index + 1,
         dieValue,
+        rolls: [dieValue],
         modifier: parsedFormula.modifier,
         total,
         status: this.getRollStatus(total),
+        resolutionLabel: '1d10',
       };
     });
     this.lastRollFormula = this.rollFormula;
+  }
+
+  getRollPreviewDescription(): string {
+    if (this.rollPreview.resolutionMode === 'disadvantage') {
+      return `1 tentativa com desvantagem e modificador total ${this.formatSignedValue(this.rollPreview.totalModifier)}`;
+    }
+
+    return `${this.rollPreview.attempts} tentativa(s) com modificador total ${this.formatSignedValue(this.rollPreview.totalModifier)}`;
   }
 
   formatSignedValue(value: number): string {
@@ -1855,7 +2224,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private refreshRollPreviewFromFormula() {
     const parsedFormula = this.parseRollFormula(this.rollFormula);
     if (!parsedFormula) {
-      this.rollPreview = { attempts: 1, modifiers: [], totalModifier: 0 };
+      this.rollPreview = { attempts: 1, modifiers: [], totalModifier: 0, resolutionMode: 'normal' };
       this.rollFormulaError = 'Use o formato Xd10+Y, por exemplo 3d10+3.';
       return;
     }
@@ -1864,13 +2233,14 @@ export class IrpwCharacterSheetComponent implements OnInit {
       attempts: parsedFormula.attempts,
       modifiers: [{ key: 'manual-formula', label: 'Fórmula manual', value: parsedFormula.modifier, category: 'manual' }],
       totalModifier: parsedFormula.modifier,
+      resolutionMode: 'normal',
     };
     this.rollFormulaError = '';
   }
 
   private buildAutoRollPreview(): RollPreview {
     const modifiers: RollModifier[] = [];
-    const attempts = this.getAutoRollAttempts();
+    const baseAttempts = this.getAutoRollAttempts();
     const skillModifier = this.getSkillTrainingModifier();
     if (skillModifier !== 0) {
       modifiers.push({ key: 'skill-training', label: 'Treino da perícia', value: skillModifier, category: 'skill' });
@@ -1886,12 +2256,70 @@ export class IrpwCharacterSheetComponent implements OnInit {
       modifiers.push({ key: 'manual-adjustment', label: 'Ajuste manual', value: manualModifier, category: 'manual' });
     }
 
+    let attempts = baseAttempts;
+    let resolutionMode: RollResolutionMode = 'normal';
+    let minusDice = 0;
+
+    for (const impact of this.getApplicableConditionImpacts()) {
+      if (impact.type === 'modifier') {
+        modifiers.push({
+          key: impact.key,
+          label: impact.label,
+          value: impact.value,
+          category: 'condition',
+          displayValue: impact.displayValue,
+        });
+        continue;
+      }
+
+      if (impact.type === 'minus-dice') {
+        minusDice += impact.value;
+        modifiers.push({
+          key: impact.key,
+          label: impact.label,
+          value: 0,
+          category: 'condition',
+          displayValue: impact.displayValue,
+        });
+        continue;
+      }
+
+      resolutionMode = 'disadvantage';
+      modifiers.push({
+        key: impact.key,
+        label: impact.label,
+        value: 0,
+        category: 'condition',
+        displayValue: impact.displayValue,
+      });
+    }
+
+    attempts -= minusDice;
+    if (attempts <= 0) {
+      attempts = 1;
+      modifiers.push({
+        key: 'condition-dice-floor',
+        label: 'Sem dados restantes',
+        value: -3,
+        category: 'condition',
+        displayValue: '1d10-3',
+      });
+    }
+
+    if (resolutionMode === 'disadvantage') {
+      attempts = 1;
+    }
+
     const totalModifier = modifiers.reduce((sum, modifier) => sum + modifier.value, 0);
-    return { attempts, modifiers, totalModifier };
+    return { attempts, modifiers, totalModifier, resolutionMode };
   }
 
   private buildRollFormula(preview: RollPreview): string {
     const modifierText = preview.totalModifier === 0 ? '' : this.formatSignedValue(preview.totalModifier);
+    if (preview.resolutionMode === 'disadvantage') {
+      return `2d10${modifierText} (desvantagem)`;
+    }
+
     return `${preview.attempts}d10${modifierText}`;
   }
 
@@ -1936,6 +2364,99 @@ export class IrpwCharacterSheetComponent implements OnInit {
     return this.rollPerceptionOptions.find(option => option.id === perception)?.name ?? perception;
   }
 
+  private getApplicableConditionImpacts(): ParsedConditionImpact[] {
+    const impacts: ParsedConditionImpact[] = [];
+
+    for (const condition of this.activeConditionsData) {
+      const definition = this.getConditionDefinition(condition.code);
+      const severityEffect = definition.effects?.[condition.severity];
+      const rawEffects = severityEffect?.conditionEffect;
+      if (!rawEffects) {
+        continue;
+      }
+
+      const effectEntries = Array.isArray(rawEffects) ? rawEffects : [rawEffects];
+      for (const effectEntry of effectEntries) {
+        const parsedImpact = this.parseConditionImpact(definition, condition.severity, effectEntry);
+        if (parsedImpact) {
+          impacts.push(parsedImpact);
+        }
+      }
+    }
+
+    return impacts;
+  }
+
+  private parseConditionImpact(
+    definition: ConditionDefinition,
+    severity: ConditionSeverityCode,
+    effectEntry: string,
+  ): ParsedConditionImpact | null {
+    const [rawTarget, rawValue] = effectEntry.split(':');
+    if (!rawTarget || !rawValue) {
+      return null;
+    }
+
+    const target = rawTarget.trim().toUpperCase();
+    if (!this.matchesConditionTarget(target)) {
+      return null;
+    }
+
+    const valueText = rawValue.trim().toUpperCase();
+    const label = `${definition.label} ${this.conditionSeverityLabel[severity]}`;
+    const keyBase = `${definition.code}-${severity}-${target}`.toLowerCase();
+
+    if (/^-?\d+$/.test(valueText)) {
+      const value = Number(valueText);
+      return {
+        key: `${keyBase}-modifier`,
+        label,
+        type: 'modifier',
+        value,
+        displayValue: this.formatSignedValue(value),
+      };
+    }
+
+    const minusDiceMatch = valueText.match(/^MINUS\s+(\d+)D10$/i);
+    if (minusDiceMatch) {
+      const value = Number(minusDiceMatch[1]);
+      return {
+        key: `${keyBase}-minus-dice`,
+        label,
+        type: 'minus-dice',
+        value,
+        displayValue: `-${value}d10`,
+      };
+    }
+
+    if (valueText === 'DISADVANTAGE') {
+      return {
+        key: `${keyBase}-disadvantage`,
+        label,
+        type: 'disadvantage',
+        value: 0,
+        displayValue: 'Desvantagem',
+      };
+    }
+
+    return null;
+  }
+
+  private matchesConditionTarget(target: string): boolean {
+    if (this.selectedRollSkill) {
+      if (target === this.selectedRollSkill) {
+        return true;
+      }
+
+      const attributeGroup = this.skillToAttributeGroup[this.selectedRollSkill];
+      if (attributeGroup && target === attributeGroup) {
+        return true;
+      }
+    }
+
+    return this.selectedRollBonusSource === 'perception' && target === 'PERCEPTION';
+  }
+
   private parseRollFormula(formula: string): { attempts: number; modifier: number } | null {
     const match = formula.trim().match(/^(\d+)\s*d\s*10\s*([+-]\s*\d+)?$/i);
     if (!match) return null;
@@ -1952,6 +2473,48 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private normalizeIntegerValue(value: number | null | undefined): number {
     const numericValue = Number(value ?? 0);
     return Number.isFinite(numericValue) ? Math.trunc(numericValue) : 0;
+  }
+
+  private normalizeActiveConditions(value: unknown): ActiveConditionState[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    const normalizedConditions = new Map<ConditionCode, ActiveConditionState>();
+
+    for (const entry of value) {
+      if (!entry || typeof entry !== 'object') {
+        continue;
+      }
+
+      const rawCode = (entry as { code?: unknown }).code;
+      if (!this.isConditionCode(rawCode)) {
+        continue;
+      }
+
+      const definition = this.getConditionDefinition(rawCode);
+      const availableSeverities = this.getAvailableConditionSeverities(definition);
+      const rawSeverity = (entry as { severity?: unknown }).severity;
+      const severity = this.isConditionSeverityCode(rawSeverity) && availableSeverities.includes(rawSeverity)
+        ? rawSeverity
+        : availableSeverities[0];
+
+      normalizedConditions.set(rawCode, { code: rawCode, severity });
+    }
+
+    return [...normalizedConditions.values()].sort((left, right) => {
+      const leftDefinition = this.getConditionDefinition(left.code);
+      const rightDefinition = this.getConditionDefinition(right.code);
+      return leftDefinition.label.localeCompare(rightDefinition.label);
+    });
+  }
+
+  private isConditionCode(value: unknown): value is ConditionCode {
+    return typeof value === 'string' && Object.hasOwn(CONDITIONS, value);
+  }
+
+  private isConditionSeverityCode(value: unknown): value is ConditionSeverityCode {
+    return typeof value === 'string' && Object.values(CONDITION_SEVERITY).includes(value as ConditionSeverityCode);
   }
 
   private getRollStatus(total: number): RollStatus {
