@@ -62,6 +62,10 @@ interface IrpwCharacterMark {
   attributes: IrpwVocationAttributes;
 }
 
+interface InheritedCharacterHability extends IrpwVocationHability {
+  source: 'species' | 'vocation';
+}
+
 @Component({
   selector: 'irpw-character-sheet',
   imports: [CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent],
@@ -640,7 +644,94 @@ interface IrpwCharacterMark {
                               <p>Inventário</p>
                             }
                             @case ('skills') {
-                              <p>Habilidades</p>
+                              <div class="flex flex-col gap-4">
+                                <div class="flex items-center justify-between gap-3">
+                                  <div>
+                                    <h3 class="text-sm font-semibold text-zinc-100">Habilidades do personagem</h3>
+                                    <p class="text-xs text-zinc-500">Essas habilidades ficam salvas na ficha e podem ser editadas livremente.</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    class="rounded-md border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-500 hover:text-white"
+                                    (click)="addHability()">
+                                    Adicionar habilidade
+                                  </button>
+                                </div>
+
+                                <div class="flex flex-col gap-3">
+                                  @for (hability of habilitiesData; track $index; let habilityIndex = $index) {
+                                    <div class="rounded-md border border-zinc-800 bg-zinc-900/70 p-4">
+                                      <div class="flex items-center justify-between gap-3 mb-3">
+                                        <span class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Habilidade {{ habilityIndex + 1 }}</span>
+                                        <button
+                                          type="button"
+                                          class="rounded-md border border-red-900/70 bg-red-950/40 px-2 py-1 text-[11px] text-red-200 transition hover:bg-red-950/70"
+                                          (click)="removeHability(habilityIndex)">
+                                          Remover
+                                        </button>
+                                      </div>
+
+                                      <div class="grid grid-cols-1 gap-3">
+                                        <label class="flex flex-col gap-1 text-xs text-zinc-400">
+                                          Nome
+                                          <input
+                                            type="text"
+                                            class="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+                                            [(ngModel)]="hability.name"
+                                            (ngModelChange)="onHabilitiesChange()"
+                                            placeholder="Ex.: Passos entre as sombras">
+                                        </label>
+
+                                        <label class="flex flex-col gap-1 text-xs text-zinc-400">
+                                          Descrição
+                                          <textarea
+                                            class="min-h-24 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
+                                            [(ngModel)]="hability.description"
+                                            (ngModelChange)="onHabilitiesChange()"
+                                            placeholder="Descreva o efeito da habilidade."></textarea>
+                                        </label>
+                                      </div>
+                                    </div>
+                                  }
+
+                                  @if (habilitiesData.length === 0) {
+                                    <div class="rounded-md border border-dashed border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
+                                      Nenhuma habilidade própria cadastrada para este personagem.
+                                    </div>
+                                  }
+                                </div>
+
+                                <div class="rounded-md border border-zinc-800 bg-zinc-950/40 p-4">
+                                  <div class="mb-3">
+                                    <h3 class="text-sm font-semibold text-zinc-100">Habilidades herdadas</h3>
+                                    <p class="text-xs text-zinc-500">Vindas da espécie ou da vocação. Essas entradas são apenas leitura nesta ficha.</p>
+                                  </div>
+
+                                  <div class="flex flex-col gap-3">
+                                    @for (hability of inheritedHabilitiesData; track $index) {
+                                      <div class="rounded-md border border-zinc-800 bg-zinc-900/60 p-3">
+                                        <div class="flex items-center justify-between gap-3 mb-2">
+                                          <span class="text-sm text-zinc-100">{{ hability.name || 'Habilidade sem nome' }}</span>
+                                          <span
+                                            class="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                                            [ngClass]="hability.source === 'species'
+                                              ? 'border-emerald-800/70 bg-emerald-950/40 text-emerald-200'
+                                              : 'border-sky-800/70 bg-sky-950/40 text-sky-200'">
+                                            {{ hability.source === 'species' ? 'Espécie' : 'Vocação' }}
+                                          </span>
+                                        </div>
+                                        <p class="text-sm leading-6 whitespace-pre-line text-zinc-300">{{ hability.description || 'Sem descrição.' }}</p>
+                                      </div>
+                                    }
+
+                                    @if (inheritedHabilitiesData.length === 0) {
+                                      <div class="rounded-md border border-dashed border-zinc-700 px-4 py-6 text-center text-xs text-zinc-500">
+                                        Nenhuma habilidade herdada encontrada na espécie ou vocação atual.
+                                      </div>
+                                    }
+                                  </div>
+                                </div>
+                              </div>
                             }
                           }
 
@@ -881,6 +972,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
   attributesData: Record<string, { value: number | null; skills: Record<string, number> }> = {};
   subspecializationsData: string[] = [''];
+  habilitiesData: IrpwVocationHability[] = [];
+  inheritedHabilitiesData: InheritedCharacterHability[] = [];
   marksData: IrpwCharacterMark[] = [];
   expandedMarkIndexes = new Set<number>();
   readonly attributeGroupEntries = Object.entries(ATTRIBUTE_GROUP_SKILLS) as [AttributeGroupCode, SkillCode[]][];
@@ -984,12 +1077,15 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.selectedCharacter = null;
       this.currentSheet = null;
       this.subspecializationsData = [''];
+      this.habilitiesData = [];
+      this.inheritedHabilitiesData = [];
       this.marksData = [];
       this.expandedMarkIndexes.clear();
     } else if (this.selectedCharacterId) {
       this.selectedCharacter = this.characters.find(c => c.id === this.selectedCharacterId) ?? this.selectedCharacter;
       this.selectedSpecieId = this.selectedCharacter?.ParentSpecies?.id ?? '';
       this.selectedVocationId = this.selectedCharacter?.ParentIRPWVocation?.id ?? '';
+      this.refreshInheritedHabilities();
     }
   }
 
@@ -1026,10 +1122,12 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.parsePerceptions();
     this.parseAttributes();
     this.parseSubspecializations();
+    this.parseHabilities();
     this.parseLifepoints();
     this.parseDefensepoints();
     this.parseResources();
     this.parseMarks();
+    this.refreshInheritedHabilities();
     this.syncRollFormula();
   }
 
@@ -1059,6 +1157,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
         ? { ...character, ParentSpecies: parentSpecie }
         : character
     );
+
+    this.refreshInheritedHabilities();
   }
 
   onVocationSelect() {
@@ -1087,6 +1187,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
         ? { ...character, ParentIRPWVocation: parentVocation }
         : character
     );
+
+    this.refreshInheritedHabilities();
   }
 
   async openCharacterEditor() {
@@ -1173,6 +1275,41 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.currentSheet.subspecialization = filledValues.length ? JSON.stringify(filledValues) : null;
       this.scheduleAutoSave();
     }
+  }
+
+  parseHabilities() {
+    if (!this.currentSheet?.habilities) {
+      this.habilitiesData = [];
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(this.currentSheet.habilities);
+      this.habilitiesData = Array.isArray(parsed)
+        ? parsed.map(hability => this.normalizeHability(hability))
+        : [];
+    } catch {
+      this.habilitiesData = [];
+    }
+  }
+
+  onHabilitiesChange() {
+    this.habilitiesData = this.habilitiesData.map(hability => this.normalizeHability(hability));
+
+    if (this.currentSheet) {
+      this.currentSheet.habilities = this.habilitiesData.length ? JSON.stringify(this.habilitiesData) : null;
+      this.scheduleAutoSave();
+    }
+  }
+
+  addHability() {
+    this.habilitiesData = [...this.habilitiesData, this.createEmptyHability()];
+    this.onHabilitiesChange();
+  }
+
+  removeHability(index: number) {
+    this.habilitiesData = this.habilitiesData.filter((_, currentIndex) => currentIndex !== index);
+    this.onHabilitiesChange();
   }
 
   getSkillLevel(group: string, skill: string): number {
@@ -1403,6 +1540,49 @@ export class IrpwCharacterSheetComponent implements OnInit {
       .filter(value => value.length > 0);
 
     return [...normalizedValues, ''];
+  }
+
+  private refreshInheritedHabilities() {
+    const inheritedFromSpecies = this.getInheritedSpeciesHabilities();
+    const inheritedFromVocation = this.getInheritedVocationHabilities();
+
+    this.inheritedHabilitiesData = [...inheritedFromSpecies, ...inheritedFromVocation];
+  }
+
+  private getInheritedSpeciesHabilities(): InheritedCharacterHability[] {
+    const specieId = this.selectedCharacter?.ParentSpecies?.id;
+    if (!specieId) {
+      return [];
+    }
+
+    const specieConfig = this.irpwSpecieService.getConfig(specieId);
+    return this.parseHabilityList(specieConfig?.passive)
+      .map(hability => ({ ...hability, source: 'species' as const }));
+  }
+
+  private getInheritedVocationHabilities(): InheritedCharacterHability[] {
+    const rawHabilities = this.selectedCharacter?.ParentIRPWVocation?.habilities;
+    return this.parseHabilityList(rawHabilities)
+      .map(hability => ({ ...hability, source: 'vocation' as const }));
+  }
+
+  private parseHabilityList(rawValue: string | null | undefined): IrpwVocationHability[] {
+    if (!rawValue) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(rawValue);
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => this.normalizeHability(item));
+      }
+
+      return parsed && typeof parsed === 'object'
+        ? [this.normalizeHability(parsed)]
+        : [];
+    } catch {
+      return [];
+    }
   }
 
   parseDefensepoints() {
