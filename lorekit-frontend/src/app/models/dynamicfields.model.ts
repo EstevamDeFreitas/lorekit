@@ -1,11 +1,15 @@
+export type DynamicFieldType = 'text' | 'options' | 'editor' | 'entity' | 'image';
+
 export class DynamicField {
   id: string;
   name: string;
   entityTable: string;
-  options ?: string;
+  options?: string;
   isEditorField: boolean = false;
+  fieldType: DynamicFieldType = 'text';
+  targetEntityTable?: string;
 
-  constructor(id: string = '', name: string = '', entityTable: string = '', options: string = ''){
+  constructor(id: string = '', name: string = '', entityTable: string = '', options: string = '') {
     this.id = id;
     this.name = name;
     this.entityTable = entityTable;

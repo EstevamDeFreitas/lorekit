@@ -4,10 +4,12 @@ import { ComboBoxComponent } from '../../../components/combo-box/combo-box.compo
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { InputComponent } from '../../../components/input/input.component';
 import { DynamicField, DynamicFieldValue } from '../../../models/dynamicfields.model';
+import { buildImageUrl } from '../../../models/image.model';
 import { WorldObject } from '../../../models/object.model';
 import { UiFieldCatalogItem, UiFieldLayoutItem } from '../../../models/ui-field-config.model';
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { UiFieldConfigService } from '../../../services/ui-field-config.service';
+import { ElectronSafeAPI } from '../../../database/database.helper';
 
 @Component({
   selector: 'app-object-configured-fields',
@@ -23,7 +25,36 @@ import { UiFieldConfigService } from '../../../services/ui-field-config.service'
           <div class="config-grid-item" [ngStyle]="itemStyle(item)">
             @let dynamicTemplate = dynamicTemplateByToken(item.token);
             @if (dynamicTemplate) {
-              @if (dynamicTemplate.isEditorField) {
+              @if (dynamicTemplate.fieldType === 'image') {
+                <div class="flex flex-col h-full rounded-lg border border-zinc-800 overflow-hidden">
+                  <div class="flex items-center justify-between px-3 py-1.5 bg-zinc-800 border-b border-zinc-700">
+                    <span class="text-xs text-zinc-300 truncate">{{ dynamicTemplate.name }}</span>
+                    <label class="cursor-pointer text-zinc-400 hover:text-white transition-colors" title="Enviar imagem">
+                      <i class="fa-solid fa-upload text-xs"></i>
+                      <input type="file" class="hidden" accept="image/*" (change)="onDynamicImageUpload($event, dynamicTemplate.id)" />
+                    </label>
+                  </div>
+                  <div class="flex-1 overflow-hidden min-h-0">
+                    @if (getDynamicFieldValue(dynamicTemplate.id).value) {
+                      <img [src]="getImageUrl(getDynamicFieldValue(dynamicTemplate.id).value)" alt="" class="w-full h-full object-cover" />
+                    } @else {
+                      <div class="flex items-center justify-center h-full text-zinc-500 text-xs">Nenhuma imagem</div>
+                    }
+                  </div>
+                </div>
+              }
+              @else if (dynamicTemplate.fieldType === 'entity') {
+                <app-combo-box
+                  [label]="dynamicTemplate.name"
+                  [items]="entityOptionsByFieldId[dynamicTemplate.id] || []"
+                  compareProp="value"
+                  displayProp="label"
+                  [clearable]="true"
+                  [comboValue]="getDynamicFieldValue(dynamicTemplate.id).value"
+                  (comboValueChange)="onDynamicComboChange(dynamicTemplate.id, $event)">
+                </app-combo-box>
+              }
+              @else if (dynamicTemplate.isEditorField) {
                 <div class="editor-wrapper">
                   <label class="mb-1 text-xs text-white">{{ dynamicTemplate.name }}</label>
                   <app-editor [entityId]="getDynamicFieldValue(dynamicTemplate.id).id" [docTitle]="dynamicTemplate.name" entityTable="Object" [entityName]="object().name" [document]="getDynamicFieldValue(dynamicTemplate.id).value || ''" (saveDocument)="onDynamicEditorSave($event, dynamicTemplate.id)" class="rounded-lg border border-zinc-800 bg-zinc-925 h-full overflow-y-auto scrollbar-dark"></app-editor>
@@ -65,6 +96,7 @@ export class ObjectConfiguredFieldsComponent {
 
   dynamicTemplatesById: Record<string, DynamicField> = {};
   dynamicValuesByFieldId: Record<string, DynamicFieldValue> = {};
+  entityOptionsByFieldId: Record<string, { value: string; label: string }[]> = {};
 
   private dynamicSaveTimeout!: ReturnType<typeof setTimeout>;
   private lastObjectId = '';
@@ -176,6 +208,13 @@ export class ObjectConfiguredFieldsComponent {
       this.dynamicTemplatesById[template.id] = template;
     });
 
+    this.entityOptionsByFieldId = {};
+    Object.values(this.dynamicTemplatesById).forEach((template) => {
+      if (template.fieldType === 'entity' && template.targetEntityTable) {
+        this.entityOptionsByFieldId[template.id] = this.uiFieldConfigService.getEntityItemsForTable(template.targetEntityTable);
+      }
+    });
+
     this.dynamicValuesByFieldId = {};
     const objectId = this.object().id;
     if (!objectId) {
@@ -202,5 +241,29 @@ export class ObjectConfiguredFieldsComponent {
     const current = this.getDynamicFieldValue(fieldId);
     current.value = value;
     this.saveDynamicValues();
+  }
+
+  getImageUrl(filePath: string): string {
+    return buildImageUrl(filePath);
+  }
+
+  async onDynamicImageUpload(event: Event, fieldId: string): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const imagesDir = await ElectronSafeAPI.electron.getImagePath();
+    const guid = crypto.randomUUID();
+    const ext = file.name.split('.').pop() ?? 'jpg';
+    const filename = `${Date.now()}-${guid}.${ext}`;
+    const fullPath = `${imagesDir}/dynamic/${filename}`;
+
+    const buffer = await file.arrayBuffer();
+    await ElectronSafeAPI.electron.writeFile(fullPath, new Uint8Array(buffer));
+
+    const fieldValue = this.getDynamicFieldValue(fieldId);
+    fieldValue.value = fullPath;
+    this.saveDynamicValues();
+    input.value = '';
   }
 }

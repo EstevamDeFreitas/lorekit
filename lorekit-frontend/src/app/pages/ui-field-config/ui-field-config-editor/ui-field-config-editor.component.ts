@@ -175,20 +175,29 @@ interface SelectOptionItem {
                 [(value)]="newFieldName">
               </app-input>
 
-              <app-input
-                label="Opcoes"
-                [placeholder]="'Separe por ; (opcional)'"
-                [(value)]="newFieldOptions">
-              </app-input>
+              <app-combo-box
+                label="Tipo"
+                [items]="fieldTypeItems"
+                compareProp="value"
+                displayProp="label"
+                [(comboValue)]="newFieldType">
+              </app-combo-box>
 
-              <label class="flex items-center gap-2 text-xs text-zinc-300 select-none">
-                <input
-                  type="checkbox"
-                  class="h-4 w-4 accent-emerald-500"
-                  [checked]="newFieldIsEditorField"
-                  (change)="newFieldIsEditorField = $any($event.target).checked" />
-                Campo de editor (texto longo)
-              </label>
+              @if (newFieldType === 'options') {
+                <app-input
+                  label="Opcoes"
+                  [placeholder]="'Separe por ; (ex: op1;op2;op3)'"
+                  [(value)]="newFieldOptions">
+                </app-input>
+              }
+
+              @if (newFieldType === 'entity') {
+                <app-combo-box
+                  label="Entidade relacionada"
+                  [items]="entityTableOptions"
+                  [(comboValue)]="newFieldTargetEntityTable">
+                </app-combo-box>
+              }
 
               <div class="flex justify-end">
                 <app-button
@@ -212,7 +221,7 @@ interface SelectOptionItem {
                 (dragstart)="onCatalogDragStart($event, field.token)">
                 <div class="flex flex-col">
                   <span class="text-sm">{{ field.label }}</span>
-                  <span class="text-[11px] text-zinc-400">{{ field.source }}{{ field.isEditorField ? ' - editor' : '' }}</span>
+                  <span class="text-[11px] text-zinc-400">{{ field.source }}{{ field.fieldType && field.fieldType !== 'text' ? ' · ' + field.fieldType : '' }}{{ field.isEditorField && field.fieldType === 'text' ? ' - editor' : '' }}</span>
                 </div>
               </div>
             }
@@ -251,7 +260,26 @@ export class UiFieldConfigEditorComponent {
   newFieldName = '';
   newFieldOptions = '';
   newFieldIsEditorField = false;
+  newFieldType: 'text' | 'options' | 'editor' | 'entity' | 'image' = 'text';
+  newFieldTargetEntityTable = '';
   creatingDynamicField = false;
+
+  readonly fieldTypeItems = [
+    { value: 'text', label: 'Texto' },
+    { value: 'options', label: 'Opcoes (combobox)' },
+    { value: 'editor', label: 'Editor de texto' },
+    { value: 'entity', label: 'Entidade relacionada' },
+    { value: 'image', label: 'Imagem' },
+  ];
+
+  get entityTableOptions(): string[] {
+    const ignored = new Set([
+      'Personalization', 'Image', 'DynamicField', 'DynamicFieldValue', 'Document',
+      'UiFieldConfig', 'UiFieldTemplate', 'LocationCategory', 'Relationship',
+      'GlobalParameter', 'OrganizationType', 'Link',
+    ]);
+    return schema.map((t) => t.name).filter((name) => !ignored.has(name));
+  }
 
   // Template
   activeTemplateId = '';
@@ -743,15 +771,19 @@ export class UiFieldConfigEditorComponent {
 
     this.creatingDynamicField = true;
     try {
-      const dynamicField = new DynamicField('', name, this.entityTable, this.newFieldOptions.trim());
-      dynamicField.isEditorField = this.newFieldIsEditorField;
+      const dynamicField = new DynamicField('', name, this.entityTable, '');
+      dynamicField.fieldType = this.newFieldType;
+      dynamicField.isEditorField = this.newFieldType === 'editor';
+      dynamicField.options = this.newFieldType === 'options' ? this.newFieldOptions.trim() : undefined;
+      dynamicField.targetEntityTable = this.newFieldType === 'entity' ? this.newFieldTargetEntityTable : undefined;
 
       this.uiFieldConfigService.saveDynamicField(dynamicField);
       this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
 
       this.newFieldName = '';
       this.newFieldOptions = '';
-      this.newFieldIsEditorField = false;
+      this.newFieldType = 'text';
+      this.newFieldTargetEntityTable = '';
       this.showNotice('Campo dinamico criado.');
     } finally {
       this.creatingDynamicField = false;
@@ -760,12 +792,16 @@ export class UiFieldConfigEditorComponent {
 
   private getDefaultWidth(token: string): number {
     const catalogItem = this.catalog.find((item) => item.token === token);
-    return catalogItem?.isEditorField ? 6 : 4;
+    if (!catalogItem) return 4;
+    if (catalogItem.fieldType === 'image') return 4;
+    return catalogItem.isEditorField ? 6 : 4;
   }
 
   private getDefaultHeight(token: string): number {
     const catalogItem = this.catalog.find((item) => item.token === token);
-    return catalogItem?.isEditorField ? 6 : 1;
+    if (!catalogItem) return 1;
+    if (catalogItem.fieldType === 'image') return 6;
+    return catalogItem.isEditorField ? 6 : 1;
   }
 
   private getSelectedParentScope(): ParentScopeOption | null {

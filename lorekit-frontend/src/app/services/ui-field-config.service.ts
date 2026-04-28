@@ -34,6 +34,7 @@ export class UiFieldConfigService {
         label: field.name,
         source: 'dynamic' as const,
         isEditorField: !!field.isEditorField,
+        fieldType: field.fieldType || 'text',
       }));
 
     return [...fixedFields, ...dynamicFields];
@@ -220,6 +221,30 @@ export class UiFieldConfigService {
   }
 
   // ─── Template methods ───────────────────────────────────────────────────────
+
+  getEntityItemsForTable(tableName: string): { value: string; label: string }[] {
+    const db = this.dbProvider.getDb<any>();
+    const pragma = db.exec(`PRAGMA table_info("${tableName}")`);
+    if (!pragma.length) return [];
+
+    const nameIndex = pragma[0].columns.indexOf('name');
+    const cols = pragma[0].values.map((row: unknown[]) => String(row[nameIndex]));
+    const labelColumn = cols.includes('name') ? 'name' : cols.includes('title') ? 'title' : null;
+
+    const sql = labelColumn
+      ? `SELECT id, "${labelColumn}" as label FROM "${tableName}" ORDER BY "${labelColumn}" COLLATE NOCASE`
+      : `SELECT id FROM "${tableName}" ORDER BY id`;
+
+    const result = db.exec(sql);
+    if (!result.length) return [];
+
+    const columns = result[0].columns;
+    return result[0].values.map((row: unknown[]) => {
+      const id = String(row[columns.indexOf('id')]);
+      const labelRaw = columns.includes('label') ? row[columns.indexOf('label')] : null;
+      return { value: id, label: labelRaw ? String(labelRaw) : id };
+    });
+  }
 
   getTemplates(entityTable: string): UiFieldTemplate[] {
     const rows = this.crud.findAll('UiFieldTemplate', { entityTable });

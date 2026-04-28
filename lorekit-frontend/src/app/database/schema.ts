@@ -238,11 +238,13 @@ export const schema: TableDef[] = [
   {
     name:"DynamicField",
     columns:[
-      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
-      { name: "name",        def: `"name" TEXT NOT NULL` },
-      { name: "entityTable", def: `"entityTable" TEXT NOT NULL` },
-      { name: "options",   def: `"options" TEXT` },
-      { name: "isEditorField",   def: `"isEditorField" INTEGER` },
+      { name: "id",                def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",              def: `"name" TEXT NOT NULL` },
+      { name: "entityTable",       def: `"entityTable" TEXT NOT NULL` },
+      { name: "options",           def: `"options" TEXT` },
+      { name: "isEditorField",     def: `"isEditorField" INTEGER` },
+      { name: "fieldType",         def: `"fieldType" TEXT` },
+      { name: "targetEntityTable", def: `"targetEntityTable" TEXT` },
     ]
   },
   {

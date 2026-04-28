@@ -20,7 +20,7 @@ import { ObjectTypeService } from '../../../services/object-type.service';
 import { schema } from '../../../database/schema';
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
-import { DynamicField } from '../../../models/dynamicfields.model';
+import { DynamicField, DynamicFieldType } from '../../../models/dynamicfields.model';
 import { ElectronService } from '../../../services/electron.service';
 import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-config-editor/ui-field-config-editor.component';
 import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
@@ -255,19 +255,22 @@ import { EventTypeService } from '../../../services/event-type.service';
                       icon="fa-solid fa-plus"
                       appFormOverlay
                       [title]="'Adicionar Campo Dinâmico para ' + currentTable"
-                      [fields]="[{ key: 'name', label: 'Nome do campo', value: '', type: 'text' },
-                        { key: 'options', label: 'Opções do campo (separar por ; )', value: '', type: 'text'},
-                        { key: 'isEditor', label: 'É Campo de Editor?', value: 'false', type: 'boolean'}
+                      [fields]="[
+                        { key: 'name', label: 'Nome do campo', value: '', type: 'text' },
+                        { key: 'fieldType', label: 'Tipo do campo', value: 'text', options: fieldTypeOptions },
+                        { key: 'options', label: 'Opções (separar por ;) — somente tipo opções', value: '', type: 'text' },
+                        { key: 'targetEntityTable', label: 'Entidade relacionada — somente tipo entity', value: '', options: availableTables }
                       ]"
                       (onSave)="createDynamicField($event)"
                     ></app-button>
                   </div>
 
-
                   @for (field of dynamicFields; track field.id) {
                     <div class="grid grid-cols-3 items-center p-2 not-last:border-b not-last:border-zinc-700">
                       <p>{{field.name}}</p>
-                      <p>{{field.options}}</p>
+                      <p class="text-sm text-zinc-400">
+                        {{ getDynamicFieldTypeLabel(field) }}
+                      </p>
                       <div class="flex flex-row gap-2 justify-end">
                         <app-icon-button
                           label="Editar"
@@ -276,15 +279,17 @@ import { EventTypeService } from '../../../services/event-type.service';
                           icon="fa-solid fa-pencil"
                           appFormOverlay
                           [title]="'Editar Campo Dinâmico'"
-                          [fields]="[{ key: 'name', label: 'Nome do campo', value: field.name, type: 'text' },
-                            { key: 'options', label: 'Opções do campo (separar por ; )', value: field.options ?? '', type: 'text'},
-                            { key: 'isEditor', label: 'É Campo de Editor?', value: field.isEditorField ? 'true' : 'false', type: 'boolean'}
+                          [fields]="[
+                            { key: 'name', label: 'Nome do campo', value: field.name, type: 'text' },
+                            { key: 'fieldType', label: 'Tipo do campo', value: field.fieldType || 'text', options: fieldTypeOptions },
+                            { key: 'options', label: 'Opções (separar por ;) — somente tipo opções', value: field.options ?? '', type: 'text' },
+                            { key: 'targetEntityTable', label: 'Entidade relacionada — somente tipo entity', value: field.targetEntityTable ?? '', options: availableTables }
                           ]"
+                          [saveLabel]="'Atualizar'"
                           (onSave)="saveDynamicField($event, field.id)"
                         ></app-icon-button>
                         <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" (click)="deleteDynamicField(field)"></app-icon-button>
                       </div>
-
                     </div>
                   }
                   @empty {
@@ -475,6 +480,8 @@ export class SettingsComponent implements OnInit{
   currentTable: string = '';
 
   dynamicFields : DynamicField[] = [];
+
+  readonly fieldTypeOptions = ['text', 'options', 'editor', 'entity', 'image'];
 
   appVersion: string = '';
   electronService = inject(ElectronService);
@@ -816,7 +823,7 @@ export class SettingsComponent implements OnInit{
 
   createDynamicField(formData: Record<string, string>) {
     const fieldName = formData['name'];
-    const fieldOptions = formData['options'];
+    const fieldType = (formData['fieldType'] as DynamicFieldType) || 'text';
 
     if (fieldName.trim() === '') {
       return;
@@ -826,8 +833,10 @@ export class SettingsComponent implements OnInit{
       id: '',
       name: fieldName.trim(),
       entityTable: this.currentTable,
-      options: fieldOptions,
-      isEditorField: formData['isEditor'] === 'true' || formData['isEditor'] === '1'
+      options: fieldType === 'options' ? formData['options'] : undefined,
+      isEditorField: fieldType === 'editor',
+      fieldType,
+      targetEntityTable: fieldType === 'entity' ? formData['targetEntityTable'] : undefined,
     };
 
     let field = this.dynamicFieldService.saveDynamicField(newField);
@@ -836,7 +845,7 @@ export class SettingsComponent implements OnInit{
 
   saveDynamicField(formData: Record<string, string>, fieldId: string) {
     const fieldName = formData['name'];
-    const fieldOptions = formData['options'];
+    const fieldType = (formData['fieldType'] as DynamicFieldType) || 'text';
 
     if (fieldName.trim() === '') {
       return;
@@ -845,11 +854,23 @@ export class SettingsComponent implements OnInit{
     const fieldToUpdate = this.dynamicFields.find(f => f.id === fieldId);
     if (fieldToUpdate) {
       fieldToUpdate.name = fieldName.trim();
-      fieldToUpdate.options = fieldOptions;
+      fieldToUpdate.fieldType = fieldType;
+      fieldToUpdate.options = fieldType === 'options' ? formData['options'] : undefined;
+      fieldToUpdate.isEditorField = fieldType === 'editor';
+      fieldToUpdate.targetEntityTable = fieldType === 'entity' ? formData['targetEntityTable'] : undefined;
       this.dynamicFieldService.saveDynamicField(fieldToUpdate);
       this.onTableSelected(this.currentTable);
     }
+  }
 
+  getDynamicFieldTypeLabel(field: DynamicField): string {
+    switch (field.fieldType) {
+      case 'options': return `opções: ${field.options || ''}`;
+      case 'editor': return 'editor de texto';
+      case 'entity': return `entidade: ${field.targetEntityTable || ''}`;
+      case 'image': return 'imagem';
+      default: return 'texto';
+    }
   }
 
   deleteDynamicField(field: DynamicField) {

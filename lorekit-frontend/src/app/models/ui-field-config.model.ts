@@ -6,6 +6,7 @@ export interface UiFieldCatalogItem {
   label: string;
   source: UiFieldSource;
   isEditorField: boolean;
+  fieldType?: string;
 }
 
 export interface UiFieldLayoutItem {
