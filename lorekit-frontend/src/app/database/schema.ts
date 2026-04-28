@@ -267,6 +267,18 @@ export const schema: TableDef[] = [
       `CREATE INDEX IF NOT EXISTS "idx_ui_field_config_parent" ON "UiFieldConfig" ("entityTable", "parentEntityTable", "parentEntityId")`,
     ]
   },
+  {
+    name: "UiFieldTemplate",
+    columns: [
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",        def: `"name" TEXT NOT NULL` },
+      { name: "entityTable", def: `"entityTable" TEXT NOT NULL` },
+      { name: "uiConfig",    def: `"uiConfig" TEXT NOT NULL` },
+    ],
+    indexes: [
+      `CREATE UNIQUE INDEX IF NOT EXISTS "idx_ui_field_template_name" ON "UiFieldTemplate" ("entityTable", "name")`,
+    ]
+  },
 
   /////////////////////////////////////// IRONPAW INTEGRATION ///////////////////////////////////////
   {

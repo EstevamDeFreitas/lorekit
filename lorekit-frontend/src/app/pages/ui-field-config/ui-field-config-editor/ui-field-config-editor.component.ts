@@ -2,7 +2,7 @@ import { NgStyle } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
-import { UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem } from '../../../models/ui-field-config.model';
+import { UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem, UiFieldTemplate } from '../../../models/ui-field-config.model';
 import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
 import { DynamicField } from '../../../models/dynamicfields.model';
 import { DbProvider } from '../../../app.config';
@@ -36,7 +36,11 @@ interface SelectOptionItem {
     <div class="p-4 md:p-6 flex flex-col gap-4">
       <div class="flex flex-row items-center justify-between gap-3 border-b border-zinc-800 pb-4">
         <div>
-          <h1 class="text-xl font-semibold text-white">Configurar Layout de Campos</h1>
+          @if (scopeMode === 'template' && activeTemplateName) {
+            <h1 class="text-xl font-semibold text-white">Editando Template: {{ activeTemplateName }}</h1>
+          } @else {
+            <h1 class="text-xl font-semibold text-white">Configurar Layout de Campos</h1>
+          }
           <p class="text-sm text-zinc-400">Arraste campos para o grid e redimensione pelas bordas.</p>
         </div>
         @if (isDialogMode) {
@@ -55,6 +59,18 @@ interface SelectOptionItem {
           displayProp="label"
           [(comboValue)]="scopeMode">
         </app-combo-box>
+
+        @if (scopeMode === 'template') {
+          <app-combo-box
+            class="min-w-72"
+            label="Template"
+            [items]="availableTemplates"
+            compareProp="value"
+            displayProp="label"
+            [comboValue]="selectedTemplateId"
+            (comboValueChange)="onTemplateSelected($event)">
+          </app-combo-box>
+        }
 
         @if (scopeMode === 'parent' && parentScopeOptions.length > 0) {
           <app-combo-box
@@ -88,9 +104,20 @@ interface SelectOptionItem {
 
         <div class="flex flex-col items-end gap-1 ms-auto">
           <div class="flex flex-row gap-2">
-            <app-button label="Padrao do Sistema" buttonType="secondary" size="xs" (click)="confirmResetToDefault()"></app-button>
+            @if (scopeMode !== 'template') {
+              <app-button label="Padrao do Sistema" buttonType="secondary" size="xs" (click)="confirmResetToDefault()"></app-button>
+              <app-button label="Criar Template" buttonType="secondary" size="xs" (click)="toggleCreateTemplateForm()"></app-button>
+            }
             <app-button label="Salvar Layout" buttonType="primary" size="xs" (click)="save()"></app-button>
           </div>
+
+          @if (showCreateTemplateForm) {
+            <div class="flex flex-row gap-2 items-end mt-2">
+              <app-input label="Nome do template" [placeholder]="'Ex: Ficha de combate'" [(value)]="newTemplateName"></app-input>
+              <app-button label="Confirmar" buttonType="primary" size="xs" (click)="confirmCreateTemplate()"></app-button>
+              <app-button label="Cancelar" buttonType="secondary" size="xs" (click)="showCreateTemplateForm = false; newTemplateName = ''"></app-button>
+            </div>
+          }
 
           @if (noticeMessage) {
             <span class="text-xs text-emerald-300">{{ noticeMessage }}</span>
@@ -212,7 +239,7 @@ export class UiFieldConfigEditorComponent {
   catalog: UiFieldCatalogItem[] = [];
   layout: UiConfigPayload = getSystemDefaultConfig('');
 
-  scopeMode: 'entity' | 'parent' | 'global' = 'global';
+  scopeMode: 'entity' | 'parent' | 'global' | 'template' = 'global';
   parentScopeOptions: ParentScopeOption[] = [];
   selectedParentScopeKey = '';
   allowParentSelection = false;
@@ -225,6 +252,14 @@ export class UiFieldConfigEditorComponent {
   newFieldOptions = '';
   newFieldIsEditorField = false;
   creatingDynamicField = false;
+
+  // Template
+  activeTemplateId = '';
+  activeTemplateName = '';
+  availableTemplates: { value: string; label: string }[] = [];
+  selectedTemplateId = '';
+  showCreateTemplateForm = false;
+  newTemplateName = '';
 
   noticeMessage = '';
   private noticeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -241,6 +276,9 @@ export class UiFieldConfigEditorComponent {
     }
 
     options.push({ value: 'global', label: 'Global da entidade' });
+    if (this.availableTemplates.length > 0) {
+      options.push({ value: 'template', label: 'Template' });
+    }
     return options;
   }
 
@@ -282,7 +320,22 @@ export class UiFieldConfigEditorComponent {
     }
 
     this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
-    this.layout = this.uiFieldConfigService.getResolvedConfig(this.entityTable, this.entityId);
+    this.refreshTemplates();
+
+    const incomingTemplateId = this.dialogData?.templateId as string | undefined;
+    if (incomingTemplateId) {
+      const tpl = this.uiFieldConfigService.getTemplates(this.entityTable)
+        .find((t) => t.id === incomingTemplateId);
+      if (tpl) {
+        this.layout = this.uiFieldConfigService.parseTemplateConfig(tpl);
+        this.activeTemplateId = tpl.id;
+        this.activeTemplateName = tpl.name;
+        this.selectedTemplateId = tpl.id;
+      }
+      this.scopeMode = 'template';
+    } else {
+      this.layout = this.uiFieldConfigService.getResolvedConfig(this.entityTable, this.entityId);
+    }
 
     const parentTable = this.dialogData?.parentEntityTable ?? queryMap.get('parentEntityTable');
     const parentId = this.dialogData?.parentEntityId ?? queryMap.get('parentEntityId');
@@ -314,12 +367,12 @@ export class UiFieldConfigEditorComponent {
       this.selectedParentEntityId = parentId;
     }
 
-    const requestedScopeMode = this.dialogData?.scopeMode as 'entity' | 'parent' | 'global' | undefined;
-    if (requestedScopeMode) {
+    const requestedScopeMode = this.dialogData?.scopeMode as 'entity' | 'parent' | 'global' | 'template' | undefined;
+    if (!incomingTemplateId && requestedScopeMode) {
       this.scopeMode = requestedScopeMode;
-    } else if (this.entityId) {
+    } else if (!incomingTemplateId && this.entityId) {
       this.scopeMode = 'entity';
-    } else {
+    } else if (!incomingTemplateId) {
       this.scopeMode = this.parentScopeOptions.length > 0 ? 'parent' : 'global';
     }
 
@@ -551,18 +604,17 @@ export class UiFieldConfigEditorComponent {
   }
 
   save(): void {
-    const cleanedLayout: UiConfigPayload = {
-      version: 1,
-      columns: this.layout.columns,
-      rowHeight: this.layout.rowHeight,
-      items: this.layout.items.map((item) => ({
-        token: item.token,
-        col: item.col,
-        row: item.row,
-        width: item.width,
-        height: item.height,
-      })),
-    };
+    const cleanedLayout = this.buildCleanedLayout();
+
+    if (this.scopeMode === 'template') {
+      if (!this.activeTemplateId) {
+        this.showNotice('Selecione um template para salvar.');
+        return;
+      }
+      this.uiFieldConfigService.updateTemplate(this.activeTemplateId, this.activeTemplateName, cleanedLayout);
+      this.showNotice('Template salvo.');
+      return;
+    }
 
     if (this.scopeMode === 'entity') {
       this.uiFieldConfigService.saveConfig({
@@ -599,6 +651,64 @@ export class UiFieldConfigEditorComponent {
       uiConfig: cleanedLayout,
     });
     this.showNotice('Configuracao salva.');
+  }
+
+  private buildCleanedLayout(): UiConfigPayload {
+    return {
+      version: 1,
+      columns: this.layout.columns,
+      rowHeight: this.layout.rowHeight,
+      items: this.layout.items.map((item) => ({
+        token: item.token,
+        col: item.col,
+        row: item.row,
+        width: item.width,
+        height: item.height,
+      })),
+    };
+  }
+
+  refreshTemplates(): void {
+    const templates = this.uiFieldConfigService.getTemplates(this.entityTable);
+    this.availableTemplates = templates.map((t) => ({ value: t.id, label: t.name }));
+  }
+
+  onTemplateSelected(templateId: string): void {
+    if (!templateId) { return; }
+    const tpl = this.uiFieldConfigService.getTemplates(this.entityTable)
+      .find((t) => t.id === templateId);
+    if (tpl) {
+      this.layout = this.uiFieldConfigService.parseTemplateConfig(tpl);
+      this.selectedTemplateId = tpl.id;
+      this.activeTemplateId = tpl.id;
+      this.activeTemplateName = tpl.name;
+      this.scopeMode = 'template';
+    }
+  }
+
+  toggleCreateTemplateForm(): void {
+    this.showCreateTemplateForm = !this.showCreateTemplateForm;
+    if (!this.showCreateTemplateForm) {
+      this.newTemplateName = '';
+    }
+  }
+
+  confirmCreateTemplate(): void {
+    const name = this.newTemplateName.trim();
+    if (!name) {
+      this.showNotice('Informe um nome para o template.');
+      return;
+    }
+    const cleanedLayout = this.buildCleanedLayout();
+    const created = this.uiFieldConfigService.saveTemplate(name, this.entityTable, cleanedLayout);
+    this.newTemplateName = '';
+    this.showCreateTemplateForm = false;
+    this.refreshTemplates();
+    this.activeTemplateId = created.id;
+    this.activeTemplateName = created.name;
+    this.selectedTemplateId = created.id;
+    this.scopeMode = 'template';
+    this.showNotice(`Template "${name}" criado.`);
   }
 
   private showNotice(message: string): void {

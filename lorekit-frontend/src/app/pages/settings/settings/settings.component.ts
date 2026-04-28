@@ -23,12 +23,14 @@ import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DynamicField } from '../../../models/dynamicfields.model';
 import { ElectronService } from '../../../services/electron.service';
 import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-config-editor/ui-field-config-editor.component';
+import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
+import { UiFieldTemplate } from '../../../models/ui-field-config.model';
 import { EventType as TimelineEventType } from '../../../models/event-type.model';
 import { EventTypeService } from '../../../services/event-type.service';
 
 @Component({
   selector: 'app-settings',
-  imports: [NgClass, FormsModule, ButtonComponent, IconButtonComponent, FormOverlayDirective, OverlayModule, ComboBoxComponent],
+  imports: [NgClass, FormsModule, ButtonComponent, IconButtonComponent, FormOverlayDirective, OverlayModule, ComboBoxComponent, InputComponent],
   template: `
   <div class="w-[60vw] h-[60vh] rounded-md border border-zinc-800">
 
@@ -299,24 +301,81 @@ import { EventTypeService } from '../../../services/event-type.service';
               <h3 class="text-base mb-2">Configuração Global de Campos</h3>
               <br>
               <p class="text-sm text-zinc-400 mb-3">Selecione uma entidade para definir o layout global dos campos exibidos.</p>
-              <div class="flex flex-col gap-4 max-w-96">
-                <app-combo-box
-                  class="w-full"
-                  label="Entidade"
-                  [items]="fieldConfigAvailableTables"
-                  [comboValue]="selectedFieldConfigTable"
-                  (comboValueChange)="selectedFieldConfigTable = $event">
-                </app-combo-box>
-
-                <div class="flex flex-row gap-2">
-                  <app-button
-                    label="Configurar Layout Global"
-                    buttonType="primary"
-                    size="sm"
-                    icon="fa-solid fa-table-cells-large"
-                    (click)="openGlobalFieldConfigDialog()">
-                  </app-button>
+              <div class="flex flex-col gap-4">
+                <div class="max-w-96">
+                  <app-combo-box
+                    class="w-full"
+                    label="Entidade"
+                    [items]="fieldConfigAvailableTables"
+                    [comboValue]="selectedFieldConfigTable"
+                    (comboValueChange)="onFieldConfigTableChange($event)">
+                  </app-combo-box>
                 </div>
+
+                @if (selectedFieldConfigTable) {
+                  <div class="flex flex-row gap-2">
+                    <app-button
+                      label="Configurar Layout Global"
+                      buttonType="primary"
+                      size="sm"
+                      icon="fa-solid fa-table-cells-large"
+                      (click)="openGlobalFieldConfigDialog()">
+                    </app-button>
+                  </div>
+
+                  <div>
+                    <div class="flex flex-row justify-between items-center mb-3">
+                      <h4 class="text-sm text-zinc-200 font-medium">Templates de Layout</h4>
+                      <app-button
+                        label="Criar Novo Template"
+                        buttonType="secondary"
+                        size="xs"
+                        icon="fa-solid fa-plus"
+                        (click)="startNewTemplate()">
+                      </app-button>
+                    </div>
+
+                    @if (showNewTemplateForm) {
+                      <div class="flex flex-row gap-2 items-end mb-3 p-3 bg-zinc-800 rounded-lg border border-zinc-700">
+                        <app-input
+                          class="flex-1"
+                          label="Nome do template"
+                          [placeholder]="'Ex: Ficha de combate'"
+                          [(value)]="newTemplateNameInline">
+                        </app-input>
+                        <app-button label="Criar" buttonType="primary" size="xs" (click)="confirmNewTemplate()"></app-button>
+                        <app-button label="Cancelar" buttonType="secondary" size="xs" (click)="showNewTemplateForm = false; newTemplateNameInline = ''"></app-button>
+                      </div>
+                    }
+                    <div class="border border-zinc-700 rounded-md bg-zinc-900">
+                      @for (template of fieldConfigTemplates; track template.id) {
+                        <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
+                          <p class="text-sm">{{ template.name }}</p>
+                          <div class="flex flex-row gap-2">
+                            <app-icon-button
+                              icon="fa-solid fa-pencil"
+                              size="sm"
+                              buttonType="secondary"
+                              title="Editar layout do template"
+                              (click)="openEditTemplateDialog(template)">
+                            </app-icon-button>
+                            <app-icon-button
+                              icon="fa-solid fa-trash"
+                              size="sm"
+                              buttonType="danger"
+                              (click)="deleteTemplate(template)">
+                            </app-icon-button>
+                          </div>
+                        </div>
+                      }
+                      @empty {
+                        <div class="flex flex-row justify-between items-center p-2">
+                          <p class="text-sm text-zinc-400">Nenhum template encontrado para esta entidade.</p>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
               </div>
             </div>
           }
@@ -340,6 +399,7 @@ export class SettingsComponent implements OnInit{
   objectTypeService = inject(ObjectTypeService);
   eventTypeService = inject(EventTypeService);
   dynamicFieldService = inject(DynamicFieldService);
+  uiFieldConfigService = inject(UiFieldConfigService);
   private dialog = inject(Dialog);
 
   currentTab: string = '';
@@ -392,6 +452,7 @@ export class SettingsComponent implements OnInit{
                     'DynamicFieldValue',
                     'Document',
                     'UiFieldConfig',
+                    'UiFieldTemplate',
                     'LocationCategory',
                     'Relationship',
                     'GlobalParameter',
@@ -407,6 +468,9 @@ export class SettingsComponent implements OnInit{
   availableTables = schema.filter(t => !this.ignoredTables.includes(t.name)).map(t => t.name);
   fieldConfigAvailableTables = [...this.availableTables];
   selectedFieldConfigTable: string = this.fieldConfigAvailableTables[0] || '';
+  fieldConfigTemplates: UiFieldTemplate[] = [];
+  showNewTemplateForm = false;
+  newTemplateNameInline = '';
 
   currentTable: string = '';
 
@@ -450,6 +514,9 @@ export class SettingsComponent implements OnInit{
       }
     }
 
+    if (tab === 'global_field_config') {
+      this.loadFieldConfigTemplates();
+    }
   }
 
   getLocationCategories() {
@@ -648,7 +715,7 @@ export class SettingsComponent implements OnInit{
       return;
     }
 
-    this.dialog.open(UiFieldConfigEditorComponent, {
+    const ref = this.dialog.open(UiFieldConfigEditorComponent, {
       panelClass: 'screen-dialog',
       width: '95vw',
       maxWidth: '1400px',
@@ -658,6 +725,92 @@ export class SettingsComponent implements OnInit{
         scopeMode: 'global',
         allowParentSelection: true,
       },
+    });
+    ref.closed.subscribe(() => this.loadFieldConfigTemplates());
+  }
+
+  onFieldConfigTableChange(table: string): void {
+    this.selectedFieldConfigTable = table;
+    this.loadFieldConfigTemplates();
+  }
+
+  loadFieldConfigTemplates(): void {
+    if (!this.selectedFieldConfigTable) {
+      this.fieldConfigTemplates = [];
+      return;
+    }
+    this.fieldConfigTemplates = this.uiFieldConfigService.getTemplates(this.selectedFieldConfigTable);
+  }
+
+  startNewTemplate(): void {
+    if (!this.selectedFieldConfigTable) { return; }
+    this.showNewTemplateForm = true;
+    this.newTemplateNameInline = '';
+  }
+
+  confirmNewTemplate(): void {
+    const name = this.newTemplateNameInline.trim();
+    if (!name) { return; }
+
+    const created = this.uiFieldConfigService.saveTemplate(
+      name,
+      this.selectedFieldConfigTable,
+      getSystemDefaultConfig(this.selectedFieldConfigTable),
+    );
+    this.showNewTemplateForm = false;
+    this.newTemplateNameInline = '';
+    this.loadFieldConfigTemplates();
+
+    const ref = this.dialog.open(UiFieldConfigEditorComponent, {
+      panelClass: 'screen-dialog',
+      width: '95vw',
+      maxWidth: '1400px',
+      height: '90vh',
+      data: {
+        entityTable: this.selectedFieldConfigTable,
+        templateId: created.id,
+        templateName: created.name,
+      },
+    });
+    ref.closed.subscribe(() => this.loadFieldConfigTemplates());
+  }
+
+  openCreateTemplateDialog(): void {
+    if (!this.selectedFieldConfigTable) { return; }
+    const ref = this.dialog.open(UiFieldConfigEditorComponent, {
+      panelClass: 'screen-dialog',
+      width: '95vw',
+      maxWidth: '1400px',
+      height: '90vh',
+      data: {
+        entityTable: this.selectedFieldConfigTable,
+        scopeMode: 'global',
+      },
+    });
+    ref.closed.subscribe(() => this.loadFieldConfigTemplates());
+  }
+
+  openEditTemplateDialog(template: UiFieldTemplate): void {
+    const ref = this.dialog.open(UiFieldConfigEditorComponent, {
+      panelClass: 'screen-dialog',
+      width: '95vw',
+      maxWidth: '1400px',
+      height: '90vh',
+      data: {
+        entityTable: template.entityTable,
+        templateId: template.id,
+        templateName: template.name,
+      },
+    });
+    ref.closed.subscribe(() => this.loadFieldConfigTemplates());
+  }
+
+  deleteTemplate(template: UiFieldTemplate): void {
+    this.confirm.ask(`Tem certeza que deseja deletar o template "${template.name}"?`).then((confirmed) => {
+      if (confirmed) {
+        this.uiFieldConfigService.deleteTemplate(template.id);
+        this.loadFieldConfigTemplates();
+      }
     });
   }
 

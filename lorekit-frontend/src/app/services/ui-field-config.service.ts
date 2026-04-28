@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { DbProvider } from '../app.config';
 import { CrudHelper } from '../database/database.helper';
-import { UiConfigPayload, UiFieldCatalogItem, UiFieldConfig } from '../models/ui-field-config.model';
+import { UiConfigPayload, UiFieldCatalogItem, UiFieldConfig, UiFieldTemplate } from '../models/ui-field-config.model';
 import { DynamicField } from '../models/dynamicfields.model';
 import { DynamicFieldService } from './dynamic-field.service';
 
@@ -217,6 +217,46 @@ export class UiFieldConfigService {
     } catch {
       return getSystemDefaultConfig(entityTable);
     }
+  }
+
+  // ─── Template methods ───────────────────────────────────────────────────────
+
+  getTemplates(entityTable: string): UiFieldTemplate[] {
+    const rows = this.crud.findAll('UiFieldTemplate', { entityTable });
+    return rows as UiFieldTemplate[];
+  }
+
+  saveTemplate(name: string, entityTable: string, uiConfig: UiConfigPayload): UiFieldTemplate {
+    const existing = this.crud.findAll('UiFieldTemplate', { entityTable, name }) as UiFieldTemplate[];
+    const payload = JSON.stringify(uiConfig);
+
+    if (existing.length > 0) {
+      this.crud.update('UiFieldTemplate', existing[0].id, { uiConfig: payload });
+      return { ...existing[0], uiConfig: payload };
+    }
+
+    const created = this.crud.create('UiFieldTemplate', {
+      id: crypto.randomUUID(),
+      name,
+      entityTable,
+      uiConfig: payload,
+    });
+    return created as UiFieldTemplate;
+  }
+
+  updateTemplate(id: string, name: string, uiConfig: UiConfigPayload): void {
+    this.crud.update('UiFieldTemplate', id, {
+      name,
+      uiConfig: JSON.stringify(uiConfig),
+    });
+  }
+
+  deleteTemplate(id: string): void {
+    this.crud.deleteWhen('UiFieldTemplate', { id });
+  }
+
+  parseTemplateConfig(template: UiFieldTemplate): UiConfigPayload {
+    return this.parseConfigOrDefault(template.entityTable, template.uiConfig);
   }
 }
 

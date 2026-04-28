@@ -40,3 +40,17 @@ export class UiFieldConfig {
     this.parentEntityId = null;
   }
 }
+
+export class UiFieldTemplate {
+  id: string;
+  name: string;
+  entityTable: string;
+  uiConfig: string;
+
+  constructor() {
+    this.id = '';
+    this.name = '';
+    this.entityTable = '';
+    this.uiConfig = '';
+  }
+}
