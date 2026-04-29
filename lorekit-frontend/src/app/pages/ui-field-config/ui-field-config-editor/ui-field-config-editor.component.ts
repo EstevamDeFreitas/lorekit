@@ -70,6 +70,14 @@ interface SelectOptionItem {
             [comboValue]="selectedTemplateId"
             (comboValueChange)="onTemplateSelected($event)">
           </app-combo-box>
+
+          @if (activeTemplateId) {
+            <app-input
+              class="min-w-56"
+              label="Nome do template"
+              [(value)]="activeTemplateName">
+            </app-input>
+          }
         }
 
         @if (scopeMode === 'parent' && parentScopeOptions.length > 0) {
