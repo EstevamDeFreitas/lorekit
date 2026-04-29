@@ -124,11 +124,25 @@ export class FormOverlayDirective implements OnInit, OnDestroy {
       offsetY: 8
     },
     {
+      originX: 'end',
+      originY: 'top',
+      overlayX: 'end',
+      overlayY: 'bottom',
+      offsetY: -8
+    },
+    {
       originX: 'start',
       originY: 'bottom',
       overlayX: 'start',
       overlayY: 'top',
       offsetY: 8
+    },
+    {
+      originX: 'start',
+      originY: 'top',
+      overlayX: 'start',
+      overlayY: 'bottom',
+      offsetY: -8
     }
   ]);
 
@@ -166,7 +180,8 @@ export class FormOverlayDirective implements OnInit, OnDestroy {
     const positionStrategy = this.overlay.position()
       .flexibleConnectedTo(this.elementRef)
       .withPositions(this.positions())
-      .withPush(false);
+      .withPush(true)
+      .withViewportMargin(8);
 
     this.overlayRef = this.overlay.create({
       positionStrategy,
