@@ -263,6 +263,7 @@ export const schema: TableDef[] = [
       { name: "entityId",          def: `"entityId" TEXT` },
       { name: "parentEntityTable", def: `"parentEntityTable" TEXT` },
       { name: "parentEntityId",    def: `"parentEntityId" TEXT` },
+      { name: "templateId",        def: `"templateId" TEXT` },
     ],
     indexes: [
       `CREATE INDEX IF NOT EXISTS "idx_ui_field_config_entity" ON "UiFieldConfig" ("entityTable", "entityId")`,

@@ -51,6 +51,10 @@ export class UiFieldConfigService {
       : undefined;
 
     if (entityRow) {
+      if (entityRow.templateId) {
+        const tpl = this.getTemplates(entityTable).find((t) => t.id === entityRow.templateId);
+        if (tpl) return this.parseTemplateConfig(tpl);
+      }
       return this.parseConfigOrDefault(entityTable, entityRow.uiConfig);
     }
 
@@ -67,6 +71,10 @@ export class UiFieldConfigService {
       });
 
       if (parentRow) {
+        if (parentRow.templateId) {
+          const tpl = this.getTemplates(entityTable).find((t) => t.id === parentRow.templateId);
+          if (tpl) return this.parseTemplateConfig(tpl);
+        }
         return this.parseConfigOrDefault(entityTable, parentRow.uiConfig);
       }
     }
@@ -78,6 +86,10 @@ export class UiFieldConfigService {
     ));
 
     if (globalRow) {
+      if (globalRow.templateId) {
+        const tpl = this.getTemplates(entityTable).find((t) => t.id === globalRow.templateId);
+        if (tpl) return this.parseTemplateConfig(tpl);
+      }
       return this.parseConfigOrDefault(entityTable, globalRow.uiConfig);
     }
 
@@ -91,6 +103,7 @@ export class UiFieldConfigService {
     entityId?: string | null;
     parentEntityTable?: string | null;
     parentEntityId?: string | null;
+    templateId?: string | null;
   }): UiFieldConfig {
     const rowToSave = this.buildScopeRow(options);
     const existing = this.findExistingByScope(rowToSave);
@@ -98,6 +111,7 @@ export class UiFieldConfigService {
     if (existing) {
       const updated = this.crud.update('UiFieldConfig', existing.id, {
         uiConfig: JSON.stringify(options.uiConfig),
+        templateId: options.templateId ?? null,
       });
       return updated as UiFieldConfig;
     }
@@ -109,6 +123,7 @@ export class UiFieldConfigService {
       entityId: rowToSave.entityId,
       parentEntityTable: rowToSave.parentEntityTable,
       parentEntityId: rowToSave.parentEntityId,
+      templateId: options.templateId ?? null,
     });
 
     return created as UiFieldConfig;

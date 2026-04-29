@@ -31,6 +31,7 @@ export class UiFieldConfig {
   entityId: string | null;
   parentEntityTable: string | null;
   parentEntityId: string | null;
+  templateId: string | null;
 
   constructor() {
     this.id = '';
@@ -39,6 +40,7 @@ export class UiFieldConfig {
     this.entityId = null;
     this.parentEntityTable = null;
     this.parentEntityId = null;
+    this.templateId = null;
   }
 }
 

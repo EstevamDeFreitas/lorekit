@@ -640,6 +640,25 @@ export class UiFieldConfigEditorComponent {
         return;
       }
       this.uiFieldConfigService.updateTemplate(this.activeTemplateId, this.activeTemplateName, cleanedLayout);
+
+      // Link the template to the appropriate scope so getResolvedConfig can find it
+      if (this.entityId) {
+        this.uiFieldConfigService.saveConfig({
+          entityTable: this.entityTable,
+          scopeMode: 'entity',
+          entityId: this.entityId,
+          uiConfig: cleanedLayout,
+          templateId: this.activeTemplateId,
+        });
+      } else {
+        this.uiFieldConfigService.saveConfig({
+          entityTable: this.entityTable,
+          scopeMode: 'global',
+          uiConfig: cleanedLayout,
+          templateId: this.activeTemplateId,
+        });
+      }
+
       this.showNotice('Template salvo.');
       return;
     }
