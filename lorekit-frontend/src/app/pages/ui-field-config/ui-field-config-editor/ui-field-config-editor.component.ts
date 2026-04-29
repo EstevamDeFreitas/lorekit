@@ -33,7 +33,7 @@ interface SelectOptionItem {
   selector: 'app-ui-field-config-editor',
   imports: [NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent, InputComponent],
   template: `
-    <div class="p-4 md:p-6 flex flex-col gap-4">
+    <div class="p-4 md:p-6 flex flex-col gap-4 overflow-y-auto scrollbar-dark h-full">
       <div class="flex flex-row items-center justify-between gap-3 border-b border-zinc-800 pb-4">
         <div>
           @if (scopeMode === 'template' && activeTemplateName) {
