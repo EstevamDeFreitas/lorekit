@@ -3,6 +3,30 @@ import { schema, TableDef } from './schema';
 
 type IncludeDef = {table:string, firstOnly?: boolean, isParent?: boolean};
 
+
+type SqlMigration = {
+  id: string;
+  kind: 'sql';
+  sql: string | string[];
+};
+
+type TsMigration = {
+  id: string;
+  kind: 'ts';
+  run: (db: any) => void;
+};
+
+export type PluginMigration = SqlMigration | TsMigration;
+
+export type PluginMigrationBundle = {
+  pluginId: string;
+  migrations: PluginMigration[];
+};
+
+const ALLOW_DESTRUCTIVE_MIGRATIONS = false;
+const PLUGIN_STATUS_READY = 'ready';
+const PLUGIN_STATUS_FAILED = 'failed';
+
 declare const window: any;
 
 export const ElectronSafeAPI = {
@@ -48,43 +72,169 @@ export async function persistDbToDisk(db: any) {
 }
 
 function ensureSchema(db: any) {
+  runCoreMigrations(db);
+}
+
+function runCoreMigrations(db: any) {
   for (const t of schema) {
     db.exec(buildCreateTableSQL(t));
 
     const existing = getExistingColumns(db, t.name);
     const schemaColumns = new Set(t.columns.map(c => c.name));
 
-    // Adiciona colunas que faltam
     for (const col of t.columns) {
       if (!existing.has(col.name)) {
         db.exec(`ALTER TABLE "${t.name}" ADD COLUMN ${col.def}`);
       }
     }
 
-    // Remove colunas que não existem mais no schema
     const columnsToRemove = Array.from(existing).filter(col => !schemaColumns.has(col));
     if (columnsToRemove.length > 0) {
-      console.log(`Removing columns from "${t.name}": ${columnsToRemove.join(", ")}`);
-
-      for (const col of columnsToRemove) {
-        db.exec(`ALTER TABLE "${t.name}" DROP COLUMN "${col}"`);
+      if (!ALLOW_DESTRUCTIVE_MIGRATIONS) {
+        console.warn(
+          `Skipping destructive core migration on "${t.name}". Columns not in schema: ${columnsToRemove.join(', ')}. ` +
+          `Enable ALLOW_DESTRUCTIVE_MIGRATIONS with backup strategy to allow DROP COLUMN.`
+        );
+      } else {
+        backupTableBeforeDestructiveChange(db, t.name);
+        for (const col of columnsToRemove) {
+          db.exec(`ALTER TABLE "${t.name}" DROP COLUMN "${col}"`);
+        }
       }
     }
 
     if (t.indexes) for (const idx of t.indexes) db.exec(idx);
 
-    //TODO: melhorar verificação para evitar re-insert desnecessário
-    if( t.insertCommands ) {
-      for(const cmd of t.insertCommands) {
-        try{
+    if (t.insertCommands) {
+      for (const cmd of t.insertCommands) {
+        try {
           db.exec(cmd);
-        }
-        catch(e){
+        } catch (e) {
           console.log(`Insert command skipped (probably already exists): ${cmd}`);
         }
       }
     }
   }
+}
+
+export function runPluginMigrations(db: any, bundle: PluginMigrationBundle) {
+  ensurePluginRuntimeStateTable(db);
+  ensurePluginMigrationHistoryTable(db);
+
+  const orderedMigrations = [...bundle.migrations].sort((a, b) => a.id.localeCompare(b.id));
+
+  for (const migration of orderedMigrations) {
+    if (hasPluginMigrationBeenApplied(db, bundle.pluginId, migration.id)) {
+      continue;
+    }
+
+    try {
+      db.exec('BEGIN');
+      executePluginMigration(db, migration);
+      recordAppliedPluginMigration(db, bundle.pluginId, migration.id);
+      markPluginStatus(db, bundle.pluginId, PLUGIN_STATUS_READY, true);
+      db.exec('COMMIT');
+    } catch (error) {
+      try {
+        db.exec('ROLLBACK');
+      } catch (_) {
+        // no-op: rollback best effort
+      }
+
+      markPluginStatus(db, bundle.pluginId, PLUGIN_STATUS_FAILED, false, String(error));
+      throw new Error(`Plugin migration failed for plugin "${bundle.pluginId}" on migration "${migration.id}": ${String(error)}`);
+    }
+  }
+}
+
+function executePluginMigration(db: any, migration: PluginMigration) {
+  if (migration.kind === 'sql') {
+    const sqlCommands = Array.isArray(migration.sql) ? migration.sql : [migration.sql];
+
+    for (const sql of sqlCommands) {
+      assertSqlMigrationIsSafe(sql);
+      db.exec(sql);
+    }
+    return;
+  }
+
+  migration.run(db);
+}
+
+function assertSqlMigrationIsSafe(sql: string) {
+  const normalized = sql.toUpperCase();
+  const hasDropColumn = normalized.includes('DROP COLUMN');
+  if (!hasDropColumn) {
+    return;
+  }
+
+  const hasExplicitStrategy = normalized.includes('/* ALLOW_DESTRUCTIVE */') && normalized.includes('/* BACKUP:');
+  if (!hasExplicitStrategy) {
+    throw new Error(
+      'Destructive plugin migration detected (DROP COLUMN). Provide explicit strategy comments: ' +
+      '/* ALLOW_DESTRUCTIVE */ and /* BACKUP:<table> */.'
+    );
+  }
+}
+
+function ensurePluginRuntimeStateTable(db: any) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS "PluginRuntimeState" (
+      "pluginId" TEXT NOT NULL PRIMARY KEY,
+      "status" TEXT NOT NULL,
+      "enabled" INTEGER NOT NULL DEFAULT 0,
+      "lastError" TEXT,
+      "updatedAt" TEXT NOT NULL
+    );
+  `);
+}
+
+function ensurePluginMigrationHistoryTable(db: any) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS "PluginMigrationHistory" (
+      "pluginId" TEXT NOT NULL,
+      "migrationId" TEXT NOT NULL,
+      "appliedAt" TEXT NOT NULL
+    );
+  `);
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS "idx_plugin_migration_history_unique"
+    ON "PluginMigrationHistory" ("pluginId", "migrationId");
+  `);
+}
+
+function hasPluginMigrationBeenApplied(db: any, pluginId: string, migrationId: string): boolean {
+  const result = db.exec(
+    `SELECT 1 FROM "PluginMigrationHistory" WHERE "pluginId" = ? AND "migrationId" = ? LIMIT 1`,
+    [pluginId, migrationId]
+  );
+  return result.length > 0 && result[0].values.length > 0;
+}
+
+function recordAppliedPluginMigration(db: any, pluginId: string, migrationId: string) {
+  db.run(
+    `INSERT INTO "PluginMigrationHistory" ("pluginId", "migrationId", "appliedAt") VALUES (?, ?, ?)` ,
+    [pluginId, migrationId, new Date().toISOString()]
+  );
+}
+
+function markPluginStatus(db: any, pluginId: string, status: string, enabled: boolean, lastError: string | null = null) {
+  db.run(
+    `INSERT INTO "PluginRuntimeState" ("pluginId", "status", "enabled", "lastError", "updatedAt")
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT("pluginId") DO UPDATE SET
+      "status" = excluded."status",
+      "enabled" = excluded."enabled",
+      "lastError" = excluded."lastError",
+      "updatedAt" = excluded."updatedAt"`,
+    [pluginId, status, enabled ? 1 : 0, lastError, new Date().toISOString()]
+  );
+}
+
+function backupTableBeforeDestructiveChange(db: any, tableName: string) {
+  const backupTable = `${tableName}__backup_before_destructive`;
+  db.exec(`CREATE TABLE IF NOT EXISTS "${backupTable}" AS SELECT * FROM "${tableName}"`);
 }
 
 function buildCreateTableSQL(t: TableDef) {
