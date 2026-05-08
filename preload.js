@@ -10,4 +10,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   toggleMaximize: () => ipcRenderer.invoke('window:toggle-maximize'),
   close:    () => ipcRenderer.invoke('window:close'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  showSaveDialog: (defaultName) => ipcRenderer.invoke('backup:save-dialog', defaultName),
+  reloadApp: () => ipcRenderer.invoke('app:reload'),
 });

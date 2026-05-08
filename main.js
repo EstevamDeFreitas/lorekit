@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
@@ -50,6 +50,25 @@ function registerIpc() {
   });
   ipcMain.handle('get-app-version', () => {
     return app.getVersion();
+  });
+  ipcMain.handle('backup:save-dialog', async (_e, defaultName) => {
+    const win = mainWindow || BrowserWindow.getFocusedWindow();
+    const result = await dialog.showSaveDialog(win, {
+      title: 'Salvar backup',
+      defaultPath: defaultName,
+      filters: [{ name: 'Lorekit Backup', extensions: ['lorekit'] }],
+    });
+    return result.canceled ? null : result.filePath;
+  });
+  ipcMain.handle('app:reload', () => {
+    if (!mainWindow) return false;
+    const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
+    if (isDev) {
+      mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL || 'http://localhost:4401');
+    } else {
+      mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');
+    }
+    return true;
   });
 
   // Permite "Abrir assim mesmo" na tela de update
