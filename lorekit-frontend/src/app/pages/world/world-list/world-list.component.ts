@@ -1,27 +1,24 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { WorldService } from '../../../services/world.service';
 import { World } from '../../../models/world.model';
 import { CommonModule, NgClass } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { WorldStateService } from '../../../services/world-state.service';
-import { ButtonComponent } from "../../../components/button/button.component";
 import {OverlayModule} from '@angular/cdk/overlay';
-import { InputComponent } from "../../../components/input/input.component";
-import { ImageService } from '../../../services/image.service';
-import { environment } from '../../../../enviroments/environment';
 import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
+import { TabManagerService } from '../../../services/tab-manager.service';
 
 @Component({
   selector: 'app-world-list',
-  imports: [CommonModule, RouterLink, ButtonComponent, IconButtonComponent, NgClass, OverlayModule, InputComponent, FormOverlayDirective],
+  imports: [CommonModule, IconButtonComponent, NgClass, OverlayModule, FormOverlayDirective],
   template: `
   <div class="flex flex-col relative" >
     <div class="flex flex-row gap-4">
-      <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
-        <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+      <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
+        <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
           <div class="flex flex-row justify-between mb-6">
             <h2 class="text-base mb-4">Mundos</h2>
             <app-icon-button
@@ -52,11 +49,14 @@ import { IconButtonComponent } from '../../../components/icon-button/icon-button
           </div>
         </div>
       </div>
-        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
-          <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
-        </small>
+        @if (!panelMode()) {
+          <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
+            <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+          </small>
+        }
 
-      <div class="flex-1 min-h-[60vh]">
+      @if (!panelMode()) {
+        <div class="flex-1 min-h-[60vh]">
           @if (selectedEntityId && showEntityEditor) {
             <div class="rounded-md px-2">
               @if (showEntityEditor && worldInfoComponent) {
@@ -75,6 +75,7 @@ import { IconButtonComponent } from '../../../components/icon-button/icon-button
             </div>
           }
         </div>
+      }
     </div>
     <!-- <div class="flex flex-row justify-between items-center mb-4 sticky top-0 z-50 bg-zinc-950 py-2">
       <h3 class="text-xl font-bold">Mundos</h3>
@@ -135,11 +136,10 @@ export class WorldListComponent {
   public getTextClass = getTextClass;
   public getImageByUsageKey = getImageByUsageKey;
   showsidebar = true;
+  panelMode = input<boolean>(false);
+  tabManager = inject(TabManagerService);
 
   worlds: World[] = [];
-
-  private imageService = inject(ImageService);
-  worldsWithImages: { [key: string]: string | undefined } = {};
 
   currentWorldId = '';
   selectedEntityId = '';
@@ -201,6 +201,13 @@ export class WorldListComponent {
   }
 
   async selectEntity(entityId: string) {
+    if (this.panelMode()) {
+      const world = this.worlds.find(w => w.id === entityId);
+      const icon = this.getPersonalizationValue(world, 'icon') || 'fa-solid fa-earth';
+      this.tabManager.openTab('World', entityId, world?.name ?? 'Mundo', icon);
+      this.selectedEntityId = entityId;
+      return;
+    }
     if (this.selectedEntityId === entityId) {
       return;
     }

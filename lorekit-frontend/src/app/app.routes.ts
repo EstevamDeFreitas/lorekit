@@ -1,16 +1,15 @@
 import { Routes } from '@angular/router';
 import { AuthGuard } from './guards/auth.guard';
 import { LoginComponent } from './pages/auth/login/login.component';
-import { WorldListComponent } from './pages/world/world-list/world-list.component';
 import { MainUiComponent } from './pages/shared/main-ui/main-ui.component';
-import { WorldInfoComponent } from './pages/world/world-info/world-info.component';
-import { DocumentEditComponent } from './pages/documents/document-edit/document-edit.component';
 
 export const routes: Routes = [
   {path: '', redirectTo: 'app', pathMatch: 'full'},
   {path: 'app', component: MainUiComponent, children: [
       {path: 'world', children:[
-        {path: '', component: WorldListComponent},
+        {path: '', loadComponent: () =>
+          import('./pages/world/world-list/world-list.component')
+            .then(m => m.WorldListComponent)},
         {path: 'info/:worldId', loadComponent: () =>
       import('./pages/world/world-info/world-info.component')
         .then(m => m.WorldInfoComponent)},

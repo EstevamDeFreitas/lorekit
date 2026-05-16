@@ -16,6 +16,7 @@ import { TreeViewListComponent } from '../../../components/entity-lateral-menu/e
 import { LocationEditComponent } from '../location-edit/location-edit.component';
 import { TreeViewNode, TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
 import { EntityChangeService } from '../../../services/entity-change.service';
+import { TabManagerService } from '../../../services/tab-manager.service';
 
 @Component({
   selector: 'app-location-list',
@@ -25,8 +26,8 @@ import { EntityChangeService } from '../../../services/entity-change.service';
     <div class="flex flex-col relative">
 
       <div class="flex flex-row gap-4">
-        <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
-          <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+        <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
+          <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
             <div>
               <h2 class="text-base mb-4">Localidades</h2>
             </div>
@@ -79,22 +80,26 @@ import { EntityChangeService } from '../../../services/entity-change.service';
           </div>
         </div>
 
-        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
-          <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
-        </small>
+        @if (!panelMode()) {
+          <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
+            <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+          </small>
+        }
 
-        <div class="flex-1 min-h-[60vh]">
-          @if (selectedLocationId && showLocationEditor) {
-            <div class="rounded-md px-2">
-              <app-location-edit [locationIdInput]="selectedLocationId" [showLateralMenu]="false"></app-location-edit>
-            </div>
-          }
-          @else {
-            <div class="h-full rounded-md  flex items-center justify-center text-zinc-500">
-              Selecione uma localidade na árvore para editar
-            </div>
-          }
-        </div>
+        @if (!panelMode()) {
+          <div class="flex-1 min-h-[60vh]">
+            @if (selectedLocationId && showLocationEditor) {
+              <div class="rounded-md px-2">
+                <app-location-edit [locationIdInput]="selectedLocationId" [showLateralMenu]="false"></app-location-edit>
+              </div>
+            }
+            @else {
+              <div class="h-full rounded-md  flex items-center justify-center text-zinc-500">
+                Selecione uma localidade na árvore para editar
+              </div>
+            }
+          </div>
+        }
       </div>
     </div>
   `,
@@ -110,8 +115,8 @@ export class LocationListComponent implements OnInit {
   selectedWorld : string = '';
   worldId = input<string>();
   locationId = input<string>();
-
-  dialog = inject(Dialog);
+  panelMode = input<boolean>(false);
+  tabManager = inject(TabManagerService);
   showsidebar = true;
 
   private worldStateService = inject(WorldStateService);
@@ -199,6 +204,12 @@ export class LocationListComponent implements OnInit {
   }
 
   selectLocation(locationId: string) {
+    if (this.panelMode()) {
+      const loc = this.locations.find(l => l.id === locationId);
+      this.tabManager.openTab('Location', locationId, loc?.name ?? 'Localidade', 'fa-solid fa-location-dot');
+      this.selectedLocationId = locationId;
+      return;
+    }
     if (this.selectedLocationId === locationId) {
       return;
     }

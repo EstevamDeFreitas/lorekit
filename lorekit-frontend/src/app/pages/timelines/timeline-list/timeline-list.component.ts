@@ -1,5 +1,5 @@
 import { CommonModule, NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, OnInit } from '@angular/core';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
@@ -8,6 +8,7 @@ import { World } from '../../../models/world.model';
 import { TimelineService } from '../../../services/timeline.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
+import { TabManagerService } from '../../../services/tab-manager.service';
 
 @Component({
   selector: 'app-timeline-list',
@@ -16,8 +17,8 @@ import { WorldStateService } from '../../../services/world-state.service';
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4">
-        <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
-          <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+        <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
+          <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
             <div class="flex flex-row justify-between mb-6">
               <h2 class="text-base mb-4">Linhas do Tempo</h2>
               <app-icon-button
@@ -66,29 +67,33 @@ import { WorldStateService } from '../../../services/world-state.service';
           </div>
         </div>
 
-        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
-          <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
-        </small>
+        @if (!panelMode()) {
+          <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
+            <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+          </small>
+        }
 
-        <div class="flex-1 min-h-[60vh]">
-          @if (selectedTimelineId) {
-            <div class="rounded-md px-2">
-              @if (showTimelineEditor && timelineEditComponent) {
-                <ng-container *ngComponentOutlet="timelineEditComponent; inputs: { timelineIdInput: selectedTimelineId }"></ng-container>
-              }
-              @else {
-                <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
-                  Carregando linha do tempo...
-                </div>
-              }
-            </div>
-          }
-          @else {
-            <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
-              Selecione uma linha do tempo para editar
-            </div>
-          }
-        </div>
+        @if (!panelMode()) {
+          <div class="flex-1 min-h-[60vh]">
+            @if (selectedTimelineId) {
+              <div class="rounded-md px-2">
+                @if (showTimelineEditor && timelineEditComponent) {
+                  <ng-container *ngComponentOutlet="timelineEditComponent; inputs: { timelineIdInput: selectedTimelineId }"></ng-container>
+                }
+                @else {
+                  <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+                    Carregando linha do tempo...
+                  </div>
+                }
+              </div>
+            }
+            @else {
+              <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+                Selecione uma linha do tempo para editar
+              </div>
+            }
+          </div>
+        }
       </div>
     </div>
   `,
@@ -104,6 +109,8 @@ export class TimelineListComponent implements OnInit {
   availableWorlds: World[] = [];
   selectedWorldId = '';
   manualWorldFilter = '';
+  panelMode = input<boolean>(false);
+  tabManager = inject(TabManagerService);
 
   showsidebar = true;
 
@@ -157,6 +164,12 @@ export class TimelineListComponent implements OnInit {
   }
 
   async selectTimeline(timelineId: string) {
+    if (this.panelMode()) {
+      const timeline = this.timelines.find(t => t.id === timelineId);
+      this.tabManager.openTab('Timeline', timelineId, timeline?.name ?? 'Linha do Tempo', 'fa-solid fa-timeline');
+      this.selectedTimelineId = timelineId;
+      return;
+    }
     if (this.selectedTimelineId === timelineId) {
       return;
     }

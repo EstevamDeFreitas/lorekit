@@ -12,6 +12,7 @@ import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
 import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../../models/personalization.model';
 import { EntityChangeService } from '../../../services/entity-change.service';
+import { TabManagerService } from '../../../services/tab-manager.service';
 
 @Component({
   selector: 'app-culture-list',
@@ -19,8 +20,8 @@ import { EntityChangeService } from '../../../services/entity-change.service';
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4">
-        <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
-          <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+        <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
+          <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
             <div class="flex flex-row justify-between mb-6">
               <h2 class="text-base mb-4">Culturas</h2>
               <app-icon-button
@@ -70,29 +71,33 @@ import { EntityChangeService } from '../../../services/entity-change.service';
           </div>
         </div>
 
-        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
-          <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
-        </small>
+        @if (!panelMode()) {
+          <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
+            <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+          </small>
+        }
 
-        <div class="flex-1 min-h-[60vh]">
-          @if (selectedCultureId) {
-            <div class="rounded-md px-2">
-              @if (showCultureEditor && cultureEditComponent) {
-                <ng-container *ngComponentOutlet="cultureEditComponent; inputs: { cultureIdInput: selectedCultureId }"></ng-container>
-              }
-              @else {
-                <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
-                  Carregando cultura...
-                </div>
-              }
-            </div>
-          }
-          @else {
-            <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
-              Selecione uma cultura para editar
-            </div>
-          }
-        </div>
+        @if (!panelMode()) {
+          <div class="flex-1 min-h-[60vh]">
+            @if (selectedCultureId) {
+              <div class="rounded-md px-2">
+                @if (showCultureEditor && cultureEditComponent) {
+                  <ng-container *ngComponentOutlet="cultureEditComponent; inputs: { cultureIdInput: selectedCultureId }"></ng-container>
+                }
+                @else {
+                  <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+                    Carregando cultura...
+                  </div>
+                }
+              </div>
+            }
+            @else {
+              <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
+                Selecione uma cultura para editar
+              </div>
+            }
+          </div>
+        }
       </div>
     </div>
   `,
@@ -106,6 +111,8 @@ export class CultureListComponent implements OnInit {
   private entityChangeService = inject(EntityChangeService);
 
   worldId = input<string>();
+  panelMode = input<boolean>(false);
+  tabManager = inject(TabManagerService);
   availableWorlds: World[] = [];
   availableLocations: Location[] = [];
   selectedWorld = '';
@@ -179,6 +186,13 @@ export class CultureListComponent implements OnInit {
   }
 
   async selectCulture(cultureId: string) {
+    if (this.panelMode()) {
+      const culture = this.cultures.find(c => c.id === cultureId);
+      const icon = this.getPersonalizationValue(culture, 'icon') || 'fa-solid fa-mortar-pestle';
+      this.tabManager.openTab('Culture', cultureId, culture?.name ?? 'Cultura', icon);
+      this.selectedCultureId = cultureId;
+      return;
+    }
     if (this.selectedCultureId === cultureId) {
       return;
     }

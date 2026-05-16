@@ -16,6 +16,7 @@ import { IconButtonComponent } from "../../../components/icon-button/icon-button
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { EntityChangeService } from '../../../services/entity-change.service';
+import { TabManagerService } from '../../../services/tab-manager.service';
 
 @Component({
   selector: 'app-document-list',
@@ -24,8 +25,8 @@ import { EntityChangeService } from '../../../services/entity-change.service';
     <div class="flex flex-col relative">
 
       <div class="flex flex-row gap-4">
-        <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showsidebar ? 'w-80' : 'w-0'">
-          <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+        <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
+          <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
             <div>
                 <h2 class="text-base mb-4">Documentos</h2>
               </div>
@@ -81,22 +82,26 @@ import { EntityChangeService } from '../../../services/entity-change.service';
             ></app-tree-view-list>
           </div>
         </div>
-        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
-          <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
-        </small>
+        @if (!panelMode()) {
+          <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
+            <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+          </small>
+        }
 
-        <div class="flex-1 min-h-[60vh]">
-          @if (selectedDocumentId && showDocumentEditor) {
-            <div class="rounded-md p-8">
-              <app-document-edit [documentIdInput]="selectedDocumentId" [showLateralMenu]="false"></app-document-edit>
-            </div>
-          }
-          @else {
-            <div class="h-full  flex items-center justify-center text-zinc-500">
-              Selecione um documento na árvore para editar
-            </div>
-          }
-        </div>
+        @if (!panelMode()) {
+          <div class="flex-1 min-h-[60vh]">
+            @if (selectedDocumentId && showDocumentEditor) {
+              <div class="rounded-md p-8">
+                <app-document-edit [documentIdInput]="selectedDocumentId" [showLateralMenu]="false"></app-document-edit>
+              </div>
+            }
+            @else {
+              <div class="h-full  flex items-center justify-center text-zinc-500">
+                Selecione um documento na árvore para editar
+              </div>
+            }
+          </div>
+        }
       </div>
     </div>`,
   styleUrl: './document-list.component.css',
@@ -121,6 +126,8 @@ export class DocumentListComponent implements OnInit {
   });
 
   worldId = input<string>();
+  panelMode = input<boolean>(false);
+  tabManager = inject(TabManagerService);
   availableWorlds : World[] = [];
   documents : Document[] = [];
   filteredDocuments : Document[] = [];
@@ -197,7 +204,22 @@ export class DocumentListComponent implements OnInit {
     this.getDocuments();
   }
 
+  private findInTree(docs: Document[], id: string): Document | undefined {
+    for (const doc of docs) {
+      if (doc.id === id) { return doc; }
+      const found = this.findInTree(doc.SubDocuments ?? [], id);
+      if (found) { return found; }
+    }
+    return undefined;
+  }
+
   selectDocument(documentId: string) {
+    if (this.panelMode()) {
+      const doc = this.findInTree(this.documents, documentId);
+      this.tabManager.openTab('Document', documentId, doc?.title ?? 'Documento', 'fa-solid fa-file');
+      this.selectedDocumentId = documentId;
+      return;
+    }
     if (this.selectedDocumentId === documentId) {
       return;
     }
