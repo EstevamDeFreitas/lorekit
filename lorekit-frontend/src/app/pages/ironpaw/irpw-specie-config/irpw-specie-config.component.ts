@@ -75,8 +75,33 @@ import { IrpwSpecieService } from '../../../services/irpw-specie.service';
         <div class="rounded-md border border-zinc-800 bg-zinc-925 p-3">
           <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-3">Weakness</h3>
           <div class="flex flex-col gap-3">
-            <app-input label="Nome" placeholder="Opcional" [(value)]="weaknessData.name" (valueChange)="onWeaknessChange()"></app-input>
-            <app-text-area label="Descrição" placeholder="Descreva a fraqueza." height="h-36" [(value)]="weaknessData.description" (valueChange)="onWeaknessChange()"></app-text-area>
+            <div class="flex justify-end">
+              <div class="w-32">
+                <app-button label="Adicionar" buttonType="secondary" size="xs" (click)="addWeakness()"></app-button>
+              </div>
+            </div>
+
+            @for (weakness of weaknessData; track $index) {
+              <div class="rounded-md border border-zinc-800 bg-zinc-900/60 p-3">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                  <span class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Weakness {{ $index + 1 }}</span>
+                  <div class="w-24">
+                    <app-button label="Remover" buttonType="danger" size="xs" (click)="removeWeakness($index)"></app-button>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                  <app-input label="Nome" placeholder="Opcional" [(value)]="weakness.name" (valueChange)="onWeaknessChange()"></app-input>
+                  <app-text-area label="Descrição" placeholder="Descreva a fraqueza." height="h-36" [(value)]="weakness.description" (valueChange)="onWeaknessChange()"></app-text-area>
+                </div>
+              </div>
+            }
+
+            @if (weaknessData.length === 0) {
+              <div class="rounded-md border border-dashed border-zinc-700 p-4 text-sm text-zinc-500">
+                Nenhuma weakness cadastrada.
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -105,13 +130,23 @@ export class IrpwSpecieConfigComponent implements OnInit {
 
   perceptionsData: IrpwSpeciePerceptions = { smell: null, vision: null, hearing: null };
   passiveData: IrpwSpecieHability[] = [];
-  weaknessData: IrpwSpecieHability = this.createEmptyHability();
+  weaknessData: IrpwSpecieHability[] = [];
   baseHealthValue: number | null = null;
 
   ngOnInit() {
     const specieId = this.data?.id || '';
     this.currentConfig = this.irpwSpecieService.getConfig(specieId) ?? new IrpwSpecie(specieId);
     this.parseConfig();
+  }
+
+  addWeakness() {
+    this.weaknessData = [...this.weaknessData, this.createEmptyHability()];
+    this.onWeaknessChange();
+  }
+
+  removeWeakness(index: number) {
+    this.weaknessData = this.weaknessData.filter((_, currentIndex) => currentIndex !== index);
+    this.onWeaknessChange();
   }
 
   onPerceptionsChange() {
@@ -144,7 +179,11 @@ export class IrpwSpecieConfigComponent implements OnInit {
   }
 
   onWeaknessChange() {
-    this.currentConfig.weakness = this.serializeHability(this.weaknessData);
+    const normalizedWeaknesses = this.weaknessData
+      .map(weakness => this.normalizeHability(weakness))
+      .filter((weakness): weakness is IrpwSpecieHability => weakness != null);
+
+    this.currentConfig.weakness = normalizedWeaknesses.length ? JSON.stringify(normalizedWeaknesses) : null;
     this.scheduleAutoSave();
   }
 
@@ -161,7 +200,7 @@ export class IrpwSpecieConfigComponent implements OnInit {
     this.baseHealthValue = this.parseInteger(this.currentConfig.basehealth);
     this.perceptionsData = this.parsePerceptions(this.currentConfig.perceptions);
     this.passiveData = this.parsePassiveList(this.currentConfig.passive);
-    this.weaknessData = this.parseHability(this.currentConfig.weakness);
+    this.weaknessData = this.parsePassiveList(this.currentConfig.weakness);
   }
 
   private parsePassiveList(rawValue: string | null | undefined): IrpwSpecieHability[] {
@@ -196,22 +235,6 @@ export class IrpwSpecieConfigComponent implements OnInit {
     } catch {
       return { smell: null, vision: null, hearing: null };
     }
-  }
-
-  private parseHability(rawValue: string | null | undefined): IrpwSpecieHability {
-    if (!rawValue) return this.createEmptyHability();
-
-    try {
-      const parsed = JSON.parse(rawValue);
-      return this.normalizeHability(parsed) ?? this.createEmptyHability();
-    } catch {
-      return this.createEmptyHability();
-    }
-  }
-
-  private serializeHability(hability: IrpwSpecieHability): string | null {
-    const normalized = this.normalizeHability(hability);
-    return normalized ? JSON.stringify(normalized) : null;
   }
 
   private normalizeHability(value: unknown): IrpwSpecieHability | null {
