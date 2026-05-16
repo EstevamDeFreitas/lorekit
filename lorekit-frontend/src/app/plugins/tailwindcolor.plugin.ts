@@ -261,6 +261,15 @@ export default class TailwindColor {
   static get sanitize() {
     return {
       font: { color: true, style: true },
+      a: {
+        href: true,
+        'data-mention': true,
+        'data-entity-table': true,
+        'data-entity-id': true,
+        class: true,
+        style: true,
+        contenteditable: true,
+      },
     };
   }
 }
