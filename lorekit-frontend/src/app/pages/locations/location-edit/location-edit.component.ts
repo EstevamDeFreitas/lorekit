@@ -24,9 +24,9 @@ import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NgStyle, NgComponentOutlet, NavButtonComponent, UiFieldConfigButtonComponent, LocationConfiguredFieldsComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NgStyle, NavButtonComponent, UiFieldConfigButtonComponent, LocationConfiguredFieldsComponent],
   template: `
-    <div class="flex flex-col">
+    <div class="flex flex-col @container">
       @if(getImageByUsageKey(location.Images, 'default') != null){
         @let img = getImageByUsageKey(location.Images, 'default');
         <div class="relative w-full h-[30vh]  overflow-hidden">
@@ -57,7 +57,7 @@ import { EntityChangeService } from '../../../services/entity-change.service';
           <app-safe-delete-button [entityName]="location.name" [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'"></app-safe-delete-button>
         </div>
       </div>
-      <div class="flex flex-row gap-4 flex-1 mt-10">
+      <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
         <div class="flex-4 flex flex-col ">
           <div class="flex flex-row gap-4 ms-1">
             <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="currentTab = 'details'"></app-nav-button>
@@ -91,7 +91,7 @@ import { EntityChangeService } from '../../../services/entity-change.service';
             }
           </div>
         </div>
-        <div class="w-70">
+        <div class="w-full @2xl:w-70">
           @if (!isLoading){
             <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
               <app-entity-lateral-menu [fields]="fields" (onSave)="onFieldsSave($event)" entityTable="Location" [entityId]="location.id"></app-entity-lateral-menu>

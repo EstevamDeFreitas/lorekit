@@ -14,8 +14,8 @@ import { buildImageUrl } from '../../../models/image.model';
   selector: 'app-relation-graph',
   imports: [FormsModule, NgClass, SlicePipe, ButtonComponent, ComboBoxComponent, InputComponent],
   template: `
-    <div class="flex flex-col gap-4 p-4">
-      <div class="flex flex-row items-end gap-3">
+    <div class="flex flex-col gap-4 p-4 @container">
+      <div class="flex flex-wrap items-end gap-3">
         <app-combo-box
           class="w-56"
           label="Tipo da Entidade"
@@ -69,7 +69,7 @@ import { buildImageUrl } from '../../../models/image.model';
       }
 
       @if (graphView; as graph) {
-        <div class="grid grid-cols-[1fr_21rem] gap-4">
+        <div class="grid grid-cols-1 @4xl:grid-cols-[1fr_21rem] gap-4">
           <div
             class="rounded-lg border border-zinc-800 bg-zinc-925 overflow-hidden relative cursor-grab"
             [ngClass]="{'!cursor-grabbing': isPanning}"

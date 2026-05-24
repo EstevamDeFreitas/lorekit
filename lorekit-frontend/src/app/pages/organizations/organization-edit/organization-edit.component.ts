@@ -30,7 +30,7 @@ import { EntityChangeService } from '../../../services/entity-change.service';
   selector: 'app-organization-edit',
   imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, OrganizationConfiguredFieldsComponent],
   template: `
-    <div class="flex flex-col relative">
+    <div class="flex flex-col relative @container">
       @if(getImageByUsageKey(organization.Images, 'default') != null){
         @let img = getImageByUsageKey(organization.Images, 'default');
         <div class="relative w-full h-[30vh]  overflow-hidden">
@@ -65,7 +65,7 @@ import { EntityChangeService } from '../../../services/entity-change.service';
           <app-safe-delete-button [entityName]="organization.name" [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'"></app-safe-delete-button>
         </div>
       </div>
-      <div class="flex flex-row gap-4 flex-1 mt-10">
+      <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
         <div class="flex-4 h-auto  flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
             <app-nav-button [label]="'Informações adicionais'" size="sm" [active]="currentTab === 'description'" (click)="currentTab = 'description'"></app-nav-button>
@@ -88,7 +88,7 @@ import { EntityChangeService } from '../../../services/entity-change.service';
             }
           </div>
         </div>
-        <div class="w-70">
+        <div class="w-full @2xl:w-70">
           @if (!isLoading){
             <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
               <app-entity-lateral-menu [fields]="getFormFields()" (onSave)="onFieldsSave($event)" entityTable="Organization" [entityId]="organization.id"></app-entity-lateral-menu>

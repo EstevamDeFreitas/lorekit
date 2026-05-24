@@ -237,7 +237,7 @@ export class TimelineEventDocumentsDialogComponent {
     TextAreaComponent,
   ],
   template: `
-    <div class="flex flex-col pb-20">
+    <div class="flex flex-col pb-20 @container">
       <div class="sticky top-0 z-50 bg-zinc-950 py-2">
         <div class="flex items-center gap-3">
           @if (isRouteComponent()) {
@@ -257,7 +257,7 @@ export class TimelineEventDocumentsDialogComponent {
         </div>
       </div>
 
-      <div class="mt-4 grid grid-cols-1 xl:grid-cols-[22rem_1fr] gap-6 items-start">
+      <div class="mt-4 grid grid-cols-1 @4xl:grid-cols-[22rem_1fr] gap-6 items-start">
         <div class="rounded-md border border-zinc-800 bg-zinc-900 p-4 sticky top-10 flex flex-col gap-4">
           <div>
             <h3 class="text-sm uppercase tracking-[0.2em] text-zinc-500">Resumo</h3>

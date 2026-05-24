@@ -19,7 +19,7 @@ import { World } from '../../../models/world.model';
   standalone: true,
   imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, SafeDeleteButtonComponent, EntityLateralMenuComponent],
   template: `
-  <div class="flex flex-col relative">
+  <div class="flex flex-col relative @container">
     <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">
       @if (isRouteComponent()){
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" [route]="getReturnUrl()"></app-icon-button>
@@ -31,13 +31,13 @@ import { World } from '../../../models/world.model';
         <app-safe-delete-button [entityName]="document.title" [entityId]="document.id" [entityTable]="'Document'" [size]="'xl'"></app-safe-delete-button>
       </div>
     </div>
-    <div class="flex flex-row gap-4 mt-10">
+    <div class="flex flex-col @2xl:flex-row gap-4 mt-10">
       <div class="flex flex-col" [class.flex-4]="showLateralMenu()" [class.flex-1]="!showLateralMenu()">
         @if (!isLoading) {
           <app-editor [entityId]="document.id" entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full"></app-editor>
         }
       </div>
-        <div class="w-70">
+        <div class="w-full @2xl:w-70">
           @if (!isLoading) {
             <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
               <app-entity-lateral-menu [fields]="getFormFields()" (onSave)="onFieldsSave($event)" entityTable="Document" [entityId]="document.id"></app-entity-lateral-menu>

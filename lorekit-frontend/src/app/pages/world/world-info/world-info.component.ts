@@ -29,7 +29,7 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
   selector: 'app-world-info',
   imports: [NgStyle, NgComponentOutlet, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, WorldConfiguredFieldsComponent],
   template: `
-    <div class="flex flex-col">
+    <div class="flex flex-col @container">
       @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
         @let img = getImageByUsageKey(currentWorld.Images, 'default');
         <div class="relative w-full h-[30vh]  overflow-hidden">
@@ -56,7 +56,7 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
           <app-safe-delete-button [entityName]="currentWorld.name" [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" ></app-safe-delete-button>
         </div>
       </div>
-      <div class="flex flex-row gap-4 flex-1 mt-10">
+      <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
         <div class="flex-4 flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
             <app-nav-button [label]="'Detalhes do mundo'" size="sm" [active]="currentTab === 'details'" (click)="currentTab = 'details'"></app-nav-button>
@@ -98,7 +98,7 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
           </div>
 
         </div>
-        <div class="w-70">
+        <div class="w-full @2xl:w-70">
           @if (!isLoading && currentWorldId){
             <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
               <app-entity-lateral-menu [fields]="fields" (onSave)="onWorldSave($event)" entityTable="World" [entityId]="currentWorldId"></app-entity-lateral-menu>
