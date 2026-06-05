@@ -19,13 +19,7 @@ import { TabManagerService } from '../../../services/tab-manager.service';
     <div class="flex flex-col bg-zinc-900 justify-between ps-4 w-15 border-r pt-4 pb-4 border-zinc-700 shrink-0">
       <div>
         <div class="pr-3 mb-8">
-          @if (!layout.sidebarVisible) {
-            <button type="button" class="opacity-60 hover:opacity-100 transition-opacity" title="Mostrar painel" (click)="tabManager.toggleSidebar()">
-              <img src="assets/lorekit-logo.png" alt="Lorekit">
-            </button>
-          } @else {
-            <img src="assets/lorekit-logo.png" alt="Lorekit">
-          }
+          <img src="assets/lorekit-logo.png" alt="Lorekit">
         </div>
         <div class="flex flex-col gap-4 mb-4">
           <app-nav-button [label]="'Mundos'" [showLabel]="false" [icon]="'fa-solid fa-earth'" size="xl" [fullWidth]="true" [direction]="'right'"
