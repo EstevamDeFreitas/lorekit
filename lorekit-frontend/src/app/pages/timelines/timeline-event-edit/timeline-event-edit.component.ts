@@ -48,7 +48,7 @@ interface TimelineEventDialogData {
 
       <app-input label="Nome" [(value)]="event.name"></app-input>
       <div class="grid grid-cols-2 gap-3">
-        <app-text-area label="Conceito" height="h-42" [(value)]="event.concept"></app-text-area>
+        <!-- <app-text-area label="Conceito" height="h-42" [(value)]="event.concept"></app-text-area> -->
         <div class="flex flex-col gap-3">
           <app-input label="Data exibida" [(value)]="event.date"></app-input>
           <app-combo-box

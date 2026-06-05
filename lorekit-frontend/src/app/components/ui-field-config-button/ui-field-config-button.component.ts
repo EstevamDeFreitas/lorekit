@@ -1,6 +1,8 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { Params, Router } from '@angular/router';
 import { IconButtonComponent } from '../icon-button/icon-button.component';
+import { Dialog } from '@angular/cdk/dialog';
+import { UiFieldConfigEditorComponent } from '../../pages/ui-field-config/ui-field-config-editor/ui-field-config-editor.component';
 
 @Component({
   selector: 'app-ui-field-config-button',
@@ -18,6 +20,7 @@ import { IconButtonComponent } from '../icon-button/icon-button.component';
 })
 export class UiFieldConfigButtonComponent {
   private router = inject(Router);
+  private dialog = inject(Dialog);
 
   entityTable = input.required<string>();
   entityId = input<string | null>(null);
@@ -49,8 +52,24 @@ export class UiFieldConfigButtonComponent {
   });
 
   goToConfig(): void {
-    this.router.navigate(['/app/ui-field-config/edit'], {
-      queryParams: this.queryParams(),
-    });
+
+    const ref = this.dialog.open(UiFieldConfigEditorComponent, {
+          panelClass: 'screen-dialog',
+          width: '95vw',
+          maxWidth: '1400px',
+          height: '90vh',
+          data: {
+            entityTable: this.entityTable(),
+            entityId: this.entityId(),
+            parentEntityTable: this.parentEntityTable(),
+            parentEntityId: this.parentEntityId(),
+            scopeMode: 'entity',
+            allowParentSelection: false,
+          },
+        });
+        ref.closed.subscribe(() => {});
+    // this.router.navigate(['/app/ui-field-config/edit'], {
+    //   queryParams: this.queryParams(),
+    // });
   }
 }

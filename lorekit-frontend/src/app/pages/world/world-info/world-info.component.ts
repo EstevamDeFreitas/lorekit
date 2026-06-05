@@ -220,7 +220,7 @@ export class WorldInfoComponent implements OnInit {
 
   private buildFields() {
     this.fields = [
-      { key: 'concept', label: 'Conceito', value: this.currentWorld.concept || '', type: 'text-area' },
+      // { key: 'concept', label: 'Conceito', value: this.currentWorld.concept || '', type: 'text-area' },
     ];
   }
 

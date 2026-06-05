@@ -275,7 +275,7 @@ export class TimelineEventDocumentsDialogComponent {
             }
           </div>
 
-          <app-text-area label="Conceito" [(value)]="timeline.concept" height="h-24"></app-text-area>
+          <!-- <app-text-area label="Conceito" [(value)]="timeline.concept" height="h-24"></app-text-area> -->
           <app-text-area label="Descrição" [(value)]="timeline.description" height="h-40"></app-text-area>
 
           <div class="flex justify-end">
@@ -310,9 +310,9 @@ export class TimelineEventDocumentsDialogComponent {
                       (click)="openGreatMarkDialog(section.mark.sortOrder, section.mark.id)">
                       <div class="text-xs uppercase tracking-[0.22em] opacity-70 mb-2">Grande Marco</div>
                       <div class="font-semibold text-lg">{{ section.mark.name }}</div>
-                      @if (section.mark.concept) {
+                      <!-- @if (section.mark.concept) {
                         <div class="text-sm opacity-80 mt-2 line-clamp-3">{{ section.mark.concept }}</div>
-                      }
+                      } -->
                     </button>
                     <div></div>
                   </div>
@@ -365,7 +365,7 @@ export class TimelineEventDocumentsDialogComponent {
                             </div>
                           </div>
                           <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
-                          <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.concept || event.description || 'Sem conceito definido.' }}</p>
+                          <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.description || 'Sem descrição definida.' }}</p>
                           <div class="mt-3 flex flex-wrap gap-2">
                             @if (event.ParentLocation) {
                               <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">
@@ -410,7 +410,7 @@ export class TimelineEventDocumentsDialogComponent {
                             </div>
                           </div>
                           <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
-                          <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.concept || event.description || 'Sem conceito definido.' }}</p>
+                          <p class="mt-2 text-sm opacity-85 line-clamp-3">{{  event.description || 'Sem descrição definida.' }}</p>
                           <div class="mt-3 flex flex-wrap gap-2">
                             @if (event.ParentLocation) {
                               <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">

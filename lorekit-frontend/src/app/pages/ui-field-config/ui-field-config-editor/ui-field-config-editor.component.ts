@@ -350,10 +350,10 @@ export class UiFieldConfigEditorComponent {
     this.entityId = this.dialogData?.entityId ?? queryMap.get('entityId');
     this.backRoute = this.dialogData?.backRoute ?? queryMap.get('backRoute') ?? '/app/culture/list';
 
-    if (!this.entityTable) {
-      this.router.navigate(['/app']);
-      return;
-    }
+    // if (!this.entityTable) {
+    //   this.router.navigate(['/app']);
+    //   return;
+    // }
 
     this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
     this.refreshTemplates();

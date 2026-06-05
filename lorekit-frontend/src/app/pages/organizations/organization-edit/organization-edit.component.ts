@@ -201,7 +201,7 @@ export class OrganizationEditComponent implements OnInit{
 
   getFormFields(): FormField[] {
     return [
-      { key: 'concept', label: 'Conceito', value: this.organization.concept || '', type: 'text-area' },
+      // { key: 'concept', label: 'Conceito', value: this.organization.concept || '', type: 'text-area' },
       { key: 'organizationType', label: 'Tipo de Organização', value: this.organization.OrganizationType ? this.organization.OrganizationType.id : '', options: this.availableOrganizationTypes, optionCompareProp: 'id', optionDisplayProp: 'name' },
       { key: 'world', label: 'Mundo', value: this.organization.ParentWorld ? this.organization.ParentWorld.id : '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
       { key: 'location', label: 'Local de Origem', value: this.organization.ParentLocation ? this.organization.ParentLocation.id : '', options: this.availableLocations, optionCompareProp: 'id', optionDisplayProp: 'name' },

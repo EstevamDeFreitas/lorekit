@@ -213,7 +213,7 @@ export class LocationEditComponent implements OnInit {
   private buildFields() {
 
     this.fields = [
-      { key: 'concept', label: 'Conceito', value: this.location.concept || '', type: 'text-area' },
+      // { key: 'concept', label: 'Conceito', value: this.location.concept || '', type: 'text-area' },
       { key: 'categoryId', label: 'Categoria', value: this.selectedCategoryId || '', options: this.locationCategories, optionCompareProp: 'id', optionDisplayProp: 'name' },
       { key: 'parentLocationId', label: 'Localidade Pai', value: this.location.ParentLocation ? this.location.ParentLocation.id : '', options: this.locationService.getLocations(), optionCompareProp: 'id', optionDisplayProp: 'name' },
       { key: 'parentWorldId', label: 'Mundo', value: this.location.ParentWorld ? this.location.ParentWorld.id : '', options: this.worldService.getWorlds(), optionCompareProp: 'id', optionDisplayProp: 'name' },

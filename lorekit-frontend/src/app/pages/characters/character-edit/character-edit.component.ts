@@ -168,7 +168,7 @@ export class CharacterEditComponent implements OnInit {
 
   getFormFields(): FormField[] {
     return [
-      { key: 'concept', label: 'Conceito', value: this.character.concept || '', type: 'text-area' },
+      // { key: 'concept', label: 'Conceito', value: this.character.concept || '', type: 'text-area' },
       { key: 'world', label: 'Mundo', value: this.character.ParentWorld ? this.character.ParentWorld.id : '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
       { key: 'specie', label: 'Espécie', value: this.character.ParentSpecies ? this.character.ParentSpecies.id : '', options: this.availableSpecies, optionCompareProp: 'id', optionDisplayProp: 'name' },
 

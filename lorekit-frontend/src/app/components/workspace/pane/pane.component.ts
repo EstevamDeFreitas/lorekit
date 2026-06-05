@@ -39,7 +39,7 @@ import { ComponentRegistryService } from '../../../services/component-registry.s
         } @else {
           @for (tab of pane().tabs; track tab.id) {
             <div
-              class="absolute inset-0 overflow-y-auto scrollbar-dark"
+              class="absolute inset-0 overflow-y-auto scrollbar-dark p-3"
               [hidden]="tab.id !== pane().activeTabId">
               @if (activatedTabs().has(tab.id)) {
                 @if (tab.resolvedComponent) {

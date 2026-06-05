@@ -203,7 +203,7 @@ export class ObjectEditComponent implements OnInit {
 
   getFormFields(): FormField[] {
     return [
-      { key: 'concept', label: 'Conceito', value: this.object.concept || '', type: 'text-area' },
+      // { key: 'concept', label: 'Conceito', value: this.object.concept || '', type: 'text-area' },
       { key: 'objectType', label: 'Tipo de Objeto', value: this.object.ObjectType ? this.object.ObjectType.id : '', options: this.availableObjectTypes, optionCompareProp: 'id', optionDisplayProp: 'name' },
       { key: 'world', label: 'Mundo', value: this.object.ParentWorld ? this.object.ParentWorld.id : '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
       { key: 'location', label: 'Local de Origem', value: this.object.ParentLocation ? this.object.ParentLocation.id : '', options: this.availableLocations, optionCompareProp: 'id', optionDisplayProp: 'name' },

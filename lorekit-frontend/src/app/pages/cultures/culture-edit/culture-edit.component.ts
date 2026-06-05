@@ -161,7 +161,7 @@ export class CultureEditComponent {
 
   getFormFields(): FormField[] {
     return [
-      { key: 'concept', label: 'Conceito', value: this.culture.concept || '', type: 'text-area' },
+      // { key: 'concept', label: 'Conceito', value: this.culture.concept || '', type: 'text-area' },
       { key: 'world', label: 'Mundo', value: this.culture.ParentWorld ? this.culture.ParentWorld.id : '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name' },
       { key: 'location', label: 'Localidade de Origem', value: this.culture.ParentLocation ? this.culture.ParentLocation.id : '', options: this.availableLocations, optionCompareProp: 'id', optionDisplayProp: 'name' },
 

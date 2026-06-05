@@ -35,7 +35,7 @@ interface GreatMarkDialogData {
       </div>
 
       <app-input label="Nome" [(value)]="mark.name"></app-input>
-      <app-input label="Conceito" [(value)]="mark.concept"></app-input>
+      <!-- <app-input label="Conceito" [(value)]="mark.concept"></app-input> -->
       <app-text-area label="Descrição" [(value)]="mark.description" height="h-28"></app-text-area>
 
       <div class="flex justify-between gap-2 pt-2">

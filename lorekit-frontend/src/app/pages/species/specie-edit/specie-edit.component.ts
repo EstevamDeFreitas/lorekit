@@ -173,7 +173,7 @@ export class SpecieEditComponent implements OnInit {
     let specieOptions = this.specieService.getSpecies(null, this.specie.ParentWorld ? this.specie.ParentWorld.id : '').filter(s => s.id !== this.specie.id && !s.ParentSpecies);
 
     this.fields = [
-      { key: 'concept', label: 'Conceito', value: this.specie.concept || '', type: 'text-area' },
+      // { key: 'concept', label: 'Conceito', value: this.specie.concept || '', type: 'text-area' },
       { key: 'parentLocationId', label: 'Local de Origem', value: this.selectedParentLocationId ?? '', options: this.locationService.getLocations(), optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
       { key: 'parentWorldId', label: 'Mundo', value: this.selectedWorldId ?? '', options: this.worldService.getWorlds(), optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
       { key: 'mainSpecieId', label: 'Espécie Principal', value: this.selectedMainSpecieId ?? '', options: specieOptions, optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
