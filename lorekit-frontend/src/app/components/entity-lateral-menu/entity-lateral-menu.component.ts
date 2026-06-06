@@ -20,10 +20,15 @@ import { DocumentService } from '../../services/document.service';
 import { TreeViewDragDropService } from './tree-view-drag-drop.service';
 import { TreeViewNode, TreeViewReparentRequest } from './tree-view.models';
 
+import { ContextMenuOption } from '../../models/context-menu-option.interface';
+import {
+  ContextMenuDirective
+} from '../../directives/context-menu.directive';
+
 @Component({
   selector: 'app-tree-view-list',
   standalone: true,
-  imports: [OverlayModule, RouterModule, FormOverlayDirective, NgClass, NgStyle, IconButtonComponent],
+  imports: [OverlayModule, RouterModule, FormOverlayDirective, NgClass, NgStyle, IconButtonComponent, ContextMenuDirective],
   template: `
     <div
       class="flex flex-col gap-2 rounded-lg border border-transparent p-1 transition-colors"
@@ -73,6 +78,9 @@ import { TreeViewNode, TreeViewReparentRequest } from './tree-view.models';
 
             <button
               (click)="openDocument(item)"
+              appContextMenu
+              [options]="menuOptions"
+              [contextId]="item.id"
               class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2"
               [ngStyle]="{'color': getTextColorStyle(getPersonalizationValue(item, 'color'))}">
               <div class="flex flex-row items-center">
@@ -130,6 +138,8 @@ import { TreeViewNode, TreeViewReparentRequest } from './tree-view.models';
                   (onCreateChild)="emitCreateChild($event)"
                   (onReparentRequested)="emitReparentRequested($event)"
                   (onDetach)="onDetach.emit($event)"
+                  (onDelete)="onDelete.emit($event)"
+                  (onDocumentNewTab)="onDocumentNewTab.emit($event)"
                   [documentArray]="item.SubDocuments || []">
                 </app-tree-view-list>
               }
@@ -149,9 +159,11 @@ export class TreeViewListComponent {
 
   onArrayChange = output<void>();
   onDocumentSelect = output<TreeViewNode>();
+  onDocumentNewTab = output<string>();
   onCreateChild = output<{ parentId: string, formData: Record<string, string> }>();
   onReparentRequested = output<TreeViewReparentRequest>();
   onDetach = output<string>();
+  onDelete = output<string>();
 
   openDocuments = new Set<string>();
 
@@ -164,15 +176,20 @@ export class TreeViewListComponent {
   openInDialog = input<boolean>(true);
   allowCreate = input<boolean>(true);
   fallbackIcon = input<string>('fa-file');
-  emptyChildrenLabel = input<string>('NÃ£o hÃ¡ Documentos Relacionados');
+  emptyChildrenLabel = input<string>('Não há Documentos Relacionados');
   createTitle = input<string>('Criar Documento');
-  createFieldLabel = input<string>('TÃ­tulo');
+  createFieldLabel = input<string>('Título');
   useCustomCreate = input<boolean>(false);
   dragEnabled = input<boolean>(true);
   dragContextId = input<string>('tree-view');
   canReparent = input<(draggedId: string, newParentId: string | null) => boolean>(() => true);
   isRecursive = input<boolean>(false);
   allowDetach = input<boolean>(false);
+
+  menuOptions : ContextMenuOption[] = [
+    { label: 'Abrir nova guia', action: (id: string) => this.onDocumentNewTab.emit(id), customIcon: 'fa-arrow-up-right-from-square' },
+    { label: 'Excluir', action: (id: string) => this.onDelete.emit(id), customClass: 'text-red-500', customIcon: 'fa-trash' },
+  ];
 
   private readonly dialog = inject(Dialog);
   private readonly treeDragDropService = inject(TreeViewDragDropService);

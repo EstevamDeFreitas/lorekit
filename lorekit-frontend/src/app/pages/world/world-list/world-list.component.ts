@@ -11,9 +11,16 @@ import { FormField, FormOverlayDirective } from '../../../components/form-overla
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { TabManagerService } from '../../../services/tab-manager.service';
 
+import { Dialog } from '@angular/cdk/dialog';
+import { ContextMenuOption } from '../../../models/context-menu-option.interface';
+import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
+import {
+  ContextMenuDirective
+} from '../../../directives/context-menu.directive';
+
 @Component({
   selector: 'app-world-list',
-  imports: [CommonModule, IconButtonComponent, NgClass, OverlayModule, FormOverlayDirective],
+  imports: [CommonModule, IconButtonComponent, NgClass, OverlayModule, FormOverlayDirective,ContextMenuDirective],
   template: `
   <div class="flex flex-col relative" >
     <div class="flex flex-row gap-4">
@@ -34,7 +41,11 @@ import { TabManagerService } from '../../../services/tab-manager.service';
           <div class="flex flex-row items-center gap-1 mb-4 w-full">
             <div class="flex flex-col gap-3 w-full">
               @for (world of worlds; track world.id) {
-                <div class="grid w-full" style="grid-template-columns: 1fr 1.5rem;" (click)="selectEntity(world.id)">
+                <div class="grid w-full" style="grid-template-columns: 1fr 1.5rem;"
+                  appContextMenu
+                  [options]="menuOptions"
+                  [contextId]="world.id"
+                (click)="selectEntity(world.id)">
                   <button  class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2" [ngClass]="[getTextClass(getPersonalizationValue(world, 'color')), currentWorldId === world.id ? 'text-yellow-300' : 'text-zinc-400']" >
                     <div class="flex flex-row items-center">
                       <i class="fa-solid " [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-earth'"></i>
@@ -139,6 +150,28 @@ export class WorldListComponent {
   panelMode = input<boolean>(false);
   tabManager = inject(TabManagerService);
 
+  safeDeleteDialog = inject(Dialog);
+
+  menuOptions : ContextMenuOption[] = [
+    { label: 'Abrir nova guia', action: (id: string) => this.openNewTabEntity(id), customIcon: 'fa-arrow-up-right-from-square' },
+    { label: 'Excluir', action: (id: string) => this.deleteWorld(id), customClass: 'text-red-500', customIcon: 'fa-trash' },
+  ];
+
+  deleteWorld(worldId: string) {
+
+    const world = this.worldService.getWorldById(worldId);
+
+    this.safeDeleteDialog.open(SafeDeleteComponent, {
+      data: {
+        entityName: world.name,
+        entityTable: 'World',
+        entityId: worldId
+      },
+      panelClass: 'screen-dialog',
+      width: '400px',
+    });
+  }
+
   worlds: World[] = [];
 
   currentWorldId = '';
@@ -200,11 +233,37 @@ export class WorldListComponent {
     ];
   }
 
-  async selectEntity(entityId: string) {
+  async openNewTabEntity(entityId: string) {
     if (this.panelMode()) {
       const world = this.worlds.find(w => w.id === entityId);
       const icon = this.getPersonalizationValue(world, 'icon') || 'fa-solid fa-earth';
       this.tabManager.openTab('World', entityId, world?.name ?? 'Mundo', icon);
+      this.selectedEntityId = entityId;
+      return;
+    }
+    if (this.selectedEntityId === entityId) {
+      return;
+    }
+
+    this.showEntityEditor = false;
+    this.selectedEntityId = '';
+
+    if (!this.worldInfoComponent) {
+      const { WorldInfoComponent } = await import('../world-info/world-info.component');
+      this.worldInfoComponent = WorldInfoComponent;
+    }
+
+    setTimeout(() => {
+      this.selectedEntityId = entityId;
+      this.showEntityEditor = true;
+    }, 0);
+  }
+
+  async selectEntity(entityId: string) {
+    if (this.panelMode()) {
+      const world = this.worlds.find(w => w.id === entityId);
+      const icon = this.getPersonalizationValue(world, 'icon') || 'fa-solid fa-earth';
+      this.tabManager.substituteCurrentTab('World', entityId, world?.name ?? 'Mundo', icon);
       this.selectedEntityId = entityId;
       return;
     }

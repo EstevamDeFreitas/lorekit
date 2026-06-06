@@ -15,6 +15,8 @@ import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
+import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
+import { Dialog } from '@angular/cdk/dialog';
 
 @Component({
   selector: 'app-specie-list',
@@ -80,6 +82,8 @@ import { TabManagerService } from '../../../services/tab-manager.service';
               (onDocumentSelect)="selectSpecie($event.id)"
               (onCreateChild)="createSubSpecie($event)"
               (onReparentRequested)="reparentSpecie($event)"
+              (onDelete)="delete($event)"
+              (onDocumentNewTab)="newTabSpecie($event)"
               [documentArray]="filteredSpecieTreeDocuments">
             </app-tree-view-list>
           </div>
@@ -206,10 +210,35 @@ export class SpecieListComponent implements OnInit {
     ];
   }
 
-  async selectSpecie(specieId: string) {
+  async newTabSpecie(specieId: string) {
     if (this.panelMode()) {
       const specie = this.species.find(s => s.id === specieId);
       this.tabManager.openTab('Specie', specieId, specie?.name ?? 'Espécie', 'fa-solid fa-paw');
+      this.selectedSpecieId = specieId;
+      return;
+    }
+    if (this.selectedSpecieId === specieId) {
+      return;
+    }
+
+    this.showSpecieEditor = false;
+    this.selectedSpecieId = '';
+
+    if (!this.specieEditComponent) {
+      const { SpecieEditComponent } = await import('../specie-edit/specie-edit.component');
+      this.specieEditComponent = SpecieEditComponent;
+    }
+
+    setTimeout(() => {
+      this.selectedSpecieId = specieId;
+      this.showSpecieEditor = true;
+    }, 0);
+  }
+
+  async selectSpecie(specieId: string) {
+    if (this.panelMode()) {
+      const specie = this.species.find(s => s.id === specieId);
+      this.tabManager.substituteCurrentTab('Specie', specieId, specie?.name ?? 'Espécie', 'fa-solid fa-paw');
       this.selectedSpecieId = specieId;
       return;
     }
@@ -306,6 +335,22 @@ export class SpecieListComponent implements OnInit {
 
     this.sortTreeByTitle(roots);
     return roots;
+  }
+
+  safeDeleteDialog = inject(Dialog);
+
+  delete(id: string) {
+    const specie = this.specieService.getSpecie(id);
+
+    this.safeDeleteDialog.open(SafeDeleteComponent, {
+      data: {
+        entityName: specie.name,
+        entityTable: 'Specie',
+        entityId: id
+      },
+      panelClass: 'screen-dialog',
+      width: '400px',
+    });
   }
 
   private sortTreeByTitle(nodes: TreeSpecieNode[]) {

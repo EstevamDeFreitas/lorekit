@@ -17,6 +17,8 @@ import { FormField, FormOverlayDirective } from '../../../components/form-overla
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
+import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
+import { Dialog } from '@angular/cdk/dialog';
 
 @Component({
   selector: 'app-document-list',
@@ -78,6 +80,8 @@ import { TabManagerService } from '../../../services/tab-manager.service';
               (onDocumentSelect)="selectDocument($event.id)"
               (onCreateChild)="createSubDocument($event)"
               (onReparentRequested)="reparentDocument($event)"
+              (onDelete)="delete($event)"
+              (onDocumentNewTab)="newTabDocument($event)"
               [documentArray]="filteredDocuments"
             ></app-tree-view-list>
           </div>
@@ -213,10 +217,29 @@ export class DocumentListComponent implements OnInit {
     return undefined;
   }
 
-  selectDocument(documentId: string) {
+  newTabDocument(documentId: string) {
     if (this.panelMode()) {
       const doc = this.findInTree(this.documents, documentId);
       this.tabManager.openTab('Document', documentId, doc?.title ?? 'Documento', 'fa-solid fa-file');
+      this.selectedDocumentId = documentId;
+      return;
+    }
+    if (this.selectedDocumentId === documentId) {
+      return;
+    }
+
+    this.showDocumentEditor = false;
+
+    setTimeout(() => {
+      this.selectedDocumentId = documentId;
+      this.showDocumentEditor = true;
+    });
+  }
+
+  selectDocument(documentId: string) {
+    if (this.panelMode()) {
+      const doc = this.findInTree(this.documents, documentId);
+      this.tabManager.substituteCurrentTab('Document', documentId, doc?.title ?? 'Documento', 'fa-solid fa-file');
       this.selectedDocumentId = documentId;
       return;
     }
@@ -342,5 +365,21 @@ export class DocumentListComponent implements OnInit {
     } catch (error: any) {
       alert(error?.message || 'Falha ao reorganizar o documento.');
     }
+  }
+
+  safeDeleteDialog = inject(Dialog);
+
+  delete(id: string) {
+    const document = this.documentService.getDocument(id);
+
+    this.safeDeleteDialog.open(SafeDeleteComponent, {
+      data: {
+        entityName: document.title,
+        entityTable: 'Document',
+        entityId: id
+      },
+      panelClass: 'screen-dialog',
+      width: '400px',
+    });
   }
 }

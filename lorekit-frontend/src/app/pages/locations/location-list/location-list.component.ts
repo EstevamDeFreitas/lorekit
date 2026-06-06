@@ -20,6 +20,7 @@ import { TabManagerService } from '../../../services/tab-manager.service';
 import {
   ContextMenuDirective
 } from '../../../directives/context-menu.directive';
+import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
 
 @Component({
   selector: 'app-location-list',
@@ -78,6 +79,8 @@ import {
               (onDocumentSelect)="selectLocation($event.id)"
               (onCreateChild)="createSubLocation($event)"
               (onReparentRequested)="reparentLocation($event)"
+              (onDelete)="delete($event)"
+              (onDocumentNewTab)="newTabLocation($event)"
               [documentArray]="filteredLocationTreeNodes"
             ></app-tree-view-list>
           </div>
@@ -211,10 +214,29 @@ export class LocationListComponent implements OnInit {
     this.getLocations();
   }
 
-  selectLocation(locationId: string) {
+  newTabLocation(locationId: string) {
     if (this.panelMode()) {
       const loc = this.locations.find(l => l.id === locationId);
       this.tabManager.openTab('Location', locationId, loc?.name ?? 'Localidade', 'fa-solid fa-location-dot');
+      this.selectedLocationId = locationId;
+      return;
+    }
+    if (this.selectedLocationId === locationId) {
+      return;
+    }
+
+    this.showLocationEditor = false;
+
+    setTimeout(() => {
+      this.selectedLocationId = locationId;
+      this.showLocationEditor = true;
+    });
+  }
+
+  selectLocation(locationId: string) {
+    if (this.panelMode()) {
+      const loc = this.locations.find(l => l.id === locationId);
+      this.tabManager.substituteCurrentTab('Location', locationId, loc?.name ?? 'Localidade', 'fa-solid fa-location-dot');
       this.selectedLocationId = locationId;
       return;
     }
@@ -325,6 +347,22 @@ export class LocationListComponent implements OnInit {
     }
 
     return filtered;
+  }
+
+  safeDeleteDialog = inject(Dialog);
+
+  delete(id: string) {
+    const location = this.locationService.getLocationById(id);
+
+    this.safeDeleteDialog.open(SafeDeleteComponent, {
+      data: {
+        entityName: location.name,
+        entityTable: 'Location',
+        entityId: id
+      },
+      panelClass: 'screen-dialog',
+      width: '400px',
+    });
   }
 
 }
