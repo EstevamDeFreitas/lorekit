@@ -6,9 +6,14 @@ import { ButtonComponent } from '../../../components/button/button.component';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { InputComponent } from '../../../components/input/input.component';
 import { LinkService, SelectableTable } from '../../../services/link.service';
+import { TabManagerService } from '../../../services/tab-manager.service';
 import { GraphEdge, GraphNode, GraphView } from '../../../libs/relationship-graph/relationship-graph.types';
 import { GRAPH_CANVAS_HEIGHT, GRAPH_CANVAS_WIDTH, makeNodeKey } from '../../../libs/relationship-graph/relationship-graph.utils';
 import { buildImageUrl } from '../../../models/image.model';
+
+const NODE_MIN_SCALE = 0.6;
+const NODE_MAX_SCALE = 2.2;
+const NODE_RESIZE_HANDLE_SIZE = 10;
 
 @Component({
   selector: 'app-relation-graph',
@@ -140,20 +145,31 @@ import { buildImageUrl } from '../../../models/image.model';
                   />
                   @if (node.imagePath) {
                     <image
-                      [attr.x]="nodeRect(node).x + 8"
-                      [attr.y]="nodeRect(node).y + 10"
-                      [attr.width]="28"
-                      [attr.height]="28"
+                      [attr.x]="nodeImageX(node)"
+                      [attr.y]="nodeImageY(node)"
+                      [attr.width]="nodeImageSize(node)"
+                      [attr.height]="nodeImageSize(node)"
                       [attr.href]="buildImageUrl(node.imagePath)"
                       preserveAspectRatio="xMidYMid slice"
                     />
                   }
-                  <text [attr.x]="nodeLabelX(node)" [attr.y]="node.y - 8" text-anchor="start" class="fill-white text-sm font-semibold">
-                    {{ node.label | slice:0:26 }}
+                  <text [attr.x]="nodeLabelX(node)" [attr.y]="nodeTitleY(node)" text-anchor="start" class="fill-white text-sm font-semibold">
+                    {{ node.label | slice:0:nodeLabelLimit(node) }}
                   </text>
-                  <text [attr.x]="nodeLabelX(node)" [attr.y]="node.y + 14" text-anchor="start" class="fill-zinc-300 text-xs">
+                  <text [attr.x]="nodeLabelX(node)" [attr.y]="nodeSubtitleY(node)" text-anchor="start" class="fill-zinc-300 text-xs">
                     {{ node.table }}
                   </text>
+                  @if (selectedNodeKey === node.key) {
+                    <rect
+                      [attr.x]="nodeResizeHandleRect(node).x"
+                      [attr.y]="nodeResizeHandleRect(node).y"
+                      [attr.width]="nodeResizeHandleRect(node).width"
+                      [attr.height]="nodeResizeHandleRect(node).height"
+                      [attr.rx]="3"
+                      class="fill-yellow-500 stroke-zinc-900 stroke-[1] cursor-se-resize"
+                      (mousedown)="startNodeResize($event, node)"
+                    />
+                  }
                 </g>
               }
             </svg>
@@ -171,6 +187,12 @@ import { buildImageUrl } from '../../../models/image.model';
                   (click)="prepareAddRelationFromContext()"
                 >
                   Adicionar relação a partir deste nó
+                </button>
+                <button
+                  class="w-full text-left text-sm px-2 py-2 rounded hover:bg-zinc-800 cursor-pointer"
+                  (click)="openNodeRelationsInNewTab()"
+                >
+                  Abrir em nova aba
                 </button>
               </div>
             }
@@ -214,7 +236,10 @@ import { buildImageUrl } from '../../../models/image.model';
             </div>
 
             @if (editingLinkId) {
-              <app-button label="Excluir Relação" buttonType="danger" (click)="deleteEditingLink()" />
+              <div class="grid grid-cols-2 gap-2">
+                <app-button label="Inverter Relação" buttonType="secondary" (click)="invertEditingLink()" />
+                <app-button label="Excluir Relação" buttonType="danger" (click)="deleteEditingLink()" />
+              </div>
             }
 
             <div class="border-t border-zinc-800 pt-3 mt-2">
@@ -287,6 +312,10 @@ export class RelationGraphComponent implements OnInit {
   isNodeDragging = false;
   private draggedNode: GraphNode | null = null;
   private movedDuringNodeDrag = false;
+  isNodeResizing = false;
+  private resizedNode: GraphNode | null = null;
+  private movedDuringNodeResize = false;
+  private resizeAnchorTopLeft: { x: number; y: number } | null = null;
 
   relationshipDepth = 2;
   loadAllLevels = false;
@@ -338,7 +367,11 @@ export class RelationGraphComponent implements OnInit {
 
   hasInputRoot = computed(() => !!this.rootTable() && !!this.rootId());
 
-  constructor(private linkService: LinkService, private route: ActivatedRoute) {
+  constructor(
+    private linkService: LinkService,
+    private route: ActivatedRoute,
+    private tabManager: TabManagerService,
+  ) {
     effect(() => {
       const inputTable = this.rootTable();
       const inputId = this.rootId();
@@ -436,6 +469,20 @@ export class RelationGraphComponent implements OnInit {
     this.movedDuringNodeDrag = false;
   }
 
+  startNodeResize(event: MouseEvent, node: GraphNode): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.button !== 0) return;
+
+    this.selectedNodeKey = node.key;
+    this.isNodeResizing = true;
+    this.resizedNode = node;
+    const rect = this.nodeRect(node);
+    this.resizeAnchorTopLeft = { x: rect.x, y: rect.y };
+    this.movedDuringNodeResize = false;
+  }
+
   nodeCircleClass(node: GraphNode): string {
     if (node.isRoot) return 'fill-yellow-500/20 stroke-yellow-500';
     if (this.selectedNodeKey === node.key) return 'fill-zinc-700 stroke-zinc-300';
@@ -443,8 +490,8 @@ export class RelationGraphComponent implements OnInit {
   }
 
   nodeRect(node: GraphNode): { x: number; y: number; width: number; height: number } {
-    const width = node.isRoot ? 220 : 190;
-    const height = node.isRoot ? 78 : 64;
+    const width = this.baseNodeWidth(node) * this.nodeWidthScale(node);
+    const height = this.baseNodeHeight(node) * this.nodeHeightScale(node);
     return {
       x: node.x - width / 2,
       y: node.y - height / 2,
@@ -453,9 +500,47 @@ export class RelationGraphComponent implements OnInit {
     };
   }
 
+  nodeResizeHandleRect(node: GraphNode): { x: number; y: number; width: number; height: number } {
+    const rect = this.nodeRect(node);
+    const size = Math.max(8, NODE_RESIZE_HANDLE_SIZE * Math.min(this.nodeWidthScale(node), this.nodeHeightScale(node)));
+    return {
+      x: rect.x + rect.width - size / 2,
+      y: rect.y + rect.height - size / 2,
+      width: size,
+      height: size,
+    };
+  }
+
+  nodeLabelLimit(node: GraphNode): number {
+    const scale = this.nodeWidthScale(node);
+    if (scale < 0.9) return 18;
+    if (scale > 1.2) return 36;
+    return 26;
+  }
+
   nodeLabelX(node: GraphNode): number {
     const left = this.nodeRect(node).x;
-    return left + (node.imagePath ? 44 : 12);
+    return left + (node.imagePath ? 44 : 12) * this.nodeWidthScale(node);
+  }
+
+  nodeImageSize(node: GraphNode): number {
+    return +(28 * Math.min(this.nodeWidthScale(node), this.nodeHeightScale(node))).toFixed(2);
+  }
+
+  nodeImageX(node: GraphNode): number {
+    return this.nodeRect(node).x + 8 * this.nodeWidthScale(node);
+  }
+
+  nodeImageY(node: GraphNode): number {
+    return this.nodeRect(node).y + 10 * this.nodeHeightScale(node);
+  }
+
+  nodeTitleY(node: GraphNode): number {
+    return node.y - 8 * this.nodeHeightScale(node);
+  }
+
+  nodeSubtitleY(node: GraphNode): number {
+    return node.y + 14 * this.nodeHeightScale(node);
   }
 
   edgeLinePoints(edge: GraphEdge): { x1: number; y1: number; x2: number; y2: number } | null {
@@ -531,6 +616,7 @@ export class RelationGraphComponent implements OnInit {
 
   startPan(event: MouseEvent): void {
     if (this.isNodeDragging) return;
+    if (this.isNodeResizing) return;
     if (event.button !== 0) return;
 
     this.isPanning = true;
@@ -543,6 +629,11 @@ export class RelationGraphComponent implements OnInit {
 
   @HostListener('window:mousemove', ['$event'])
   onPanMove(event: MouseEvent): void {
+    if (this.isNodeResizing) {
+      this.moveResizedNode(event);
+      return;
+    }
+
     if (this.isNodeDragging) {
       this.moveDraggedNode(event);
       return;
@@ -563,6 +654,26 @@ export class RelationGraphComponent implements OnInit {
 
   @HostListener('window:mouseup')
   stopPan(): void {
+    if (this.isNodeResizing && this.resizedNode) {
+      if (this.movedDuringNodeResize && this.graphView) {
+        this.linkService.saveNodeCardSize(
+          { table: this.currentRootTable, id: this.currentRootId },
+          {
+            table: this.resizedNode.table,
+            id: this.resizedNode.id,
+            cardWidthScale: this.nodeWidthScale(this.resizedNode),
+            cardHeightScale: this.nodeHeightScale(this.resizedNode),
+          },
+          this.graphView.edges.map((edge) => edge.link)
+        );
+      }
+
+      this.isNodeResizing = false;
+      this.resizedNode = null;
+      this.resizeAnchorTopLeft = null;
+      this.movedDuringNodeResize = false;
+    }
+
     if (this.isNodeDragging && this.draggedNode) {
       if (this.movedDuringNodeDrag && this.graphView) {
         this.linkService.saveNodePosition(
@@ -609,6 +720,18 @@ export class RelationGraphComponent implements OnInit {
     this.relationDraft.toId = this.currentRootId || this.draftTargetEntities[0]?.id || '';
     this.relationDraft.name = '';
     this.editingLinkId = null;
+
+    this.closeContextMenu();
+  }
+
+  openNodeRelationsInNewTab(): void {
+    if (!this.contextMenuNode) return;
+
+    this.tabManager.openRelationsTab({
+      table: this.contextMenuNode.table,
+      id: this.contextMenuNode.id,
+      label: this.contextMenuNode.label,
+    });
 
     this.closeContextMenu();
   }
@@ -667,6 +790,27 @@ export class RelationGraphComponent implements OnInit {
     this.resetDraft();
   }
 
+  invertEditingLink(): void {
+    if (!this.editingLinkId) return;
+
+    const updated = this.linkService.invertLinkDirection(this.editingLinkId);
+    if (!updated) return;
+
+    this.relationDraft = {
+      fromTable: updated.fromTable,
+      fromId: updated.fromId,
+      toTable: updated.toTable,
+      toId: updated.toId,
+      name: updated.name || '',
+    };
+
+    const sourceEntity = this.linkService.getEntitySummary(updated.fromTable, updated.fromId);
+    this.relationDraftFromLabel = sourceEntity?.label || updated.fromId;
+    this.draftTargetEntities = this.linkService.getEntitiesByTable(updated.toTable);
+
+    this.refreshGraph();
+  }
+
   resetDraft(): void {
     this.editingLinkId = null;
     this.draftTargetEntities = [];
@@ -696,6 +840,13 @@ export class RelationGraphComponent implements OnInit {
       this.selectedEntityId = id;
     }
 
+    const rootEntity = this.linkService.getEntitySummary(table, id);
+    this.tabManager.pinActiveRelationsTab({
+      table,
+      id,
+      label: rootEntity?.label,
+    });
+
     this.resetDraft();
   }
 
@@ -704,20 +855,13 @@ export class RelationGraphComponent implements OnInit {
   }
 
   private moveDraggedNode(event: MouseEvent): void {
-    if (!this.draggedNode || !this.graphSvg) return;
+    if (!this.draggedNode) return;
 
-    const svg = this.graphSvg.nativeElement;
-    const rect = svg.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
+    const point = this.mouseToGraphPoint(event);
+    if (!point) return;
 
-    const [viewX, viewY, viewW, viewH] = this.graphViewBox.split(' ').map(Number);
-    if ([viewX, viewY, viewW, viewH].some((n) => Number.isNaN(n))) return;
-
-    const ratioX = (event.clientX - rect.left) / rect.width;
-    const ratioY = (event.clientY - rect.top) / rect.height;
-
-    const nextX = viewX + ratioX * viewW;
-    const nextY = viewY + ratioY * viewH;
+    const nextX = point.x;
+    const nextY = point.y;
 
     if (Math.abs(nextX - this.draggedNode.x) > 0.5 || Math.abs(nextY - this.draggedNode.y) > 0.5) {
       this.movedDuringNodeDrag = true;
@@ -725,6 +869,79 @@ export class RelationGraphComponent implements OnInit {
 
     this.draggedNode.x = nextX;
     this.draggedNode.y = nextY;
+  }
+
+  private moveResizedNode(event: MouseEvent): void {
+    if (!this.resizedNode || !this.resizeAnchorTopLeft) return;
+
+    const point = this.mouseToGraphPoint(event);
+    if (!point) return;
+
+    const nextWidth = Math.max(this.minNodeWidth(this.resizedNode), point.x - this.resizeAnchorTopLeft.x);
+    const nextHeight = Math.max(this.minNodeHeight(this.resizedNode), point.y - this.resizeAnchorTopLeft.y);
+
+    const targetWidthScale = this.clampNodeDimensionScale(nextWidth / this.baseNodeWidth(this.resizedNode));
+    const targetHeightScale = this.clampNodeDimensionScale(nextHeight / this.baseNodeHeight(this.resizedNode));
+    const currentWidthScale = this.nodeWidthScale(this.resizedNode);
+    const currentHeightScale = this.nodeHeightScale(this.resizedNode);
+
+    if (Math.abs(targetWidthScale - currentWidthScale) > 0.003 || Math.abs(targetHeightScale - currentHeightScale) > 0.003) {
+      this.resizedNode.cardWidthScale = targetWidthScale;
+      this.resizedNode.cardHeightScale = targetHeightScale;
+
+      const width = this.baseNodeWidth(this.resizedNode) * targetWidthScale;
+      const height = this.baseNodeHeight(this.resizedNode) * targetHeightScale;
+      this.resizedNode.x = this.resizeAnchorTopLeft.x + width / 2;
+      this.resizedNode.y = this.resizeAnchorTopLeft.y + height / 2;
+      this.movedDuringNodeResize = true;
+    }
+  }
+
+  private mouseToGraphPoint(event: MouseEvent): { x: number; y: number } | null {
+    if (!this.graphSvg) return null;
+
+    const svg = this.graphSvg.nativeElement;
+    const rect = svg.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return null;
+
+    const [viewX, viewY, viewW, viewH] = this.graphViewBox.split(' ').map(Number);
+    if ([viewX, viewY, viewW, viewH].some((n) => Number.isNaN(n))) return null;
+
+    const ratioX = (event.clientX - rect.left) / rect.width;
+    const ratioY = (event.clientY - rect.top) / rect.height;
+
+    return {
+      x: viewX + ratioX * viewW,
+      y: viewY + ratioY * viewH,
+    };
+  }
+
+  private baseNodeWidth(node: GraphNode): number {
+    return node.isRoot ? 220 : 190;
+  }
+
+  private baseNodeHeight(node: GraphNode): number {
+    return node.isRoot ? 78 : 64;
+  }
+
+  private minNodeWidth(node: GraphNode): number {
+    return this.baseNodeWidth(node) * NODE_MIN_SCALE;
+  }
+
+  private minNodeHeight(node: GraphNode): number {
+    return this.baseNodeHeight(node) * NODE_MIN_SCALE;
+  }
+
+  private nodeWidthScale(node: GraphNode): number {
+    return this.clampNodeDimensionScale(node.cardWidthScale ?? 1);
+  }
+
+  private nodeHeightScale(node: GraphNode): number {
+    return this.clampNodeDimensionScale(node.cardHeightScale ?? 1);
+  }
+
+  private clampNodeDimensionScale(scale: number): number {
+    return +Math.min(NODE_MAX_SCALE, Math.max(NODE_MIN_SCALE, scale)).toFixed(3);
   }
 
   outgoingEdges(graph: GraphView): GraphEdge[] {

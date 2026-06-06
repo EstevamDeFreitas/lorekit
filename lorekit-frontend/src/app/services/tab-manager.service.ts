@@ -1,6 +1,10 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import {
+  buildRelationsViewEntityId,
+  parseRelationsViewEntityId,
+  RelationViewRoot,
+  RELATIONS_VIEW_SECTION_ID,
   SerializableLayout,
   SerializableTab,
   TabEntityType,
@@ -60,10 +64,69 @@ export class TabManagerService {
   setActiveSidebarSection(section: string): void {
     const viewMeta = VIEW_SECTIONS[section];
     if (viewMeta) {
+      if (section === RELATIONS_VIEW_SECTION_ID) {
+        this.openRelationsTab();
+        return;
+      }
+
       this.openTab('view', section, viewMeta.title, viewMeta.icon);
       return;
     }
     this.update(l => ({ ...l, activeSidebarSection: section, sidebarVisible: true }));
+  }
+
+  openRelationsTab(root?: RelationViewRoot & { label?: string }, targetPaneId?: string): void {
+    const viewMeta = VIEW_SECTIONS[RELATIONS_VIEW_SECTION_ID];
+    if (!viewMeta) return;
+
+    const entityId = buildRelationsViewEntityId(root ? { table: root.table, id: root.id } : null);
+    const title = root?.label?.trim()
+      ? `${viewMeta.title}: ${root.label.trim()}`
+      : viewMeta.title;
+
+    this.openTab('view', entityId, title, viewMeta.icon, targetPaneId);
+  }
+
+  pinActiveRelationsTab(root: RelationViewRoot & { label?: string }): void {
+    if (!root?.table || !root?.id) return;
+
+    const viewMeta = VIEW_SECTIONS[RELATIONS_VIEW_SECTION_ID];
+    if (!viewMeta) return;
+
+    const layout = this.snapshot;
+    const focusedPane = layout.panes.find((pane) => pane.id === layout.focusedPaneId);
+    if (!focusedPane?.activeTabId) return;
+
+    const activeTab = focusedPane.tabs.find((tab) => tab.id === focusedPane.activeTabId);
+    if (!activeTab || activeTab.entityType !== 'view') return;
+
+    const isRelationsTab = activeTab.entityId === RELATIONS_VIEW_SECTION_ID || !!parseRelationsViewEntityId(activeTab.entityId);
+    if (!isRelationsTab) return;
+
+    const nextEntityId = buildRelationsViewEntityId({ table: root.table, id: root.id });
+    const nextTitle = root.label?.trim()
+      ? `${viewMeta.title}: ${root.label.trim()}`
+      : viewMeta.title;
+
+    if (activeTab.entityId === nextEntityId && activeTab.title === nextTitle) {
+      return;
+    }
+
+    this.update(l => ({
+      ...l,
+      panes: l.panes.map(p => ({
+        ...p,
+        tabs: p.tabs.map(t =>
+          t.id === activeTab.id
+            ? {
+                ...t,
+                entityId: nextEntityId,
+                title: nextTitle,
+              }
+            : t
+        ),
+      })),
+    }));
   }
 
   toggleSidebar(): void {

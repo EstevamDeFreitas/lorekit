@@ -30,10 +30,10 @@ export class LinkService {
     Species: 'Espécies',
     Culture: 'Culturas',
     Document: 'Documentos',
-    Item: 'Itens'
+    Object: 'Objetos'
   };
 
-  private readonly selectableTables = ['World', 'Character', 'Location', 'Organization', 'Species', 'Culture', 'Document', 'Item'];
+  private readonly selectableTables = ['World', 'Character', 'Location', 'Organization', 'Species', 'Culture', 'Document', 'Object'];
 
   constructor(private dbProvider: DbProvider) {
     this.crud = this.dbProvider.getCrudHelper();
@@ -144,6 +144,44 @@ export class LinkService {
     }
   }
 
+  saveNodeCardSize(
+    root: { table: string; id: string },
+    node: { table: string; id: string; cardWidthScale: number; cardHeightScale: number },
+    links: Link[]
+  ): void {
+    if (!root?.table || !root?.id) return;
+    if (!node?.table || !node?.id) return;
+    if (typeof node.cardWidthScale !== 'number' || !Number.isFinite(node.cardWidthScale)) return;
+    if (typeof node.cardHeightScale !== 'number' || !Number.isFinite(node.cardHeightScale)) return;
+
+    const nodeKey = makeNodeKey(node.table, node.id);
+    const normalizedWidthScale = this.normalizeCardDimensionScale(node.cardWidthScale);
+    const normalizedHeightScale = this.normalizeCardDimensionScale(node.cardHeightScale);
+
+    const targetLinkIds = new Set(
+      links
+        .filter((link) => makeNodeKey(link.fromTable, link.fromId) === nodeKey || makeNodeKey(link.toTable, link.toId) === nodeKey)
+        .map((link) => link.id)
+    );
+
+    for (const linkId of targetLinkIds) {
+      const link = this.crud.findById('Link', linkId) as Link | null;
+      if (!link) continue;
+
+      const config = this.parseConfig(link.configJson);
+      const nodeCardSizes = config.nodeCardSizes || {};
+      nodeCardSizes[nodeKey] = {
+        widthScale: normalizedWidthScale,
+        heightScale: normalizedHeightScale,
+      };
+      config.nodeCardSizes = nodeCardSizes;
+
+      this.crud.update('Link', link.id, {
+        configJson: JSON.stringify(config)
+      });
+    }
+  }
+
   createLink(payload: {
     fromTable: string;
     fromId: string;
@@ -169,6 +207,20 @@ export class LinkService {
 
   deleteLink(id: string): void {
     this.crud.delete('Link', id);
+  }
+
+  invertLinkDirection(id: string): Link | null {
+    const current = this.crud.findById('Link', id) as Link | null;
+    if (!current) return null;
+
+    this.updateLink(id, {
+      fromTable: current.toTable,
+      fromId: current.toId,
+      toTable: current.fromTable,
+      toId: current.fromId,
+    });
+
+    return this.crud.findById('Link', id) as Link | null;
   }
 
   private getLinksRecursive(table: string, id: string, depth: number, includeAllLevels: boolean): Link[] {
@@ -224,6 +276,8 @@ export class LinkService {
     for (const link of links) {
       const config = this.parseConfig(link.configJson);
       const positions = config.positions || {};
+      const nodeCardSizes = config.nodeCardSizes || {};
+      const nodeCardScales = config.nodeCardScales || {};
 
       for (const [nodeKey, rawOffset] of Object.entries(positions)) {
         const node = nodeMap.get(nodeKey);
@@ -236,7 +290,30 @@ export class LinkService {
           node.y = rootNode.y + offset.y;
         }
       }
+
+      for (const [nodeKey, rawSize] of Object.entries(nodeCardSizes)) {
+        const node = nodeMap.get(nodeKey);
+        if (!node || !rawSize || typeof rawSize !== 'object') continue;
+
+        const size = rawSize as { widthScale?: number; heightScale?: number };
+        const widthScale = this.normalizeCardDimensionScale(size.widthScale ?? 1);
+        const heightScale = this.normalizeCardDimensionScale(size.heightScale ?? 1);
+        node.cardWidthScale = widthScale;
+        node.cardHeightScale = heightScale;
+      }
+
+      for (const [nodeKey, rawScale] of Object.entries(nodeCardScales)) {
+        const node = nodeMap.get(nodeKey);
+        if (!node || typeof rawScale !== 'number' || !Number.isFinite(rawScale)) continue;
+        const scale = this.normalizeCardDimensionScale(rawScale);
+        node.cardWidthScale = scale;
+        node.cardHeightScale = scale;
+      }
     }
+  }
+
+  private normalizeCardDimensionScale(scale: number): number {
+    return +Math.min(2.2, Math.max(0.6, scale)).toFixed(3);
   }
 
   private parseConfig(configJson?: string | null): any {

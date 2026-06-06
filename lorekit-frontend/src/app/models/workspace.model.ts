@@ -14,6 +14,52 @@ export type TabEntityType =
   | 'Vocations'
   | 'view'; // view tabs have no entity id: relations, character-sheet, vocations, etc.
 
+export const RELATIONS_VIEW_SECTION_ID = 'relations';
+const RELATIONS_VIEW_SEPARATOR = '|';
+
+export type RelationViewRoot = {
+  table: string;
+  id: string;
+};
+
+/**
+ * For relation view tabs:
+ * - default view: "relations"
+ * - rooted view:  "relations|Table|uuid"
+ */
+export function buildRelationsViewEntityId(root?: RelationViewRoot | null): string {
+  if (!root?.table || !root?.id) {
+    return RELATIONS_VIEW_SECTION_ID;
+  }
+
+  return [
+    RELATIONS_VIEW_SECTION_ID,
+    encodeURIComponent(root.table),
+    encodeURIComponent(root.id),
+  ].join(RELATIONS_VIEW_SEPARATOR);
+}
+
+export function parseRelationsViewEntityId(entityId: string): RelationViewRoot | null {
+  if (!entityId.startsWith(`${RELATIONS_VIEW_SECTION_ID}${RELATIONS_VIEW_SEPARATOR}`)) {
+    return null;
+  }
+
+  const [, rawTable, rawId] = entityId.split(RELATIONS_VIEW_SEPARATOR);
+  if (!rawTable || !rawId) {
+    return null;
+  }
+
+  try {
+    return {
+      table: decodeURIComponent(rawTable),
+      id: decodeURIComponent(rawId),
+    };
+  }
+  catch {
+    return null;
+  }
+}
+
 export interface WorkspaceTab {
   id: string;
   title: string;

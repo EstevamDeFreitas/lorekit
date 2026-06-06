@@ -18,6 +18,8 @@ export function buildGraphView(root: EntitySummary, entities: EntitySummary[], l
     isRoot: true,
     x: GRAPH_CANVAS_WIDTH / 2,
     y: GRAPH_CANVAS_HEIGHT / 2,
+    cardWidthScale: 1,
+    cardHeightScale: 1,
   });
 
   for (const entity of entities) {
@@ -29,6 +31,8 @@ export function buildGraphView(root: EntitySummary, entities: EntitySummary[], l
         isRoot: key === rootKey,
         x: 0,
         y: 0,
+        cardWidthScale: 1,
+        cardHeightScale: 1,
       });
     }
   }

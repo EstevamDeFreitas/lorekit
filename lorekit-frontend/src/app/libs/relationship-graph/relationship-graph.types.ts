@@ -12,6 +12,8 @@ export type GraphNode = EntitySummary & {
   isRoot: boolean;
   x: number;
   y: number;
+  cardWidthScale: number;
+  cardHeightScale: number;
 };
 
 export type GraphEdge = {

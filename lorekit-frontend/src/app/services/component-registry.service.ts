@@ -1,5 +1,9 @@
 import { Injectable, Type } from '@angular/core';
-import { TabEntityType } from '../models/workspace.model';
+import {
+  parseRelationsViewEntityId,
+  RELATIONS_VIEW_SECTION_ID,
+  TabEntityType,
+} from '../models/workspace.model';
 
 export interface RegistryEntry {
   loader: () => Promise<Type<any>>;
@@ -116,7 +120,15 @@ export class ComponentRegistryService {
 
   /** Returns the registry key for a given tab (entity type or 'view:viewName'). */
   static registryKey(entityType: TabEntityType, entityId: string): string {
-    return entityType === 'view' ? `view:${entityId}` : entityType;
+    if (entityType !== 'view') {
+      return entityType;
+    }
+
+    if (entityId === RELATIONS_VIEW_SECTION_ID || !!parseRelationsViewEntityId(entityId)) {
+      return `view:${RELATIONS_VIEW_SECTION_ID}`;
+    }
+
+    return `view:${entityId}`;
   }
 
   /** Lazy-loads and caches the component for a tab. */
@@ -135,9 +147,22 @@ export class ComponentRegistryService {
     return component;
   }
 
-  /** Returns the @Input() name for the entity id of a given entity type. */
-  getInputKey(entityType: TabEntityType, entityId: string): string {
-    const key = ComponentRegistryService.registryKey(entityType, entityId);
-    return REGISTRY[key]?.inputKey ?? '';
+  /** Returns all @Input() bindings needed to render a tab component. */
+  getTabInputs(entityType: TabEntityType, entityId: string): Record<string, string> {
+    if (entityType !== 'view') {
+      const key = ComponentRegistryService.registryKey(entityType, entityId);
+      const inputKey = REGISTRY[key]?.inputKey ?? '';
+      return inputKey ? { [inputKey]: entityId } : {};
+    }
+
+    const relationRoot = parseRelationsViewEntityId(entityId);
+    if (relationRoot) {
+      return {
+        rootTable: relationRoot.table,
+        rootId: relationRoot.id,
+      };
+    }
+
+    return {};
   }
 }

@@ -78,8 +78,6 @@ export class WorkspacePaneComponent implements OnChanges {
   }
 
   getTabInputs(tab: { entityType: any; entityId: string; id: string }): Record<string, string> {
-    const key = this.registry.getInputKey(tab.entityType, tab.entityId);
-    if (!key) return {};
-    return { [key]: tab.entityId };
+    return this.registry.getTabInputs(tab.entityType, tab.entityId);
   }
 }
