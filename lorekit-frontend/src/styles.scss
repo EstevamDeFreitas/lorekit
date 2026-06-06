@@ -211,7 +211,6 @@ select:focus {
 }
 
 .context-menu-item {
-
   border: none;
   background: transparent;
 
@@ -221,6 +220,13 @@ select:focus {
   padding: 0.5rem;
 
   cursor: pointer;
+}
+
+.context-menu-item span{
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .context-menu-item:hover {

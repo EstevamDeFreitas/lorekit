@@ -15,9 +15,16 @@ import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
 
+import { Dialog } from '@angular/cdk/dialog';
+import { ContextMenuOption } from '../../../models/context-menu-option.interface';
+import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
+import {
+  ContextMenuDirective
+} from '../../../directives/context-menu.directive';
+
 @Component({
   selector: 'app-organization-list',
-  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective],
+  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, ContextMenuDirective],
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4">
@@ -54,6 +61,9 @@ import { TabManagerService } from '../../../services/tab-manager.service';
               @for (organization of organizations; track organization.id) {
                 <button
                   type="button"
+                  appContextMenu
+                  [options]="menuOptions"
+                  [contextId]="organization.id"
                   class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
                   [ngClass]="selectedOrganizationId === organization.id ? 'text-yellow-300' : 'text-zinc-400'"
                   [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(organization, 'color'))}"
@@ -124,6 +134,28 @@ export class OrganizationListComponent implements OnInit {
   public getTextClass = getTextClass;
   public getTextColorStyle = getTextColorStyle;
 
+  safeDeleteDialog = inject(Dialog);
+
+  menuOptions : ContextMenuOption[] = [
+    { label: 'Abrir nova guia', action: (id: string) => this.openNewTabOrganization(id), customIcon: 'fa-arrow-up-right-from-square' },
+    { label: 'Excluir', action: (id: string) => this.deleteOrganization(id), customClass: 'text-red-500', customIcon: 'fa-trash' },
+  ];
+
+  deleteOrganization(organizationId: string) {
+
+    const organization = this.organizationService.getOrganization(organizationId);
+
+    this.safeDeleteDialog.open(SafeDeleteComponent, {
+      data: {
+        entityName: organization.name,
+        entityTable: 'Organization',
+        entityId: organizationId
+      },
+      panelClass: 'screen-dialog',
+      width: '400px',
+    });
+  }
+
   showsidebar = true;
 
   selectedOrganizationId = '';
@@ -193,11 +225,37 @@ export class OrganizationListComponent implements OnInit {
     ];
   }
 
-  async selectOrganization(organizationId: string) {
+  async openNewTabOrganization(organizationId: string) {
     if (this.panelMode()) {
       const org = this.organizations.find(o => o.id === organizationId);
       const icon = this.getPersonalizationValue(org, 'icon') || 'fa-solid fa-building';
       this.tabManager.openTab('Organization', organizationId, org?.name ?? 'Organização', icon);
+      this.selectedOrganizationId = organizationId;
+      return;
+    }
+    if (this.selectedOrganizationId === organizationId) {
+      return;
+    }
+
+    this.showOrganizationEditor = false;
+    this.selectedOrganizationId = '';
+
+    if (!this.organizationEditComponent) {
+      const { OrganizationEditComponent } = await import('../organization-edit/organization-edit.component');
+      this.organizationEditComponent = OrganizationEditComponent;
+    }
+
+    setTimeout(() => {
+      this.selectedOrganizationId = organizationId;
+      this.showOrganizationEditor = true;
+    }, 0);
+  }
+
+  async selectOrganization(organizationId: string) {
+    if (this.panelMode()) {
+      const org = this.organizations.find(o => o.id === organizationId);
+      const icon = this.getPersonalizationValue(org, 'icon') || 'fa-solid fa-building';
+      this.tabManager.substituteCurrentTab('Organization', organizationId, org?.name ?? 'Organização', icon);
       this.selectedOrganizationId = organizationId;
       return;
     }

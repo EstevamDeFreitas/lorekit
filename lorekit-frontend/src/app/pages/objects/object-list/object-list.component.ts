@@ -15,9 +15,16 @@ import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
 
+import { Dialog } from '@angular/cdk/dialog';
+import { ContextMenuOption } from '../../../models/context-menu-option.interface';
+import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
+import {
+  ContextMenuDirective
+} from '../../../directives/context-menu.directive';
+
 @Component({
   selector: 'app-object-list',
-  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective],
+  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, ContextMenuDirective],
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4">
@@ -54,6 +61,9 @@ import { TabManagerService } from '../../../services/tab-manager.service';
               @for (object of objects; track object.id) {
                 <button
                   type="button"
+                  appContextMenu
+                  [options]="menuOptions"
+                  [contextId]="object.id"
                   class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
                   [ngClass]="selectedObjectId === object.id ? 'text-yellow-300' : 'text-zinc-400'"
                   [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(object, 'color'))}"
@@ -124,6 +134,28 @@ export class ObjectListComponent implements OnInit {
   public getTextClass = getTextClass;
   public getTextColorStyle = getTextColorStyle;
 
+  safeDeleteDialog = inject(Dialog);
+
+  menuOptions : ContextMenuOption[] = [
+    { label: 'Abrir nova guia', action: (id: string) => this.openNewTabObject(id), customIcon: 'fa-arrow-up-right-from-square' },
+    { label: 'Excluir', action: (id: string) => this.deleteObject(id), customClass: 'text-red-500', customIcon: 'fa-trash' },
+  ];
+
+  deleteObject(objectId: string) {
+
+    const object = this.objectService.getObject(objectId);
+
+    this.safeDeleteDialog.open(SafeDeleteComponent, {
+      data: {
+        entityName: object.name,
+        entityTable: 'Object',
+        entityId: objectId
+      },
+      panelClass: 'screen-dialog',
+      width: '400px',
+    });
+  }
+
   showsidebar = true;
 
   selectedObjectId = '';
@@ -193,11 +225,37 @@ export class ObjectListComponent implements OnInit {
     ];
   }
 
-  async selectObject(objectId: string) {
+  async openNewTabObject(objectId: string) {
     if (this.panelMode()) {
       const object = this.objects.find(o => o.id === objectId);
       const icon = this.getPersonalizationValue(object, 'icon') || 'fa-solid fa-cube';
       this.tabManager.openTab('Object', objectId, object?.name ?? 'Objeto', icon);
+      this.selectedObjectId = objectId;
+      return;
+    }
+    if (this.selectedObjectId === objectId) {
+      return;
+    }
+
+    this.showObjectEditor = false;
+    this.selectedObjectId = '';
+
+    if (!this.objectEditComponent) {
+      const { ObjectEditComponent } = await import('../object-edit/object-edit.component');
+      this.objectEditComponent = ObjectEditComponent;
+    }
+
+    setTimeout(() => {
+      this.selectedObjectId = objectId;
+      this.showObjectEditor = true;
+    }, 0);
+  }
+
+  async selectObject(objectId: string) {
+    if (this.panelMode()) {
+      const object = this.objects.find(o => o.id === objectId);
+      const icon = this.getPersonalizationValue(object, 'icon') || 'fa-solid fa-cube';
+      this.tabManager.substituteCurrentTab('Object', objectId, object?.name ?? 'Objeto', icon);
       this.selectedObjectId = objectId;
       return;
     }

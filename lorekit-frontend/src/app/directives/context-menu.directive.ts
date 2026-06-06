@@ -79,18 +79,56 @@ export class ContextMenuDirective implements OnDestroy {
       const item =
         this.renderer.createElement('button');
 
-      const text =
-        this.renderer.createText(option.label);
+      const child = this.renderer.createElement('span');
+
+      const text = this.renderer.createElement('p');
+
+      this.renderer.appendChild(
+        text,
+        this.renderer.createText(option.label)
+      );
+
+      if(option.customIcon){
+
+        const icon = this.renderer.createElement('i');
+
+        this.renderer.addClass(
+          icon,
+          "fa-solid"
+        );
+
+        this.renderer.addClass(
+          icon,
+          option.customIcon
+        );
+
+        this.renderer.appendChild(
+          child,
+          icon
+        );
+      }
+
+      this.renderer.appendChild(
+        child,
+        text
+      );
 
       this.renderer.appendChild(
         item,
-        text
+        child
       );
 
       this.renderer.addClass(
         item,
         'context-menu-item'
       );
+
+      if(option.customClass){
+        this.renderer.addClass(
+          item,
+          option.customClass
+        );
+      }
 
       if (option.disabled) {
 

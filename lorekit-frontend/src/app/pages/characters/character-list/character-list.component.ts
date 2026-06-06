@@ -18,6 +18,8 @@ import {
   ContextMenuDirective
 } from '../../../directives/context-menu.directive';
 import {ContextMenuOption} from '../../../models/context-menu-option.interface';
+import { Dialog } from '@angular/cdk/dialog';
+import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
 
 @Component({
   selector: 'app-character-list',
@@ -130,10 +132,27 @@ export class CharacterListComponent implements OnInit {
 
   showsidebar = true;
 
+  safeDeleteDialog = inject(Dialog);
+
   menuOptions : ContextMenuOption[] = [
-    { label: 'Abrir nova guia', action: (id: string) => this.openNewTabCharacter(id) },
-    { label: 'Excluir', action: (id: string) => console.log('Excluir personagem', id) },
+    { label: 'Abrir nova guia', action: (id: string) => this.openNewTabCharacter(id), customIcon: 'fa-arrow-up-right-from-square' },
+    { label: 'Excluir', action: (id: string) => this.deleteCharacter(id), customClass: 'text-red-500', customIcon: 'fa-trash' },
   ];
+
+  deleteCharacter(characterId: string) {
+
+    const character = this.characterService.getCharacter(characterId);
+
+    this.safeDeleteDialog.open(SafeDeleteComponent, {
+      data: {
+        entityName: character.name,
+        entityTable: 'Character',
+        entityId: characterId
+      },
+      panelClass: 'screen-dialog',
+      width: '400px',
+    });
+  }
 
   selectedCharacterId = '';
   showCharacterEditor = false;
@@ -259,4 +278,6 @@ export class CharacterListComponent implements OnInit {
     this.characterService.saveCharacter(newCharacter, formData['world'] || null, formData['specie'] || null);
     this.getCharacters();
   }
+
+
 }

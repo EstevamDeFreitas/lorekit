@@ -13,10 +13,16 @@ import { WorldStateService } from '../../../services/world-state.service';
 import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../../models/personalization.model';
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
+import { Dialog } from '@angular/cdk/dialog';
+import { ContextMenuOption } from '../../../models/context-menu-option.interface';
+import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
+import {
+  ContextMenuDirective
+} from '../../../directives/context-menu.directive';
 
 @Component({
   selector: 'app-culture-list',
-  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective],
+  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, ContextMenuDirective],
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4">
@@ -53,6 +59,9 @@ import { TabManagerService } from '../../../services/tab-manager.service';
               @for (culture of cultures; track culture.id) {
                 <button
                   type="button"
+                  appContextMenu
+                  [options]="menuOptions"
+                  [contextId]="culture.id"
                   class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
                   [ngClass]="selectedCultureId === culture.id ? 'text-yellow-300' : 'text-zinc-400'"
                   [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(culture, 'color'))}"
@@ -124,6 +133,28 @@ export class CultureListComponent implements OnInit {
 
   showsidebar = true;
 
+  safeDeleteDialog = inject(Dialog);
+
+  menuOptions : ContextMenuOption[] = [
+    { label: 'Abrir nova guia', action: (id: string) => this.openNewTabCulture(id), customIcon: 'fa-arrow-up-right-from-square' },
+    { label: 'Excluir', action: (id: string) => this.deleteCulture(id), customClass: 'text-red-500', customIcon: 'fa-trash' },
+  ];
+
+  deleteCulture(cultureId: string) {
+
+    const culture = this.cultureService.getCulture(cultureId);
+
+    this.safeDeleteDialog.open(SafeDeleteComponent, {
+      data: {
+        entityName: culture.name,
+        entityTable: 'Culture',
+        entityId: cultureId
+      },
+      panelClass: 'screen-dialog',
+      width: '400px',
+    });
+  }
+
   public getPersonalizationValue = getPersonalizationValue;
   public getTextClass = getTextClass;
   public getTextColorStyle = getTextColorStyle;
@@ -185,11 +216,37 @@ export class CultureListComponent implements OnInit {
     ];
   }
 
-  async selectCulture(cultureId: string) {
+  async openNewTabCulture(cultureId: string) {
     if (this.panelMode()) {
       const culture = this.cultures.find(c => c.id === cultureId);
       const icon = this.getPersonalizationValue(culture, 'icon') || 'fa-solid fa-mortar-pestle';
       this.tabManager.openTab('Culture', cultureId, culture?.name ?? 'Cultura', icon);
+      this.selectedCultureId = cultureId;
+      return;
+    }
+    if (this.selectedCultureId === cultureId) {
+      return;
+    }
+
+    this.showCultureEditor = false;
+    this.selectedCultureId = '';
+
+    if (!this.cultureEditComponent) {
+      const { CultureEditComponent } = await import('../culture-edit/culture-edit.component');
+      this.cultureEditComponent = CultureEditComponent;
+    }
+
+    setTimeout(() => {
+      this.selectedCultureId = cultureId;
+      this.showCultureEditor = true;
+    }, 0);
+  }
+
+  async selectCulture(cultureId: string) {
+    if (this.panelMode()) {
+      const culture = this.cultures.find(c => c.id === cultureId);
+      const icon = this.getPersonalizationValue(culture, 'icon') || 'fa-solid fa-mortar-pestle';
+      this.tabManager.substituteCurrentTab('Culture', cultureId, culture?.name ?? 'Cultura', icon);
       this.selectedCultureId = cultureId;
       return;
     }
