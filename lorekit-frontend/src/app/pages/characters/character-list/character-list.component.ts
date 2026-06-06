@@ -14,10 +14,14 @@ import { WorldStateService } from '../../../services/world-state.service';
 import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../../models/personalization.model';
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
+import {
+  ContextMenuDirective
+} from '../../../directives/context-menu.directive';
+import {ContextMenuOption} from '../../../models/context-menu-option.interface';
 
 @Component({
   selector: 'app-character-list',
-  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective],
+  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, ContextMenuDirective],
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4 relative">
@@ -54,6 +58,9 @@ import { TabManagerService } from '../../../services/tab-manager.service';
               @for (character of characters; track character.id) {
                 <button
                   type="button"
+                  appContextMenu
+                  [options]="menuOptions"
+                  [contextId]="character.id"
                   class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
                   [ngClass]="selectedCharacterId === character.id ? 'text-yellow-300' : 'text-zinc-400'"
                   [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(character, 'color'))}"
@@ -123,6 +130,11 @@ export class CharacterListComponent implements OnInit {
 
   showsidebar = true;
 
+  menuOptions : ContextMenuOption[] = [
+    { label: 'Abrir nova guia', action: (id: string) => this.openNewTabCharacter(id) },
+    { label: 'Excluir', action: (id: string) => console.log('Excluir personagem', id) },
+  ];
+
   selectedCharacterId = '';
   showCharacterEditor = false;
   characterEditComponent: any = null;
@@ -186,6 +198,32 @@ export class CharacterListComponent implements OnInit {
   }
 
   async selectCharacter(characterId: string) {
+    if (this.panelMode()) {
+      const character = this.characters.find(c => c.id === characterId);
+      const icon = this.getPersonalizationValue(character, 'icon') || 'fa-solid fa-user';
+      this.tabManager.substituteCurrentTab('Character', characterId, character?.name ?? 'Personagem', icon);
+      this.selectedCharacterId = characterId;
+      return;
+    }
+    if (this.selectedCharacterId === characterId) {
+      return;
+    }
+
+    this.showCharacterEditor = false;
+    this.selectedCharacterId = '';
+
+    if (!this.characterEditComponent) {
+      const { CharacterEditComponent } = await import('../character-edit/character-edit.component');
+      this.characterEditComponent = CharacterEditComponent;
+    }
+
+    setTimeout(() => {
+      this.selectedCharacterId = characterId;
+      this.showCharacterEditor = true;
+    }, 0);
+  }
+
+  async openNewTabCharacter(characterId: string) {
     if (this.panelMode()) {
       const character = this.characters.find(c => c.id === characterId);
       const icon = this.getPersonalizationValue(character, 'icon') || 'fa-solid fa-user';

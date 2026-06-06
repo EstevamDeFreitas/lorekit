@@ -196,3 +196,38 @@ select:focus {
 .text-xss {
   font-size: 0.625rem; /* 10px */
 }
+
+.context-menu {
+  background: var(--color-zinc-900);
+  border: 1px solid var(--color-zinc-700);
+  border-radius: 6px;
+  box-shadow:
+    0 4px 10px rgba(0,0,0,.15);
+
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 10rem;
+}
+
+.context-menu-item {
+
+  border: none;
+  background: transparent;
+
+  text-align: left;
+  font-size: 0.75rem;
+
+  padding: 0.5rem;
+
+  cursor: pointer;
+}
+
+.context-menu-item:hover {
+  background: var(--color-zinc-800);
+}
+
+.context-menu-item:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+}

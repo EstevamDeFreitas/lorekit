@@ -17,10 +17,13 @@ import { LocationEditComponent } from '../location-edit/location-edit.component'
 import { TreeViewNode, TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
+import {
+  ContextMenuDirective
+} from '../../../directives/context-menu.directive';
 
 @Component({
   selector: 'app-location-list',
-  imports: [FormOverlayDirective, NgClass, ComboBoxComponent, FormsModule, IconButtonComponent, TreeViewListComponent, LocationEditComponent],
+  imports: [FormOverlayDirective, NgClass, ComboBoxComponent, FormsModule, IconButtonComponent, TreeViewListComponent, LocationEditComponent, ContextMenuDirective],
   standalone: true,
   template: `
     <div class="flex flex-col relative">
@@ -118,6 +121,11 @@ export class LocationListComponent implements OnInit {
   panelMode = input<boolean>(false);
   tabManager = inject(TabManagerService);
   showsidebar = true;
+
+  menuOptions = [
+    { label: 'Editar', action: (id: string) => this.selectLocation(id) },
+    { label: 'Criar Sub-Localidade', action: (id: string) => console.log('Criar sub-localidade para', id) },
+  ]
 
   private worldStateService = inject(WorldStateService);
   private entityChangeService = inject(EntityChangeService);

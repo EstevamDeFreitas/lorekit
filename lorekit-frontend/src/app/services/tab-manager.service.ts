@@ -79,6 +79,88 @@ export class TabManagerService {
    * If a tab with the same entityType + entityId already exists in any pane, focuses it.
    * Otherwise creates a new tab in targetPaneId (or focused pane).
    */
+
+  substituteCurrentTab(
+    entityType: TabEntityType,
+    entityId: string,
+    title: string,
+    icon: string
+  ): void {
+    const layout = this.snapshot;
+    const paneId = layout.focusedPaneId;
+    const pane = layout.panes.find(p => p.id === paneId);
+    if (!pane) return;
+
+    // If already opened anywhere, just focus/activate it. Do not replace current tab.
+    for (const p of layout.panes) {
+      const existing = p.tabs.find(
+        t => t.entityType === entityType && t.entityId === entityId
+      );
+      if (existing) {
+        this.update(l => ({
+          ...l,
+          focusedPaneId: p.id,
+          panes: l.panes.map(lp =>
+            lp.id === p.id ? { ...lp, activeTabId: existing.id } : lp
+          ),
+        }));
+        return;
+      }
+    }
+
+    const activeTab = pane.tabs.find(t => t.id === pane.activeTabId);
+    if (!activeTab) {
+      this.openTab(entityType, entityId, title, icon, paneId);
+      return;
+    }
+
+    // New id forces @for(track tab.id) to unmount old outlet and mount a fresh component tree.
+    const replacementTabId = newTabId();
+
+    const substitutedTab: WorkspaceTab = {
+      ...activeTab,
+      id: replacementTabId,
+      title,
+      icon,
+      entityType,
+      entityId,
+      isDirty: false,
+      resolvedComponent: undefined,
+    };
+
+    // First pass: replace tab metadata and clear component reference to force teardown.
+    this.update(l => ({
+      ...l,
+      focusedPaneId: paneId,
+      panes: l.panes.map(p => {
+        if (p.id !== paneId) return p;
+        return {
+          ...p,
+          tabs: p.tabs.map(t => (t.id === activeTab.id ? substitutedTab : t)),
+          activeTabId: replacementTabId,
+        };
+      }),
+    }));
+
+    // Second pass: load and attach component again, forcing a fresh instance.
+    this.registry.getComponent(entityType, entityId).then(component => {
+      if (!component) return;
+      this.update(l => ({
+        ...l,
+        panes: l.panes.map(p => ({
+          ...p,
+          tabs: p.tabs.map(t =>
+            t.id === replacementTabId &&
+            t.entityType === entityType &&
+            t.entityId === entityId
+              ? { ...t, resolvedComponent: component }
+              : t
+          ),
+        })),
+      }));
+    });
+  }
+
   openTab(
     entityType: TabEntityType,
     entityId: string,
