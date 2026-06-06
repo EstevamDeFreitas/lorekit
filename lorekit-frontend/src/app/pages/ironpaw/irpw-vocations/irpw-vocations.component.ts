@@ -1,5 +1,5 @@
 import { CommonModule, NgClass } from '@angular/common';
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, effect, inject, input, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
@@ -31,57 +31,59 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4 relative">
-        <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showSidebar ? 'w-80' : 'w-0'">
-          <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
-            <div class="flex items-center justify-between gap-2 mb-4">
-              <h2 class="text-base">Vocações</h2>
-              <app-icon-button
-                size="sm"
-                buttonType="secondary"
-                icon="fa-solid fa-plus"
-                appFormOverlay
-                [title]="'Criar Vocação'"
-                [fields]="getFormFields()"
-                (onSave)="createVocation($event)">
-              </app-icon-button>
-            </div>
+        @if (!vocationIdInput()) {
+          <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showSidebar ? 'w-80' : 'w-0'">
+            <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+              <div class="flex items-center justify-between gap-2 mb-4">
+                <h2 class="text-base">Vocações</h2>
+                <app-icon-button
+                  size="sm"
+                  buttonType="secondary"
+                  icon="fa-solid fa-plus"
+                  appFormOverlay
+                  [title]="'Criar Vocação'"
+                  [fields]="getFormFields()"
+                  (onSave)="createVocation($event)">
+                </app-icon-button>
+              </div>
 
-            <div class="mb-4">
-              <app-input
-                placeholder="Buscar vocação..."
-                [(value)]="searchTerm"
-                (valueChange)="onSearch()">
-              </app-input>
-            </div>
+              <div class="mb-4">
+                <app-input
+                  placeholder="Buscar vocação..."
+                  [(value)]="searchTerm"
+                  (valueChange)="onSearch()">
+                </app-input>
+              </div>
 
-            <div class="flex flex-col gap-3 w-full">
-              @for (vocation of filteredVocations; track vocation.id) {
-                <button
-                  type="button"
-                  class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
-                  [ngClass]="selectedVocationId === vocation.id ? 'text-yellow-300' : 'text-zinc-400'"
-                  [ngStyle]="{'color': getTextColorStyle(getPersonalizationValue(vocation, 'color'))}"
-                  (click)="selectVocation(vocation.id)">
-                  <div class="flex flex-row items-center">
-                    <i class="fa-solid" [ngClass]="getPersonalizationValue(vocation, 'icon') || 'fa-hat-wizard'"></i>
-                  </div>
-                  <h2 [title]="vocation.name || 'Vocação sem nome'" class="text-xs truncate">{{ vocation.name || 'Vocação sem nome' }}</h2>
-                </button>
-              }
+              <div class="flex flex-col gap-3 w-full">
+                @for (vocation of filteredVocations; track vocation.id) {
+                  <button
+                    type="button"
+                    class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
+                    [ngClass]="selectedVocationId === vocation.id ? 'text-yellow-300' : 'text-zinc-400'"
+                    [ngStyle]="{'color': getTextColorStyle(getPersonalizationValue(vocation, 'color'))}"
+                    (click)="selectVocation(vocation.id)">
+                    <div class="flex flex-row items-center">
+                      <i class="fa-solid" [ngClass]="getPersonalizationValue(vocation, 'icon') || 'fa-hat-wizard'"></i>
+                    </div>
+                    <h2 [title]="vocation.name || 'Vocação sem nome'" class="text-xs truncate">{{ vocation.name || 'Vocação sem nome' }}</h2>
+                  </button>
+                }
 
-              @if (filteredVocations.length === 0) {
-                <p class="text-xs text-zinc-500">Nenhuma vocação encontrada.</p>
-              }
+                @if (filteredVocations.length === 0) {
+                  <p class="text-xs text-zinc-500">Nenhuma vocação encontrada.</p>
+                }
+              </div>
             </div>
           </div>
-        </div>
 
-        <small
-          class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer"
-          [ngClass]="showSidebar ? 'start-92' : 'start-12'"
-          (click)="showSidebar = !showSidebar">
-          <i class="fa-solid text-zinc-400" [ngClass]="showSidebar ? 'fa-angles-left' : 'fa-angles-right'"></i>
-        </small>
+          <small
+            class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer"
+            [ngClass]="showSidebar ? 'start-92' : 'start-12'"
+            (click)="showSidebar = !showSidebar">
+            <i class="fa-solid text-zinc-400" [ngClass]="showSidebar ? 'fa-angles-left' : 'fa-angles-right'"></i>
+          </small>
+        }
 
         <div class="flex-1 min-h-[60vh] p-4 flex flex-col">
           @if (currentVocation) {
@@ -259,6 +261,17 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
   private vocationService = inject(IrpwVocationService);
   private entityChangeService = inject(EntityChangeService);
 
+  vocationIdInput = input<string>('');
+
+  private syncInputSelectionEffect = effect(() => {
+    const vocationId = this.vocationIdInput().trim();
+    if (!vocationId || vocationId === this.selectedVocationId) {
+      return;
+    }
+
+    this.selectVocation(vocationId, true);
+  });
+
   vocations: IrpwVocation[] = [];
   filteredVocations: IrpwVocation[] = [];
   currentVocation: IrpwVocation | null = null;
@@ -283,16 +296,18 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadVocations();
 
+    const initialVocationId = this.vocationIdInput();
+    if (initialVocationId) {
+      this.selectVocation(initialVocationId, true);
+    }
+
     this.entityChangeService.changes$.subscribe(event => {
       if (event.table === 'IRPWVocation' || event.table === 'Personalization') {
-        const selectedId = this.selectedVocationId;
+        const selectedId = this.vocationIdInput() || this.selectedVocationId;
         this.loadVocations();
 
         if (selectedId) {
-          this.currentVocation = this.vocationService.getVocation(selectedId);
-          if (this.currentVocation) {
-            this.parseSelectedVocation();
-          }
+          this.selectVocation(selectedId, true);
         }
       }
     });
@@ -329,8 +344,10 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
       : [...this.vocations];
   }
 
-  selectVocation(vocationId: string) {
-    //if (this.selectedVocationId === vocationId) return;
+  selectVocation(vocationId: string, force = false) {
+    if (!force && this.selectedVocationId === vocationId) {
+      return;
+    }
 
     this.flushPendingSave();
     this.selectedVocationId = vocationId;

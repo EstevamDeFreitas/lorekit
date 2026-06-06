@@ -10,6 +10,8 @@ export type TabEntityType =
   | 'Object'
   | 'Timeline'
   | 'World'
+  | 'CharacterSheet'
+  | 'Vocations'
   | 'view'; // view tabs have no entity id: relations, character-sheet, vocations, etc.
 
 export interface WorkspaceTab {

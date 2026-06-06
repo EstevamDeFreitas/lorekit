@@ -89,6 +89,25 @@ const SIDEBAR_SECTIONS: Record<string, SidebarSectionEntry> = {
         m => m.ObjectListComponent
       ),
   },
+
+
+  //IRONPAW
+  'character-sheet': {
+    label: 'Fichas de Personagem',
+    icon: 'fa-solid fa-address-card',
+    loader: () =>
+      import('../../pages/ironpaw/irpw-character-sheet/irpw-character-sheet-list.component').then(
+        m => m.IrpwCharacterSheetListComponent
+      ),
+    },
+  vocations: {
+    label: 'Vocações',
+    icon: 'fa-solid fa-hat-wizard',
+    loader: () =>
+      import('../../pages/ironpaw/irpw-vocations/irpw-vocations-list.component').then(
+        m => m.IrpwVocationsListComponent
+      ),
+  },
 };
 
 @Component({

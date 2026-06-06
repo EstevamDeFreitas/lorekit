@@ -1,6 +1,6 @@
 import { CommonModule, NgClass } from '@angular/common';
 import { Dialog } from '@angular/cdk/dialog';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, effect, inject, input, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { Character } from '../../../models/character.model';
@@ -98,6 +98,8 @@ interface InheritedCharacterHability extends IrpwVocationHability {
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4 relative">
 
+        @if (!characterIdInput()) {
+
         <!-- Sidebar -->
         <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showSidebar ? 'w-80' : 'w-0'">
           <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
@@ -154,6 +156,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
           (click)="showSidebar = !showSidebar">
           <i class="fa-solid text-zinc-400" [ngClass]="showSidebar ? 'fa-angles-left' : 'fa-angles-right'"></i>
         </small>
+        }
 
         <!-- Sheet view -->
         <div class="flex-1 min-h-[60vh] p-4 flex flex-col">
@@ -1088,6 +1091,17 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private entityChangeService = inject(EntityChangeService);
   private sheetService = inject(IrpwCharacterSheetService);
 
+  characterIdInput = input<string>('');
+
+  private syncInputSelectionEffect = effect(() => {
+    const characterId = this.characterIdInput().trim();
+    if (!characterId || characterId === this.selectedCharacterId) {
+      return;
+    }
+
+    this.selectCharacter(characterId, true);
+  });
+
   availableWorlds: World[] = [];
   availableSpecies: Specie[] = [];
   availableVocations: IrpwVocation[] = [];
@@ -1184,6 +1198,10 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
   ngOnInit() {
     this.worldStateService.currentWorld$.subscribe(world => {
+      if (this.characterIdInput()) {
+        return;
+      }
+
       const nextWorldId = world ? world.id : '';
       if (this.selectedWorldId === nextWorldId) return;
       this.selectedWorldId = nextWorldId;
@@ -1202,6 +1220,12 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.loadSpecies();
     this.loadVocations();
     this.loadCharacters();
+
+    const initialCharacterId = this.characterIdInput();
+    if (initialCharacterId) {
+      this.selectCharacter(initialCharacterId, true);
+    }
+
     this.syncRollFormula();
   }
 
@@ -1219,27 +1243,26 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   loadCharacters() {
+    const worldFilter = this.characterIdInput() ? null : (this.selectedWorldId || null);
+
     this.characters = this.characterService
-      .getCharacters(this.selectedWorldId || null)
+      .getCharacters(worldFilter)
       .sort((a, b) => a.name.localeCompare(b.name));
 
     this.applySearch();
 
-    if (this.selectedCharacterId && !this.characters.some(c => c.id === this.selectedCharacterId)) {
-      this.selectedCharacterId = '';
-      this.selectedSpecieId = '';
-      this.selectedVocationId = '';
-      this.selectedCharacter = null;
-      this.currentSheet = null;
-      this.subspecializationsData = [''];
-      this.habilitiesData = [];
-      this.inheritedHabilitiesData = [];
-      this.activeConditionsData = [];
-      this.pendingConditionsData = [];
-      this.marksData = [];
-      this.expandedMarkIndexes.clear();
-    } else if (this.selectedCharacterId) {
-      this.selectedCharacter = this.characters.find(c => c.id === this.selectedCharacterId) ?? this.selectedCharacter;
+    const preferredCharacterId = this.characterIdInput() || this.selectedCharacterId;
+
+    if (preferredCharacterId && !this.characters.some(c => c.id === preferredCharacterId)) {
+      if (this.characterIdInput()) {
+        this.selectCharacter(preferredCharacterId, true);
+        return;
+      }
+
+      this.clearSelectedCharacterState();
+    } else if (preferredCharacterId) {
+      this.selectedCharacterId = preferredCharacterId;
+      this.selectedCharacter = this.characters.find(c => c.id === preferredCharacterId) ?? this.selectedCharacter;
       this.selectedSpecieId = this.selectedCharacter?.ParentSpecies?.id ?? '';
       this.selectedVocationId = this.selectedCharacter?.ParentIRPWVocation?.id ?? '';
       this.refreshInheritedHabilities();
@@ -1262,11 +1285,24 @@ export class IrpwCharacterSheetComponent implements OnInit {
       : [...this.characters];
   }
 
-  selectCharacter(characterId: string) {
-    if (this.selectedCharacterId === characterId) return;
+  selectCharacter(characterId: string, force = false) {
+    if (!force && this.selectedCharacterId === characterId) return;
 
     this.selectedCharacterId = characterId;
     this.selectedCharacter = this.characters.find(c => c.id === characterId) ?? null;
+    if (!this.selectedCharacter) {
+      try {
+        this.selectedCharacter = this.characterService.getCharacter(characterId) ?? null;
+      } catch {
+        this.selectedCharacter = null;
+      }
+    }
+
+    if (!this.selectedCharacter) {
+      this.clearSelectedCharacterState();
+      return;
+    }
+
     this.selectedSpecieId = this.selectedCharacter?.ParentSpecies?.id ?? '';
     this.selectedVocationId = this.selectedCharacter?.ParentIRPWVocation?.id ?? '';
     this.currentSheet = this.sheetService.getSheet(characterId);
@@ -1287,6 +1323,21 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.parseMarks();
     this.refreshInheritedHabilities();
     this.syncRollFormula();
+  }
+
+  private clearSelectedCharacterState() {
+    this.selectedCharacterId = '';
+    this.selectedSpecieId = '';
+    this.selectedVocationId = '';
+    this.selectedCharacter = null;
+    this.currentSheet = null;
+    this.subspecializationsData = [''];
+    this.habilitiesData = [];
+    this.inheritedHabilitiesData = [];
+    this.activeConditionsData = [];
+    this.pendingConditionsData = [];
+    this.marksData = [];
+    this.expandedMarkIndexes.clear();
   }
 
   onSpecieSelect() {

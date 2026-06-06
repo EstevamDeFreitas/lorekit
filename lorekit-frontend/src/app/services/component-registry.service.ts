@@ -72,6 +72,20 @@ const REGISTRY: Record<string, RegistryEntry> = {
       ),
     inputKey: 'worldIdInput',
   },
+  CharacterSheet: {
+    loader: () =>
+      import('../pages/ironpaw/irpw-character-sheet/irpw-character-sheet.component').then(
+        m => m.IrpwCharacterSheetComponent
+      ),
+    inputKey: 'characterIdInput',
+  },
+  Vocations: {
+    loader: () =>
+      import('../pages/ironpaw/irpw-vocations/irpw-vocations.component').then(
+        m => m.IrpwVocationsComponent
+      ),
+    inputKey: 'vocationIdInput',
+  },
   // ── View tabs (no entity id input) ─────────────────────────────────────────
   'view:relations': {
     loader: () =>
@@ -82,15 +96,15 @@ const REGISTRY: Record<string, RegistryEntry> = {
   },
   'view:character-sheet': {
     loader: () =>
-      import('../pages/ironpaw/irpw-character-sheet/irpw-character-sheet.component').then(
-        m => m.IrpwCharacterSheetComponent
+      import('../pages/ironpaw/irpw-character-sheet/irpw-character-sheet-list.component').then(
+        m => m.IrpwCharacterSheetListComponent
       ),
     inputKey: '',
   },
   'view:vocations': {
     loader: () =>
-      import('../pages/ironpaw/irpw-vocations/irpw-vocations.component').then(
-        m => m.IrpwVocationsComponent
+      import('../pages/ironpaw/irpw-vocations/irpw-vocations-list.component').then(
+        m => m.IrpwVocationsListComponent
       ),
     inputKey: '',
   },

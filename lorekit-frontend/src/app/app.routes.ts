@@ -138,8 +138,8 @@ export const routes: Routes = [
       {
         path: 'character-sheet',
         loadComponent: () =>
-          import('./pages/ironpaw/irpw-character-sheet/irpw-character-sheet.component')
-            .then(m => m.IrpwCharacterSheetComponent),
+          import('./pages/ironpaw/irpw-character-sheet/irpw-character-sheet-list.component')
+            .then(m => m.IrpwCharacterSheetListComponent),
       },
       {
         path: 'content-manager',
@@ -150,8 +150,8 @@ export const routes: Routes = [
       {
         path: 'vocations',
         loadComponent: () =>
-          import('./pages/ironpaw/irpw-vocations/irpw-vocations.component')
-            .then(m => m.IrpwVocationsComponent),
+          import('./pages/ironpaw/irpw-vocations/irpw-vocations-list.component')
+            .then(m => m.IrpwVocationsListComponent),
       }
     ]
   }
