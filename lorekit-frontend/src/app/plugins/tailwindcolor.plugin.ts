@@ -18,15 +18,28 @@ export default class TailwindColor {
 
   private readonly colors = [
     { hex: '#FFFFFF', label: 'Branco' },
+    { hex: '#353535', label: 'Cinza' },
+    { hex: '#000000', label: 'Preto' },
+
+
+    { hex: '#EF4444', label: 'Vermelho' },
+    { hex: '#641616', label: 'Vinho' },
+    { hex: '#F88379', label: 'Coral' },
+    { hex: '#3a261d', label: 'Marrom Escuro' },
+    { hex: '#684839', label: 'Marrom Claro' },
+    { hex: '#F97316', label: 'Laranja' },
+    { hex: '#ddc095', label: 'Bege' },
     { hex: '#FDC112', label: 'Amarelo' },
+    { hex: '#A3E635', label: 'Lima' },
     { hex: '#22C55E', label: 'Verde' },
     { hex: '#38BDF8', label: 'Azul Claro' },
     { hex: '#60A5FA', label: 'Azul' },
+    { hex: '#d3d3ff', label: 'Lavanda' },
     { hex: '#A78BFA', label: 'Roxo' },
-    { hex: '#FB7185', label: 'Rosa' },
-    { hex: '#F97316', label: 'Laranja' },
-    { hex: '#EF4444', label: 'Vermelho' },
-    { hex: '#A3E635', label: 'Lima' },
+    { hex: '#560591', label: 'Indigo' },
+    { hex: '#8B008B', label: 'Magenta' },
+    { hex: '#FB7185', label: 'Rosa' }
+
   ];
 
   constructor({ api }: { api: any }) {
