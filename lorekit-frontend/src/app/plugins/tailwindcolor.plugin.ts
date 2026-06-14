@@ -34,6 +34,7 @@ export default class TailwindColor {
     { hex: '#22C55E', label: 'Verde' },
     { hex: '#38BDF8', label: 'Azul Claro' },
     { hex: '#60A5FA', label: 'Azul' },
+    { hex: '#1d3f61', label: 'Azul Petroleo' },
     { hex: '#d3d3ff', label: 'Lavanda' },
     { hex: '#A78BFA', label: 'Roxo' },
     { hex: '#560591', label: 'Indigo' },
