@@ -10,6 +10,7 @@ import { TabManagerService } from '../../../services/tab-manager.service';
 import { GraphEdge, GraphNode, GraphView } from '../../../libs/relationship-graph/relationship-graph.types';
 import { GRAPH_CANVAS_HEIGHT, GRAPH_CANVAS_WIDTH, makeNodeKey } from '../../../libs/relationship-graph/relationship-graph.utils';
 import { buildImageUrl } from '../../../models/image.model';
+import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 
 const NODE_MIN_SCALE = 0.6;
 const NODE_MAX_SCALE = 2.2;
@@ -17,13 +18,14 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
 
 @Component({
   selector: 'app-relation-graph',
-  imports: [FormsModule, NgClass, SlicePipe, ButtonComponent, ComboBoxComponent, InputComponent],
+  imports: [FormsModule, NgClass, SlicePipe, ButtonComponent, ComboBoxComponent, InputComponent, IconButtonComponent],
   template: `
-    <div class="flex flex-col gap-4 p-4 @container">
+    <div class="flex flex-col gap-4 @container">
       <div class="flex flex-wrap items-end gap-3">
         <app-combo-box
           class="w-56"
           label="Tipo da Entidade"
+          size="xs"
           [items]="tableOptions"
           compareProp="value"
           displayProp="label"
@@ -41,11 +43,9 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
           (comboValueChange)="onRootEntitySelected()"
         />
 
-        <div class="w-40">
-          <app-button label="Atualizar" buttonType="secondary" (click)="refreshGraph()" />
-        </div>
+        <!-- <app-button label="Atualizar" icon="fa-refresh" size="sm" buttonType="secondary" (click)="refreshGraph()" /> -->
 
-        <div class="flex flex-col">
+        <!-- <div class="flex flex-col">
           <label class="text-xs mb-1">Níveis</label>
           <select
             class="rounded-lg px-3 py-2 bg-zinc-925 border-zinc-800 border transition focus:outline-none focus:border-zinc-100"
@@ -64,7 +64,7 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
         <label class="flex flex-row items-center gap-2 text-sm pb-2 cursor-pointer select-none">
           <input type="checkbox" [(ngModel)]="loadAllLevels" (ngModelChange)="onToggleAllLevels()" />
           Carregar todas relações
-        </label>
+        </label> -->
       </div>
 
       @if (!graphView) {
@@ -87,7 +87,7 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
               <button class="w-7 h-7 rounded hover:bg-zinc-800 cursor-pointer" (click)="$event.stopPropagation(); zoomIn()">+</button>
             </div>
 
-            <svg #graphSvg class="w-full h-[70vh]" [attr.viewBox]="graphViewBox">
+            <svg #graphSvg class="w-full h-[calc(100vh-10.5rem)]" [attr.viewBox]="graphViewBox">
               <defs>
                 <marker
                   id="arrow-head"
@@ -131,7 +131,7 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
                 <g
                   class="cursor-pointer"
                   (contextmenu)="openNodeContextMenu($event, node)"
-                  (click)="$event.stopPropagation(); selectNode(node)"
+                  (click)="$event.stopPropagation(); selectNode(node);"
                   (mousedown)="startNodeDrag($event, node)"
                 >
                   <rect
@@ -225,22 +225,28 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
 
             <app-input label="Nome da Relação" [(value)]="relationDraft.name" />
 
-            <div class="grid grid-cols-2 gap-2">
+            <div class="flex flex-row gap-2">
               @if (!editingLinkId) {
-                <app-button label="Criar Relação" buttonType="white" (click)="saveDraftRelation()" />
+                <!-- <app-button label="Criar Relação" size="xs" buttonType="white" (click)="saveDraftRelation()" /> -->
+                <app-icon-button title="Criar Relação" icon="fa-solid fa-plus" size="xs" buttonType="white" (click)="saveDraftRelation()" />
               }
               @else {
-                <app-button label="Salvar" buttonType="white" (click)="saveDraftRelation()" />
+                <!-- <app-button label="Salvar" size="xs" buttonType="white" (click)="saveDraftRelation()" /> -->
+                  <app-icon-button title="Salvar" icon="fa-solid fa-floppy-disk" size="xs" buttonType="white" (click)="saveDraftRelation()" />
               }
-              <app-button label="Limpar" buttonType="secondary" (click)="resetDraft()" />
+              <!-- <app-button label="Limpar" size="xs" buttonType="secondary" (click)="resetDraft()" /> -->
+              <app-icon-button title="Limpar" icon="fa-solid fa-xmark" size="xs" buttonType="danger" (click)="resetDraft()" />
+              @if (editingLinkId) {
+
+                <!-- <app-button label="Inverter Relação" size="xs" buttonType="secondary" (click)="invertEditingLink()" /> -->
+                <app-icon-button title="Inverter Relação" icon="fa-solid fa-arrow-right-arrow-left" size="xs" buttonType="white" (click)="invertEditingLink()" />
+                <!-- <app-button label="Excluir Relação" size="xs" buttonType="danger" (click)="deleteEditingLink()" /> -->
+                <app-icon-button title="Excluir Relação" icon="fa-solid fa-trash-can" size="xs" buttonType="danger" (click)="deleteEditingLink()" />
+
+              }
+
             </div>
 
-            @if (editingLinkId) {
-              <div class="grid grid-cols-2 gap-2">
-                <app-button label="Inverter Relação" buttonType="secondary" (click)="invertEditingLink()" />
-                <app-button label="Excluir Relação" buttonType="danger" (click)="deleteEditingLink()" />
-              </div>
-            }
 
             <div class="border-t border-zinc-800 pt-3 mt-2">
               <h4 class="text-sm font-semibold mb-2">Relações de Origem (saindo)</h4>
@@ -318,7 +324,7 @@ export class RelationGraphComponent implements OnInit {
   private resizeAnchorTopLeft: { x: number; y: number } | null = null;
 
   relationshipDepth = 2;
-  loadAllLevels = false;
+  loadAllLevels = true;
 
   get graphViewBox(): string {
     const viewWidth = this.canvasWidth / this.zoomLevel;
@@ -360,6 +366,10 @@ export class RelationGraphComponent implements OnInit {
   relationDraftFromLabel = '';
 
   selectedNodeKey = '';
+
+  currentSelectedTable = '';
+  currentSelectedId = '';
+
 
   contextMenuOpen = false;
   contextMenuNode: GraphNode | null = null;
@@ -455,7 +465,18 @@ export class RelationGraphComponent implements OnInit {
       return;
     }
 
+    this.relationDraft.fromTable = node.table;
+    this.relationDraft.fromId = node.id;
+    this.relationDraftFromLabel = node.label;
+    // this.relationDraft.toTable = this.currentRootTable || node.table;
+    // this.draftTargetEntities = this.linkService.getEntitiesByTable(this.relationDraft.toTable);
+    // this.relationDraft.toId = this.currentRootId || this.draftTargetEntities[0]?.id || '';
+    this.relationDraft.name = '';
+    this.editingLinkId = null;
+
     this.selectedNodeKey = node.key;
+    this.currentSelectedTable = node.table;
+    this.currentSelectedId = node.id;
   }
 
   startNodeDrag(event: MouseEvent, node: GraphNode): void {
@@ -715,11 +736,14 @@ export class RelationGraphComponent implements OnInit {
     this.relationDraft.fromTable = this.contextMenuNode.table;
     this.relationDraft.fromId = this.contextMenuNode.id;
     this.relationDraftFromLabel = this.contextMenuNode.label;
-    this.relationDraft.toTable = this.currentRootTable || this.contextMenuNode.table;
-    this.draftTargetEntities = this.linkService.getEntitiesByTable(this.relationDraft.toTable);
-    this.relationDraft.toId = this.currentRootId || this.draftTargetEntities[0]?.id || '';
+    // this.relationDraft.toTable = this.currentRootTable || this.contextMenuNode.table;
+    // this.draftTargetEntities = this.linkService.getEntitiesByTable(this.relationDraft.toTable);
+    // this.relationDraft.toId = this.currentRootId || this.draftTargetEntities[0]?.id || '';
     this.relationDraft.name = '';
     this.editingLinkId = null;
+
+    this.currentSelectedTable = this.contextMenuNode.table;
+    this.currentSelectedId = this.contextMenuNode.id;
 
     this.closeContextMenu();
   }
@@ -828,6 +852,9 @@ export class RelationGraphComponent implements OnInit {
   private setRoot(table: string, id: string, syncSelectors: boolean): void {
     this.currentRootTable = table;
     this.currentRootId = id;
+
+    this.currentSelectedTable = table;
+    this.currentSelectedId = id;
 
     this.graphView = this.linkService.getGraphForRoot(table, id, {
       depth: this.relationshipDepth,
@@ -945,12 +972,12 @@ export class RelationGraphComponent implements OnInit {
   }
 
   outgoingEdges(graph: GraphView): GraphEdge[] {
-    const currentKey = makeNodeKey(this.currentRootTable, this.currentRootId);
+    const currentKey = makeNodeKey(this.currentSelectedTable, this.currentSelectedId);
     return graph.edges.filter((edge) => edge.fromKey === currentKey);
   }
 
   incomingEdges(graph: GraphView): GraphEdge[] {
-    const currentKey = makeNodeKey(this.currentRootTable, this.currentRootId);
+    const currentKey = makeNodeKey(this.currentSelectedTable, this.currentSelectedId);
     return graph.edges.filter((edge) => edge.toKey === currentKey);
   }
 

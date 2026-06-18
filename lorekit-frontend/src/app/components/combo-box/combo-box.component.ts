@@ -27,7 +27,7 @@ import { NgClass } from '@angular/common';
         <input
           #searchInput
           type="text"
-          class="flex-1 bg-transparent outline-none text-sm placeholder-zinc-500 cursor-pointer"
+          class="flex-1 bg-transparent outline-none text-xs placeholder-zinc-500 cursor-pointer"
           [placeholder]="displaySelected() || placeholder()"
           [ngClass]="displaySelected() ? 'text-white' : 'text-zinc-400'"
           [ngModel]="searchTerm()"
