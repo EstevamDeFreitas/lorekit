@@ -328,6 +328,9 @@ export class RelationGraphComponent implements OnInit {
   private movedDuringNodeResize = false;
   private resizeAnchorTopLeft: { x: number; y: number } | null = null;
 
+  private dragOffsetX = 0;
+  private dragOffsetY = 0;
+
   relationshipDepth = 2;
   loadAllLevels = true;
 
@@ -489,6 +492,12 @@ export class RelationGraphComponent implements OnInit {
 
     if (event.button !== 0) return;
     if (node.isRoot) return;
+
+    const point = this.mouseToGraphPoint(event);
+    if (!point) return;
+
+    this.dragOffsetX = point.x - node.x;
+    this.dragOffsetY = point.y - node.y;
 
     this.isNodeDragging = true;
     this.draggedNode = node;
@@ -892,8 +901,8 @@ export class RelationGraphComponent implements OnInit {
     const point = this.mouseToGraphPoint(event);
     if (!point) return;
 
-    const nextX = point.x;
-    const nextY = point.y;
+     const nextX = point.x - this.dragOffsetX;
+    const nextY = point.y - this.dragOffsetY;
 
     if (Math.abs(nextX - this.draggedNode.x) > 0.5 || Math.abs(nextY - this.draggedNode.y) > 0.5) {
       this.movedDuringNodeDrag = true;
@@ -929,22 +938,47 @@ export class RelationGraphComponent implements OnInit {
     }
   }
 
-  private mouseToGraphPoint(event: MouseEvent): { x: number; y: number } | null {
-    if (!this.graphSvg) return null;
+  // private mouseToGraphPoint(event: MouseEvent): { x: number; y: number } | null {
+  //   if (!this.graphSvg) return null;
+
+  //   const svg = this.graphSvg.nativeElement;
+  //   const rect = svg.getBoundingClientRect();
+
+  //   if (rect.width === 0 || rect.height === 0) return null;
+
+  //   const [viewX, viewY, viewW, viewH] = this.graphViewBox.split(' ').map(Number);
+  //   if ([viewX, viewY, viewW, viewH].some((n) => Number.isNaN(n))) return null;
+
+  //   console.log(`svg bounding: W ${svg.getBoundingClientRect().width} H ${svg.getBoundingClientRect().height}; View: W ${viewW} H ${viewH}`);
+
+  //   const ratioX = (event.clientX - rect.left) / rect.width;
+  //   const ratioY = (event.clientY - rect.top) / rect.height;
+
+  //   return {
+  //     x: viewX + ratioX * viewW,
+  //     y: viewY + ratioY * viewH,
+  //   };
+  // }
+
+  private mouseToGraphPoint(event: MouseEvent) {
+    if (!this.graphSvg) {
+      return null;
+    }
 
     const svg = this.graphSvg.nativeElement;
-    const rect = svg.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return null;
 
-    const [viewX, viewY, viewW, viewH] = this.graphViewBox.split(' ').map(Number);
-    if ([viewX, viewY, viewW, viewH].some((n) => Number.isNaN(n))) return null;
+    const point = svg.createSVGPoint();
 
-    const ratioX = (event.clientX - rect.left) / rect.width;
-    const ratioY = (event.clientY - rect.top) / rect.height;
+    point.x = event.clientX;
+    point.y = event.clientY;
+
+    const transformed = point.matrixTransform(
+      svg.getScreenCTM()?.inverse()
+    );
 
     return {
-      x: viewX + ratioX * viewW,
-      y: viewY + ratioY * viewH,
+      x: transformed.x,
+      y: transformed.y
     };
   }
 
