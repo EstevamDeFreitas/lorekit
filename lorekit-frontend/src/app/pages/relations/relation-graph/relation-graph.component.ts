@@ -11,6 +11,7 @@ import { GraphEdge, GraphNode, GraphView } from '../../../libs/relationship-grap
 import { GRAPH_CANVAS_HEIGHT, GRAPH_CANVAS_WIDTH, makeNodeKey } from '../../../libs/relationship-graph/relationship-graph.utils';
 import { buildImageUrl } from '../../../models/image.model';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
+import { getPersonalizationValue, hexToRgba } from '../../../models/personalization.model';
 
 const NODE_MIN_SCALE = 0.6;
 const NODE_MAX_SCALE = 2.2;
@@ -141,7 +142,8 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
                     [attr.height]="nodeRect(node).height"
                     [attr.rx]="12"
                     class="stroke-[2]"
-                    [ngClass]="nodeCircleClass(node)"
+
+                    [style]="'stroke: ' + (getPersonalizationValue(node, 'color') || 'var(--color-zinc-800)') + ';' + ' fill: ' + hexToRgba(getPersonalizationValue(node, 'color') || 'var(--color-zinc-800)', 0.25)"
                   />
                   @if (node.imagePath) {
                     <image
@@ -300,6 +302,9 @@ export class RelationGraphComponent implements OnInit {
 
   rootTable = input<string | null>(null);
   rootId = input<string | null>(null);
+
+  public getPersonalizationValue = getPersonalizationValue;
+  public hexToRgba = hexToRgba;
 
   canvasWidth = GRAPH_CANVAS_WIDTH;
   canvasHeight = GRAPH_CANVAS_HEIGHT;
@@ -505,9 +510,9 @@ export class RelationGraphComponent implements OnInit {
   }
 
   nodeCircleClass(node: GraphNode): string {
-    if (node.isRoot) return 'fill-yellow-500/20 stroke-yellow-500';
-    if (this.selectedNodeKey === node.key) return 'fill-zinc-700 stroke-zinc-300';
-    return 'fill-zinc-800 stroke-zinc-600';
+    if (node.isRoot) return 'fill-yellow-500/20';
+    if (this.selectedNodeKey === node.key) return 'fill-zinc-700';
+    return 'fill-zinc-800';
   }
 
   nodeRect(node: GraphNode): { x: number; y: number; width: number; height: number } {

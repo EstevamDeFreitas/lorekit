@@ -59,7 +59,7 @@ export class LinkService {
   getEntitySummary(table: string, id: string): EntitySummary | null {
     if (!table || !id) return null;
 
-    const row = this.crud.findById(table, id, [{ table: 'Image', firstOnly: false }]);
+    const row = this.crud.findById(table, id, [{ table: 'Image', firstOnly: false }, { table: 'Personalization', firstOnly: true }]);
     if (!row) return null;
 
     return this.toEntitySummary(table, row);
@@ -332,7 +332,8 @@ export class LinkService {
       table,
       id: String(row.id),
       label: this.getEntityLabel(table, row),
-      imagePath: this.getPreferredImagePath(row?.Images)
+      imagePath: this.getPreferredImagePath(row?.Images),
+      Personalization : row.Personalization
     };
   }
 

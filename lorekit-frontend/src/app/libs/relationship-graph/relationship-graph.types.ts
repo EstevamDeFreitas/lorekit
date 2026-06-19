@@ -5,6 +5,7 @@ export type EntitySummary = {
   id: string;
   label: string;
   imagePath?: string | null;
+  Personalization?: any;
 };
 
 export type GraphNode = EntitySummary & {
