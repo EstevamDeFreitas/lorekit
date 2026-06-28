@@ -9,11 +9,16 @@ import { TimelineService } from '../../../services/timeline.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
-
+import { ContextMenuOption } from '../../../models/context-menu-option.interface';
+import { Dialog } from '@angular/cdk/dialog';
+import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
+import {
+  ContextMenuDirective
+} from '../../../directives/context-menu.directive';
 @Component({
   selector: 'app-timeline-list',
   standalone: true,
-  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective],
+  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, ContextMenuDirective],
   template: `
     <div class="flex flex-col relative">
       <div class="flex flex-row gap-4">
@@ -52,6 +57,9 @@ import { TabManagerService } from '../../../services/tab-manager.service';
                   type="button"
                   class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
                   [ngClass]="selectedTimelineId === timeline.id ? 'text-yellow-300' : 'text-zinc-400'"
+                  appContextMenu
+                  [options]="menuOptions"
+                  [contextId]="timeline.id"
                   (click)="selectTimeline(timeline.id)">
                   <div class="flex flex-row items-center">
                     <i class="fa-solid" [ngClass]="'fa-timeline'"></i>
@@ -118,6 +126,13 @@ export class TimelineListComponent implements OnInit {
   showTimelineEditor = false;
   timelineEditComponent: any = null;
 
+  safeDeleteDialog = inject(Dialog);
+
+  menuOptions : ContextMenuOption[] = [
+      { label: 'Abrir nova guia', action: (id: string) => this.newTabTimeline(id), customIcon: 'fa-arrow-up-right-from-square' },
+      { label: 'Excluir', action: (id: string) => this.deleteTimeline(id), customClass: 'text-red-500', customIcon: 'fa-trash' },
+    ];
+
   ngOnInit() {
     this.availableWorlds = this.worldService.getWorlds();
 
@@ -146,6 +161,20 @@ export class TimelineListComponent implements OnInit {
     this.loadTimelines();
   }
 
+  deleteTimeline(timelineId: string){
+    let timeline = this.timelineService.getTimelineById(timelineId);
+
+    this.safeDeleteDialog.open(SafeDeleteComponent, {
+          data: {
+            entityName: timeline.name,
+            entityTable: 'Timeline',
+            entityId: timelineId
+          },
+          panelClass: 'screen-dialog',
+          width: '400px',
+        });
+  }
+
   getFormFields(): FormField[] {
     return [
       { key: 'name', label: 'Nome', value: '' },
@@ -163,10 +192,35 @@ export class TimelineListComponent implements OnInit {
     this.loadTimelines();
   }
 
-  async selectTimeline(timelineId: string) {
+  async newTabTimeline(timelineId: string) {
     if (this.panelMode()) {
       const timeline = this.timelines.find(t => t.id === timelineId);
       this.tabManager.openTab('Timeline', timelineId, timeline?.name ?? 'Linha do Tempo', 'fa-solid fa-timeline');
+      this.selectedTimelineId = timelineId;
+      return;
+    }
+    if (this.selectedTimelineId === timelineId) {
+      return;
+    }
+
+    this.showTimelineEditor = false;
+    this.selectedTimelineId = '';
+
+    if (!this.timelineEditComponent) {
+      const { TimelineEditComponent } = await import('../timeline-edit/timeline-edit.component');
+      this.timelineEditComponent = TimelineEditComponent;
+    }
+
+    setTimeout(() => {
+      this.selectedTimelineId = timelineId;
+      this.showTimelineEditor = true;
+    }, 0);
+  }
+
+  async selectTimeline(timelineId: string) {
+    if (this.panelMode()) {
+      const timeline = this.timelines.find(t => t.id === timelineId);
+      this.tabManager.substituteCurrentTab('Timeline', timelineId, timeline?.name ?? 'Linha do Tempo', 'fa-solid fa-timeline');
       this.selectedTimelineId = timelineId;
       return;
     }
