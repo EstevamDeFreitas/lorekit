@@ -282,6 +282,23 @@ export const schema: TableDef[] = [
       `CREATE UNIQUE INDEX IF NOT EXISTS "idx_ui_field_template_name" ON "UiFieldTemplate" ("entityTable", "name")`,
     ]
   },
+  {
+    name:"Moodboard",
+    columns:[
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",        def: `"name" TEXT NOT NULL` },
+    ]
+  },
+  {
+    name:"MoodboardItem",
+    columns:[
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "configJson",  def: `"configJson" TEXT` },
+      { name: "posX",  def: `"posX" REAL` },
+      { name: "posY",  def: `"posY" REAL` },
+      { name: "index",  def: `"index" INTEGER` },
+    ]
+  },
 
   /////////////////////////////////////// IRONPAW INTEGRATION ///////////////////////////////////////
   {
