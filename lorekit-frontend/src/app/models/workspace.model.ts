@@ -10,6 +10,7 @@ export type TabEntityType =
   | 'Object'
   | 'Timeline'
   | 'World'
+  | 'Moodboard'
   | 'CharacterSheet'
   | 'Vocations'
   | 'view'; // view tabs have no entity id: relations, character-sheet, vocations, etc.

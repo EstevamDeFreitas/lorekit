@@ -1,0 +1,96 @@
+<div class="flex flex-col h-full relative">
+  <div class="flex flex-row h-full gap-4">
+    <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
+      <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
+        <div class="flex flex-row justify-between items-center mb-5">
+          <h2 class="text-base">Moodboards</h2>
+          <app-icon-button
+            size="sm"
+            buttonType="secondary"
+            icon="fa-solid fa-plus"
+            appFormOverlay
+            [title]="'Criar Moodboard'"
+            [fields]="getFormFields()"
+            (onSave)="createMoodboard($event)">
+          </app-icon-button>
+        </div>
+
+        @if (!selectedWorldId) {
+          <div class="mb-4">
+            <app-combo-box
+              class="w-full"
+              label="Filtro de mundo"
+              [items]="availableWorlds"
+              compareProp="id"
+              displayProp="name"
+              [(comboValue)]="manualWorldFilter"
+              (comboValueChange)="onWorldSelect()">
+            </app-combo-box>
+          </div>
+        }
+
+        <div class="flex flex-row items-center gap-1 mb-4">
+          <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus-within:border-white">
+            <div class="w-8 h-5 flex flex-row justify-center items-center">
+              <i class="fa fa-search"></i>
+            </div>
+            <input
+              type="text"
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="filterMoodboards()"
+              placeholder="Pesquisar..."
+              class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10" />
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          @for (moodboard of filteredMoodboards; track moodboard.id) {
+            <div
+              class="group flex flex-row items-center gap-2 rounded-md border px-2 py-2 transition"
+              [ngClass]="selectedMoodboardId === moodboard.id ? 'border-yellow-400 bg-yellow-400/10' : 'border-zinc-800 bg-zinc-900'">
+              <button
+                type="button"
+                class="min-w-0 flex-1 cursor-pointer text-left"
+                (click)="selectMoodboard(moodboard.id)">
+                <div class="flex flex-row items-center gap-2 min-w-0">
+                  <i class="fa-solid fa-table-cells-large text-xs text-zinc-400"></i>
+                  <span class="text-xs truncate" [title]="moodboard.name">{{ moodboard.name }}</span>
+                </div>
+              </button>
+              <button
+                type="button"
+                class="w-6 h-6 rounded text-zinc-500 hover:text-white hover:bg-zinc-800 cursor-pointer"
+                title="Abrir nova guia"
+                (click)="openMoodboard(moodboard.id)">
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+              </button>
+              <button
+                type="button"
+                class="w-6 h-6 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-800 cursor-pointer"
+                title="Excluir"
+                (click)="deleteMoodboard(moodboard)">
+                <i class="fa-solid fa-trash text-[10px]"></i>
+              </button>
+            </div>
+          }
+
+          @if (filteredMoodboards.length === 0) {
+            <p class="text-xs text-zinc-500">Nenhum moodboard encontrado.</p>
+          }
+        </div>
+      </div>
+    </div>
+
+    @if (!panelMode()) {
+      <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
+        <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
+      </small>
+    }
+
+    @if (!panelMode()) {
+      <div class="flex-1 h-full flex items-center justify-center text-zinc-500">
+        Selecione um moodboard para editar
+      </div>
+    }
+  </div>
+</div>

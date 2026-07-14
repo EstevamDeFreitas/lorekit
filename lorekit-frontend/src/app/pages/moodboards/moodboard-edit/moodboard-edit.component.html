@@ -1,0 +1,439 @@
+<div class="h-full min-h-0 flex flex-col bg-zinc-950 text-white">
+  <div class="shrink-0 border-b border-zinc-800 bg-zinc-950/95 px-3 py-2">
+    <div class="flex flex-row flex-wrap items-center gap-2">
+      <input
+        type="text"
+        class="min-w-48 flex-1 bg-transparent text-lg font-semibold outline-none border-0 focus:ring-0"
+        [ngModel]="moodboard().name"
+        (ngModelChange)="updateMoodboardName($event)"
+        (blur)="saveMoodboardName()" />
+
+      <div class="flex flex-row gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-1">
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'select'" title="Selecionar" (click)="setTool('select')">
+          <i class="fa-solid fa-arrow-pointer"></i>
+        </button>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'text'" title="Texto" (click)="setTool('text')">
+          <i class="fa-solid fa-font"></i>
+        </button>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'rectangle'" title="Retângulo" (click)="setTool('rectangle')">
+          <i class="fa-regular fa-square"></i>
+        </button>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'circle'" title="Círculo" (click)="setTool('circle')">
+          <i class="fa-regular fa-circle"></i>
+        </button>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'line'" title="Linha" (click)="setTool('line')">
+          <i class="fa-solid fa-minus"></i>
+        </button>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'arrow'" title="Seta" (click)="setTool('arrow')">
+          <i class="fa-solid fa-arrow-right-long"></i>
+        </button>
+        <button type="button" class="tool-button" title="Imagem" (click)="triggerImageUpload()">
+          <i class="fa-regular fa-image"></i>
+        </button>
+        <input #imageInput type="file" accept="image/*" class="hidden" (change)="onImageSelected($event)" />
+      </div>
+
+      <div class="flex flex-row gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-1">
+        <button type="button" class="tool-button" title="Trazer para frente" (click)="bringSelectedToFront()">
+          <i class="fa-solid fa-up-long"></i>
+        </button>
+        <button type="button" class="tool-button" title="Enviar para trás" (click)="sendSelectedToBack()">
+          <i class="fa-solid fa-down-long"></i>
+        </button>
+        <button type="button" class="tool-button tool-button-danger" title="Excluir" (click)="deleteSelected()">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+
+      <div class="flex flex-row gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-1">
+        <button type="button" class="tool-button" title="Diminuir zoom" (click)="zoomOut()">
+          <i class="fa-solid fa-minus"></i>
+        </button>
+        <button type="button" class="zoom-label" title="Restaurar visão" (click)="resetView()">{{ (zoom() * 100).toFixed(0) }}%</button>
+        <button type="button" class="tool-button" title="Aumentar zoom" (click)="zoomIn()">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="min-h-0 flex-1 grid grid-cols-[minmax(0,1fr)_19rem]">
+    <div #stage class="moodboard-stage">
+      @if (selectedItem(); as selected) {
+        <div class="moodboard-item-toolbar" (mousedown)="$event.stopPropagation()">
+          <button type="button" class="tool-button" title="Editar texto" (click)="editingItemId.set(selected.item.id)">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+
+          <label class="color-control" title="Cor">
+            <input type="color" [ngModel]="fillColor()" (ngModelChange)="setFillColor($event)" />
+          </label>
+
+          <button
+            type="button"
+            class="tool-button"
+            [class.tool-button-active]="isTransparentFill(selected)"
+            title="Sem fundo"
+            (click)="clearFillColor()">
+            <i class="fa-solid fa-ban"></i>
+          </button>
+
+          <label class="color-control color-control-stroke" title="Borda">
+            <input type="color" [ngModel]="strokeColor()" (ngModelChange)="setStrokeColor($event)" />
+          </label>
+
+          <div class="toolbar-divider"></div>
+
+          <button type="button" class="tool-button" [class.tool-button-active]="selected.config.textAlign === 'left'" title="Alinhar Ã  esquerda" (click)="setTextAlign('left')">
+            <i class="fa-solid fa-align-left"></i>
+          </button>
+          <button type="button" class="tool-button" [class.tool-button-active]="selected.config.textAlign === 'center'" title="Centralizar" (click)="setTextAlign('center')">
+            <i class="fa-solid fa-align-center"></i>
+          </button>
+          <button type="button" class="tool-button" [class.tool-button-active]="selected.config.textAlign === 'right'" title="Alinhar Ã  direita" (click)="setTextAlign('right')">
+            <i class="fa-solid fa-align-right"></i>
+          </button>
+
+          <div class="toolbar-divider"></div>
+
+          <button type="button" class="tool-button" [class.tool-button-active]="selected.config.verticalAlign === 'top'" title="Alinhar acima" (click)="setVerticalAlign('top')">
+            <i class="fa-solid fa-arrow-up"></i>
+          </button>
+          <button type="button" class="tool-button" [class.tool-button-active]="selected.config.verticalAlign === 'middle'" title="Alinhar ao centro vertical" (click)="setVerticalAlign('middle')">
+            <i class="fa-solid fa-grip-lines"></i>
+          </button>
+          <button type="button" class="tool-button" [class.tool-button-active]="selected.config.verticalAlign === 'bottom'" title="Alinhar abaixo" (click)="setVerticalAlign('bottom')">
+            <i class="fa-solid fa-arrow-down"></i>
+          </button>
+        </div>
+      }
+
+      <div
+        class="moodboard-content"
+        [class.moodboard-content-pannable]="canPanByDrag()"
+        [class.moodboard-content-panning]="isCanvasPanning()"
+        [style.width.px]="canvasWidth"
+        [style.height.px]="canvasHeight"
+        [style.transform]="canvasTransform()"
+        (mousedown)="onCanvasMouseDown($event)"
+        (auxclick)="$event.preventDefault()"
+        (dblclick)="onCanvasDoubleClick($event)"
+        (wheel)="onCanvasWheel($event)"
+        (dragover)="$event.preventDefault()"
+        (drop)="onEntityDrop($event)">
+        <div class="moodboard-grid"></div>
+
+        @for (view of sortedItems(); track view.item.id) {
+          @if (view.config.kind === 'shape') {
+            <div
+              class="moodboard-shape-layer"
+              [style.left.px]="view.item.posX || 0"
+              [style.top.px]="view.item.posY || 0"
+              [style.width.px]="itemWidth(view)"
+              [style.height.px]="itemHeight(view)"
+              [style.transform]="'rotate(' + (view.config.rotation || 0) + 'deg)'"
+              [style.z-index]="layerZIndex(view)"
+              (mousedown)="onItemMouseDown($event, view)"
+              (dblclick)="editItem($event, view)">
+              <svg class="moodboard-shape-svg" [attr.width]="itemWidth(view)" [attr.height]="itemHeight(view)">
+                <defs>
+                  <marker [id]="'moodboard-arrow-' + view.item.id" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto" markerUnits="strokeWidth">
+                    <path d="M 0 0 L 12 4 L 0 8 z" [attr.fill]="view.config.stroke || '#e4e4e7'"></path>
+                  </marker>
+                </defs>
+
+                @switch (view.config.shapeType) {
+                  @case ('circle') {
+                    <ellipse
+                      [attr.cx]="itemWidth(view) / 2"
+                      [attr.cy]="itemHeight(view) / 2"
+                      [attr.rx]="itemWidth(view) / 2 - (view.config.strokeWidth || 2)"
+                      [attr.ry]="itemHeight(view) / 2 - (view.config.strokeWidth || 2)"
+                      [attr.fill]="view.config.fill || 'transparent'"
+                      [attr.stroke]="view.config.stroke || '#e4e4e7'"
+                      [attr.stroke-width]="view.config.strokeWidth || 2" />
+                  }
+                  @case ('line') {
+                    <line
+                      [attr.x1]="lineX1(view)"
+                      [attr.y1]="lineY1(view)"
+                      [attr.x2]="lineX2(view)"
+                      [attr.y2]="lineY2(view)"
+                      [attr.stroke]="view.config.stroke || '#e4e4e7'"
+                      [attr.stroke-width]="view.config.strokeWidth || 2"
+                      stroke-linecap="round" />
+                  }
+                  @case ('arrow') {
+                    <line
+                      [attr.x1]="lineX1(view)"
+                      [attr.y1]="lineY1(view)"
+                      [attr.x2]="lineX2(view)"
+                      [attr.y2]="lineY2(view)"
+                      [attr.stroke]="view.config.stroke || '#e4e4e7'"
+                      [attr.stroke-width]="view.config.strokeWidth || 2"
+                      stroke-linecap="round"
+                      [attr.marker-end]="'url(#moodboard-arrow-' + view.item.id + ')'" />
+                  }
+                  @default {
+                    <rect
+                      [attr.x]="(view.config.strokeWidth || 2) / 2"
+                      [attr.y]="(view.config.strokeWidth || 2) / 2"
+                      [attr.width]="itemWidth(view) - (view.config.strokeWidth || 2)"
+                      [attr.height]="itemHeight(view) - (view.config.strokeWidth || 2)"
+                      rx="8"
+                      [attr.fill]="view.config.fill || 'transparent'"
+                      [attr.stroke]="view.config.stroke || '#e4e4e7'"
+                      [attr.stroke-width]="view.config.strokeWidth || 2" />
+                  }
+                }
+              </svg>
+
+              @if (view.config.text) {
+                <div
+                  class="moodboard-shape-label"
+                  [style.color]="readableTextColor(view.config.fill)"
+                  [style.text-align]="textAlign(view)"
+                  [style.align-items]="alignItems(view)"
+                  [style.justify-content]="justifyContent(view)">
+                  {{ view.config.text }}
+                </div>
+              }
+            </div>
+          } @else {
+            <div
+              class="moodboard-html-item"
+              [class.moodboard-html-selected]="selectedItemId() === view.item.id"
+              [style.left.px]="view.item.posX || 0"
+              [style.top.px]="view.item.posY || 0"
+              [style.width.px]="itemWidth(view)"
+              [style.height.px]="itemHeight(view)"
+              [style.transform]="'rotate(' + (view.config.rotation || 0) + 'deg)'"
+              [style.z-index]="layerZIndex(view)"
+              (mousedown)="onItemMouseDown($event, view)"
+              (dblclick)="editItem($event, view)">
+              @switch (view.config.kind) {
+                @case ('text') {
+                  @if (editingItemId() === view.item.id) {
+                    <div
+                      class="moodboard-text moodboard-editable-text"
+                      contenteditable="true"
+                      spellcheck="false"
+                      [style.color]="textItemColor(view)"
+                      [style.text-align]="textAlign(view)"
+                      [style.align-items]="alignItems(view)"
+                      [style.justify-content]="justifyContent(view)"
+                      (blur)="saveEditableText($event, view)"
+                      (mousedown)="$event.stopPropagation()">{{ view.config.text }}</div>
+                  } @else {
+                    <div
+                      class="moodboard-text"
+                      [style.color]="textItemColor(view)"
+                      [style.text-align]="textAlign(view)"
+                      [style.align-items]="alignItems(view)"
+                      [style.justify-content]="justifyContent(view)">
+                      {{ view.config.text }}
+                    </div>
+                  }
+                }
+                @case ('image') {
+                  <div class="moodboard-image-frame" [style.border-color]="view.config.stroke || '#3f3f46'">
+                    @if (view.config.imagePath) {
+                      <img [src]="buildImageUrl(view.config.imagePath)" [alt]="view.config.text || 'Imagem do moodboard'" />
+                    }
+                  </div>
+                  @if (editingItemId() === view.item.id) {
+                    <input
+                      class="moodboard-image-title"
+                      [style.border-color]="view.config.stroke || '#3f3f46'"
+                      [ngModel]="view.config.text || ''"
+                      (ngModelChange)="updateItemText(view, $event)"
+                      (blur)="stopEditing()"
+                      (mousedown)="$event.stopPropagation()" />
+                  } @else {
+                    <div class="moodboard-image-title" [style.border-color]="view.config.stroke || '#3f3f46'">{{ view.config.text }}</div>
+                  }
+                }
+                @case ('entity') {
+                  @if (view.config.renderMode === 'document') {
+                    <div class="moodboard-document" [class.moodboard-document-editing]="editingItemId() === view.item.id">
+                      <div class="moodboard-document-inner">
+                      <div class="moodboard-document-title" (mousedown)="editDocumentItem($event, view)">{{ view.entity?.label || view.config.text }}</div>
+                      @if (editingItemId() === view.item.id && view.document) {
+                        <div class="moodboard-document-editor scrollbar-dark" (mousedown)="$event.stopPropagation()">
+                          <app-editor
+                            entityTable="Document"
+                            [entityId]="view.document.id"
+                            [entityName]="view.document.title"
+                            [docTitle]="view.document.title"
+                            [document]="view.document.content || ''"
+                            (saveDocument)="saveDocumentContent(view, $event)">
+                          </app-editor>
+                        </div>
+                      } @else {
+                        <div class="moodboard-document-body scrollbar-dark" (mousedown)="editDocumentItem($event, view)">
+                          @for (block of view.documentBlocks; track $index) {
+                            @if (block.type === 'header') {
+                              <h3 [class.text-base]="block.level === 1" [class.text-sm]="block.level !== 1">{{ block.text }}</h3>
+                            } @else if (block.type === 'list' || block.type === 'quote') {
+                              <p class="whitespace-pre-line">{{ block.text }}</p>
+                            } @else if (block.type === 'table') {
+                              <table>
+                                @for (row of block.rows || []; track $index) {
+                                  <tr>
+                                    @for (cell of row; track $index) {
+                                      <td>{{ cell }}</td>
+                                    }
+                                  </tr>
+                                }
+                              </table>
+                            } @else {
+                              <p>{{ block.text }}</p>
+                            }
+                          }
+                        </div>
+                      }
+                      </div>
+                    </div>
+                  } @else {
+                    <div
+                      class="moodboard-entity-card"
+                      [style.background]="entityCardBackground(view)"
+                      [style.border-color]="entityCardBorder(view)">
+                      <div class="moodboard-entity-overlay" [class.moodboard-entity-overlay-clear]="isTransparentFill(view) && !view.entity?.imagePath">
+                        @if (view.entity?.imagePath) {
+                          <img [src]="buildImageUrl(view.entity?.imagePath)" [alt]="view.entity?.label || 'Entidade'" />
+                        } @else {
+                          <div class="moodboard-entity-color" [style.background]="entityColor(view.entity) || '#3f3f46'"></div>
+                        }
+                        <div class="min-w-0">
+                          <div class="truncate text-sm font-semibold">{{ view.entity?.label || view.config.text }}</div>
+                          <div class="truncate text-xs text-zinc-300">{{ view.entity?.subtitle || view.config.entityTable }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                }
+              }
+            </div>
+          }
+
+          @if (view.config.kind === 'shape' && editingItemId() === view.item.id) {
+            <div
+              class="moodboard-shape-textarea moodboard-editable-text"
+              contenteditable="true"
+              spellcheck="false"
+              [style.left.px]="view.item.posX || 0"
+              [style.top.px]="view.item.posY || 0"
+              [style.width.px]="itemWidth(view)"
+              [style.height.px]="itemHeight(view)"
+              [style.transform]="'rotate(' + (view.config.rotation || 0) + 'deg)'"
+              [style.z-index]="9020"
+              [style.color]="readableTextColor(view.config.fill)"
+              [style.text-align]="textAlign(view)"
+              [style.align-items]="alignItems(view)"
+              [style.justify-content]="justifyContent(view)"
+              (blur)="saveEditableText($event, view)"
+              (mousedown)="$event.stopPropagation()">{{ view.config.text }}</div>
+          }
+        }
+
+        @if (selectedItem(); as selected) {
+          <div
+            class="moodboard-selection"
+            [style.left.px]="selected.item.posX || 0"
+            [style.top.px]="selected.item.posY || 0"
+            [style.width.px]="itemWidth(selected)"
+            [style.height.px]="itemHeight(selected)"
+            [style.transform]="'rotate(' + (selected.config.rotation || 0) + 'deg)'">
+            <button type="button" class="moodboard-rotate-handle" title="Rotacionar" (mousedown)="startRotate($event, selected)">
+              <i class="fa-solid fa-rotate-right"></i>
+            </button>
+            @if (selected.config.kind === 'shape' && (selected.config.shapeType === 'line' || selected.config.shapeType === 'arrow')) {
+              <button
+                type="button"
+                class="moodboard-line-point"
+                title="Ponto inicial"
+                [style.left.px]="lineX1(selected) - 6"
+                [style.top.px]="lineY1(selected) - 6"
+                (mousedown)="startLineEndpointDrag($event, selected, 'start')"></button>
+              <button
+                type="button"
+                class="moodboard-line-point"
+                title="Ponto final"
+                [style.left.px]="lineX2(selected) - 6"
+                [style.top.px]="lineY2(selected) - 6"
+                (mousedown)="startLineEndpointDrag($event, selected, 'end')"></button>
+            } @else {
+              <button type="button" class="moodboard-resize-handle moodboard-resize-nw" title="Redimensionar" (mousedown)="startResize($event, selected, 'nw')"></button>
+              <button type="button" class="moodboard-resize-handle moodboard-resize-n" title="Redimensionar" (mousedown)="startResize($event, selected, 'n')"></button>
+              <button type="button" class="moodboard-resize-handle moodboard-resize-ne" title="Redimensionar" (mousedown)="startResize($event, selected, 'ne')"></button>
+              <button type="button" class="moodboard-resize-handle moodboard-resize-e" title="Redimensionar" (mousedown)="startResize($event, selected, 'e')"></button>
+              <button type="button" class="moodboard-resize-handle moodboard-resize-se" title="Redimensionar" (mousedown)="startResize($event, selected, 'se')"></button>
+              <button type="button" class="moodboard-resize-handle moodboard-resize-s" title="Redimensionar" (mousedown)="startResize($event, selected, 's')"></button>
+              <button type="button" class="moodboard-resize-handle moodboard-resize-sw" title="Redimensionar" (mousedown)="startResize($event, selected, 'sw')"></button>
+              <button type="button" class="moodboard-resize-handle moodboard-resize-w" title="Redimensionar" (mousedown)="startResize($event, selected, 'w')"></button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <aside class="moodboard-entity-panel">
+      <div class="flex flex-col gap-3">
+        <div>
+          <h3 class="text-sm font-semibold">Entidades</h3>
+          <p class="text-xs text-zinc-500">Arraste ou clique para adicionar.</p>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <div class="flex flex-row items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus-within:border-white">
+            <div class="w-8 h-7 flex items-center justify-center">
+              <i class="fa fa-search text-xs"></i>
+            </div>
+            <input
+              type="text"
+              class="w-full bg-transparent border-none outline-none text-xs placeholder:text-white/10"
+              placeholder="Pesquisar..."
+              [ngModel]="entitySearchTerm()"
+              (ngModelChange)="entitySearchTerm.set($event); refreshEntities()" />
+          </div>
+
+          <app-combo-box
+            label="Tipo"
+            size="xs"
+            [items]="tableOptions"
+            compareProp="value"
+            displayProp="label"
+            [comboValue]="entityTableFilter()"
+            (comboValueChange)="entityTableFilter.set($event); refreshEntities()">
+          </app-combo-box>
+        </div>
+
+        <div class="flex flex-col gap-2 overflow-y-auto scrollbar-dark pr-1">
+          @for (entity of entityResults(); track entity.table + ':' + entity.id) {
+            <button
+              type="button"
+              class="entity-search-card"
+              draggable="true"
+              (dragstart)="onEntityDragStart($event, entity)"
+              (click)="addEntity(entity)">
+              @if (entity.imagePath) {
+                <img [src]="buildImageUrl(entity.imagePath)" [alt]="entity.label" />
+              } @else {
+                <span [style.background]="entityColor(entity) || '#3f3f46'"></span>
+              }
+              <span class="min-w-0">
+                <strong>{{ entity.label }}</strong>
+                <small>{{ entity.subtitle }}</small>
+              </span>
+            </button>
+          }
+
+          @if (entityResults().length === 0) {
+            <p class="text-xs text-zinc-500">Nenhuma entidade encontrada.</p>
+          }
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>

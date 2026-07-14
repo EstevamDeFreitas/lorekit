@@ -104,6 +104,24 @@ export const routes: Routes = [
         ]
       },
       {
+        path: 'moodboard',
+        children: [
+          { path: '', redirectTo: 'list', pathMatch: 'full' },
+          {
+            path: 'list',
+            loadComponent: () =>
+              import('./pages/moodboards/moodboard-list/moodboard-list.component')
+                .then(m => m.MoodboardListComponent),
+          },
+          {
+            path: 'edit/:moodboardId',
+            loadComponent: () =>
+              import('./pages/moodboards/moodboard-edit/moodboard-edit.component')
+                .then(m => m.MoodboardEditComponent),
+          },
+        ]
+      },
+      {
         path: 'object', children: [
           {path: '', redirectTo: 'list', pathMatch: 'full'},
           {path: 'list', loadComponent: () =>

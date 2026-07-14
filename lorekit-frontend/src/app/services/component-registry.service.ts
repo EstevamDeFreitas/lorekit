@@ -69,6 +69,13 @@ const REGISTRY: Record<string, RegistryEntry> = {
       ),
     inputKey: 'timelineIdInput',
   },
+  Moodboard: {
+    loader: () =>
+      import('../pages/moodboards/moodboard-edit/moodboard-edit.component').then(
+        m => m.MoodboardEditComponent
+      ),
+    inputKey: 'moodboardIdInput',
+  },
   World: {
     loader: () =>
       import('../pages/world/world-info/world-info.component').then(

@@ -34,6 +34,9 @@ import { TabManagerService } from '../../../services/tab-manager.service';
           <app-nav-button [label]="'Linhas do Tempo'" [showLabel]="false" [icon]="'fa-solid fa-timeline'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'timeline'"
             (click)="tabManager.setActiveSidebarSection('timeline')"></app-nav-button>
+          <app-nav-button [label]="'Moodboards'" [showLabel]="false" [icon]="'fa-solid fa-table-cells-large'" size="xl" [fullWidth]="true" [direction]="'right'"
+            [active]="layout.activeSidebarSection === 'moodboard'"
+            (click)="tabManager.setActiveSidebarSection('moodboard')"></app-nav-button>
           <app-nav-button [label]="'Espécies'" [showLabel]="false" [icon]="'fa-solid fa-paw'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'specie'"
             (click)="tabManager.setActiveSidebarSection('specie')"></app-nav-button>

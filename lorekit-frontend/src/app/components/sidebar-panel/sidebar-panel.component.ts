@@ -49,6 +49,14 @@ const SIDEBAR_SECTIONS: Record<string, SidebarSectionEntry> = {
         m => m.TimelineListComponent
       ),
   },
+  moodboard: {
+    label: 'Moodboards',
+    icon: 'fa-solid fa-table-cells-large',
+    loader: () =>
+      import('../../pages/moodboards/moodboard-list/moodboard-list.component').then(
+        m => m.MoodboardListComponent
+      ),
+  },
   specie: {
     label: 'Espécies',
     icon: 'fa-solid fa-paw',

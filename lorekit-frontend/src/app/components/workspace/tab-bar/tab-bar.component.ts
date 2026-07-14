@@ -97,7 +97,14 @@ import { TabManagerService } from '../../../services/tab-manager.service';
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     .cdk-drag-preview {
-      @apply bg-zinc-700 text-zinc-200 text-xs px-3 py-1 rounded shadow-xl border border-zinc-500 opacity-90;
+      background: #3f3f46;
+      color: #e4e4e7;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 0.25rem;
+      border: 1px solid #71717a;
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      opacity: 0.9;
     }
     .cdk-drag-animating { transition: transform 200ms cubic-bezier(0, 0, 0.2, 1); }
   `],
