@@ -27,6 +27,9 @@
         <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'arrow'" title="Seta" (click)="setTool('arrow')">
           <i class="fa-solid fa-arrow-right-long"></i>
         </button>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'draw'" title="Desenhar" (click)="setTool('draw')">
+          <i class="fa-solid fa-pencil"></i>
+        </button>
         <button type="button" class="tool-button" title="Imagem" (click)="triggerImageUpload()">
           <i class="fa-regular fa-image"></i>
         </button>
@@ -59,7 +62,14 @@
 
   <div class="min-h-0 flex-1 grid grid-cols-[minmax(0,1fr)_19rem]">
     <div #stage class="moodboard-stage">
-      @if (selectedItem(); as selected) {
+      @if (activeTool() === 'draw') {
+        <div class="moodboard-item-toolbar moodboard-draw-toolbar" (mousedown)="$event.stopPropagation()">
+          <label class="color-control color-control-stroke" title="Cor do lápis">
+            <input type="color" [ngModel]="strokeColor()" (ngModelChange)="setDrawingColor($event)" />
+          </label>
+        </div>
+      } @else {
+        @if (selectedItem(); as selected) {
         <div class="moodboard-item-toolbar" (mousedown)="$event.stopPropagation()">
           <button type="button" class="tool-button" title="Editar texto" (click)="editingItemId.set(selected.item.id)">
             <i class="fa-solid fa-pen"></i>
@@ -84,13 +94,13 @@
 
           <div class="toolbar-divider"></div>
 
-          <button type="button" class="tool-button" [class.tool-button-active]="selected.config.textAlign === 'left'" title="Alinhar Ã  esquerda" (click)="setTextAlign('left')">
+          <button type="button" class="tool-button" [class.tool-button-active]="selected.config.textAlign === 'left'" title="Alinhar à esquerda" (click)="setTextAlign('left')">
             <i class="fa-solid fa-align-left"></i>
           </button>
           <button type="button" class="tool-button" [class.tool-button-active]="selected.config.textAlign === 'center'" title="Centralizar" (click)="setTextAlign('center')">
             <i class="fa-solid fa-align-center"></i>
           </button>
-          <button type="button" class="tool-button" [class.tool-button-active]="selected.config.textAlign === 'right'" title="Alinhar Ã  direita" (click)="setTextAlign('right')">
+          <button type="button" class="tool-button" [class.tool-button-active]="selected.config.textAlign === 'right'" title="Alinhar à direita" (click)="setTextAlign('right')">
             <i class="fa-solid fa-align-right"></i>
           </button>
 
@@ -106,12 +116,14 @@
             <i class="fa-solid fa-arrow-down"></i>
           </button>
         </div>
+        }
       }
 
       <div
         class="moodboard-content"
         [class.moodboard-content-pannable]="canPanByDrag()"
         [class.moodboard-content-panning]="isCanvasPanning()"
+        [class.moodboard-content-drawing]="activeTool() === 'draw' && !canPanByDrag()"
         [style.width.px]="canvasWidth"
         [style.height.px]="canvasHeight"
         [style.transform]="canvasTransform()"
@@ -122,6 +134,25 @@
         (dragover)="$event.preventDefault()"
         (drop)="onEntityDrop($event)">
         <div class="moodboard-grid"></div>
+
+        @if (drawingPreview(); as preview) {
+          <div
+            class="moodboard-drawing-preview"
+            [style.left.px]="preview.left"
+            [style.top.px]="preview.top"
+            [style.width.px]="preview.width"
+            [style.height.px]="preview.height">
+            <svg [attr.viewBox]="preview.viewBox">
+              <path
+                [attr.d]="preview.path"
+                fill="none"
+                [attr.stroke]="preview.stroke"
+                [attr.stroke-width]="preview.strokeWidth"
+                stroke-linecap="round"
+                stroke-linejoin="round"></path>
+            </svg>
+          </div>
+        }
 
         @for (view of sortedItems(); track view.item.id) {
           @if (view.config.kind === 'shape') {
@@ -188,7 +219,7 @@
                 }
               </svg>
 
-              @if (view.config.text) {
+              @if (view.config.text && editingItemId() !== view.item.id) {
                 <div
                   class="moodboard-shape-label"
                   [style.color]="readableTextColor(view.config.fill)"
@@ -234,6 +265,17 @@
                       {{ view.config.text }}
                     </div>
                   }
+                }
+                @case ('drawing') {
+                  <svg class="moodboard-drawing-svg" [attr.viewBox]="view.config.viewBox || ('0 0 ' + itemWidth(view) + ' ' + itemHeight(view))">
+                    <path
+                      [attr.d]="view.config.path || ''"
+                      fill="none"
+                      [attr.stroke]="view.config.stroke || '#e4e4e7'"
+                      [attr.stroke-width]="view.config.strokeWidth || 3"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"></path>
+                  </svg>
                 }
                 @case ('image') {
                   <div class="moodboard-image-frame" [style.border-color]="view.config.stroke || '#3f3f46'">

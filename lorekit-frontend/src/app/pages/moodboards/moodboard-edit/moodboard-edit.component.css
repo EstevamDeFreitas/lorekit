@@ -91,6 +91,10 @@
   height: 1.65rem;
 }
 
+.moodboard-draw-toolbar {
+  align-items: center;
+}
+
 .toolbar-divider {
   height: 1px;
   background: var(--color-zinc-800);
@@ -110,6 +114,10 @@
 
 .moodboard-content-panning {
   cursor: grabbing;
+}
+
+.moodboard-content-drawing {
+  cursor: crosshair;
 }
 
 .moodboard-grid {
@@ -135,6 +143,20 @@ svg {
 
 .moodboard-shape-svg {
   display: block;
+  overflow: visible;
+}
+
+.moodboard-drawing-preview {
+  position: absolute;
+  z-index: 8900;
+  pointer-events: none;
+}
+
+.moodboard-drawing-svg,
+.moodboard-drawing-preview svg {
+  display: block;
+  width: 100%;
+  height: 100%;
   overflow: visible;
 }
 
@@ -201,6 +223,8 @@ svg {
 }
 
 .moodboard-shape-textarea {
+  display: flex;
+  flex-direction: column;
   position: absolute;
   transform-origin: center;
 }

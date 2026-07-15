@@ -36,8 +36,8 @@ import {
 import { TabManagerService } from '../../../services/tab-manager.service';
 import { WorldStateService } from '../../../services/world-state.service';
 
-type MoodboardTool = 'select' | 'text' | MoodboardShapeType;
-type DragMode = 'none' | 'pan' | 'item' | 'resize' | 'rotate' | 'pendingCreate' | 'create' | 'endpoint';
+type MoodboardTool = 'select' | 'text' | 'draw' | MoodboardShapeType;
+type DragMode = 'none' | 'pan' | 'item' | 'resize' | 'rotate' | 'pendingCreate' | 'create' | 'endpoint' | 'draw';
 type ResizeHandle = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 type LineEndpoint = 'start' | 'end';
 
@@ -54,6 +54,25 @@ type DocumentPreviewBlock = {
   text: string;
   level?: number;
   rows?: string[][];
+};
+
+type CanvasPoint = {
+  x: number;
+  y: number;
+};
+
+type DrawingGeometry = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  path: string;
+  viewBox: string;
+};
+
+type DrawingPreview = DrawingGeometry & {
+  stroke: string;
+  strokeWidth: number;
 };
 
 type DragState = {
@@ -90,6 +109,9 @@ const DEFAULT_SHAPE_HEIGHT = 120;
 const DEFAULT_LINE_WIDTH = 220;
 const DEFAULT_LINE_HEIGHT = 40;
 const CREATE_DRAG_THRESHOLD = 4;
+const DEFAULT_DRAWING_STROKE_WIDTH = 3;
+const DRAWING_PADDING = 8;
+const DRAWING_POINT_DISTANCE = 1.5;
 
 @Component({
   selector: 'app-moodboard-edit',
@@ -131,6 +153,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   readonly entitySearchTerm = signal('');
   readonly entityTableFilter = signal('');
   readonly entityResults = signal<MoodboardEntitySearchResult[]>([]);
+  readonly drawingPreview = signal<DrawingPreview | null>(null);
 
   readonly tableOptions = [
     { value: '', label: 'Todos' },
@@ -159,6 +182,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   private worldId: string | null = null;
   private dragState: DragState = this.emptyDragState();
   private saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private drawingPoints: CanvasPoint[] = [];
   private removeMouseMove?: () => void;
   private removeMouseUp?: () => void;
   private removeKeyDown?: () => void;
@@ -202,6 +226,11 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
 
   setTool(tool: MoodboardTool): void {
     this.activeTool.set(tool);
+
+    if (tool === 'draw') {
+      this.selectedItemId.set('');
+      this.editingItemId.set('');
+    }
   }
 
   setFillColor(color: string): void {
@@ -212,6 +241,10 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     }
 
     this.updateItemConfig(selectedId, config => ({ ...config, fill: color }));
+  }
+
+  setDrawingColor(color: string): void {
+    this.strokeColor.set(color);
   }
 
   setStrokeColor(color: string): void {
@@ -289,6 +322,11 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     const point = this.clientToCanvasPoint(event.clientX, event.clientY);
     const tool = this.activeTool();
 
+    if (tool === 'draw') {
+      this.startDrawing(point, event);
+      return;
+    }
+
     if (tool === 'text') {
       this.startCreateItem(tool, point, event);
       return;
@@ -304,6 +342,11 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   onCanvasDoubleClick(event: MouseEvent): void {
+    if (this.activeTool() === 'draw') {
+      event.preventDefault();
+      return;
+    }
+
     const point = this.clientToCanvasPoint(event.clientX, event.clientY);
     this.createTextItem(point.x, point.y, true);
   }
@@ -318,6 +361,12 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     }
 
     if (event.button !== 0) {
+      return;
+    }
+
+    if (this.activeTool() === 'draw') {
+      const point = this.clientToCanvasPoint(event.clientX, event.clientY);
+      this.startDrawing(point, event);
       return;
     }
 
@@ -401,6 +450,11 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   editItem(event: MouseEvent, view: MoodboardCanvasItem): void {
     event.preventDefault();
     event.stopPropagation();
+
+    if (this.activeTool() === 'draw') {
+      return;
+    }
+
     this.selectItem(view);
     this.editingItemId.set(view.item.id);
   }
@@ -408,6 +462,20 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   editDocumentItem(event: MouseEvent, view: MoodboardCanvasItem): void {
     event.preventDefault();
     event.stopPropagation();
+
+    if (this.isPanGesture(event)) {
+      this.startPanDrag(event);
+      return;
+    }
+
+    if (this.activeTool() === 'draw') {
+      if (event.button === 0) {
+        const point = this.clientToCanvasPoint(event.clientX, event.clientY);
+        this.startDrawing(point, event);
+      }
+      return;
+    }
+
     this.selectItem(view);
     this.editingItemId.set(view.item.id);
     this.activeTool.set('select');
@@ -823,6 +891,78 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     };
   }
 
+  private startDrawing(point: CanvasPoint, event: MouseEvent): void {
+    event.preventDefault();
+    this.selectedItemId.set('');
+    this.editingItemId.set('');
+    this.drawingPoints = [point];
+    this.dragState = {
+      ...this.emptyDragState(),
+      mode: 'draw',
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startCanvasX: point.x,
+      startCanvasY: point.y,
+    };
+    this.updateDrawingPreview();
+  }
+
+  private updateDrawing(point: CanvasPoint): void {
+    const last = this.drawingPoints[this.drawingPoints.length - 1];
+    if (last && Math.hypot(point.x - last.x, point.y - last.y) < DRAWING_POINT_DISTANCE) {
+      return;
+    }
+
+    this.drawingPoints.push(point);
+    this.updateDrawingPreview();
+  }
+
+  private finishDrawing(): void {
+    const points = [...this.drawingPoints];
+    this.drawingPoints = [];
+    this.drawingPreview.set(null);
+    this.dragState = this.emptyDragState();
+
+    if (points.length < 2) {
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.createDrawingItem(points);
+    this.cdr.markForCheck();
+  }
+
+  private updateDrawingPreview(): void {
+    const geometry = this.buildDrawingFromPoints(this.drawingPoints);
+    this.drawingPreview.set(geometry
+      ? { ...geometry, stroke: this.strokeColor(), strokeWidth: DEFAULT_DRAWING_STROKE_WIDTH }
+      : null);
+    this.cdr.markForCheck();
+  }
+
+  private createDrawingItem(points: CanvasPoint[]): MoodboardCanvasItem | null {
+    const geometry = this.buildDrawingFromPoints(points);
+    if (!geometry) {
+      return null;
+    }
+
+    const view = this.createItem({
+      kind: 'drawing',
+      width: geometry.width,
+      height: geometry.height,
+      rotation: 0,
+      text: '',
+      textAlign: 'center',
+      verticalAlign: 'middle',
+      fill: 'transparent',
+      stroke: this.strokeColor(),
+      strokeWidth: DEFAULT_DRAWING_STROKE_WIDTH,
+      path: geometry.path,
+      viewBox: geometry.viewBox,
+    }, geometry.left, geometry.top, false);
+
+    return view;
+  }
   private createTextItem(x: number, y: number, edit = false): MoodboardCanvasItem | null {
     const view = this.createItem({
       kind: 'text',
@@ -868,7 +1008,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     return view;
   }
 
-  private createItem(config: MoodboardItemConfig, x: number, y: number): MoodboardCanvasItem | null {
+  private createItem(config: MoodboardItemConfig, x: number, y: number, selectAfterCreate = true): MoodboardCanvasItem | null {
     const moodboardId = this.moodboard().id;
     if (!moodboardId) {
       return null;
@@ -885,7 +1025,9 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     const saved = this.moodboardService.saveMoodboardItem(item, moodboardId);
     const view = this.toCanvasItem(saved);
     this.items.update(items => [...items, view]);
-    this.selectItem(view);
+    if (selectAfterCreate) {
+      this.selectItem(view);
+    }
     this.cdr.markForCheck();
     return view;
   }
@@ -1035,6 +1177,11 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
 
     const point = this.clientToCanvasPoint(event.clientX, event.clientY);
 
+    if (state.mode === 'draw') {
+      this.updateDrawing(point);
+      return;
+    }
+
     if (state.mode === 'pendingCreate') {
       if (
         Math.abs(event.clientX - state.startClientX) < CREATE_DRAG_THRESHOLD &&
@@ -1112,6 +1259,11 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   private onWindowMouseUp(): void {
+    if (this.dragState.mode === 'draw') {
+      this.finishDrawing();
+      return;
+    }
+
     if (this.dragState.mode === 'pendingCreate') {
       this.dragState = this.emptyDragState();
       return;
@@ -1311,6 +1463,58 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     };
   }
 
+  private buildDrawingFromPoints(points: CanvasPoint[]): DrawingGeometry | null {
+    if (points.length < 2) {
+      return null;
+    }
+
+    const xs = points.map(point => point.x);
+    const ys = points.map(point => point.y);
+    const left = Math.floor(Math.min(...xs) - DRAWING_PADDING);
+    const top = Math.floor(Math.min(...ys) - DRAWING_PADDING);
+    const width = Math.max(MIN_ITEM_SIZE, Math.ceil(Math.max(...xs) - Math.min(...xs) + DRAWING_PADDING * 2));
+    const height = Math.max(MIN_ITEM_SIZE, Math.ceil(Math.max(...ys) - Math.min(...ys) + DRAWING_PADDING * 2));
+    const localPoints = points.map(point => ({
+      x: point.x - left,
+      y: point.y - top,
+    }));
+
+    return {
+      left,
+      top,
+      width,
+      height,
+      path: this.pointsToSvgPath(localPoints),
+      viewBox: `0 0 ${width} ${height}`,
+    };
+  }
+
+  private pointsToSvgPath(points: CanvasPoint[]): string {
+    const first = points[0];
+    if (!first) {
+      return '';
+    }
+
+    let path = `M ${this.roundSvgNumber(first.x)} ${this.roundSvgNumber(first.y)}`;
+    if (points.length === 1) {
+      return path;
+    }
+
+    for (let index = 1; index < points.length - 1; index++) {
+      const current = points[index];
+      const next = points[index + 1];
+      const midX = (current.x + next.x) / 2;
+      const midY = (current.y + next.y) / 2;
+      path += ` Q ${this.roundSvgNumber(current.x)} ${this.roundSvgNumber(current.y)} ${this.roundSvgNumber(midX)} ${this.roundSvgNumber(midY)}`;
+    }
+
+    const last = points[points.length - 1];
+    return `${path} L ${this.roundSvgNumber(last.x)} ${this.roundSvgNumber(last.y)}`;
+  }
+
+  private roundSvgNumber(value: number): number {
+    return Math.round(value * 10) / 10;
+  }
   private resizeItemFromHandle(id: string, point: { x: number; y: number }): void {
     const state = this.dragState;
     const handle = state.resizeHandle;

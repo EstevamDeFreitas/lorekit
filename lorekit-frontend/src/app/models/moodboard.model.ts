@@ -14,7 +14,7 @@ export class Moodboard {
 }
 
 export type MoodboardShapeType = 'rectangle' | 'circle' | 'line' | 'arrow';
-export type MoodboardItemKind = 'shape' | 'text' | 'image' | 'entity';
+export type MoodboardItemKind = 'shape' | 'text' | 'image' | 'entity' | 'drawing';
 export type MoodboardTextAlign = 'left' | 'center' | 'right';
 export type MoodboardVerticalAlign = 'top' | 'middle' | 'bottom';
 
@@ -39,6 +39,8 @@ export interface MoodboardItemConfig {
   entityTable?: string;
   entityId?: string;
   renderMode?: 'card' | 'document';
+  path?: string;
+  viewBox?: string;
 }
 
 export class MoodboardItem {
@@ -56,4 +58,3 @@ export class MoodboardItem {
     this.index = index;
   }
 }
-
