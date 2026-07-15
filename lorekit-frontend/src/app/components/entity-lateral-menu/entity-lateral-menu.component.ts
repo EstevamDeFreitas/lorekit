@@ -31,17 +31,17 @@ import {
   imports: [OverlayModule, RouterModule, FormOverlayDirective, NgClass, NgStyle, IconButtonComponent, ContextMenuDirective],
   template: `
     <div
-      class="flex flex-col gap-2 rounded-lg border border-transparent p-1 transition-colors"
+      class="flex flex-col gap-1 transition-colors"
       [attr.data-tree-root-context]="isRecursive() ? null : dragContextId()"
       [ngClass]="{
         'border-emerald-500 bg-emerald-950/40': isRootDropActive(),
         'border-red-500 bg-red-950/30': isRootDropInvalid()
       }">
       @for (item of documentArray(); track item.id) {
-        <div class="flex flex-col gap-1">
+        <div class="flex flex-col ">
           <div
-            class="grid items-center gap-1 rounded-md border px-1 py-1 transition-colors"
-            [style.grid-template-columns]="allowDetach() && !isRecursive() ? '1.5rem 1.25rem 1fr 1.5rem 1.5rem' : '1.5rem 1.25rem 1fr 1.5rem'"
+            class="grid items-center gap-1 py-0.5 transition-colors"
+            [style.grid-template-columns]="allowDetach() && !isRecursive() ? '1rem 1rem 1fr 1.5rem 1.5rem' : '1rem 1rem 1fr 1.5rem'"
             data-tree-node-row
             [attr.data-tree-context]="dragContextId()"
             [attr.data-tree-node-id]="item.id"
@@ -67,7 +67,7 @@ import {
 
             <button
               type="button"
-              class="flex h-6 w-5 items-center justify-center rounded text-zinc-500 transition-colors hover:text-white"
+              class="flex  w-5 items-center justify-center rounded text-zinc-500 transition-colors hover:text-white"
               [class.cursor-grab]="dragEnabled()"
               [class.cursor-not-allowed]="!dragEnabled()"
               [disabled]="!dragEnabled()"
@@ -92,7 +92,7 @@ import {
             @if (allowCreate()) {
               <app-icon-button
                 size="xss"
-                buttonType="secondary"
+                buttonType="secondaryActive"
                 icon="fa-solid fa-plus"
                 appFormOverlay
                 [title]="createTitle()"
@@ -116,7 +116,7 @@ import {
           </div>
 
           @if (isOpen(item.id)) {
-            <span class="pl-4">
+            <span class="pl-2">
               @if (hasChildren(item)) {
                 <app-tree-view-list
                   [entityId]="entityId()"
