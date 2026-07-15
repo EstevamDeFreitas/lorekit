@@ -264,7 +264,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   private htmlToText(html: string): string {
     const el = document.createElement('div');
     el.innerHTML = html ?? '';
-    el.querySelectorAll('br').forEach(br => (br.outerHTML = '\n'));
+    el.querySelectorAll('br').forEach(br => br.replaceWith(document.createTextNode('\n')));
+    el.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, blockquote').forEach(node => {
+      if (node.nextSibling) {
+        node.after(document.createTextNode('\n'));
+      }
+    });
     return (el.textContent || el.innerText || '').replace(/\u00A0/g, ' ').trim();
   }
 
@@ -288,51 +293,192 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     return text.replace(/\|/g, '\\|');
   }
 
+  private stringifyEditorValue(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+
+    if (typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      const url = record['url'];
+      if (typeof url === 'string') return url;
+    }
+
+    return '';
+  }
+
+  private getBlockData(block: any): Record<string, unknown> {
+    return block?.data && typeof block.data === 'object' ? block.data : {};
+  }
+
+  private getFirstTextField(data: Record<string, unknown>, fields: string[]): string {
+    for (const field of fields) {
+      const text = this.stringifyEditorValue(data[field]);
+      if (text.trim()) return text;
+    }
+
+    return '';
+  }
+
+  private getImageUrl(data: Record<string, unknown>): string {
+    const directUrl = this.stringifyEditorValue(data['url']);
+    if (directUrl.trim()) return directUrl;
+
+    const file = data['file'];
+    if (file && typeof file === 'object') {
+      return this.stringifyEditorValue((file as Record<string, unknown>)['url']);
+    }
+
+    return '';
+  }
+
+  private getTableRows(data: Record<string, unknown>): unknown[][] {
+    const content = data['content'];
+    if (!Array.isArray(content)) return [];
+
+    return content
+      .filter((row): row is unknown[] => Array.isArray(row))
+      .map(row => row);
+  }
+
+  private getListContent(item: unknown): string {
+    if (typeof item === 'string') return item;
+    if (!item || typeof item !== 'object') return '';
+
+    const record = item as Record<string, unknown>;
+    return this.getFirstTextField(record, ['content', 'text', 'caption']);
+  }
+
+  private getListChildren(item: unknown): unknown[] {
+    if (!item || typeof item !== 'object') return [];
+    const children = (item as Record<string, unknown>)['items'];
+    return Array.isArray(children) ? children : [];
+  }
+
+  private isCheckedListItem(item: unknown): boolean {
+    if (!item || typeof item !== 'object') return false;
+
+    const meta = (item as Record<string, unknown>)['meta'];
+    if (!meta || typeof meta !== 'object') return false;
+
+    return (meta as Record<string, unknown>)['checked'] === true;
+  }
+
+  private getListStart(data: Record<string, unknown>): number {
+    const meta = data['meta'];
+    if (!meta || typeof meta !== 'object') return 1;
+
+    const start = Number((meta as Record<string, unknown>)['start']);
+    return Number.isFinite(start) && start > 0 ? start : 1;
+  }
+
+  private listItemsToMarkdown(items: unknown, style: string, depth = 0, start = 1): string[] {
+    if (!Array.isArray(items)) return [];
+
+    const lines: string[] = [];
+    let orderedIndex = start;
+
+    for (const item of items) {
+      const content = this.htmlInlineToMarkdown(this.getListContent(item));
+      const indent = '  '.repeat(depth);
+
+      if (content) {
+        if (style === 'ordered') {
+          lines.push(`${indent}${orderedIndex}. ${content}`);
+        } else if (style === 'checklist') {
+          lines.push(`${indent}- [${this.isCheckedListItem(item) ? 'x' : ' '}] ${content}`);
+        } else {
+          lines.push(`${indent}- ${content}`);
+        }
+      }
+
+      lines.push(...this.listItemsToMarkdown(this.getListChildren(item), style, depth + 1));
+      orderedIndex++;
+    }
+
+    return lines;
+  }
+
+  private listItemsToPlainText(items: unknown, style: string, depth = 0, start = 1): string[] {
+    if (!Array.isArray(items)) return [];
+
+    const lines: string[] = [];
+    let orderedIndex = start;
+
+    for (const item of items) {
+      const content = this.htmlToText(this.getListContent(item));
+      const indent = '  '.repeat(depth);
+
+      if (content) {
+        if (style === 'ordered') {
+          lines.push(`${indent}${orderedIndex}. ${content}`);
+        } else if (style === 'checklist') {
+          lines.push(`${indent}[${this.isCheckedListItem(item) ? 'x' : ' '}] ${content}`);
+        } else {
+          lines.push(`${indent}- ${content}`);
+        }
+      }
+
+      lines.push(...this.listItemsToPlainText(this.getListChildren(item), style, depth + 1));
+      orderedIndex++;
+    }
+
+    return lines;
+  }
+
+  private getPlainTextFromData(data: Record<string, unknown>): string {
+    return this.htmlToText(this.getFirstTextField(data, ['text', 'content', 'caption', 'title', 'name', 'message']));
+  }
+
+  private getMarkdownFromData(data: Record<string, unknown>): string {
+    return this.htmlInlineToMarkdown(this.getFirstTextField(data, ['text', 'content', 'caption', 'title', 'name', 'message']));
+  }
+
   private blocksToMarkdown(blocks: any[]): string {
     const out: string[] = [];
-    const mdFromHtmlInline = (html: string) => this.htmlInlineToMarkdown(html);
 
     for (const b of blocks) {
+      const data = this.getBlockData(b);
+
       switch (b.type) {
         case 'header': {
-          const level = Math.min(Math.max(b.data?.level ?? 2, 1), 6);
-          const t = mdFromHtmlInline(b.data?.text ?? '');
-          out.push(`${'#'.repeat(level)} ${t}`, '');
+          const level = Math.min(Math.max(Number(data['level'] ?? 2), 1), 6);
+          const t = this.getMarkdownFromData(data);
+          if (t) out.push(`${'#'.repeat(level)} ${t}`, '');
           break;
         }
         case 'paragraph': {
-          const t = mdFromHtmlInline(b.data?.text ?? '');
+          const t = this.getMarkdownFromData(data);
           if (t) out.push(t, '');
           break;
         }
         case 'list': {
-          const ordered = b.data?.style === 'ordered';
-          const items: string[] = b.data?.items ?? [];
-          items.forEach((item: string, idx: number) => {
-            const t = mdFromHtmlInline(item);
-            out.push(ordered ? `${idx + 1}. ${t}` : `- ${t}`);
-          });
-          out.push('');
+          const style = String(data['style'] ?? 'unordered');
+          const lines = this.listItemsToMarkdown(data['items'], style, 0, this.getListStart(data));
+          if (lines.length) out.push(...lines, '');
           break;
         }
         case 'quote': {
-          const t = mdFromHtmlInline(b.data?.text ?? '');
-          t.split('\n').forEach(line => out.push(`> ${line}`));
-          if (b.data?.caption) {
-            out.push(`> — ${mdFromHtmlInline(b.data.caption)}`);
+          const t = this.htmlInlineToMarkdown(this.stringifyEditorValue(data['text']));
+          if (t) {
+            t.split('\n').forEach(line => out.push(`> ${line}`));
           }
-          out.push('');
+          const caption = this.htmlInlineToMarkdown(this.stringifyEditorValue(data['caption']));
+          if (caption) {
+            out.push(`> - ${caption}`);
+          }
+          if (t || caption) out.push('');
           break;
         }
         case 'table': {
-          const rows: string[][] = b.data?.content ?? [];
+          const rows = this.getTableRows(data);
           if (rows.length) {
-            const header = rows[0].map(c => this.escapeMdPipes(this.htmlToText(c))).join(' | ');
+            const header = rows[0].map(c => this.escapeMdPipes(this.htmlToText(this.stringifyEditorValue(c)))).join(' | ');
             out.push(`| ${header} |`);
             const sep = rows[0].map(() => '---').join(' | ');
             out.push(`| ${sep} |`);
             for (let r = 1; r < rows.length; r++) {
-              const row = rows[r].map(c => this.escapeMdPipes(this.htmlToText(c))).join(' | ');
+              const row = rows[r].map(c => this.escapeMdPipes(this.htmlToText(this.stringifyEditorValue(c)))).join(' | ');
               out.push(`| ${row} |`);
             }
             out.push('');
@@ -340,15 +486,17 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
           break;
         }
         case 'image': {
-          const url = b.data?.url ?? '';
-          const caption = b.data?.caption ?? '';
+          const url = this.getImageUrl(data);
+          const caption = this.htmlToText(this.stringifyEditorValue(data['caption']));
           if (url) {
             out.push(`![${caption}](${url})`, '');
+          } else if (caption) {
+            out.push(caption, '');
           }
           break;
         }
         default: {
-          const raw = mdFromHtmlInline(b.data?.text ?? '');
+          const raw = this.getMarkdownFromData(data);
           if (raw) out.push(raw, '');
           break;
         }
@@ -362,54 +510,49 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     const lines: string[] = [];
 
     for (const b of blocks) {
+      const data = this.getBlockData(b);
+
       switch (b.type) {
         case 'header': {
-          const t = this.htmlToText(b.data?.text ?? '');
-          lines.push(t);
-          lines.push('');
+          const t = this.getPlainTextFromData(data);
+          if (t) lines.push(t, '');
           break;
         }
         case 'paragraph': {
-          const t = this.htmlToText(b.data?.text ?? '');
-          if (t) lines.push(t);
-          lines.push('');
+          const t = this.getPlainTextFromData(data);
+          if (t) lines.push(t, '');
           break;
         }
         case 'list': {
-          const style = b.data?.style;
-          const items: string[] = b.data?.items ?? [];
-          items.forEach((item: string, idx: number) => {
-            const t = this.htmlToText(item);
-            if (style === 'ordered') {
-              lines.push(`${idx + 1}. ${t}`);
-            } else {
-              lines.push(`- ${t}`);
-            }
-          });
-          lines.push('');
+          const style = String(data['style'] ?? 'unordered');
+          const listLines = this.listItemsToPlainText(data['items'], style, 0, this.getListStart(data));
+          if (listLines.length) lines.push(...listLines, '');
           break;
         }
         case 'quote': {
-          const t = this.htmlToText(b.data?.text ?? '');
-          t.split('\n').forEach(line => lines.push(`> ${line}`));
-          if (b.data?.caption) {
-            lines.push(`— ${this.htmlToText(b.data.caption)}`);
+          const t = this.htmlToText(this.stringifyEditorValue(data['text']));
+          if (t) {
+            t.split('\n').forEach(line => lines.push(`> ${line}`));
           }
-          lines.push('');
+          const caption = this.htmlToText(this.stringifyEditorValue(data['caption']));
+          if (caption) {
+            lines.push(`- ${caption}`);
+          }
+          if (t || caption) lines.push('');
           break;
         }
         case 'table': {
-          const rows: string[][] = b.data?.content ?? [];
-          rows.forEach((row: string[]) => {
-            const cols = row.map(cell => this.htmlToText(cell));
+          const rows = this.getTableRows(data);
+          rows.forEach((row: unknown[]) => {
+            const cols = row.map(cell => this.htmlToText(this.stringifyEditorValue(cell)));
             lines.push(cols.join('\t'));
           });
-          lines.push('');
+          if (rows.length) lines.push('');
           break;
         }
         case 'image': {
-          const caption = b.data?.caption ?? '';
-          const url = b.data?.url ?? '';
+          const caption = this.htmlToText(this.stringifyEditorValue(data['caption']));
+          const url = this.getImageUrl(data);
           if (caption) {
             lines.push(`[Imagem: ${caption}]`);
           } else if (url) {
@@ -419,7 +562,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
           break;
         }
         default: {
-          const raw = b.data?.text ? this.htmlToText(b.data.text) : '';
+          const raw = this.getPlainTextFromData(data);
           if (raw) lines.push(raw, '');
           break;
         }
