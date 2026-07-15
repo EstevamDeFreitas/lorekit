@@ -532,12 +532,12 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  zoomIn(): void {
-    this.zoom.set(Math.min(2.5, +(this.zoom() + 0.1).toFixed(2)));
+  zoomIn(anchor?: { clientX: number; clientY: number }): void {
+    this.zoomBy(0.1, anchor);
   }
 
-  zoomOut(): void {
-    this.zoom.set(Math.max(0.25, +(this.zoom() - 0.1).toFixed(2)));
+  zoomOut(anchor?: { clientX: number; clientY: number }): void {
+    this.zoomBy(-0.1, anchor);
   }
 
   resetView(): void {
@@ -554,10 +554,11 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     event.preventDefault();
     event.stopPropagation();
 
+    const anchor = { clientX: event.clientX, clientY: event.clientY };
     if (event.deltaY < 0) {
-      this.zoomIn();
+      this.zoomIn(anchor);
     } else {
-      this.zoomOut();
+      this.zoomOut(anchor);
     }
   }
 
@@ -1335,6 +1336,30 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     return target.isContentEditable
       || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
       || !!target.closest('.codex-editor');
+  }
+
+  private zoomBy(delta: number, anchor?: { clientX: number; clientY: number }): void {
+    const currentZoom = this.zoom();
+    const nextZoom = Math.max(0.25, Math.min(2.5, +(currentZoom + delta).toFixed(2)));
+    if (nextZoom === currentZoom) {
+      return;
+    }
+
+    const rect = this.stage?.nativeElement.getBoundingClientRect();
+    if (!rect) {
+      this.zoom.set(nextZoom);
+      return;
+    }
+
+    const clientX = anchor?.clientX ?? rect.left + rect.width / 2;
+    const clientY = anchor?.clientY ?? rect.top + rect.height / 2;
+    const canvasX = (clientX - rect.left - this.panX()) / currentZoom;
+    const canvasY = (clientY - rect.top - this.panY()) / currentZoom;
+
+    this.zoom.set(nextZoom);
+    this.panX.set(+(clientX - rect.left - canvasX * nextZoom).toFixed(2));
+    this.panY.set(+(clientY - rect.top - canvasY * nextZoom).toFixed(2));
+    this.cdr.markForCheck();
   }
 
   private clientToCanvasPoint(clientX: number, clientY: number): { x: number; y: number } {
