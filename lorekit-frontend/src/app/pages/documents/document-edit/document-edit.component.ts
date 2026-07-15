@@ -9,7 +9,7 @@ import { EditorComponent } from "../../../components/editor/editor.component";
 import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { EntityChangeService } from '../../../services/entity-change.service';
-import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
+import { EntityLateralMenuButtonComponent } from "../../../components/entity-lateral-menu-button/entity-lateral-menu-button.component";
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { WorldService } from '../../../services/world.service';
 import { World } from '../../../models/world.model';
@@ -17,7 +17,7 @@ import { World } from '../../../models/world.model';
 @Component({
   selector: 'app-document-edit',
   standalone: true,
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, SafeDeleteButtonComponent, EntityLateralMenuComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, SafeDeleteButtonComponent, EntityLateralMenuButtonComponent],
   template: `
   <div class="flex flex-col relative @container">
     <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">
@@ -27,23 +27,24 @@ import { World } from '../../../models/world.model';
       <input type="text" (blur)="saveDocument()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="document.title" />
       <div class="flex flex-row gap-2">
         <!-- <app-entity-transfer-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-entity-transfer-button> -->
+        @if (!isLoading && showLateralMenu()) {
+          <app-entity-lateral-menu-button
+            [fields]="getFormFields()"
+            (onSave)="onFieldsSave($event)"
+            entityTable="Document"
+            [entityId]="document.id">
+          </app-entity-lateral-menu-button>
+        }
         <app-personalization-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-personalization-button>
         <app-safe-delete-button [entityName]="document.title" [entityId]="document.id" [entityTable]="'Document'" [size]="'xl'"></app-safe-delete-button>
       </div>
     </div>
     <div class="flex flex-col @2xl:flex-row gap-4 mt-10">
-      <div class="flex flex-col" [class.flex-4]="showLateralMenu()" [class.flex-1]="!showLateralMenu()">
+      <div class="flex flex-col flex-1">
         @if (!isLoading) {
           <app-editor [entityId]="document.id" entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full"></app-editor>
         }
       </div>
-        <div class="w-full @2xl:w-70">
-          @if (!isLoading) {
-            <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
-              <app-entity-lateral-menu [fields]="getFormFields()" (onSave)="onFieldsSave($event)" entityTable="Document" [entityId]="document.id"></app-entity-lateral-menu>
-            </div>
-          }
-        </div>
     </div>
   </div>`,
   styleUrl: './document-edit.component.css',

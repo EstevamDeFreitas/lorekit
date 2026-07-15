@@ -12,7 +12,7 @@ import { PersonalizationButtonComponent } from '../../../components/personalizat
 import { NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EditorComponent } from '../../../components/editor/editor.component';
-import { EntityLateralMenuComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
+import { EntityLateralMenuButtonComponent } from '../../../components/entity-lateral-menu-button/entity-lateral-menu-button.component';
 import { SafeDeleteButtonComponent } from '../../../components/safe-delete-button/safe-delete-button.component';
 import { LocationListComponent } from '../../locations/location-list/location-list.component';
 import { SpecieListComponent } from "../specie-list/specie-list.component";
@@ -24,7 +24,7 @@ import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-specie-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, SpecieListComponent, NavButtonComponent, UiFieldConfigButtonComponent, SpecieConfiguredFieldsComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, SpecieListComponent, NavButtonComponent, UiFieldConfigButtonComponent, SpecieConfiguredFieldsComponent],
   template: `
     <div class="flex flex-col relative @container">
       @if(getImageByUsageKey(specie.Images, 'default') != null){
@@ -57,13 +57,21 @@ import { EntityChangeService } from '../../../services/entity-change.service';
             [parentLabel]="specie.ParentWorld ? ('Mundo: ' + specie.ParentWorld.name) : null"
             [backRoute]="'/app/specie/edit/' + specie.id">
           </app-ui-field-config-button>
+          @if (!isLoading) {
+            <app-entity-lateral-menu-button
+              [fields]="fields"
+              (onSave)="onFieldsSave($event)"
+              entityTable="Species"
+              [entityId]="specie.id">
+            </app-entity-lateral-menu-button>
+          }
           <app-icon-button buttonType="white" icon="fa-solid fa-shield-cat" [size]="'xl'" title="Configurar IRPW" (click)="openIrpwSpecieConfig()"></app-icon-button>
           <app-personalization-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'" (onClose)="getSpecie()"></app-personalization-button>
           <app-safe-delete-button [entityName]="specie.name" [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-safe-delete-button>
         </div>
       </div>
       <div class="flex flex-col @2xl:flex-row gap-4 mt-10">
-        <div class="flex-4 flex flex-col">
+        <div class="flex-1 flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
             <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
             <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="currentTab = 'details'"></app-nav-button>
@@ -90,13 +98,6 @@ import { EntityChangeService } from '../../../services/entity-change.service';
               }
             }
           </div>
-        </div>
-        <div class="w-full @2xl:w-70">
-          @if (!isLoading){
-            <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
-              <app-entity-lateral-menu [fields]="fields" (onSave)="onFieldsSave($event)" entityTable="Species" [entityId]="specie.id"></app-entity-lateral-menu>
-            </div>
-          }
         </div>
       </div>
     </div>

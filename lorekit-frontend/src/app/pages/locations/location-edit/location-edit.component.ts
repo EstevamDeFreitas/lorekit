@@ -8,7 +8,7 @@ import { PersonalizationButtonComponent } from "../../../components/personalizat
 import { FormsModule } from '@angular/forms';
 import { LocationService } from '../../../services/location.service';
 import { EditorComponent } from "../../../components/editor/editor.component";
-import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
+import { EntityLateralMenuButtonComponent } from "../../../components/entity-lateral-menu-button/entity-lateral-menu-button.component";
 import { LocationCategoriesService } from '../../../services/location-categories.service';
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
@@ -24,7 +24,7 @@ import { EntityChangeService } from '../../../services/entity-change.service';
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NgStyle, NavButtonComponent, UiFieldConfigButtonComponent, LocationConfiguredFieldsComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NgStyle, NavButtonComponent, UiFieldConfigButtonComponent, LocationConfiguredFieldsComponent],
   template: `
     <div class="flex flex-col @container">
       @if(getImageByUsageKey(location.Images, 'default') != null){
@@ -53,12 +53,20 @@ import { EntityChangeService } from '../../../services/entity-change.service';
             [parentLabel]="location.ParentWorld ? ('Mundo: ' + location.ParentWorld.name) : null"
             [backRoute]="'/app/location/edit/' + location.id">
           </app-ui-field-config-button>
+          @if (!isLoading) {
+            <app-entity-lateral-menu-button
+              [fields]="fields"
+              (onSave)="onFieldsSave($event)"
+              entityTable="Location"
+              [entityId]="location.id">
+            </app-entity-lateral-menu-button>
+          }
           <app-personalization-button [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'" (onClose)="getLocation()"></app-personalization-button>
           <app-safe-delete-button [entityName]="location.name" [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'"></app-safe-delete-button>
         </div>
       </div>
       <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
-        <div class="flex-4 flex flex-col ">
+        <div class="flex-1 flex flex-col ">
           <div class="flex flex-row gap-4 ms-1">
             <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="currentTab = 'details'"></app-nav-button>
             @if(hasDynamicFields) {
@@ -90,13 +98,6 @@ import { EntityChangeService } from '../../../services/entity-change.service';
               }
             }
           </div>
-        </div>
-        <div class="w-full @2xl:w-70">
-          @if (!isLoading){
-            <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
-              <app-entity-lateral-menu [fields]="fields" (onSave)="onFieldsSave($event)" entityTable="Location" [entityId]="location.id"></app-entity-lateral-menu>
-            </div>
-          }
         </div>
       </div>
     </div>

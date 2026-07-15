@@ -11,7 +11,7 @@ import { EditorComponent } from "../../../components/editor/editor.component";
 import { Dialog } from '@angular/cdk/dialog';
 import { PersonalizationComponent } from '../../../components/personalization/personalization.component';
 import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
-import { EntityLateralMenuComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
+import { EntityLateralMenuButtonComponent } from "../../../components/entity-lateral-menu-button/entity-lateral-menu-button.component";
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
 import { ImageUploaderComponent } from "../../../components/ImageUploader/image-uploader.component";
 import { getImageByUsageKey, Image } from '../../../models/image.model';
@@ -27,7 +27,7 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
 
 @Component({
   selector: 'app-world-info',
-  imports: [NgStyle, NgComponentOutlet, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, WorldConfiguredFieldsComponent],
+  imports: [NgStyle, NgComponentOutlet, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, WorldConfiguredFieldsComponent],
   template: `
     <div class="flex flex-col @container">
       @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
@@ -52,12 +52,20 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
             [entityId]="currentWorld.id"
             [backRoute]="'/app/world/info/' + currentWorld.id">
           </app-ui-field-config-button>
+          @if (!isLoading) {
+            <app-entity-lateral-menu-button
+              [fields]="fields"
+              (onSave)="onWorldSave($event)"
+              entityTable="World"
+              [entityId]="currentWorld.id">
+            </app-entity-lateral-menu-button>
+          }
           <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" (onClose)="getWorld()"></app-personalization-button>
           <app-safe-delete-button [entityName]="currentWorld.name" [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" ></app-safe-delete-button>
         </div>
       </div>
       <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
-        <div class="flex-4 flex flex-col">
+        <div class="flex-1 flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
             <app-nav-button [label]="'Detalhes do mundo'" size="sm" [active]="currentTab === 'details'" (click)="currentTab = 'details'"></app-nav-button>
             <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
@@ -97,13 +105,6 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
 
           </div>
 
-        </div>
-        <div class="w-full @2xl:w-70">
-          @if (!isLoading && currentWorldId){
-            <div class="p-4 rounded-lg bg-zinc-900 sticky top-20">
-              <app-entity-lateral-menu [fields]="fields" (onSave)="onWorldSave($event)" entityTable="World" [entityId]="currentWorldId"></app-entity-lateral-menu>
-            </div>
-          }
         </div>
       </div>
     </div>

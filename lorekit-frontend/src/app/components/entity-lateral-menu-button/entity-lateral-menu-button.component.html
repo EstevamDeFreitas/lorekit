@@ -1,0 +1,38 @@
+<app-icon-button
+  buttonType="white"
+  icon="fa-solid fa-sliders"
+  [size]="size()"
+  [title]="title()"
+  (click)="togglePanel()">
+</app-icon-button>
+
+@if (isOpen()) {
+  <button
+    type="button"
+    class="entity-lateral-menu-button__backdrop"
+    title="Fechar campos"
+    (click)="closePanel()">
+  </button>
+
+  <aside class="entity-lateral-menu-button__panel" [style.width.px]="panelWidth()">
+    <div class="entity-lateral-menu-button__header">
+      <span class="entity-lateral-menu-button__title">Campos</span>
+      <app-icon-button
+        buttonType="whiteActive"
+        icon="fa-solid fa-xmark"
+        size="lg"
+        title="Fechar campos"
+        (click)="closePanel()">
+      </app-icon-button>
+    </div>
+
+    <div class="entity-lateral-menu-button__content scrollbar-dark">
+      <app-entity-lateral-menu
+        [fields]="fields()"
+        [entityTable]="entityTable()"
+        [entityId]="entityId()"
+        (onSave)="handleSave($event)">
+      </app-entity-lateral-menu>
+    </div>
+  </aside>
+}
