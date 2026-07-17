@@ -1,12 +1,9 @@
-import { APP_INITIALIZER, ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
+import { APP_INITIALIZER, ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter, withHashLocation } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideAnimations } from '@angular/platform-browser/animations';
 
 import { routes } from './app.routes';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { tokenInterceptor } from './interceptors/token.interceptor';
-import { TW500C, TW700C, TWZINC } from './theme/tailwind-classes';
+import { provideHttpClient } from '@angular/common/http';
 import { CrudHelper, openDbAndEnsureSchema } from './database/database.helper';
 
 export class DbProvider {
@@ -16,9 +13,16 @@ export class DbProvider {
     if (!this.db) throw new Error('DB not initialized');
     return this.db as T;
   }
-  getCrudHelper(){
+  getCrudHelper() {
     return new CrudHelper(this.getDb());
   }
+}
+
+function initializeDatabase(dbProvider: DbProvider) {
+  return async () => {
+    const db = await openDbAndEnsureSchema();
+    dbProvider.setDb(db);
+  };
 }
 
 export const appConfig: ApplicationConfig = {
@@ -28,15 +32,11 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     provideHttpClient(),
     DbProvider,
-    provideAppInitializer(async () => {
-      const dbProvider = inject(DbProvider);
-      const db = await openDbAndEnsureSchema();
-      dbProvider.setDb(db);
-    }),
+    {
+      provide: APP_INITIALIZER,
+      multi: true,
+      useFactory: initializeDatabase,
+      deps: [DbProvider],
+    },
   ]
 };
-
-let classes = [TW500C, TWZINC, TW700C];
-
-
-
