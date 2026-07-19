@@ -53,10 +53,13 @@ export class WorkspaceComponent {
     const newRatios = [...layout.splitRatios];
     newRatios[leftIndex] = ratios[0];
     newRatios[leftIndex + 1] = ratios[1];
-    this.tabManager.setPaneRatios(newRatios);
+    this.tabManager.previewPaneRatios(newRatios);
   }
 
   onRatioCommit(layout: WorkspaceLayout, leftIndex: number, ratios: [number, number]): void {
-    // Commit final ratio on mouse-up (already persisted by setPaneRatios above)
+    const newRatios = [...layout.splitRatios];
+    newRatios[leftIndex] = ratios[0];
+    newRatios[leftIndex + 1] = ratios[1];
+    this.tabManager.commitPaneRatios(newRatios);
   }
 }

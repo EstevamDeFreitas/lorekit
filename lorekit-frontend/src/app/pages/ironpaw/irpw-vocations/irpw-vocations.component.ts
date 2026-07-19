@@ -1,5 +1,7 @@
 import { CommonModule, NgClass } from '@angular/common';
-import { Component, effect, inject, input, OnDestroy, OnInit } from '@angular/core';
+import { inject, DestroyRef, Component, effect, input, OnDestroy, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { FormsModule } from '@angular/forms';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
@@ -258,6 +260,7 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
   styleUrl: './irpw-vocations.component.css',
 })
 export class IrpwVocationsComponent implements OnInit, OnDestroy {
+  private readonly destroyRef = inject(DestroyRef);
   private vocationService = inject(IrpwVocationService);
   private entityChangeService = inject(EntityChangeService);
 
@@ -279,7 +282,7 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
   searchTerm = '';
   showSidebar = true;
   isSaving = false;
-  private saveTimeout?: ReturnType<typeof setTimeout>;
+  private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 600);
 
   baseHealthValue: number | null = null;
   baseDefenseValue: number | null = null;
@@ -301,7 +304,7 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
       this.selectVocation(initialVocationId, true);
     }
 
-    this.entityChangeService.changes$.subscribe(event => {
+    this.entityChangeService.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
       if (event.table === 'IRPWVocation' || event.table === 'Personalization') {
         const selectedId = this.vocationIdInput() || this.selectedVocationId;
         this.loadVocations();
@@ -314,9 +317,7 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
+    this.flushPendingSave();
   }
 
   loadVocations() {
@@ -598,28 +599,19 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
   }
 
   private flushPendingSave() {
-    if (!this.saveTimeout) return;
-
-    clearTimeout(this.saveTimeout);
-    this.persistCurrentVocation();
+    this.saveTask.flush();
   }
 
   private scheduleAutoSave() {
     if (!this.currentVocation) return;
 
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-
     this.isSaving = true;
-    this.saveTimeout = setTimeout(() => {
+    this.saveTask.schedule(() => {
       this.persistCurrentVocation();
-    }, 600);
+    });
   }
 
   private persistCurrentVocation() {
-    this.saveTimeout = undefined;
-
     if (!this.currentVocation) {
       this.isSaving = false;
       return;

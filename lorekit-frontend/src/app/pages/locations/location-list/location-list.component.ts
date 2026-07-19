@@ -1,4 +1,5 @@
-import { Component, computed, inject, input, OnInit } from '@angular/core';
+import { inject, DestroyRef, Component, computed, input, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgClass } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
@@ -112,6 +113,7 @@ import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete
   styleUrl: './location-list.component.css',
 })
 export class LocationListComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
   private locationService = inject(LocationService);
@@ -154,7 +156,7 @@ export class LocationListComponent implements OnInit {
     this.locationService.canReparentLocation(draggedId, newParentId);
 
   ngOnInit() {
-    this.worldStateService.currentWorld$.subscribe(world => {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       const worldId = world ? world.id : '';
 
       if (this.selectedWorld === worldId) {
@@ -165,7 +167,7 @@ export class LocationListComponent implements OnInit {
       this.getLocations();
     });
 
-    this.entityChangeService.changes$.subscribe(event => {
+    this.entityChangeService.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
       if (event.table === 'Location') {
         this.getLocations();
       }

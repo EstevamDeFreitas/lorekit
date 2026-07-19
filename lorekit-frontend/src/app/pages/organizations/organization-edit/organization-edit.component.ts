@@ -1,5 +1,6 @@
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
-import { Component, computed, inject, input, OnInit } from '@angular/core';
+import { DestroyRef, Component, computed, inject, input, OnInit } from '@angular/core';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { Router, ActivatedRoute } from '@angular/router';
 import { getImageByUsageKey } from '../../../models/image.model';
 import { getPersonalizationValue } from '../../../models/personalization.model';
@@ -152,7 +153,7 @@ export class OrganizationEditComponent implements OnInit{
 
   isLoading = true;
 
-  saveTimeout!: ReturnType<typeof setTimeout>;
+  private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 500);
 
   availableWorlds : World[] = [];
   availableLocations : Location[] = [];
@@ -178,11 +179,10 @@ export class OrganizationEditComponent implements OnInit{
   }
 
   saveOrganization() {
-    clearTimeout(this.saveTimeout);
-    this.saveTimeout = setTimeout(() => {
+    this.saveTask.schedule(() => {
       this.organizationService.saveOrganization(this.organization, this.selectedWorldId, this.selectedLocationId, this.selectedOrganizationTypeId);
       this.entityChangeService.notifySave('Organization', this.organization.id);
-    }, 500);
+    });
   }
 
   onEditorSave($event: any, field : any) {

@@ -1,4 +1,4 @@
-import { Directive, input, output, ViewContainerRef, inject, OnInit, OnDestroy, signal, ElementRef } from '@angular/core';
+import { Directive, input, output, ViewContainerRef, inject, OnDestroy, signal, ElementRef } from '@angular/core';
 import { Overlay, OverlayRef, ConnectedPosition } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Component, ChangeDetectionStrategy } from '@angular/core';
@@ -105,9 +105,10 @@ export class FormOverlayComponent {
 }
 
 @Directive({
-  selector: '[appFormOverlay]'
+  selector: '[appFormOverlay]',
+  host: { '(click)': 'toggle()' }
 })
-export class FormOverlayDirective implements OnInit, OnDestroy {
+export class FormOverlayDirective implements OnDestroy {
   private overlay = inject(Overlay);
   private viewContainerRef = inject(ViewContainerRef);
   private elementRef = inject(ElementRef);
@@ -153,18 +154,12 @@ export class FormOverlayDirective implements OnInit, OnDestroy {
   private overlayRef: OverlayRef | null = null;
   private isOpen = signal(false);
 
-  ngOnInit() {
-    this.elementRef.nativeElement.addEventListener('click', this.toggle.bind(this));
-  }
 
   ngOnDestroy() {
     this.close();
-    if (this.elementRef?.nativeElement) {
-      this.elementRef.nativeElement.removeEventListener('click', this.toggle.bind(this));
-    }
   }
 
-  private toggle() {
+  protected toggle() {
     if (this.isOpen()) {
       this.close();
     } else {

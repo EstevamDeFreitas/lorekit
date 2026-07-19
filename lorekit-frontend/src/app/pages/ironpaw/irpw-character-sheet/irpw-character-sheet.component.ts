@@ -1,6 +1,8 @@
 import { CommonModule, NgClass } from '@angular/common';
 import { Dialog } from '@angular/cdk/dialog';
-import { Component, effect, inject, input, OnInit } from '@angular/core';
+import { inject, DestroyRef, Component, effect, input, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { FormsModule } from '@angular/forms';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { Character } from '../../../models/character.model';
@@ -1081,6 +1083,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
   styleUrl: './irpw-character-sheet.component.css',
 })
 export class IrpwCharacterSheetComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private dialog = inject(Dialog);
   private characterService = inject(CharacterService);
   private specieService = inject(SpecieService);
@@ -1121,7 +1124,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   currentSheet: IrpwCharacterSheet | null = null;
 
   isSaving = false;
-  private saveTimeout?: ReturnType<typeof setTimeout>;
+  private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 600);
   isLifeSettingsOpen = false;
   pendingLifeMaxPoints: number | null = null;
   isConditionSettingsOpen = false;
@@ -1197,7 +1200,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   lastRollFormula = '';
 
   ngOnInit() {
-    this.worldStateService.currentWorld$.subscribe(world => {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       if (this.characterIdInput()) {
         return;
       }
@@ -1208,7 +1211,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.loadCharacters();
     });
 
-    this.entityChangeService.changes$.subscribe(event => {
+    this.entityChangeService.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
       if (event.table === 'Character' || event.table === 'Species' || event.table === 'IRPWSpecie' || event.table === 'IRPWVocation' || event.table === 'Relationship') {
         this.loadCharacters();
         this.loadSpecies();
@@ -2111,14 +2114,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   scheduleAutoSave() {
-    if (this.saveTimeout) clearTimeout(this.saveTimeout);
     this.isSaving = true;
-    this.saveTimeout = setTimeout(() => {
+    this.saveTask.schedule(() => {
       if (this.selectedCharacterId && this.currentSheet) {
         this.sheetService.saveSheet(this.selectedCharacterId, this.currentSheet);
       }
       this.isSaving = false;
-    }, 600);
+    });
   }
 
   toggleRollPanel() {

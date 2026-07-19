@@ -1,5 +1,6 @@
 import { CommonModule, NgClass } from '@angular/common';
-import { Component, inject, input, OnInit } from '@angular/core';
+import { inject, DestroyRef, Component, input, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
@@ -113,6 +114,7 @@ import {
   styleUrl: './culture-list.component.css',
 })
 export class CultureListComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private cultureService = inject(CultureService);
   private worldService = inject(WorldService);
   private locationService = inject(LocationService);
@@ -160,7 +162,7 @@ export class CultureListComponent implements OnInit {
   public getTextColorStyle = getTextColorStyle;
 
   ngOnInit(): void {
-    this.worldStateService.currentWorld$.subscribe(world => {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       const nextWorldId = world ? world.id : '';
 
       if (this.selectedWorld === nextWorldId) {
@@ -172,7 +174,7 @@ export class CultureListComponent implements OnInit {
       this.getCultures();
     });
 
-    this.entityChangeService.changes$.subscribe(event => {
+    this.entityChangeService.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
       if (event.table === 'Culture') {
         this.getCultures();
       }

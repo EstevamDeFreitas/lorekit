@@ -7,17 +7,33 @@ import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { tokenInterceptor } from './interceptors/token.interceptor';
 import { TW500C, TW700C, TWZINC } from './theme/tailwind-classes';
-import { CrudHelper, openDbAndEnsureSchema } from './database/database.helper';
+import { CrudHelper, DatabasePersistenceCoordinator, openDbAndEnsureSchema } from './database/database.helper';
 
 export class DbProvider {
   private db: any | null = null;
-  setDb(db: any) { this.db = db; }
+  private persistence: DatabasePersistenceCoordinator | null = null;
+
+  setDb(db: any): void {
+    this.db = db;
+    this.persistence = new DatabasePersistenceCoordinator(db);
+  }
+
   getDb<T = any>(): T {
     if (!this.db) throw new Error('DB not initialized');
     return this.db as T;
   }
-  getCrudHelper(){
-    return new CrudHelper(this.getDb());
+
+  getCrudHelper(): CrudHelper {
+    return new CrudHelper(this.getDb(), () => this.requestPersist());
+  }
+
+  requestPersist(): void {
+    if (!this.persistence) throw new Error('DB not initialized');
+    this.persistence.requestPersist();
+  }
+
+  async flushPendingWrites(): Promise<void> {
+    await this.persistence?.flush();
   }
 }
 

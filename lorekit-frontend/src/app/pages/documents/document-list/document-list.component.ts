@@ -1,4 +1,5 @@
-import { Component, computed, inject, input, OnInit } from '@angular/core';
+import { inject, DestroyRef, Component, computed, input, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, ActivatedRoute } from '@angular/router';
 import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
@@ -111,6 +112,7 @@ import { Dialog } from '@angular/cdk/dialog';
   styleUrl: './document-list.component.css',
 })
 export class DocumentListComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
   private documentService = inject(DocumentService);
@@ -146,7 +148,7 @@ export class DocumentListComponent implements OnInit {
     this.documentService.canReparentDocument(draggedId, newParentId);
 
   ngOnInit(): void {
-    this.worldStateService.currentWorld$.subscribe(world => {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       const nextWorldId = world ? world.id : '';
 
       if (this.selectedWorld === nextWorldId) {
@@ -157,7 +159,7 @@ export class DocumentListComponent implements OnInit {
       this.getDocuments();
     });
 
-    this.entityChangeService.changes$.subscribe(event => {
+    this.entityChangeService.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
       if (event.table === 'Document') {
         this.getDocuments();
       }

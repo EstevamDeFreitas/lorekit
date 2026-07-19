@@ -1,5 +1,6 @@
 import { CommonModule, NgClass } from '@angular/common';
-import { Component, inject, input, OnInit } from '@angular/core';
+import { inject, DestroyRef, Component, input, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { Character } from '../../../models/character.model';
@@ -103,6 +104,7 @@ import {
   `,
 })
 export class IrpwCharacterSheetListComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private characterService = inject(CharacterService);
   private worldService = inject(WorldService);
   private worldStateService = inject(WorldStateService);
@@ -132,7 +134,7 @@ export class IrpwCharacterSheetListComponent implements OnInit {
   public getTextColorStyle = getTextColorStyle;
 
   ngOnInit(): void {
-    this.worldStateService.currentWorld$.subscribe(world => {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       const nextWorldId = world ? world.id : '';
       if (this.selectedWorldId === nextWorldId) {
         return;
@@ -141,7 +143,7 @@ export class IrpwCharacterSheetListComponent implements OnInit {
       this.loadCharacters();
     });
 
-    this.entityChangeService.changes$.subscribe(event => {
+    this.entityChangeService.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
       if (
         event.table === 'Character' ||
         event.table === 'Personalization' ||

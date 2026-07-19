@@ -32,6 +32,8 @@ export default class TailwindMentionPlugin {
   private dropdown: HTMLDivElement | null = null;
   private activeContext: MentionContext | null = null;
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  private searchGeneration = 0;
+  private destroyed = false;
 
   private readonly onInputBound = this.onInput.bind(this);
   private readonly onClickBound = this.onClick.bind(this);
@@ -46,6 +48,7 @@ export default class TailwindMentionPlugin {
   }
 
   init() {
+    this.destroyed = false;
     this.holder = document.getElementById(this.holderId);
     if (!this.holder) return;
 
@@ -56,6 +59,9 @@ export default class TailwindMentionPlugin {
   }
 
   destroy() {
+    this.destroyed = true;
+    this.searchGeneration++;
+
     if (this.holder) {
       this.holder.removeEventListener('input', this.onInputBound);
       this.holder.removeEventListener('click', this.onClickBound);
@@ -68,7 +74,8 @@ export default class TailwindMentionPlugin {
       this.searchTimer = null;
     }
 
-    this.hideDropdown();
+    this.dropdown?.remove();
+    this.dropdown = null;
     this.holder = null;
     this.activeContext = null;
   }
@@ -77,6 +84,11 @@ export default class TailwindMentionPlugin {
     const context = this.getMentionContext();
 
     if (!context || context.query.length < this.minChars) {
+      if (this.searchTimer) {
+        clearTimeout(this.searchTimer);
+        this.searchTimer = null;
+      }
+      this.searchGeneration++;
       this.activeContext = null;
       this.hideDropdown();
       return;
@@ -88,9 +100,13 @@ export default class TailwindMentionPlugin {
       clearTimeout(this.searchTimer);
     }
 
+    const generation = ++this.searchGeneration;
     this.searchTimer = setTimeout(async () => {
-      if (!this.activeContext) return;
-      const results = await this.search(this.activeContext.query, this.maxResults);
+      this.searchTimer = null;
+      if (this.destroyed || generation !== this.searchGeneration) return;
+
+      const results = await this.search(context.query, this.maxResults);
+      if (this.destroyed || generation !== this.searchGeneration || !this.activeContext) return;
 
       if (!results.length) {
         this.hideDropdown();

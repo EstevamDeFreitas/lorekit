@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, OnInit } from '@angular/core';
+import { inject, DestroyRef, ChangeDetectionStrategy, Component, computed, effect, input, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorldStateService } from '../../../services/world-state.service';
 import { World } from '../../../models/world.model';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -114,6 +115,7 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
   changeDetection: ChangeDetectionStrategy.Default,
 })
 export class WorldInfoComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   dialogref = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
   worldIdInput = input<string>('');
@@ -175,7 +177,7 @@ export class WorldInfoComponent implements OnInit {
       this.getWorld();
     }
     else {
-      this.currentRoute.params.subscribe(params => {
+      this.currentRoute.params.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
         this.currentWorldId = params['worldId'];
         this.getWorld();
       });

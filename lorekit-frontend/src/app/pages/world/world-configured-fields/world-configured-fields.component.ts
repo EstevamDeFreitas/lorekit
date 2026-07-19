@@ -1,5 +1,6 @@
 import { NgStyle } from '@angular/common';
-import { Component, inject, input, output } from '@angular/core';
+import { DestroyRef, Component, inject, input, output } from '@angular/core';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { InputComponent } from '../../../components/input/input.component';
@@ -108,7 +109,7 @@ export class WorldConfiguredFieldsComponent {
   dynamicValuesByFieldId: Record<string, DynamicFieldValue> = {};
   entityOptionsByFieldId: Record<string, { value: string; label: string }[]> = {};
 
-  private dynamicSaveTimeout!: ReturnType<typeof setTimeout>;
+  private readonly dynamicSaveTask = new FlushableDebounce(inject(DestroyRef), 220);
   private lastWorldId = '';
 
   ngDoCheck(): void {
@@ -182,8 +183,7 @@ export class WorldConfiguredFieldsComponent {
   }
 
   saveDynamicValues(): void {
-    clearTimeout(this.dynamicSaveTimeout);
-    this.dynamicSaveTimeout = setTimeout(() => {
+    this.dynamicSaveTask.schedule(() => {
       const worldId = this.world().id;
       if (!worldId) {
         return;
@@ -196,7 +196,7 @@ export class WorldConfiguredFieldsComponent {
       });
 
       this.dynamicFieldService.saveEntityDynamicFieldsValues('World', worldId, values);
-    }, 220);
+    });
   }
 
   private loadLayout(): void {

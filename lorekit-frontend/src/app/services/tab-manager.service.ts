@@ -218,7 +218,7 @@ export class TabManagerService {
               : t
           ),
         })),
-      }));
+      }), false);
     });
   }
 
@@ -274,7 +274,7 @@ export class TabManagerService {
             t.id === tab.id ? { ...t, resolvedComponent: component } : t
           ),
         })),
-      }));
+      }), false);
     });
 
     this.update(l => ({
@@ -445,7 +445,11 @@ export class TabManagerService {
     });
   }
 
-  setPaneRatios(ratios: number[]): void {
+  previewPaneRatios(ratios: number[]): void {
+    this.update(l => ({ ...l, splitRatios: ratios }), false);
+  }
+
+  commitPaneRatios(ratios: number[]): void {
     this.update(l => ({ ...l, splitRatios: ratios }));
   }
 
@@ -538,10 +542,15 @@ export class TabManagerService {
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  private update(fn: (l: WorkspaceLayout) => WorkspaceLayout): void {
+  private update(
+    fn: (l: WorkspaceLayout) => WorkspaceLayout,
+    persist = true
+  ): void {
     const next = fn(this.snapshot);
     this._layout$.next(next);
-    this.saveLayout();
+    if (persist) {
+      this.saveLayout();
+    }
   }
 }
 

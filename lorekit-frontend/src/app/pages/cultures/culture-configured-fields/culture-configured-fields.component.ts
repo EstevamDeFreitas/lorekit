@@ -1,5 +1,6 @@
 import { NgStyle } from '@angular/common';
-import { Component, inject, input, output } from '@angular/core';
+import { DestroyRef, Component, inject, input, output } from '@angular/core';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { FormsModule } from '@angular/forms';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { EditorComponent } from '../../../components/editor/editor.component';
@@ -142,7 +143,7 @@ export class CultureConfiguredFieldsComponent {
   dynamicValuesByFieldId: Record<string, DynamicFieldValue> = {};
   entityOptionsByFieldId: Record<string, { value: string; label: string }[]> = {};
 
-  private dynamicSaveTimeout!: ReturnType<typeof setTimeout>;
+  private readonly dynamicSaveTask = new FlushableDebounce(inject(DestroyRef), 220);
   private lastCultureId = '';
 
   ngDoCheck(): void {
@@ -221,8 +222,7 @@ export class CultureConfiguredFieldsComponent {
   }
 
   saveDynamicValues(): void {
-    clearTimeout(this.dynamicSaveTimeout);
-    this.dynamicSaveTimeout = setTimeout(() => {
+    this.dynamicSaveTask.schedule(() => {
       const cultureId = this.culture().id;
       if (!cultureId) {
         return;
@@ -235,7 +235,7 @@ export class CultureConfiguredFieldsComponent {
       });
 
       this.dynamicFieldService.saveEntityDynamicFieldsValues('Culture', cultureId, values);
-    }, 220);
+    });
   }
 
   private loadLayout(): void {

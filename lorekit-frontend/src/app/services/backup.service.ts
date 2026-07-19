@@ -34,6 +34,7 @@ export class BackupService {
   async exportBackup(): Promise<void> {
     this.status$.next({ state: 'processing' });
     try {
+      await this.dbProvider.flushPendingWrites();
       const api = ElectronSafeAPI.electron;
 
       const [dbPath, imagesRoot] = await Promise.all([
@@ -107,6 +108,7 @@ export class BackupService {
   async importBackup(file: File): Promise<void> {
     this.status$.next({ state: 'processing' });
     try {
+      await this.dbProvider.flushPendingWrites();
       const text = await file.text();
       let bundle: LorekitFullBackup;
       try {

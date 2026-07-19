@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { inject, DestroyRef, ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorldService } from '../../../services/world.service';
 import { World } from '../../../models/world.model';
 import { CommonModule, NgClass } from '@angular/common';
@@ -139,6 +140,7 @@ import {
   changeDetection: ChangeDetectionStrategy.Default,
 })
 export class WorldListComponent {
+  private readonly destroyRef = inject(DestroyRef);
   worldCreationOpen = false;
   newWorldName = '';
 
@@ -182,7 +184,7 @@ export class WorldListComponent {
   constructor(private worldService: WorldService, private worldStateService : WorldStateService, private router:Router) { }
 
   ngOnInit() {
-    this.worldStateService.currentWorld$.subscribe(world => {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       this.currentWorldId = world ? world.id : '';
     })
     this.loadWorlds();

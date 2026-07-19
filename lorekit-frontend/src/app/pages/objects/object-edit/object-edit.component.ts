@@ -1,5 +1,6 @@
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
-import { Component, computed, inject, input, OnInit } from '@angular/core';
+import { DestroyRef, Component, computed, inject, input, OnInit } from '@angular/core';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { Router, ActivatedRoute } from '@angular/router';
 import { getImageByUsageKey } from '../../../models/image.model';
 import { getPersonalizationValue } from '../../../models/personalization.model';
@@ -154,7 +155,7 @@ export class ObjectEditComponent implements OnInit {
 
   isLoading = true;
 
-  saveTimeout!: ReturnType<typeof setTimeout>;
+  private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 500);
 
   availableWorlds: World[] = [];
   availableLocations: Location[] = [];
@@ -180,11 +181,10 @@ export class ObjectEditComponent implements OnInit {
   }
 
   saveObject() {
-    clearTimeout(this.saveTimeout);
-    this.saveTimeout = setTimeout(() => {
+    this.saveTask.schedule(() => {
       this.objectService.saveObject(this.object, this.selectedWorldId, this.selectedLocationId, this.selectedObjectTypeId);
       this.entityChangeService.notifySave('Object', this.object.id);
-    }, 500);
+    });
   }
 
   onEditorSave($event: any, field: string) {

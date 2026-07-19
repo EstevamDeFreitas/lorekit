@@ -1,5 +1,6 @@
 import { CommonModule, NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, input, OnInit } from '@angular/core';
+import { inject, DestroyRef, ChangeDetectionStrategy, Component, input, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
@@ -109,6 +110,7 @@ import {
   changeDetection: ChangeDetectionStrategy.Default,
 })
 export class TimelineListComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private timelineService = inject(TimelineService);
   private worldService = inject(WorldService);
   private worldStateService = inject(WorldStateService);
@@ -136,7 +138,7 @@ export class TimelineListComponent implements OnInit {
   ngOnInit() {
     this.availableWorlds = this.worldService.getWorlds();
 
-    this.worldStateService.currentWorld$.subscribe(world => {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       this.selectedWorldId = world?.id || '';
       if (this.selectedWorldId) {
         this.manualWorldFilter = '';

@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
+import { inject, DestroyRef, ChangeDetectionStrategy, Component, computed, effect, input } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
@@ -51,6 +52,7 @@ import { World } from '../../../models/world.model';
   changeDetection: ChangeDetectionStrategy.Default
 })
 export class DocumentEditComponent {
+  private readonly destroyRef = inject(DestroyRef);
   dialogref = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
   private dialog = inject(Dialog);
@@ -91,7 +93,7 @@ export class DocumentEditComponent {
   isInDialog = computed(() => !!this.dialogref);
 
   constructor() {
-    this.currentRoute.queryParams.subscribe(queryParams => {
+    this.currentRoute.queryParams.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(queryParams => {
       this.returnUrl = queryParams['returnUrl'];
     });
 

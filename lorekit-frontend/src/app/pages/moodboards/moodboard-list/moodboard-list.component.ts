@@ -1,6 +1,7 @@
 import { Dialog } from '@angular/cdk/dialog';
 import { NgClass } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, input, OnInit } from '@angular/core';
+import { inject, DestroyRef, ChangeDetectionStrategy, Component, input, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
@@ -21,6 +22,7 @@ import { WorldStateService } from '../../../services/world-state.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MoodboardListComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly moodboardService = inject(MoodboardService);
   private readonly worldService = inject(WorldService);
   private readonly worldStateService = inject(WorldStateService);
@@ -41,7 +43,7 @@ export class MoodboardListComponent implements OnInit {
   ngOnInit(): void {
     this.availableWorlds = this.worldService.getWorlds();
 
-    this.worldStateService.currentWorld$.subscribe(world => {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       this.selectedWorldId = world?.id || '';
       if (this.selectedWorldId) {
         this.manualWorldFilter = '';

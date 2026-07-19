@@ -1,5 +1,6 @@
 import { NgStyle } from '@angular/common';
-import { Component, inject, input, output } from '@angular/core';
+import { DestroyRef, Component, inject, input, output } from '@angular/core';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { FormsModule } from '@angular/forms';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { EditorComponent } from '../../../components/editor/editor.component';
@@ -138,7 +139,7 @@ export class CharacterConfiguredFieldsComponent {
   dynamicValuesByFieldId: Record<string, DynamicFieldValue> = {};
   entityOptionsByFieldId: Record<string, { value: string; label: string }[]> = {};
 
-  private dynamicSaveTimeout!: ReturnType<typeof setTimeout>;
+  private readonly dynamicSaveTask = new FlushableDebounce(inject(DestroyRef), 220);
   private lastCharacterId = '';
 
   ngDoCheck(): void {
@@ -217,8 +218,7 @@ export class CharacterConfiguredFieldsComponent {
   }
 
   saveDynamicValues(): void {
-    clearTimeout(this.dynamicSaveTimeout);
-    this.dynamicSaveTimeout = setTimeout(() => {
+    this.dynamicSaveTask.schedule(() => {
       const characterId = this.character().id;
       if (!characterId) {
         return;
@@ -231,7 +231,7 @@ export class CharacterConfiguredFieldsComponent {
       });
 
       this.dynamicFieldService.saveEntityDynamicFieldsValues('Character', characterId, values);
-    }, 220);
+    });
   }
 
   private loadLayout(): void {

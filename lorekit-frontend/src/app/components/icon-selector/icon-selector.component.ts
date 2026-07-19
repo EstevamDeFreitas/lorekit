@@ -88,9 +88,10 @@ export class IconSelectorOverlayComponent implements OnInit {
 }
 
 @Directive({
-  selector: '[appIconSelector]'
+  selector: '[appIconSelector]',
+  host: { '(click)': 'toggle()' }
 })
-export class IconSelectorDirective implements OnInit, OnDestroy {
+export class IconSelectorDirective implements OnDestroy {
   private overlay = inject(Overlay);
   private viewContainerRef = inject(ViewContainerRef);
   private elementRef = inject(ElementRef);
@@ -119,18 +120,12 @@ export class IconSelectorDirective implements OnInit, OnDestroy {
   private overlayRef: OverlayRef | null = null;
   private isOpen = signal(false);
 
-  ngOnInit() {
-    this.elementRef.nativeElement.addEventListener('click', this.toggle.bind(this));
-  }
 
   ngOnDestroy() {
     this.close();
-    if (this.elementRef?.nativeElement) {
-      this.elementRef.nativeElement.removeEventListener('click', this.toggle.bind(this));
-    }
   }
 
-  private toggle() {
+  protected toggle() {
     if (this.isOpen()) {
       this.close();
     } else {

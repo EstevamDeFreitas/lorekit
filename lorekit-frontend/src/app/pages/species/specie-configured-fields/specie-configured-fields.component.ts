@@ -1,5 +1,6 @@
 import { NgStyle } from '@angular/common';
-import { Component, inject, input, output } from '@angular/core';
+import { DestroyRef, Component, inject, input, output } from '@angular/core';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { FormsModule } from '@angular/forms';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { EditorComponent } from '../../../components/editor/editor.component';
@@ -132,7 +133,7 @@ export class SpecieConfiguredFieldsComponent {
   dynamicValuesByFieldId: Record<string, DynamicFieldValue> = {};
   entityOptionsByFieldId: Record<string, { value: string; label: string }[]> = {};
 
-  private dynamicSaveTimeout!: ReturnType<typeof setTimeout>;
+  private readonly dynamicSaveTask = new FlushableDebounce(inject(DestroyRef), 220);
   private lastSpecieId = '';
 
   ngDoCheck(): void {
@@ -211,8 +212,7 @@ export class SpecieConfiguredFieldsComponent {
   }
 
   saveDynamicValues(): void {
-    clearTimeout(this.dynamicSaveTimeout);
-    this.dynamicSaveTimeout = setTimeout(() => {
+    this.dynamicSaveTask.schedule(() => {
       const specieId = this.specie().id;
       if (!specieId) {
         return;
@@ -225,7 +225,7 @@ export class SpecieConfiguredFieldsComponent {
       });
 
       this.dynamicFieldService.saveEntityDynamicFieldsValues('Species', specieId, values);
-    }, 220);
+    });
   }
 
   private loadLayout(): void {

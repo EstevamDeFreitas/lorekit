@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { DbProvider } from '../app.config';
-import { ElectronSafeAPI, persistDbToDisk } from '../database/database.helper';
+import { ElectronSafeAPI } from '../database/database.helper';
 import { schema } from '../database/schema';
 
 type EntityRef = { table: string; id: string };
@@ -115,7 +115,8 @@ export class EntityTransferService {
       throw error;
     }
 
-    await persistDbToDisk(this.db);
+    this.dbProvider.requestPersist();
+    await this.dbProvider.flushPendingWrites();
 
     return bundle.rootEntity;
   }

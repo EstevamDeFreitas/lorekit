@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, input, OnInit } from '@angular/core';
+import { inject, DestroyRef, Component, input, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { TreeViewListComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
@@ -122,6 +123,7 @@ import { Dialog } from '@angular/cdk/dialog';
   styleUrl: './specie-list.component.css',
 })
 export class SpecieListComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private specieService = inject(SpecieService);
   private locationService = inject(LocationService);
   private worldService = inject(WorldService);
@@ -152,7 +154,7 @@ export class SpecieListComponent implements OnInit {
     this.specieService.canReparentSpecie(draggedId, newParentId);
 
   ngOnInit() {
-    this.worldStateService.currentWorld$.subscribe(world => {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       const nextWorldId = world ? world.id : '';
 
       if (this.selectedWorld === nextWorldId) {
@@ -164,7 +166,7 @@ export class SpecieListComponent implements OnInit {
       this.getSpecies();
     });
 
-    this.entityChangeService.changes$.subscribe(event => {
+    this.entityChangeService.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
       if (event.table === 'Species') {
         this.getSpecies();
       }

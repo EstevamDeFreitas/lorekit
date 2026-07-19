@@ -37,13 +37,88 @@ export async function openDbAndEnsureSchema() {
   return db;
 }
 
-export async function persistDbToDisk(db: any) {
-  try {
-    const dbPath = await ElectronSafeAPI.electron.getDbPath();
-    const binary = db.export();
-    await ElectronSafeAPI.electron.writeFile(dbPath, binary);
-  } catch (e) {
-    console.error('Failed to persist DB', e);
+export async function persistDbToDisk(db: any): Promise<void> {
+  const dbPath = await ElectronSafeAPI.electron.getDbPath();
+  const binary = db.export();
+  await ElectronSafeAPI.electron.writeFile(dbPath, binary);
+}
+
+type PersistWriter = (db: any) => Promise<void>;
+
+export class DatabasePersistenceCoordinator {
+  private dirty = false;
+  private scheduled = false;
+  private activeDrain: Promise<void> | null = null;
+
+  constructor(
+    private readonly db: any,
+    private readonly writer: PersistWriter = persistDbToDisk
+  ) {}
+
+  requestPersist(): void {
+    this.dirty = true;
+    this.scheduleDrain();
+  }
+
+  async flush(): Promise<void> {
+    if (this.scheduled) {
+      this.scheduled = false;
+    }
+
+    while (this.dirty || this.activeDrain) {
+      const drain = this.activeDrain ?? this.startDrain();
+      await drain;
+    }
+  }
+
+  private scheduleDrain(): void {
+    if (this.scheduled || this.activeDrain) {
+      return;
+    }
+
+    this.scheduled = true;
+    queueMicrotask(() => {
+      if (!this.scheduled) {
+        return;
+      }
+
+      this.scheduled = false;
+      void this.startDrain().catch(error => {
+        console.error('Failed to persist DB', error);
+      });
+    });
+  }
+
+  private startDrain(): Promise<void> {
+    if (this.activeDrain) {
+      return this.activeDrain;
+    }
+
+    let succeeded = false;
+    const drain = this.drain().then(() => {
+      succeeded = true;
+    });
+
+    this.activeDrain = drain.finally(() => {
+      this.activeDrain = null;
+      if (succeeded && this.dirty) {
+        this.scheduleDrain();
+      }
+    });
+
+    return this.activeDrain;
+  }
+
+  private async drain(): Promise<void> {
+    while (this.dirty) {
+      this.dirty = false;
+      try {
+        await this.writer(this.db);
+      } catch (error) {
+        this.dirty = true;
+        throw error;
+      }
+    }
   }
 }
 
@@ -108,7 +183,10 @@ function toSqlValue(v: any) {
 
 export class CrudHelper {
   private debugging: boolean = false;
-  constructor(private db: any) {}
+  constructor(
+    private db: any,
+    private readonly schedulePersist: () => void
+  ) {}
 
   create(table: string, data: Record<string, any>) {
     const existing = getExistingColumns(this.db, table);
@@ -131,7 +209,7 @@ export class CrudHelper {
 
     this.db.run(sql, values);
 
-    void persistDbToDisk(this.db);
+    this.schedulePersist();
     return data;
   }
 
@@ -143,7 +221,7 @@ export class CrudHelper {
     }
     this.db.run(sql, [value, key]);
 
-    void persistDbToDisk(this.db);
+    this.schedulePersist();
   }
 
   update(table: string, id: string, data: Record<string, any>) {
@@ -161,7 +239,7 @@ export class CrudHelper {
 
     this.db.run(sql, [...values, id]);
 
-    void persistDbToDisk(this.db);
+    this.schedulePersist();
     return data;
   }
 
@@ -178,7 +256,7 @@ export class CrudHelper {
 
     this.db.run(sql, Object.values(where));
 
-    void persistDbToDisk(this.db);
+    this.schedulePersist();
   }
 
   delete(table: string, id: string, deleteRelatedItems: boolean = false) {
@@ -206,7 +284,7 @@ export class CrudHelper {
 
     this.db.run(sql, [id]);
 
-    void persistDbToDisk(this.db);
+    this.schedulePersist();
   }
 
   findById(table: string, id: string, include: IncludeDef[] = []) {

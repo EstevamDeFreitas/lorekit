@@ -1,11 +1,5 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  OnInit,
-  signal,
-  Type,
-} from '@angular/core';
+import { inject, DestroyRef, ChangeDetectionStrategy, Component, OnInit, signal, Type } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AsyncPipe, NgComponentOutlet } from '@angular/common';
 import { TabManagerService } from '../../services/tab-manager.service';
 import { NgClass } from '@angular/common';
@@ -156,6 +150,7 @@ const SIDEBAR_SECTIONS: Record<string, SidebarSectionEntry> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SidebarPanelComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   tabManager = inject(TabManagerService);
   layout$ = this.tabManager.layout$;
 
@@ -166,7 +161,7 @@ export class SidebarPanelComponent implements OnInit {
   private lastSection = '';
 
   ngOnInit(): void {
-    this.layout$.subscribe(layout => {
+    this.layout$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(layout => {
       const section = layout.activeSidebarSection;
       if (section !== this.lastSection) {
         this.lastSection = section;

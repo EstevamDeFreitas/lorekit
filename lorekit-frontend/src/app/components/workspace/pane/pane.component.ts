@@ -3,9 +3,6 @@ import {
   Component,
   inject,
   input,
-  NgZone,
-  OnChanges,
-  signal,
 } from '@angular/core';
 import { NgComponentOutlet } from '@angular/common';
 import { WorkspacePane } from '../../../models/workspace.model';
@@ -38,10 +35,8 @@ import { ComponentRegistryService } from '../../../services/component-registry.s
           </div>
         } @else {
           @for (tab of pane().tabs; track tab.id) {
-            <div
-              class="absolute inset-0 overflow-y-auto scrollbar-dark px-3"
-              [hidden]="tab.id !== pane().activeTabId">
-              @if (activatedTabs().has(tab.id)) {
+            @if (tab.id === pane().activeTabId) {
+              <div class="absolute inset-0 overflow-y-auto scrollbar-dark px-3">
                 @if (tab.resolvedComponent) {
                   <ng-container
                     *ngComponentOutlet="tab.resolvedComponent; inputs: getTabInputs(tab)">
@@ -52,30 +47,21 @@ import { ComponentRegistryService } from '../../../services/component-registry.s
                     <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Carregando...
                   </div>
                 }
-              }
-            </div>
+              </div>
+            }
           }
         }
       </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class WorkspacePaneComponent implements OnChanges {
+export class WorkspacePaneComponent {
   pane = input.required<WorkspacePane>();
   flexRatio = input<number>(100);
 
   tabManager = inject(TabManagerService);
   private registry = inject(ComponentRegistryService);
 
-  /** Tracks which tab ids have been activated at least once (for lazy creation) */
-  activatedTabs = signal<Set<string>>(new Set());
-
-  ngOnChanges(): void {
-    const activeId = this.pane().activeTabId;
-    if (activeId && !this.activatedTabs().has(activeId)) {
-      this.activatedTabs.update(set => new Set([...set, activeId]));
-    }
-  }
 
   getTabInputs(tab: { entityType: any; entityId: string; id: string }): Record<string, string> {
     return this.registry.getTabInputs(tab.entityType, tab.entityId);

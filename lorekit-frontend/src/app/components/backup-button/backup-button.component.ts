@@ -1,4 +1,5 @@
-import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
+import { inject, DestroyRef, Component, ElementRef, HostListener, ViewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { BackupService, BackupStatus } from '../../services/backup.service';
 
@@ -79,6 +80,7 @@ import { BackupService, BackupStatus } from '../../services/backup.service';
   styles: [':host { display: block; }'],
 })
 export class BackupButtonComponent {
+  private readonly destroyRef = inject(DestroyRef);
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
   isOpen = false;
@@ -89,7 +91,7 @@ export class BackupButtonComponent {
   }
 
   constructor(private backupService: BackupService, private elRef: ElementRef) {
-    this.backupService.status$.subscribe((s) => {
+    this.backupService.status$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((s) => {
       this.status = s;
       if (s.state === 'success' || s.state === 'error') {
         // auto-close dropdown after a short delay on error; success auto-reloads

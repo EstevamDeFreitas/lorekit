@@ -34,6 +34,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   editor!: EditorJS;
   private lastSaveTime = 0;
   private mentionPlugin: TailwindMentionPlugin | null = null;
+  private destroyed = false;
 
   document = input('');
   saveDocument = output<any>();
@@ -137,6 +138,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
 
     this.editor.isReady
       .then(() => {
+        if (this.destroyed) return;
         this.disableSpellcheck();
         this.initMentionPlugin();
       })
@@ -223,6 +225,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   }
 
   async ngOnDestroy() {
+    this.destroyed = true;
+
     if (this.mentionPlugin) {
       this.mentionPlugin.destroy();
       this.mentionPlugin = null;

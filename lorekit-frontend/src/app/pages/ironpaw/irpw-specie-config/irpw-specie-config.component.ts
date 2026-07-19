@@ -1,6 +1,7 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { DestroyRef, Component, inject, OnInit } from '@angular/core';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { InputComponent } from '../../../components/input/input.component';
@@ -126,7 +127,7 @@ export class IrpwSpecieConfigComponent implements OnInit {
 
   currentConfig: IrpwSpecie = new IrpwSpecie();
   isSaving = false;
-  private saveTimeout?: ReturnType<typeof setTimeout>;
+  private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 600);
 
   perceptionsData: IrpwSpeciePerceptions = { smell: null, vision: null, hearing: null };
   passiveData: IrpwSpecieHability[] = [];
@@ -278,21 +279,13 @@ export class IrpwSpecieConfigComponent implements OnInit {
   }
 
   private scheduleAutoSave() {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-
     this.isSaving = true;
-    this.saveTimeout = setTimeout(() => {
+    this.saveTask.schedule(() => {
       this.persistConfig();
-    }, 600);
+    });
   }
 
   private persistConfig() {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-      this.saveTimeout = undefined;
-    }
 
     if (!this.currentConfig.id) {
       this.isSaving = false;

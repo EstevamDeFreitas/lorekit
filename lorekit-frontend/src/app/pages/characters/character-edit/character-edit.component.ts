@@ -1,5 +1,6 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { Component, computed, inject, input, OnInit } from '@angular/core';
+import { DestroyRef, Component, computed, inject, input, OnInit } from '@angular/core';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorldService } from '../../../services/world.service';
 import { SpecieService } from '../../../services/specie.service';
@@ -144,7 +145,7 @@ export class CharacterEditComponent implements OnInit {
 
   isLoading = true;
 
-  saveTimeout!: ReturnType<typeof setTimeout>;
+  private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 500);
 
   availableWorlds : World[] = [];
   availableSpecies : Specie[] = [];
@@ -182,11 +183,10 @@ export class CharacterEditComponent implements OnInit {
   }
 
   saveCharacter() {
-    clearTimeout(this.saveTimeout);
-    this.saveTimeout = setTimeout(() => {
+    this.saveTask.schedule(() => {
       this.characterService.saveCharacter(this.character, this.selectedWorldId, this.selectedSpecieId);
       this.entityChangeService.notifySave('Character', this.character.id);
-    }, 500);
+    });
   }
 
   onEditorSave($event: any, field: keyof Character) {

@@ -1,4 +1,5 @@
-import { Component, inject, input, OnInit } from '@angular/core';
+import { DestroyRef, Component, inject, input, OnInit } from '@angular/core';
+import { FlushableDebounce } from '../../utils/flushable-debounce';
 import { DynamicFieldService } from '../../services/dynamic-field.service';
 import { ComboBoxComponent } from "../combo-box/combo-box.component";
 import { InputComponent } from "../input/input.component";
@@ -53,7 +54,7 @@ export class DynamicFieldsComponent implements OnInit {
 
   private dynamicFieldService = inject(DynamicFieldService);
 
-  saveTimeout!: ReturnType<typeof setTimeout>;
+  private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 250);
 
   fields: any[] = [];
 
@@ -87,9 +88,8 @@ export class DynamicFieldsComponent implements OnInit {
   }
 
   save() {
-    clearTimeout(this.saveTimeout);
 
-    this.saveTimeout = setTimeout(() => {
+    this.saveTask.schedule(() => {
       let values = this.fields.map(field => {
         return {id: field.fieldValueId, value: field.value, ParentDynamicField: field.template};
       });
@@ -98,7 +98,7 @@ export class DynamicFieldsComponent implements OnInit {
 
 
       this.dynamicFieldService.saveEntityDynamicFieldsValues(this.entityTable(), this.entityId(), values);
-    }, 250);
+    });
 
 
   }

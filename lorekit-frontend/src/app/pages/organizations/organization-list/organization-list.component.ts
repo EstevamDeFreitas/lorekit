@@ -1,5 +1,6 @@
 import { CommonModule, NgClass } from '@angular/common';
-import { Component, inject, input, OnInit } from '@angular/core';
+import { inject, DestroyRef, Component, input, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
@@ -115,6 +116,7 @@ import {
   styleUrl: './organization-list.component.css',
 })
 export class OrganizationListComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private organizationService = inject(OrganizationService);
   private organizationTypeService = inject(OrganizationTypeService);
   private worldService = inject(WorldService);
@@ -163,7 +165,7 @@ export class OrganizationListComponent implements OnInit {
   organizationEditComponent: any = null;
 
   ngOnInit(): void {
-    this.worldStateService.currentWorld$.subscribe(world => {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       const nextWorldId = world ? world.id : '';
 
       if (this.selectedWorld === nextWorldId) {
@@ -175,7 +177,7 @@ export class OrganizationListComponent implements OnInit {
       this.getOrganizations();
     });
 
-    this.entityChangeService.changes$.subscribe(event => {
+    this.entityChangeService.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
       if (event.table === 'Organization') {
         this.getOrganizations();
       }

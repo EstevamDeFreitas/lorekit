@@ -1,5 +1,6 @@
 import { CommonModule, NgClass } from '@angular/common';
-import { Component, inject, input, OnInit } from '@angular/core';
+import { inject, DestroyRef, Component, input, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
@@ -114,6 +115,7 @@ import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete
   styleUrl: './character-list.component.css',
 })
 export class CharacterListComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);
   private characterService = inject(CharacterService);
@@ -163,7 +165,7 @@ export class CharacterListComponent implements OnInit {
   public getTextColorStyle = getTextColorStyle;
 
   ngOnInit() {
-    this.worldStateService.currentWorld$.subscribe(world => {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       const nextWorldId = world ? world.id : '';
 
       if (this.selectedWorld === nextWorldId) {
@@ -175,7 +177,7 @@ export class CharacterListComponent implements OnInit {
       this.getCharacters();
     });
 
-    this.entityChangeService.changes$.subscribe(event => {
+    this.entityChangeService.changes$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(event => {
       if (event.table === 'Character') {
         this.getCharacters();
       }

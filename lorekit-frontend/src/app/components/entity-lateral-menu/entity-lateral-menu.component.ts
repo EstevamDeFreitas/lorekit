@@ -1,4 +1,5 @@
-import { AfterViewInit, ChangeDetectionStrategy, Component, inject, input, OnChanges, OnInit, output, SimpleChanges } from '@angular/core';
+import { inject, DestroyRef, AfterViewInit, ChangeDetectionStrategy, Component, input, OnChanges, OnInit, output, SimpleChanges } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgClass, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OverlayModule } from '@angular/cdk/overlay';
@@ -474,6 +475,7 @@ export class TreeViewListComponent {
   styleUrl: './entity-lateral-menu.component.css',
 })
 export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewInit {
+  private readonly destroyRef = inject(DestroyRef);
   documentArray: Document[] = [];
   availableDocuments: Document[] = [];
   filteredDocuments: Document[] = [];
@@ -511,7 +513,8 @@ export class EntityLateralMenuComponent implements OnInit, OnChanges, AfterViewI
 
     this.syncFieldsFromInput();
     this.fieldValueChanges.pipe(
-      debounceTime(500)
+      debounceTime(500),
+      takeUntilDestroyed(this.destroyRef)
     ).subscribe(() => {
       this.onFieldChange();
     });

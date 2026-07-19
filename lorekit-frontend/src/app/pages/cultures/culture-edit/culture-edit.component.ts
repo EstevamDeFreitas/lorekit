@@ -1,5 +1,6 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { Component, computed, inject, input } from '@angular/core';
+import { DestroyRef, Component, computed, inject, input } from '@angular/core';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorldService } from '../../../services/world.service';
 import { LocationService } from '../../../services/location.service';
@@ -137,7 +138,7 @@ export class CultureEditComponent {
 
   isLoading = true;
 
-  saveTimeout!: ReturnType<typeof setTimeout>;
+  private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 500);
 
   availableWorlds : World[] = [];
   availableLocations : Location[] = [];
@@ -175,11 +176,10 @@ export class CultureEditComponent {
   }
 
   saveCulture() {
-    clearTimeout(this.saveTimeout);
-    this.saveTimeout = setTimeout(() => {
+    this.saveTask.schedule(() => {
       this.cultureService.saveCulture(this.culture, this.selectedWorldId, this.selectedLocationId);
       this.entityChangeService.notifySave('Culture', this.culture.id);
-    }, 500);
+    });
   }
 
   onEditorSave($event: any, field : any) {
