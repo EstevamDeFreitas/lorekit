@@ -32,6 +32,15 @@ import { ComponentRegistryService } from '../../../services/component-registry.s
             <i class="fa-solid fa-table-columns text-3xl"></i>
             <p class="text-sm">Painel vazio</p>
             <p class="text-xs">Abra uma entidade pelo painel lateral</p>
+            @if (tabManager.snapshot.panes.length > 1) {
+              <button
+                type="button"
+                class="mt-1 inline-flex items-center gap-2 rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:border-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                (click)="tabManager.closePane(pane().id)">
+                <i class="fa-solid fa-xmark"></i>
+                Fechar painel
+              </button>
+            }
           </div>
         } @else {
           @for (tab of pane().tabs; track tab.id) {

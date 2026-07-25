@@ -354,6 +354,20 @@ export class TabManagerService {
       const tab = fromPane.tabs.find(t => t.id === tabId);
       if (!tab) return l;
 
+      if (fromPaneId === toPaneId) {
+        const currentIndex = fromPane.tabs.findIndex(t => t.id === tabId);
+        const reorderedTabs = [...fromPane.tabs];
+        const [movedTab] = reorderedTabs.splice(currentIndex, 1);
+        const targetIndex = Math.max(0, Math.min(insertIndex ?? reorderedTabs.length, reorderedTabs.length));
+        reorderedTabs.splice(targetIndex, 0, movedTab);
+        return {
+          ...l,
+          panes: l.panes.map(p =>
+            p.id === fromPaneId ? { ...p, tabs: reorderedTabs } : p
+          ),
+          focusedPaneId: fromPaneId,
+        };
+      }
       const movedTab: WorkspaceTab = { ...tab, paneId: toPaneId };
       const newFromTabs = fromPane.tabs.filter(t => t.id !== tabId);
       const newToTabs = [...toPane.tabs];

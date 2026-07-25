@@ -42,4 +42,14 @@ describe('TabManagerService persistence', () => {
     expect(globalParameter.setParameter).toHaveBeenCalledTimes(1);
     expect(service.snapshot.panes[0].tabs[0].resolvedComponent).toBeDefined();
   });
+  it('reorders a tab in the same pane without removing it', () => {
+    const { service } = createService();
+    service.openTab('Document', 'document-1', 'Primeiro', 'fa-file');
+    service.openTab('Document', 'document-2', 'Segundo', 'fa-file');
+    service.openTab('Document', 'document-3', 'Terceiro', 'fa-file');
+    const pane = service.snapshot.panes[0];
+    service.moveTab(pane.tabs[0].id, pane.id, pane.id, 2);
+    expect(service.snapshot.panes[0].tabs.map(tab => tab.title))
+      .toEqual(['Segundo', 'Terceiro', 'Primeiro']);
+  });
 });

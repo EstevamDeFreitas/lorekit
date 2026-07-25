@@ -86,7 +86,8 @@ import { getEntityStyle } from '../../../models/entity-colors';
     <!-- Context menu -->
     @if (contextMenu()) {
       <div
-        class="fixed z-50 bg-zinc-800 border border-zinc-600 rounded-md shadow-xl py-1 text-xs text-zinc-200 min-w-44"
+        class="fixed bg-zinc-800 border border-zinc-600 rounded-md shadow-xl py-1 text-xs text-zinc-200 min-w-44"
+        style="z-index: 2147483647"
         [style.left.px]="contextMenu()!.x"
         [style.top.px]="contextMenu()!.y"
         (mouseleave)="closeContextMenu()">
@@ -94,7 +95,7 @@ import { getEntityStyle } from '../../../models/entity-colors';
         <button class="w-full text-left px-3 py-1.5 hover:bg-zinc-700" (click)="ctxCloseOthers()">Fechar outras abas</button>
         <div class="border-t border-zinc-700 my-1"></div>
         <button class="w-full text-left px-3 py-1.5 hover:bg-zinc-700" (click)="ctxMoveToNewPane()">Mover para novo painel</button>
-        @if (pane().tabs.length > 1) {
+        @if (canClosePane()) {
           <button class="w-full text-left px-3 py-1.5 hover:bg-zinc-700" (click)="ctxClosePane()">Fechar painel</button>
         }
       </div>
@@ -213,5 +214,9 @@ export class WorkspaceTabBarComponent{
   ctxClosePane(): void {
     this.tabManager.closePane(this.pane().id);
     this.closeContextMenu();
+  }
+
+  canClosePane(): boolean {
+    return this.tabManager.snapshot.panes.length > 1;
   }
 }
