@@ -16,6 +16,7 @@ import { IconButtonComponent } from '../icon-button/icon-button.component';
 import { GlobalParameterService } from '../../services/global-parameter.service';
 import { ImageService } from '../../services/image.service';
 import { EntityMentionService } from '../../services/entity-mention.service';
+import { FLUSH_PENDING_SAVES_EVENT, PendingSaveEventDetail } from '../../utils/pending-save-event';
 
 @Component({
   selector: 'app-editor',
@@ -34,6 +35,12 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   editor!: EditorJS;
   private lastSaveTime = 0;
   private mentionPlugin: TailwindMentionPlugin | null = null;
+  private readonly onFlushPendingSaves = (event: Event): void => {
+    const detail = (event as CustomEvent<PendingSaveEventDetail>).detail;
+    if (detail && this.editor) {
+      detail.flushes.push(this.saveContent());
+    }
+  };
   private destroyed = false;
 
   document = input('');
@@ -58,6 +65,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   }
 
   ngAfterViewInit() {
+    window.addEventListener(FLUSH_PENDING_SAVES_EVENT, this.onFlushPendingSaves);
     this.editor = new EditorJS({
       holder: this.editorId,
       placeholder: 'Comece a escrever aqui, use "/" para comandos...',
@@ -226,6 +234,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
 
   async ngOnDestroy() {
     this.destroyed = true;
+    window.removeEventListener(FLUSH_PENDING_SAVES_EVENT, this.onFlushPendingSaves);
 
     if (this.mentionPlugin) {
       this.mentionPlugin.destroy();

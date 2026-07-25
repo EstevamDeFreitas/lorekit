@@ -35,6 +35,7 @@ import {
 } from '../../../services/moodboard.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
 import { WorldStateService } from '../../../services/world-state.service';
+import { FLUSH_PENDING_SAVES_EVENT } from '../../../utils/pending-save-event';
 
 type MoodboardTool = 'select' | 'text' | 'draw' | MoodboardShapeType;
 type DragMode = 'none' | 'pan' | 'item' | 'resize' | 'rotate' | 'pendingCreate' | 'create' | 'endpoint' | 'draw';
@@ -186,6 +187,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   private removeMouseMove?: () => void;
   private removeMouseUp?: () => void;
   private removeKeyDown?: () => void;
+  private removePendingSaveListener?: () => void;
   private removeKeyUp?: () => void;
 
   readonly moodboardId = computed(() => {
@@ -212,6 +214,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
 
     this.removeMouseMove = this.renderer.listen('window', 'mousemove', (event: MouseEvent) => this.onWindowMouseMove(event));
     this.removeMouseUp = this.renderer.listen('window', 'mouseup', () => this.onWindowMouseUp());
+    this.removePendingSaveListener = this.renderer.listen('window', FLUSH_PENDING_SAVES_EVENT, () => this.flushPendingSaves());
     this.removeKeyDown = this.renderer.listen('window', 'keydown', (event: KeyboardEvent) => this.onWindowKeyDown(event));
     this.removeKeyUp = this.renderer.listen('window', 'keyup', (event: KeyboardEvent) => this.onWindowKeyUp(event));
   }
@@ -219,6 +222,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.flushPendingSaves();
     this.removeMouseMove?.();
+    this.removePendingSaveListener?.();
     this.removeMouseUp?.();
     this.removeKeyDown?.();
     this.removeKeyUp?.();
@@ -1156,9 +1160,30 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   private flushPendingSaves(): void {
+    this.saveMoodboardName();
+    this.saveActiveTextEdit();
+
     for (const id of Array.from(this.saveTimers.keys())) {
       this.saveItemNow(id);
     }
+  }
+
+  private saveActiveTextEdit(): void {
+    const id = this.editingItemId();
+    if (!id) {
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement && activeElement.classList.contains('moodboard-editable-text')) {
+      this.updateItemConfig(id, config => ({
+        ...config,
+        text: activeElement.innerText.replace(/\u00A0/g, ' ').replace(/\n$/g, ''),
+      }));
+    }
+
+    this.saveItemNow(id);
+    this.editingItemId.set('');
   }
 
   private onWindowMouseMove(event: MouseEvent): void {

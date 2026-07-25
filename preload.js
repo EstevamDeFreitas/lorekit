@@ -12,4 +12,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   showSaveDialog: (defaultName) => ipcRenderer.invoke('backup:save-dialog', defaultName),
   reloadApp: () => ipcRenderer.invoke('app:reload'),
+  rendererReady: () => ipcRenderer.invoke('app:renderer-ready'),
+  onPrepareToClose: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('app:prepare-to-close', listener);
+    return () => ipcRenderer.removeListener('app:prepare-to-close', listener);
+  },
+  finishPrepareToClose: (success) => ipcRenderer.send('app:prepare-to-close-finished', success),
 });

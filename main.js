@@ -6,6 +6,23 @@ const { autoUpdater } = require('electron-updater');
 let mainWindow;
 let updateWindow; // ADDED
 let hasOpenedMain = false; // ADDED: evita abrir múltiplas janelas
+let rendererReady = false;
+let pendingRendererTransition = null;
+
+function requestRendererTransition(onSuccess, onFailure = () => {}) {
+  if (!mainWindow || mainWindow.isDestroyed() || !rendererReady) {
+    onSuccess();
+    return;
+  }
+
+  if (pendingRendererTransition) {
+    return;
+  }
+
+  pendingRendererTransition = { onSuccess, onFailure };
+  mainWindow.webContents.send('app:prepare-to-close');
+}
+
 
 function registerIpc() {
   ipcMain.handle('get-db-path', () => {
@@ -61,14 +78,35 @@ function registerIpc() {
     return result.canceled ? null : result.filePath;
   });
   ipcMain.handle('app:reload', () => {
-    if (!mainWindow) return false;
-    const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
-    if (isDev) {
-      mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL || 'http://localhost:4401');
-    } else {
-      mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');
-    }
+    if (!mainWindow || mainWindow.isDestroyed()) return false;
+
+    return new Promise(resolve => {
+      requestRendererTransition(() => {
+        rendererReady = false;
+        const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
+        if (isDev) {
+          mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL || 'http://localhost:4401');
+        } else {
+          mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');
+        }
+        resolve(true);
+      }, () => resolve(false));
+    });
+  });
+  ipcMain.handle('app:renderer-ready', () => {
+    rendererReady = true;
     return true;
+  });
+  ipcMain.on('app:prepare-to-close-finished', (_event, success) => {
+    const transition = pendingRendererTransition;
+    pendingRendererTransition = null;
+    if (!transition) return;
+
+    if (success) {
+      transition.onSuccess();
+    } else {
+      transition.onFailure();
+    }
   });
 
   // Permite "Abrir assim mesmo" na tela de update
@@ -236,6 +274,28 @@ function createWindow() {
     mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');
   }
 
+
+  let canClose = false;
+  mainWindow.on('close', event => {
+    if (canClose || !rendererReady) {
+      return;
+    }
+
+    event.preventDefault();
+    requestRendererTransition(() => {
+      canClose = true;
+      rendererReady = false;
+      mainWindow?.close();
+    });
+  });
+  mainWindow.webContents.on('did-start-loading', () => {
+    rendererReady = false;
+  });
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+    pendingRendererTransition = null;
+    rendererReady = false;
+  });
   // REMOVIDO: não checar updates aqui para evitar loop
   // if (app.isPackaged) { ... }
 }
