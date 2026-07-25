@@ -1,0 +1,96 @@
+<section class="crop-dialog">
+  <header class="crop-header">
+    <div>
+      <h2>Recortar imagem</h2>
+      <p>Arraste para posicionar e use a roda do mouse para aplicar zoom.</p>
+    </div>
+    <label class="replace-button">
+      <i class="fa-solid fa-image"></i>
+      Trocar imagem
+      <input type="file" accept="image/*" (change)="selectFile($event)">
+    </label>
+  </header>
+
+  <div class="crop-workspace">
+    <div
+      #cropFrame
+      class="crop-frame"
+      [class.is-dragging]="isDragging()"
+      [class.is-file-over]="isFileOver()"
+      [style.--crop-aspect]="aspectRatio"
+      (pointerdown)="onPointerDown($event)"
+      (pointermove)="onPointerMove($event)"
+      (pointerup)="endPointerDrag($event)"
+      (pointercancel)="endPointerDrag($event)"
+      (wheel)="onWheel($event)"
+      (dragover)="allowFileDrop($event)"
+      (dragleave)="leaveFileDrop($event)"
+      (drop)="dropFile($event)">
+      <img
+        #sourceImage
+        class="source-image"
+        [src]="imageSource()"
+        [style.width.px]="renderedImage().width"
+        [style.height.px]="renderedImage().height"
+        [style.left.px]="renderedImage().left"
+        [style.top.px]="renderedImage().top"
+        alt="Imagem para recorte"
+        draggable="false"
+        (load)="onImageLoad($event)"
+        (error)="onImageError()">
+
+      <div class="crop-grid" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </div>
+
+      @if (isFileOver()) {
+        <div class="drop-overlay">
+          <i class="fa-solid fa-cloud-arrow-down"></i>
+          <span>Solte para usar esta imagem</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="zoom-controls">
+    <button type="button" (click)="zoomOut()" title="Reduzir zoom">
+      <i class="fa-solid fa-minus"></i>
+    </button>
+    <input
+      type="range"
+      min="1"
+      max="8"
+      step="0.01"
+      [value]="zoom()"
+      (input)="onZoomInput($event)"
+      aria-label="Zoom da imagem">
+    <button type="button" (click)="zoomIn()" title="Aumentar zoom">
+      <i class="fa-solid fa-plus"></i>
+    </button>
+    <span>{{ zoomPercentage() }}%</span>
+    <button type="button" class="reset-button" (click)="resetPosition()">
+      Redefinir
+    </button>
+  </div>
+
+  @if (errorMessage()) {
+    <p class="error-message">{{ errorMessage() }}</p>
+  }
+
+  <footer class="crop-actions">
+    <button type="button" class="cancel-button" (click)="close()">Cancelar</button>
+    <button
+      type="button"
+      class="confirm-button"
+      [disabled]="isExporting() || imageSize().width === 0"
+      (click)="confirm()">
+      @if (isExporting()) {
+        <i class="fa-solid fa-circle-notch fa-spin"></i>
+        Preparando...
+      } @else {
+        <i class="fa-solid fa-check"></i>
+        Confirmar recorte
+      }
+    </button>
+  </footer>
+</section>

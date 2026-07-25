@@ -2,19 +2,18 @@ import { NgStyle } from '@angular/common';
 import { DestroyRef, Component, inject, input } from '@angular/core';
 import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { DynamicImageFieldComponent } from '../../../components/dynamic-image-field/dynamic-image-field.component';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { InputComponent } from '../../../components/input/input.component';
 import { DynamicField, DynamicFieldValue } from '../../../models/dynamicfields.model';
-import { buildImageUrl } from '../../../models/image.model';
 import { Organization } from '../../../models/organization.model';
 import { UiFieldCatalogItem, UiFieldLayoutItem } from '../../../models/ui-field-config.model';
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { UiFieldConfigService } from '../../../services/ui-field-config.service';
-import { ElectronSafeAPI } from '../../../database/database.helper';
 
 @Component({
   selector: 'app-organization-configured-fields',
-  imports: [NgStyle, InputComponent, EditorComponent, ComboBoxComponent],
+  imports: [NgStyle, InputComponent, EditorComponent, ComboBoxComponent, DynamicImageFieldComponent],
   template: `
     <div class="w-full p-1">
       @if (!visibleItems.length) {
@@ -27,22 +26,13 @@ import { ElectronSafeAPI } from '../../../database/database.helper';
             @let dynamicTemplate = dynamicTemplateByToken(item.token);
             @if (dynamicTemplate) {
               @if (dynamicTemplate.fieldType === 'image') {
-                <div class="flex flex-col h-full rounded-lg border border-zinc-800 overflow-hidden">
-                  <div class="flex items-center justify-between px-3 py-1.5 bg-zinc-800 border-b border-zinc-700">
-                    <span class="text-xs text-zinc-300 truncate">{{ dynamicTemplate.name }}</span>
-                    <label class="cursor-pointer text-zinc-400 hover:text-white transition-colors" title="Enviar imagem">
-                      <i class="fa-solid fa-upload text-xs"></i>
-                      <input type="file" class="hidden" accept="image/*" (change)="onDynamicImageUpload($event, dynamicTemplate.id)" />
-                    </label>
-                  </div>
-                  <div class="flex-1 overflow-hidden min-h-0">
-                    @if (getDynamicFieldValue(dynamicTemplate.id).value) {
-                      <img [src]="getImageUrl(getDynamicFieldValue(dynamicTemplate.id).value)" alt="" class="w-full h-full object-cover" />
-                    } @else {
-                      <div class="flex items-center justify-center h-full text-zinc-500 text-xs">Nenhuma imagem</div>
-                    }
-                  </div>
-                </div>
+                <app-dynamic-image-field
+                  class="block h-full min-h-0"
+                  [label]="dynamicTemplate.name"
+                  [value]="getDynamicFieldValue(dynamicTemplate.id).value"
+                  [aspectRatio]="dynamicTemplate.options"
+                  (valueChange)="onDynamicImageValueChange(dynamicTemplate.id, $event)">
+                </app-dynamic-image-field>
               }
               @else if (dynamicTemplate.fieldType === 'entity') {
                 <app-combo-box
@@ -243,27 +233,10 @@ export class OrganizationConfiguredFieldsComponent {
     this.saveDynamicValues();
   }
 
-  getImageUrl(filePath: string): string {
-    return buildImageUrl(filePath);
-  }
-
-  async onDynamicImageUpload(event: Event, fieldId: string): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-
-    const imagesDir = await ElectronSafeAPI.electron.getImagePath();
-    const guid = crypto.randomUUID();
-    const ext = file.name.split('.').pop() ?? 'jpg';
-    const filename = `${Date.now()}-${guid}.${ext}`;
-    const fullPath = `${imagesDir}/dynamic/${filename}`;
-
-    const buffer = await file.arrayBuffer();
-    await ElectronSafeAPI.electron.writeFile(fullPath, new Uint8Array(buffer));
-
+  onDynamicImageValueChange(fieldId: string, value: string): void {
     const fieldValue = this.getDynamicFieldValue(fieldId);
-    fieldValue.value = fullPath;
+    fieldValue.value = value;
     this.saveDynamicValues();
-    input.value = '';
+    this.dynamicSaveTask.flush();
   }
 }

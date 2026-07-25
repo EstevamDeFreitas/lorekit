@@ -206,6 +206,16 @@ interface SelectOptionItem {
                   [(comboValue)]="newFieldTargetEntityTable">
                 </app-combo-box>
               }
+              @if (newFieldType === 'image') {
+                <app-combo-box
+                  label="Propor??o do recorte"
+                  [items]="imageAspectRatioItems"
+                  compareProp="value"
+                  displayProp="label"
+                  [(comboValue)]="newFieldImageAspectRatio">
+                </app-combo-box>
+              }
+
 
               <div class="flex justify-end">
                 <app-button
@@ -270,6 +280,7 @@ export class UiFieldConfigEditorComponent {
   newFieldIsEditorField = false;
   newFieldType: 'text' | 'options' | 'editor' | 'entity' | 'image' = 'text';
   newFieldTargetEntityTable = '';
+  newFieldImageAspectRatio = '1';
   creatingDynamicField = false;
 
   readonly fieldTypeItems = [
@@ -279,6 +290,15 @@ export class UiFieldConfigEditorComponent {
     { value: 'entity', label: 'Entidade relacionada' },
     { value: 'image', label: 'Imagem' },
   ];
+  readonly imageAspectRatioItems = [
+    { value: '1', label: 'Quadrada (1:1)' },
+    { value: '0.8', label: 'Retrato (4:5)' },
+    { value: '0.6666666667', label: 'Retrato (2:3)' },
+    { value: '1.3333333333', label: 'Paisagem (4:3)' },
+    { value: '1.7777777778', label: 'Paisagem (16:9)' },
+    { value: '5', label: 'Banner (5:1)' },
+  ];
+
 
   get entityTableOptions(): string[] {
     const ignored = new Set([
@@ -801,7 +821,11 @@ export class UiFieldConfigEditorComponent {
       const dynamicField = new DynamicField('', name, this.entityTable, '');
       dynamicField.fieldType = this.newFieldType;
       dynamicField.isEditorField = this.newFieldType === 'editor';
-      dynamicField.options = this.newFieldType === 'options' ? this.newFieldOptions.trim() : undefined;
+      dynamicField.options = this.newFieldType === 'options'
+        ? this.newFieldOptions.trim()
+        : this.newFieldType === 'image'
+          ? this.newFieldImageAspectRatio
+          : undefined;
       dynamicField.targetEntityTable = this.newFieldType === 'entity' ? this.newFieldTargetEntityTable : undefined;
 
       this.uiFieldConfigService.saveDynamicField(dynamicField);
@@ -812,6 +836,7 @@ export class UiFieldConfigEditorComponent {
       this.newFieldType = 'text';
       this.newFieldTargetEntityTable = '';
       this.showNotice('Campo dinamico criado.');
+      this.newFieldImageAspectRatio = '1';
     } finally {
       this.creatingDynamicField = false;
     }

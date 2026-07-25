@@ -1,0 +1,66 @@
+<section class="flex w-full flex-col gap-4 text-zinc-100 shadow-2xl">
+  <header class="flex items-center justify-between gap-4">
+    <div>
+      <h2 class="text-lg font-semibold">Imagem</h2>
+      <p class="text-xs text-zinc-500">Escolha ou arraste uma imagem para recortar.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="flex h-8 w-8 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+        title="Fechar"
+        (click)="close()">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  </header>
+
+  <div
+    class="relative min-h-36 overflow-hidden rounded-lg border border-dashed bg-zinc-950 transition-colors"
+    [class.border-sky-500]="isFileOver()"
+    [class.bg-sky-950]="isFileOver()"
+    [class.border-zinc-700]="!isFileOver()"
+    (dragover)="allowFileDrop($event)"
+    (dragleave)="leaveFileDrop($event)"
+    (drop)="dropFile($event)">
+    @if (images()[0]; as image) {
+      <img
+        [src]="image.filePath"
+        alt="Imagem atual"
+        class="h-36 w-full object-contain">
+      <button
+        type="button"
+        class="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-md bg-red-600 text-white opacity-80 transition hover:opacity-100"
+        title="Excluir imagem"
+        [disabled]="isLoading()"
+        (click)="deleteImage(image.id)">
+        <i class="fa-solid fa-trash text-xs"></i>
+      </button>
+    } @else {
+      <div class="flex h-36 flex-col items-center justify-center gap-2 text-zinc-500">
+        <i class="fa-regular fa-image text-2xl"></i>
+        <span class="text-xs">Arraste uma imagem para cá</span>
+        <label class="cursor-pointer rounded-md bg-yellow-500 px-3 py-2 text-xs text-nowrap text-zinc-900 transition-colors hover:brightness-85">
+          {{ isLoading() ? 'Salvando...' : 'Escolher imagem' }}
+          <input
+            type="file"
+            class="hidden"
+            accept="image/*"
+            [disabled]="isLoading()"
+            (change)="selectFile($event)">
+        </label>
+      </div>
+    }
+
+    @if (isFileOver()) {
+      <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-sky-700/90 text-white">
+        <i class="fa-solid fa-cloud-arrow-down text-2xl"></i>
+        <span class="text-sm font-medium">Solte para recortar</span>
+      </div>
+    }
+  </div>
+
+  @if (errorMessage()) {
+    <p class="text-xs text-red-300">{{ errorMessage() }}</p>
+  }
+</section>

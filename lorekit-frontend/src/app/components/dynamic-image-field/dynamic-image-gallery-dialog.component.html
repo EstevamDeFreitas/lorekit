@@ -1,0 +1,134 @@
+<section class="flex w-[min(82vw,56rem)] max-w-full flex-col gap-4 text-zinc-100">
+  <header class="flex items-start justify-between gap-4">
+    <div>
+      <h2 class="text-lg font-semibold">{{ title }}</h2>
+      <p class="mt-1 text-xs text-zinc-500">
+        Adicione, remova ou altere a ordem das imagens do carrossel.
+      </p>
+    </div>
+    <app-icon-button
+      icon="fa-solid fa-xmark"
+      title="Fechar"
+      buttonType="secondaryActive"
+      (click)="cancel()">
+    </app-icon-button>
+  </header>
+
+  <div
+    class="relative flex min-h-28 items-center justify-center rounded-lg border border-dashed p-4 transition-colors"
+    [class.border-sky-500]="isFileOver()"
+    [class.bg-sky-950]="isFileOver()"
+    [class.border-zinc-700]="!isFileOver()"
+    (dragover)="allowFileDrop($event)"
+    (dragleave)="leaveFileDrop($event)"
+    (drop)="dropFile($event)">
+    <div class="flex flex-col items-center gap-3 text-center">
+      <i class="fa-regular fa-images text-2xl text-zinc-500"></i>
+      <p class="text-xs text-zinc-400">
+        Arraste uma imagem ou escolha um arquivo para abrir o recorte.
+      </p>
+      <input
+        #fileInput
+        type="file"
+        class="hidden"
+        accept="image/*"
+        [disabled]="isSaving()"
+        (change)="selectFile($event)">
+      <div class="w-fit">
+        <app-button
+          label="Adicionar imagem"
+          icon="fa-plus"
+          size="xs"
+          [disabled]="isSaving()"
+          (click)="fileInput.click()">
+        </app-button>
+      </div>
+    </div>
+
+    @if (isFileOver()) {
+      <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg bg-sky-700/90 text-white">
+        <i class="fa-solid fa-cloud-arrow-down text-2xl"></i>
+        <span class="text-sm font-medium">Solte para recortar</span>
+      </div>
+    }
+  </div>
+
+  <div class="max-h-[52vh] overflow-y-auto pr-1 scrollbar-dark">
+    @if (images().length) {
+      <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+        @for (path of images(); track path; let index = $index) {
+          <article class="group overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+            <div
+              class="relative w-full overflow-hidden bg-zinc-950"
+              [style.aspect-ratio]="aspectRatio">
+              <img
+                [src]="imageUrl(path)"
+                [alt]="'Imagem ' + (index + 1)"
+                class="h-full w-full object-cover">
+              <span class="absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-zinc-200">
+                {{ index + 1 }}
+              </span>
+            </div>
+            <div class="flex items-center justify-between gap-1 p-2">
+              <div class="flex items-center gap-1">
+                <app-icon-button
+                  icon="fa-solid fa-arrow-left"
+                  title="Mover para a esquerda"
+                  buttonType="secondary"
+                  size="xss"
+                  [disabled]="index === 0"
+                  (click)="moveImage(index, -1)">
+                </app-icon-button>
+                <app-icon-button
+                  icon="fa-solid fa-arrow-right"
+                  title="Mover para a direita"
+                  buttonType="secondary"
+                  size="xss"
+                  [disabled]="index === images().length - 1"
+                  (click)="moveImage(index, 1)">
+                </app-icon-button>
+              </div>
+              <app-icon-button
+                icon="fa-solid fa-trash"
+                title="Remover imagem"
+                buttonType="danger"
+                size="xss"
+                (click)="removeImage(path)">
+              </app-icon-button>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <div class="flex min-h-32 flex-col items-center justify-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-500">
+        <i class="fa-regular fa-image text-2xl"></i>
+        <span class="text-xs">Nenhuma imagem adicionada</span>
+      </div>
+    }
+  </div>
+
+  @if (errorMessage()) {
+    <p class="text-xs text-red-300">{{ errorMessage() }}</p>
+  }
+
+  <footer class="flex justify-end gap-2 border-t border-zinc-800 pt-4">
+    <div class="w-fit">
+      <app-button
+        label="Cancelar"
+        buttonType="secondary"
+        size="xs"
+        [disabled]="isSaving()"
+        (click)="cancel()">
+      </app-button>
+    </div>
+    <div class="w-fit">
+      <app-button
+        label="Salvar galeria"
+        icon="fa-check"
+        size="xs"
+        [disabled]="isSaving()"
+        (click)="confirm()">
+      </app-button>
+    </div>
+  </footer>
+</section>

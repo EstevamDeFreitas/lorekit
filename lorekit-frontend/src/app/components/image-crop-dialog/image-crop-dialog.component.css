@@ -1,3 +1,250 @@
 :host {
   display: block;
+  width: min(92vw, 56rem);
+  color: #f4f4f5;
+}
+
+.crop-dialog {
+  display: flex;
+  max-height: 92vh;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: auto;
+  border: 1px solid #3f3f46;
+  border-radius: 0.75rem;
+  background: var(--color-zinc-925);
+  padding: 1.25rem;
+  box-shadow: 0 25px 60px rgb(0 0 0 / 0.55);
+}
+
+.crop-header,
+.crop-actions,
+.zoom-controls {
+  display: flex;
+  align-items: center;
+}
+
+.crop-header {
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.crop-header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.crop-header p {
+  margin: 0.25rem 0 0;
+  color: #a1a1aa;
+  font-size: 0.75rem;
+}
+
+.replace-button,
+.crop-actions button,
+.zoom-controls button {
+  cursor: pointer;
+  border-radius: 0.375rem;
+  background: #27272a;
+  color: #e4e4e7;
+  transition: border-color 150ms, background 150ms, color 150ms;
+}
+
+.replace-button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.replace-button input {
+  display: none;
+}
+
+.replace-button:hover,
+.zoom-controls button:hover,
+.crop-actions button:hover {
+  border-color: #71717a;
+  background: #3f3f46;
+  color: white;
+}
+
+.crop-workspace {
+  display: flex;
+  min-height: 12rem;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background:
+    linear-gradient(45deg, #18181b 25%, transparent 25%),
+    linear-gradient(-45deg, #18181b 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #18181b 75%),
+    linear-gradient(-45deg, transparent 75%, #18181b 75%),
+    #09090b;
+  background-position: 0 0, 0 0, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+  padding: 1rem;
+}
+
+.crop-frame {
+  --crop-aspect: 1;
+  position: relative;
+  width: min(100%, calc(62vh * var(--crop-aspect)));
+  max-width: 100%;
+  aspect-ratio: var(--crop-aspect);
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  border: 1px solid rgb(255 255 255 / 0.8);
+  background: #09090b;
+}
+
+.crop-frame.is-dragging {
+  cursor: grabbing;
+}
+
+.crop-frame.is-file-over {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgb(56 189 248 / 0.35);
+}
+
+.source-image {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+  will-change: left, top, width, height;
+}
+
+.crop-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.crop-grid span {
+  position: absolute;
+  background: rgb(255 255 255 / 0.28);
+}
+
+.crop-grid span:nth-child(1),
+.crop-grid span:nth-child(2) {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.crop-grid span:nth-child(1) {
+  left: 33.333%;
+}
+
+.crop-grid span:nth-child(2) {
+  left: 66.666%;
+}
+
+.crop-grid span:nth-child(3),
+.crop-grid span:nth-child(4) {
+  right: 0;
+  left: 0;
+  height: 1px;
+}
+
+.crop-grid span:nth-child(3) {
+  top: 33.333%;
+}
+
+.crop-grid span:nth-child(4) {
+  top: 66.666%;
+}
+
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  pointer-events: none;
+  background: rgb(2 132 199 / 0.88);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.drop-overlay i {
+  font-size: 1.5rem;
+}
+
+.zoom-controls {
+  gap: 0.5rem;
+}
+
+.zoom-controls button {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoom-controls input {
+  min-width: 8rem;
+  flex: 1;
+  accent-color: var(--color-yellow-500);
+}
+
+.zoom-controls span {
+  width: 3.5rem;
+  color: #a1a1aa;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.zoom-controls .reset-button {
+  width: auto;
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+}
+
+.error-message {
+  margin: 0;
+  color: #fca5a5;
+  font-size: 0.75rem;
+}
+
+.crop-actions {
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.crop-actions button {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.8rem;
+}
+
+.crop-actions .confirm-button {
+  border-color: var(--color-yellow-500);
+  background: var(--color-yellow-500);
+  color: var(--color-zinc-900);
+}
+
+.crop-actions .confirm-button:hover {
+  border-color: var(--color-yellow-500);
+  background: var(--color-yellow-500);
+}
+
+.crop-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }

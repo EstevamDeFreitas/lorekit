@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 @Component({
   selector: 'app-icon-button',
   imports: [NgClass, RouterLink],
-  template: `<button [ngClass]="buttonClasses" [routerLink]="this.route()" [title]="title()"><i [ngClass]="icon()"></i></button>`,
+  template: `<button [ngClass]="buttonClasses" [routerLink]="this.route()" [title]="title()" [disabled]="disabled()"><i [ngClass]="icon()"></i></button>`,
   styleUrl: './icon-button.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
