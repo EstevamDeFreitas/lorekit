@@ -6,7 +6,6 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { tokenInterceptor } from './interceptors/token.interceptor';
-import { TW500C, TW700C, TWZINC } from './theme/tailwind-classes';
 import { CrudHelper, DatabasePersistenceCoordinator, openDbAndEnsureSchema } from './database/database.helper';
 
 export class DbProvider {
@@ -51,8 +50,4 @@ export const appConfig: ApplicationConfig = {
     }),
   ]
 };
-
-let classes = [TW500C, TWZINC, TW700C];
-
-
 

@@ -3,10 +3,11 @@ import {
   Component,
   inject,
   input,
+  OnInit,
   output,
   signal,
 } from '@angular/core';
-import { NgClass } from '@angular/common';
+import { NgClass, NgStyle } from '@angular/common';
 import {
   CdkDrag,
   CdkDragDrop,
@@ -15,11 +16,15 @@ import {
 } from '@angular/cdk/drag-drop';
 import { WorkspacePane, WorkspaceTab } from '../../../models/workspace.model';
 import { TabManagerService } from '../../../services/tab-manager.service';
+import { CrudHelper } from '../../../database/database.helper';
+import { DbProvider } from '../../../app.config';
+import { getPersonalizationValue, hexToRgba } from '../../../models/personalization.model';
+import { getEntityStyle } from '../../../models/entity-colors';
 
 @Component({
   selector: 'app-workspace-tab-bar',
   standalone: true,
-  imports: [NgClass, CdkDrag, CdkDropList, CdkDragPlaceholder],
+  imports: [NgClass, CdkDrag, CdkDropList, CdkDragPlaceholder, NgStyle],
   template: `
     <div
       class="flex flex-row items-stretch h-9 bg-zinc-925 border-b border-zinc-700 overflow-x-auto scrollbar-hide shrink-0"
@@ -37,8 +42,10 @@ import { TabManagerService } from '../../../services/tab-manager.service';
           [cdkDragData]="{ tabId: tab.id, paneId: pane().id }"
           class="flex flex-row items-center gap-1.5 px-3 h-full text-xs border-r border-zinc-700 cursor-pointer select-none shrink-0 group relative max-w-48 min-w-20"
           [ngClass]="getTabClasses(tab)"
+          [style.border-top-color]="getTabAccentColor(tab)"
           (click)="tabManager.setActiveTab(pane().id, tab.id)"
-          (contextmenu)="openContextMenu($event, tab)">
+          (contextmenu)="openContextMenu($event, tab)"
+          >
 
           <!-- Drag placeholder -->
           <div *cdkDragPlaceholder class="w-24 h-full bg-zinc-700 opacity-40 rounded-sm"></div>
@@ -110,19 +117,46 @@ import { TabManagerService } from '../../../services/tab-manager.service';
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class WorkspaceTabBarComponent {
+export class WorkspaceTabBarComponent{
   pane = input.required<WorkspacePane>();
 
   tabManager = inject(TabManagerService);
+
+  public getPersonalizationValue = getPersonalizationValue;
+  public hexToRgba = hexToRgba;
+
+  private crud : CrudHelper;
+
+  private dbProvider = inject(DbProvider);
+
+  constructor(){
+    this.crud = this.dbProvider.getCrudHelper();
+  }
 
   contextMenu = signal<{ x: number; y: number; tab: WorkspaceTab } | null>(null);
 
   getTabClasses(tab: WorkspaceTab): Record<string, boolean> {
     const isActive = tab.id === this.pane().activeTabId;
+
     return {
-      'bg-zinc-900 text-zinc-100 border-t-2 border-t-yellow-300': isActive,
-      'bg-zinc-925 text-zinc-400 hover:bg-zinc-850 hover:text-zinc-200': !isActive,
+      [`bg-zinc-900 text-zinc-100 border-t-2 border-t-yellow-300`] : isActive,
+      [`bg-zinc-900 text-zinc-400 hover:bg-zinc-850 hover:text-zinc-200`] : !isActive,
     };
+  }
+
+  getTabAccentColor(tab: WorkspaceTab): string | null {
+    if (tab.id !== this.pane().activeTabId) {
+      return null;
+    }
+
+    const entityTable = tab.entityType === 'Specie'
+      ? 'Species'
+      : tab.entityType === 'view' && tab.entityId.startsWith('relations')
+        ? 'Relationship'
+        : tab.entityType;
+    const entityStyle = getEntityStyle(entityTable);
+
+    return entityStyle ? 'var(--color-' + entityStyle.color + ')' : null;
   }
 
   closeTab(event: MouseEvent, tabId: string): void {

@@ -24,35 +24,46 @@ import { TabManagerService } from '../../../services/tab-manager.service';
         <div class="flex flex-col gap-4 mb-4">
           <app-nav-button [label]="'Mundos'" [showLabel]="false" [icon]="'fa-solid fa-earth'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'world'"
+            activeColor="yellow-400"
             (click)="tabManager.setActiveSidebarSection('world')"></app-nav-button>
           <app-nav-button [label]="'Localidades'" [showLabel]="false" [icon]="'fa-solid fa-location-dot'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'location'"
+            activeColor="emerald-400"
             (click)="tabManager.setActiveSidebarSection('location')"></app-nav-button>
           <app-nav-button [label]="'Documentos'" [showLabel]="false" [icon]="'fa-solid fa-file'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'document'"
+            activeColor="olive-400"
             (click)="tabManager.setActiveSidebarSection('document')"></app-nav-button>
           <app-nav-button [label]="'Linhas do Tempo'" [showLabel]="false" [icon]="'fa-solid fa-timeline'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'timeline'"
+            activeColor="mist-400"
             (click)="tabManager.setActiveSidebarSection('timeline')"></app-nav-button>
           <app-nav-button [label]="'Moodboards'" [showLabel]="false" [icon]="'fa-solid fa-table-cells-large'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'moodboard'"
+            activeColor="pink-400"
             (click)="tabManager.setActiveSidebarSection('moodboard')"></app-nav-button>
           <app-nav-button [label]="'Espécies'" [showLabel]="false" [icon]="'fa-solid fa-paw'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'specie'"
+            activeColor="lime-400"
             (click)="tabManager.setActiveSidebarSection('specie')"></app-nav-button>
           <app-nav-button [label]="'Personagens'" [showLabel]="false" [icon]="'fa-solid fa-users'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'character'"
+            activeColor="sky-400"
             (click)="tabManager.setActiveSidebarSection('character')"></app-nav-button>
           <app-nav-button [label]="'Culturas'" [showLabel]="false" [icon]="'fa-solid fa-mortar-pestle'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'culture'"
+            activeColor="amber-400"
             (click)="tabManager.setActiveSidebarSection('culture')"></app-nav-button>
           <app-nav-button [label]="'Organizações'" [showLabel]="false" [icon]="'fa-solid fa-building'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'organization'"
+            activeColor="blue-400"
             (click)="tabManager.setActiveSidebarSection('organization')"></app-nav-button>
           <app-nav-button [label]="'Objetos'" [showLabel]="false" [icon]="'fa-solid fa-cube'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'object'"
+            activeColor="rose-400"
             (click)="tabManager.setActiveSidebarSection('object')"></app-nav-button>
           <app-nav-button [label]="'Relações'" [showLabel]="false" [icon]="'fa-solid fa-share-nodes'" size="xl" [fullWidth]="true" [direction]="'right'"
+            activeColor="green-400"
             (click)="tabManager.setActiveSidebarSection('relations')"></app-nav-button>
           <div class="border-b border-zinc-700 w-7.5"></div>
           <app-nav-button [label]="'Fichas de Personagem'" buttonType="pink" [showLabel]="false" [icon]="'fa-solid fa-address-card'" size="xl" [fullWidth]="true" [direction]="'right'"

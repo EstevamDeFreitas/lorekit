@@ -47,6 +47,7 @@ export class NavButtonComponent {
   route = input<string>();
   params = input<Params>({});
   active = input<boolean>(false);
+  activeColor = input<string>();
   icon = input<string>();
   size = input<TextSizeType>('base');
   direction = input<'down' | 'up' | 'left' | 'right'>('down');
@@ -68,14 +69,20 @@ export class NavButtonComponent {
     }
 
     const activeTypes = {
-      primary: 'text-yellow-300 font-bold',
-      secondary: 'text-zinc-800 font-bold',
-      white: 'text-zinc-50 font-bold',
-      danger: 'text-red-600 font-bold',
-      pink: 'text-pink-400 font-bold'
+      primary: 'text-yellow-300',
+      secondary: 'text-zinc-800',
+      white: 'text-zinc-50',
+      danger: 'text-red-600',
+      pink: 'text-pink-400'
     }
 
-    return base + ' ' + (isActive ? activeTypes[this.buttonType()] : types[this.buttonType()]) ;
+    let overrideColor = this.activeColor();
+
+    if(overrideColor){
+      overrideColor = 'text-'+overrideColor;
+    }
+
+    return base + ' ' + ` ${isActive? 'font-bold' : ''} ` + (isActive ? overrideColor ?? activeTypes[this.buttonType()] : types[this.buttonType()]) ;
   }
 
   getContentClasses(): string {
@@ -129,7 +136,13 @@ export class NavButtonComponent {
       pink: 'bg-pink-400'
     }
 
-    return base + ' ' + (isActive ? activeColors[this.buttonType()] : 'bg-white') + ' ' + positions[this.direction()];
+    let overrideColor = this.activeColor();
+
+    if(overrideColor){
+      overrideColor = 'bg-'+overrideColor;
+    }
+
+    return base + ' ' + (isActive ? overrideColor ?? activeColors[this.buttonType()] : 'bg-white') + ' ' + positions[this.direction()];
   }
 
 

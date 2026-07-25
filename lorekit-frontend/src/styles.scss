@@ -1,6 +1,14 @@
 @import "tailwindcss";
 @import '@angular/cdk/overlay-prebuilt.css';
 
+// Runtime-built classes cannot be inferred by the Tailwind scanner.
+// This safelist keeps the color combinations used by personalization,
+// buttons, and the palette selector available in the build.
+@source inline("{hover:,focus:,active:,}{bg,text,border}-{red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose,slate,gray,zinc,neutral,stone,olive,mist}-{50,{100..900..100},950}");
+@source inline("bg-{red,orange,amber,yellow,lime,green,emerald,teal,cyan,sky,blue,indigo,violet,purple,fuchsia,pink,rose,slate,gray,zinc,neutral,stone,olive,mist}-500/10");
+@source inline("text-{xs,sm,base,lg,xl,2xl,3xl,4xl,5xl,6xl,md}");
+@source inline("{h,w}-{1..12}");
+
 
 @font-face {
   font-family: 'Inter';
