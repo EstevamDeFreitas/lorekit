@@ -120,6 +120,10 @@
   cursor: crosshair;
 }
 
+.moodboard-content-selecting {
+  cursor: crosshair;
+}
+
 .moodboard-grid {
   position: absolute;
   inset: 0;
@@ -175,8 +179,26 @@ svg {
   white-space: pre-wrap;
 }
 
-.moodboard-html-selected {
+.moodboard-item-selected {
   outline: 1px solid rgb(250 204 21 / 0.3);
+}
+
+.moodboard-selection-marquee,
+.moodboard-group-selection {
+  position: absolute;
+  pointer-events: none;
+  border: 1px dashed var(--color-yellow-300);
+}
+
+.moodboard-selection-marquee {
+  z-index: 9100;
+  background: rgb(250 204 21 / 0.1);
+  box-shadow: inset 0 0 0 1px rgb(250 204 21 / 0.08);
+}
+
+.moodboard-group-selection {
+  z-index: 8990;
+  box-shadow: 0 0 0 1px rgb(250 204 21 / 0.12);
 }
 
 .moodboard-text,

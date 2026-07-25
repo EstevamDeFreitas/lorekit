@@ -1,7 +1,7 @@
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { Dialog, DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { NgClass, NgStyle } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, effect, inject, input, NgZone } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef, effect, inject, input, NgZone } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent } from "../../../components/button/button.component";
@@ -24,6 +24,9 @@ import { GreatMarkService } from '../../../services/great-mark.service';
 import { TimelineService } from '../../../services/timeline.service';
 import { GreatMarkEditComponent } from '../great-mark-edit/great-mark-edit.component';
 import { TimelineEventEditComponent } from '../timeline-event-edit/timeline-event-edit.component';
+import { EditorComponent } from '../../../components/editor/editor.component';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
+import { EntityChangeService } from '../../../services/entity-change.service';
 
 type EventSide = 'left' | 'right';
 
@@ -235,6 +238,7 @@ export class TimelineEventDocumentsDialogComponent {
     PersonalizationButtonComponent,
     SafeDeleteButtonComponent,
     TextAreaComponent,
+    EditorComponent
   ],
   template: `
     <div class="flex flex-col pb-20 @container">
@@ -250,7 +254,7 @@ export class TimelineEventDocumentsDialogComponent {
             (blur)="saveTimeline()"
           />
           <div class="flex items-center gap-2">
-            <app-button label="Novo Grande Marco" buttonType="secondary" size="sm" (click)="openGreatMarkDialog(getDefaultTailMarkOrder())"></app-button>
+            <app-icon-button title="Novo Grande Marco" icon="fa-solid fa-calendar-plus" buttonType="white" size="xl" (click)="openGreatMarkDialog(getDefaultTailMarkOrder())"></app-icon-button>
             <app-personalization-button [entityId]="timeline.id" [entityTable]="'Timeline'" [size]="'xl'" (onClose)="loadTimeline()"></app-personalization-button>
             <app-safe-delete-button [entityName]="timeline.name" [entityId]="timeline.id" [entityTable]="'Timeline'" [size]="'xl'"></app-safe-delete-button>
           </div>
@@ -258,28 +262,13 @@ export class TimelineEventDocumentsDialogComponent {
       </div>
 
       <div class="mt-4 grid grid-cols-1 @4xl:grid-cols-[22rem_1fr] gap-6 items-start">
-        <div class="rounded-md border border-zinc-800 bg-zinc-900 p-4 sticky top-10 flex flex-col gap-4">
+        <div class="rounded-md border border-zinc-800 bg-zinc-925 p-4  sticky top-10 flex flex-col gap-4">
           <div>
-            <h3 class="text-sm uppercase tracking-[0.2em] text-zinc-500">Resumo</h3>
-            @if (timeline.ParentWorld) {
-              <div class="mt-3 inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-1 text-sm">
-                <i class="fa-solid fa-earth text-zinc-400"></i>
-                <span>{{ timeline.ParentWorld.name }}</span>
-              </div>
-            }
-            @else {
-              <div class="mt-3 inline-flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-1 text-sm">
-                <i class="fa-solid fa-globe text-zinc-400"></i>
-                <span>Timeline global</span>
-              </div>
-            }
+            <h3 class="text-sm text-zinc-500">Resumo</h3>
           </div>
 
-          <!-- <app-text-area label="Conceito" [(value)]="timeline.concept" height="h-24"></app-text-area> -->
-          <app-text-area label="Descrição" [(value)]="timeline.description" height="h-40"></app-text-area>
-
-          <div class="flex justify-end">
-            <app-button label="Salvar detalhes" buttonType="primary" size="sm" (click)="saveTimeline()"></app-button>
+          <div class="p-1 rounded-lg border border-zinc-800  ">
+            <app-editor [entityId]="timeline.id" docTitle="Descrição" entityTable="Timeline" [entityName]="timeline.name" [document]="timeline.description || ''" (saveDocument)="timelineDescriptionChange($event, 'description')" class="w-full"></app-editor>
           </div>
         </div>
 
@@ -494,6 +483,8 @@ export class TimelineEditComponent {
   private readonly MARK_SPACING = 100000;
   private readonly EVENT_SPACING = 100;
 
+  private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 500);
+
   dialogRef = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
 
@@ -515,6 +506,8 @@ export class TimelineEditComponent {
   public readonly getPersonalizationValue = getPersonalizationValue;
   public readonly getTextClass = getTextClass;
   private zone = inject(NgZone);
+
+  private entityChangeService = inject(EntityChangeService);
 
   readonly timelineId = computed(() => {
     const inputId = this.timelineIdInput();
@@ -564,12 +557,23 @@ export class TimelineEditComponent {
     this.buildSections();
   }
 
+  timelineDescriptionChange($event: any, field: keyof Timeline){
+    (this.timeline[field] as any) = JSON.stringify($event);
+
+    this.saveTimeline();
+  }
+
   saveTimeline() {
+
     if (!this.timeline.id || !this.timeline.name.trim()) {
       return;
     }
 
-    this.timelineService.saveTimeline(this.timeline, this.timeline.ParentWorld?.id || null);
+    this.saveTask.schedule(() => {
+      this.timelineService.saveTimeline(this.timeline, this.timeline.ParentWorld?.id || null);
+      this.entityChangeService.notifySave('Timeline', this.timeline.id);
+    });
+
   }
 
   buildSections() {

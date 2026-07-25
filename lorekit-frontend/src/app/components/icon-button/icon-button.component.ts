@@ -5,7 +5,9 @@ import { RouterLink } from '@angular/router';
 @Component({
   selector: 'app-icon-button',
   imports: [NgClass, RouterLink],
-  template: `<button [ngClass]="buttonClasses" [routerLink]="this.route()" [title]="title()" [disabled]="disabled()"><i [ngClass]="icon()"></i></button>`,
+  template: `<button [ngClass]="buttonClasses" [routerLink]="this.route()" [title]="title()" [disabled]="disabled()">
+  <i [ngClass]="icon()"></i>
+  </button>`,
   styleUrl: './icon-button.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -18,9 +20,9 @@ export class IconButtonComponent {
   route = input<string>();
 
   get buttonClasses(): string {
-    const base = 'rounded-md font-medium focus:outline-none transition text-' + this.size();
+    const base = 'rounded-md relative font-medium focus:outline-none transition text-' + this.size();
 
-    const padding = this.size() === 'xss' ? 'px-1 py-0.5' : 'px-2 py-1';
+    const size = this.getSize(this.size());
 
     let currentTypeStyle = "";
 
@@ -35,7 +37,7 @@ export class IconButtonComponent {
         currentTypeStyle = 'bg-zinc-50' + (this.disabled() ? ' text-zinc-600' : ' text-zinc-900 ');
         break;
       case 'danger':
-        currentTypeStyle = 'bg-red-400' + (this.disabled() ? ' text-zinc-600' : ' text-white ');
+        currentTypeStyle = 'bg-red-500' + (this.disabled() ? ' text-zinc-600' : ' text-white ');
         break;
       case 'primaryActive':
         currentTypeStyle = (this.disabled() ? ' text-zinc-600' : ' text-yellow-600');
@@ -49,6 +51,25 @@ export class IconButtonComponent {
 
     }
 
-    return `${base} ${padding} ${currentTypeStyle} ${this.disabled() ? ' cursor-not-allowed' : ' cursor-pointer hover:brightness-85 active:brightness-70'}`;
+    return `${base} ${size} ${currentTypeStyle} ${this.disabled() ? ' cursor-not-allowed' : ' cursor-pointer hover:brightness-85 active:brightness-70'}`;
+  }
+
+  getSize(key:string) : string{
+    switch(key){
+      case 'xs':
+        return 'h-6 w-6';
+      case 'sm':
+        return 'h-6.5 w-6.5';
+      case 'base':
+        return 'h-7 w-7';
+      case 'lg':
+        return 'h-7.5 w-7.5';
+      case 'xl':
+        return 'h-8 w-8';
+      case '2xl':
+        return 'h-9 w-9';
+      default:
+        return 'h-6 w-6';
+    }
   }
 }

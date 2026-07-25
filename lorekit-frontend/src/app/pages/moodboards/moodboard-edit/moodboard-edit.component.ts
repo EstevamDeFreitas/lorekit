@@ -38,7 +38,7 @@ import { WorldStateService } from '../../../services/world-state.service';
 import { FLUSH_PENDING_SAVES_EVENT } from '../../../utils/pending-save-event';
 
 type MoodboardTool = 'select' | 'text' | 'draw' | MoodboardShapeType;
-type DragMode = 'none' | 'pan' | 'item' | 'resize' | 'rotate' | 'pendingCreate' | 'create' | 'endpoint' | 'draw';
+type DragMode = 'none' | 'pan' | 'item' | 'resize' | 'rotate' | 'pendingCreate' | 'create' | 'endpoint' | 'draw' | 'marquee';
 type ResizeHandle = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 type LineEndpoint = 'start' | 'end';
 
@@ -60,6 +60,11 @@ type DocumentPreviewBlock = {
 type CanvasPoint = {
   x: number;
   y: number;
+};
+
+type CanvasRect = CanvasPoint & {
+  width: number;
+  height: number;
 };
 
 type DrawingGeometry = {
@@ -143,6 +148,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   readonly moodboard = signal<Moodboard>(new Moodboard());
   readonly items = signal<MoodboardCanvasItem[]>([]);
   readonly selectedItemId = signal('');
+  readonly selectedItemIds = signal<readonly string[]>([]);
   readonly editingItemId = signal('');
   readonly activeTool = signal<MoodboardTool>('select');
   readonly zoom = signal(0.85);
@@ -155,6 +161,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   readonly entityTableFilter = signal('');
   readonly entityResults = signal<MoodboardEntitySearchResult[]>([]);
   readonly drawingPreview = signal<DrawingPreview | null>(null);
+  readonly selectionMarquee = signal<CanvasRect | null>(null);
 
   readonly tableOptions = [
     { value: '', label: 'Todos' },
@@ -172,9 +179,35 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     [...this.items()].sort((a, b) => (a.item.index ?? 0) - (b.item.index ?? 0))
   );
 
-  readonly selectedItem = computed(() =>
-    this.items().find(view => view.item.id === this.selectedItemId()) || null
-  );
+  readonly selectedItem = computed(() => {
+    if (this.selectedItemIds().length !== 1) {
+      return null;
+    }
+
+    return this.items().find(view => view.item.id === this.selectedItemId()) || null;
+  });
+
+  readonly groupSelectionBounds = computed(() => {
+    const selectedIds = new Set(this.selectedItemIds());
+    if (selectedIds.size < 2) {
+      return null;
+    }
+
+    const bounds = this.items()
+      .filter(view => selectedIds.has(view.item.id))
+      .map(view => this.itemBounds(view));
+
+    if (bounds.length < 2) {
+      return null;
+    }
+
+    const left = Math.min(...bounds.map(rect => rect.x));
+    const top = Math.min(...bounds.map(rect => rect.y));
+    const right = Math.max(...bounds.map(rect => rect.x + rect.width));
+    const bottom = Math.max(...bounds.map(rect => rect.y + rect.height));
+
+    return { x: left, y: top, width: right - left, height: bottom - top };
+  });
 
   readonly canvasTransform = computed(() =>
     `translate(${this.panX()}px, ${this.panY()}px) scale(${this.zoom()})`
@@ -184,6 +217,9 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   private dragState: DragState = this.emptyDragState();
   private saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private drawingPoints: CanvasPoint[] = [];
+  private marqueeBaseSelection: readonly string[] = [];
+  private draggedItemIds: readonly string[] = [];
+  private dragItemStartPositions = new Map<string, CanvasPoint>();
   private removeMouseMove?: () => void;
   private removeMouseUp?: () => void;
   private removeKeyDown?: () => void;
@@ -232,7 +268,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.activeTool.set(tool);
 
     if (tool === 'draw') {
-      this.selectedItemId.set('');
+      this.clearSelection();
       this.editingItemId.set('');
     }
   }
@@ -293,10 +329,34 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   private selectItem(view: MoodboardCanvasItem): void {
-    this.selectedItemId.set(view.item.id);
+    this.setSelectedItems([view.item.id], view.item.id);
+  }
 
-    this.fillColor.set(view.config.fill === 'transparent' ? DEFAULT_SHAPE_FILL : (view.config.fill || DEFAULT_SHAPE_FILL));
-    this.strokeColor.set(view.config.stroke || DEFAULT_SHAPE_STROKE);
+  isItemSelected(id: string): boolean {
+    return this.selectedItemIds().includes(id);
+  }
+
+  private setSelectedItems(ids: readonly string[], primaryId = ''): void {
+    const availableIds = new Set(this.items().map(view => view.item.id));
+    const validIds = [...new Set(ids)].filter(id => availableIds.has(id));
+    const resolvedPrimaryId = validIds.includes(primaryId) ? primaryId : (validIds[0] || '');
+
+    this.selectedItemIds.set(validIds);
+    this.selectedItemId.set(resolvedPrimaryId);
+
+    const primary = this.items().find(view => view.item.id === resolvedPrimaryId);
+    if (primary) {
+      this.fillColor.set(primary.config.fill === 'transparent' ? DEFAULT_SHAPE_FILL : (primary.config.fill || DEFAULT_SHAPE_FILL));
+      this.strokeColor.set(primary.config.stroke || DEFAULT_SHAPE_STROKE);
+    }
+
+    this.cdr.markForCheck();
+  }
+
+  private clearSelection(): void {
+    this.selectedItemIds.set([]);
+    this.selectedItemId.set('');
+    this.selectionMarquee.set(null);
   }
 
   updateMoodboardName(name: string): void {
@@ -341,8 +401,52 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.selectedItemId.set('');
+    if (tool === 'select') {
+      event.preventDefault();
+      this.editingItemId.set('');
+      this.startMarqueeSelection(point, event);
+      return;
+    }
+
+    this.clearSelection();
     this.editingItemId.set('');
+  }
+
+  private startMarqueeSelection(point: CanvasPoint, event: MouseEvent): void {
+    const additiveSelection = event.shiftKey || event.ctrlKey || event.metaKey;
+    this.marqueeBaseSelection = additiveSelection ? this.selectedItemIds() : [];
+    this.setSelectedItems(this.marqueeBaseSelection);
+    this.selectionMarquee.set({ x: point.x, y: point.y, width: 0, height: 0 });
+    this.dragState = {
+      ...this.emptyDragState(),
+      mode: 'marquee',
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startCanvasX: point.x,
+      startCanvasY: point.y,
+    };
+  }
+
+  private updateMarqueeSelection(point: CanvasPoint): void {
+    const left = Math.min(this.dragState.startCanvasX, point.x);
+    const top = Math.min(this.dragState.startCanvasY, point.y);
+    const rect = {
+      x: left,
+      y: top,
+      width: Math.abs(point.x - this.dragState.startCanvasX),
+      height: Math.abs(point.y - this.dragState.startCanvasY),
+    };
+
+    this.selectionMarquee.set(rect);
+    const selectedIds = new Set(this.marqueeBaseSelection);
+
+    for (const view of this.items()) {
+      if (this.rectsIntersect(rect, this.itemBounds(view))) {
+        selectedIds.add(view.item.id);
+      }
+    }
+
+    this.setSelectedItems([...selectedIds]);
   }
 
   onCanvasDoubleClick(event: MouseEvent): void {
@@ -374,11 +478,32 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.selectItem(view);
+    const additiveSelection = event.shiftKey || event.ctrlKey || event.metaKey;
+    const wasSelected = this.isItemSelected(view.item.id);
+
+    if (additiveSelection) {
+      const nextIds = wasSelected
+        ? this.selectedItemIds().filter(id => id !== view.item.id)
+        : [...this.selectedItemIds(), view.item.id];
+      this.setSelectedItems(nextIds, wasSelected ? '' : view.item.id);
+
+      if (wasSelected) {
+        return;
+      }
+    } else if (!wasSelected) {
+      this.selectItem(view);
+    }
 
     if (this.editingItemId() === view.item.id || this.activeTool() !== 'select') {
       return;
     }
+
+    this.draggedItemIds = this.selectedItemIds();
+    this.dragItemStartPositions = new Map(
+      this.items()
+        .filter(item => this.draggedItemIds.includes(item.item.id))
+        .map(item => [item.item.id, { x: item.item.posX ?? 0, y: item.item.posY ?? 0 }])
+    );
 
     const point = this.clientToCanvasPoint(event.clientX, event.clientY);
     this.dragState = {
@@ -567,43 +692,53 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   deleteSelected(): void {
-    const id = this.selectedItemId();
-    if (!id) {
+    const ids = this.selectedItemIds();
+    if (!ids.length) {
       return;
     }
 
-    this.saveTimers.get(id) && clearTimeout(this.saveTimers.get(id));
-    this.saveTimers.delete(id);
-    this.moodboardService.deleteMoodboardItem(id);
-    this.items.update(items => items.filter(view => view.item.id !== id));
-    this.selectedItemId.set('');
+    const selectedIds = new Set(ids);
+    for (const id of ids) {
+      const timer = this.saveTimers.get(id);
+      if (timer) {
+        clearTimeout(timer);
+      }
+      this.saveTimers.delete(id);
+      this.moodboardService.deleteMoodboardItem(id);
+    }
+
+    this.items.update(items => items.filter(view => !selectedIds.has(view.item.id)));
+    this.clearSelection();
     this.editingItemId.set('');
   }
 
   bringSelectedToFront(): void {
-    const id = this.selectedItemId();
-    if (!id) {
+    const selectedIds = new Set(this.selectedItemIds());
+    if (!selectedIds.size) {
       return;
     }
 
     const nextIndex = this.nextIndex();
-    this.updateItem(id, view => ({
-      ...view,
-      item: { ...view.item, index: nextIndex },
-    }), true);
+    this.sortedItems()
+      .filter(view => selectedIds.has(view.item.id))
+      .forEach((view, offset) => this.updateItem(view.item.id, current => ({
+        ...current,
+        item: { ...current.item, index: nextIndex + offset },
+      }), true));
   }
 
   sendSelectedToBack(): void {
-    const id = this.selectedItemId();
-    if (!id) {
+    const selectedIds = new Set(this.selectedItemIds());
+    if (!selectedIds.size) {
       return;
     }
 
     const minIndex = Math.min(0, ...this.items().map(view => view.item.index ?? 0));
-    this.updateItem(id, view => ({
-      ...view,
-      item: { ...view.item, index: minIndex - 1 },
-    }), true);
+    const selected = this.sortedItems().filter(view => selectedIds.has(view.item.id));
+    selected.forEach((view, offset) => this.updateItem(view.item.id, current => ({
+      ...current,
+      item: { ...current.item, index: minIndex - selected.length + offset },
+    }), true));
   }
 
   layerZIndex(view: MoodboardCanvasItem): number {
@@ -871,6 +1006,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.moodboard.set(moodboard);
     this.worldId = this.moodboardService.getMoodboardWorldId(id) || this.worldStateService.getCurrentWorld()?.id || null;
     this.items.set((moodboard.MoodboardItems || []).map(item => this.toCanvasItem(item)));
+    this.clearSelection();
     this.tabManager.updateTabTitle(this.findActiveTabId(), moodboard.name || 'Moodboard');
     this.refreshEntities();
     this.cdr.markForCheck();
@@ -898,7 +1034,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
 
   private startDrawing(point: CanvasPoint, event: MouseEvent): void {
     event.preventDefault();
-    this.selectedItemId.set('');
+    this.clearSelection();
     this.editingItemId.set('');
     this.drawingPoints = [point];
     this.dragState = {
@@ -1112,6 +1248,33 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     }, true);
   }
 
+  private updateDraggedItems(dx: number, dy: number): void {
+    const draggedIds = new Set(this.draggedItemIds);
+
+    this.items.update(items => items.map(view => {
+      if (!draggedIds.has(view.item.id)) {
+        return view;
+      }
+
+      const start = this.dragItemStartPositions.get(view.item.id);
+      if (!start) {
+        return view;
+      }
+
+      return {
+        ...view,
+        item: {
+          ...view.item,
+          posX: Math.round(start.x + dx),
+          posY: Math.round(start.y + dy),
+        },
+      };
+    }));
+
+    this.draggedItemIds.forEach(id => this.scheduleSave(id));
+    this.cdr.markForCheck();
+  }
+
   private updateItem(id: string, updater: (view: MoodboardCanvasItem) => MoodboardCanvasItem, save: boolean): void {
     this.items.update(items => items.map(view => {
       if (view.item.id !== id) {
@@ -1203,6 +1366,11 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
 
     const point = this.clientToCanvasPoint(event.clientX, event.clientY);
 
+    if (state.mode === 'marquee') {
+      this.updateMarqueeSelection(point);
+      return;
+    }
+
     if (state.mode === 'draw') {
       this.updateDrawing(point);
       return;
@@ -1246,14 +1414,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     state.moved = true;
 
     if (state.mode === 'item') {
-      this.updateItem(state.itemId, current => ({
-        ...current,
-        item: {
-          ...current.item,
-          posX: Math.round(state.startItemX + dx),
-          posY: Math.round(state.startItemY + dy),
-        },
-      }), true);
+      this.updateDraggedItems(dx, dy);
       return;
     }
 
@@ -1285,6 +1446,14 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   private onWindowMouseUp(): void {
+    if (this.dragState.mode === 'marquee') {
+      this.selectionMarquee.set(null);
+      this.marqueeBaseSelection = [];
+      this.dragState = this.emptyDragState();
+      this.cdr.markForCheck();
+      return;
+    }
+
     if (this.dragState.mode === 'draw') {
       this.finishDrawing();
       return;
@@ -1295,10 +1464,16 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.dragState.mode !== 'none' && this.dragState.itemId) {
+    if (this.dragState.mode === 'item') {
+      for (const id of this.draggedItemIds) {
+        this.saveItemNow(id);
+      }
+    } else if (this.dragState.mode !== 'none' && this.dragState.itemId) {
       this.saveItemNow(this.dragState.itemId);
     }
 
+    this.draggedItemIds = [];
+    this.dragItemStartPositions.clear();
     this.dragState = this.emptyDragState();
   }
 
@@ -1321,7 +1496,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     }
 
     if (event.key === 'Escape') {
-      this.selectedItemId.set('');
+      this.clearSelection();
       this.activeTool.set('select');
       this.cdr.markForCheck();
     }
@@ -1397,6 +1572,30 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       x: (clientX - rect.left - this.panX()) / this.zoom(),
       y: (clientY - rect.top - this.panY()) / this.zoom(),
     };
+  }
+
+  private itemBounds(view: MoodboardCanvasItem): CanvasRect {
+    const x = view.item.posX ?? 0;
+    const y = view.item.posY ?? 0;
+    const width = this.itemWidth(view);
+    const height = this.itemHeight(view);
+    const radians = (view.config.rotation ?? 0) * Math.PI / 180;
+    const rotatedWidth = Math.abs(Math.cos(radians)) * width + Math.abs(Math.sin(radians)) * height;
+    const rotatedHeight = Math.abs(Math.sin(radians)) * width + Math.abs(Math.cos(radians)) * height;
+
+    return {
+      x: x + (width - rotatedWidth) / 2,
+      y: y + (height - rotatedHeight) / 2,
+      width: rotatedWidth,
+      height: rotatedHeight,
+    };
+  }
+
+  private rectsIntersect(first: CanvasRect, second: CanvasRect): boolean {
+    return first.x <= second.x + second.width
+      && first.x + first.width >= second.x
+      && first.y <= second.y + second.height
+      && first.y + first.height >= second.y;
   }
 
   private defaultCreatePoint(): { x: number; y: number } {

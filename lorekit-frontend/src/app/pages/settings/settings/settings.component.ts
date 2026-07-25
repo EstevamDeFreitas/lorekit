@@ -35,7 +35,7 @@ import { EventTypeService } from '../../../services/event-type.service';
   <div class="w-[60vw] h-[60vh] rounded-md border border-zinc-800">
 
     <div class="flex flex-row ">
-      <div class="w-75 h-[60vh] rounded-md border-e border-zinc-700 bg-zinc-900">
+      <div class="w-75 h-[60vh] rounded-s-md border-e border-zinc-700 bg-zinc-900">
         <h2 class="text-xl mb-6 p-4">Configurações</h2>
         <div class="flex flex-col gap-1">
           <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('general_settings')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'general_settings'}">

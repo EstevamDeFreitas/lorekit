@@ -124,6 +124,7 @@
         [class.moodboard-content-pannable]="canPanByDrag()"
         [class.moodboard-content-panning]="isCanvasPanning()"
         [class.moodboard-content-drawing]="activeTool() === 'draw' && !canPanByDrag()"
+        [class.moodboard-content-selecting]="selectionMarquee() !== null"
         [style.width.px]="canvasWidth"
         [style.height.px]="canvasHeight"
         [style.transform]="canvasTransform()"
@@ -154,10 +155,21 @@
           </div>
         }
 
+        @if (selectionMarquee(); as marquee) {
+          <div
+            class="moodboard-selection-marquee"
+            [style.left.px]="marquee.x"
+            [style.top.px]="marquee.y"
+            [style.width.px]="marquee.width"
+            [style.height.px]="marquee.height">
+          </div>
+        }
+
         @for (view of sortedItems(); track view.item.id) {
           @if (view.config.kind === 'shape') {
             <div
               class="moodboard-shape-layer"
+              [class.moodboard-item-selected]="isItemSelected(view.item.id)"
               [style.left.px]="view.item.posX || 0"
               [style.top.px]="view.item.posY || 0"
               [style.width.px]="itemWidth(view)"
@@ -233,7 +245,7 @@
           } @else {
             <div
               class="moodboard-html-item"
-              [class.moodboard-html-selected]="selectedItemId() === view.item.id"
+              [class.moodboard-item-selected]="isItemSelected(view.item.id)"
               [style.left.px]="view.item.posX || 0"
               [style.top.px]="view.item.posY || 0"
               [style.width.px]="itemWidth(view)"
@@ -377,6 +389,16 @@
               (blur)="saveEditableText($event, view)"
               (mousedown)="$event.stopPropagation()">{{ view.config.text }}</div>
           }
+        }
+
+        @if (groupSelectionBounds(); as group) {
+          <div
+            class="moodboard-group-selection"
+            [style.left.px]="group.x"
+            [style.top.px]="group.y"
+            [style.width.px]="group.width"
+            [style.height.px]="group.height">
+          </div>
         }
 
         @if (selectedItem(); as selected) {
