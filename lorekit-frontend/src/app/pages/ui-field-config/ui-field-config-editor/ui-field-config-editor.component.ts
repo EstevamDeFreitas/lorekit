@@ -33,7 +33,7 @@ interface SelectOptionItem {
   selector: 'app-ui-field-config-editor',
   imports: [NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent, InputComponent],
   template: `
-    <div class="p-4 md:p-6 flex flex-col gap-4 overflow-y-auto scrollbar-dark h-full">
+    <div class=" flex flex-col gap-4 overflow-y-auto scrollbar-dark h-full">
       <div class="flex flex-row items-center justify-between gap-3 border-b border-zinc-800 pb-4">
         <div>
           @if (scopeMode === 'template' && activeTemplateName) {
@@ -44,13 +44,13 @@ interface SelectOptionItem {
           <p class="text-sm text-zinc-400">Arraste campos para o grid e redimensione pelas bordas.</p>
         </div>
         @if (isDialogMode) {
-          <app-button label="Fechar" buttonType="secondary" size="xs" (click)="closeDialog()"></app-button>
+          <app-icon-button label="Fechar" icon="fa-solid fa-xmark" buttonType="secondary" size="base" (click)="closeDialog()"></app-icon-button>
         } @else {
           <app-button label="Voltar" buttonType="secondary" size="xs" [route]="backRoute"></app-button>
         }
       </div>
 
-      <div class="flex flex-wrap gap-4 items-end bg-zinc-900 p-3 rounded-lg border border-zinc-800">
+      <div class="flex flex-wrap gap-4 items-end bg-zinc-925 p-3 rounded-lg border border-zinc-800">
         <app-combo-box
           class="min-w-56"
           label="Escopo"
@@ -113,10 +113,10 @@ interface SelectOptionItem {
         <div class="flex flex-col items-end gap-1 ms-auto">
           <div class="flex flex-row gap-2">
             @if (scopeMode !== 'template') {
-              <app-button label="Padrao do Sistema" buttonType="secondary" size="xs" (click)="confirmResetToDefault()"></app-button>
-              <app-button label="Criar Template" buttonType="secondary" size="xs" (click)="toggleCreateTemplateForm()"></app-button>
+              <app-icon-button title="Padrão do Sistema" icon="fa-solid fa-computer" buttonType="secondary" size="base" (click)="confirmResetToDefault()"></app-icon-button>
+              <app-icon-button title="Criar Template" icon="fa-solid fa-bookmark" buttonType="secondary" size="base" (click)="toggleCreateTemplateForm()"></app-icon-button>
             }
-            <app-button label="Salvar Layout" buttonType="primary" size="xs" (click)="save()"></app-button>
+            <app-icon-button title="Salvar Layout" icon="fa-solid fa-floppy-disk" buttonType="primary" size="base" (click)="save()"></app-icon-button>
           </div>
 
           @if (showCreateTemplateForm) {
@@ -172,8 +172,8 @@ interface SelectOptionItem {
           </div>
         </div>
 
-        <div class="bg-zinc-900 rounded-lg border border-zinc-800 p-3 h-[65vh] overflow-y-auto scrollbar-dark flex flex-col min-h-0">
-          <div class="rounded-lg border border-zinc-800 bg-zinc-925 p-3 mb-3">
+        <div class="bg-zinc-925 rounded-lg border border-zinc-800 p-3 h-[65vh] overflow-y-auto scrollbar-dark flex flex-col min-h-0">
+          <div class="border-b border-zinc-800 bg-zinc-925 p-3 mb-6 pb-6">
             <div class="text-sm text-zinc-200 mb-2">Novo campo dinamico</div>
 
             <div class="flex flex-col gap-2">
@@ -233,7 +233,7 @@ interface SelectOptionItem {
           <div class="flex flex-col gap-2 pr-1 min-h-0 flex-1">
             @for (field of catalog; track field.token) {
               <div
-                class="catalog-item"
+                class="catalog-item relative"
                 [class.catalog-item--disabled]="isTokenPlaced(field.token)"
                 [attr.draggable]="!isTokenPlaced(field.token)"
                 (dragstart)="onCatalogDragStart($event, field.token)">
@@ -241,6 +241,12 @@ interface SelectOptionItem {
                   <span class="text-sm">{{ field.label }}</span>
                   <span class="text-[11px] text-zinc-400">{{ field.source }}{{ field.fieldType && field.fieldType !== 'text' ? ' · ' + field.fieldType : '' }}{{ field.isEditorField && field.fieldType === 'text' ? ' - editor' : '' }}</span>
                 </div>
+                @if (isTokenPlaced(field.token)){
+                  <div class="absolute top-1 right-1" >
+                    <p class="text-xs">Presente no Grid</p>
+                  </div>
+                }
+
               </div>
             }
           </div>

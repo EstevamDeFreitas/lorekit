@@ -35,19 +35,40 @@ import { EventTypeService } from '../../../services/event-type.service';
   <div class="w-[60vw] h-[60vh] rounded-md border border-zinc-800">
 
     <div class="flex flex-row ">
-      <div class="w-75 h-[60vh] p-4 border-e border-zinc-700 bg-zinc-900">
-        <h2 class="text-lg mb-4">Configurações</h2>
-        <div class="flex flex-col gap-2">
-          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('general_settings')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'general_settings'}">Configurações Gerais</a>
-          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('location_categories')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'location_categories'}">Categorias de Localidade</a>
-          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('organization_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'organization_types'}">Tipos de Organização</a>
-          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('object_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'object_types'}">Tipos de Objeto</a>
-          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('event_types')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'event_types'}">Tipos de Evento</a>
-          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('dynamic_fields')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'dynamic_fields'}">Campos Dinâmicos</a>
-          <a class="px-4 py-2 rounded-md text-md cursor-pointer hover:bg-zinc-800" (click)="selectTab('global_field_config')" [ngClass]="{'text-yellow-500 bg-yellow-300/10 font-bold': currentTab === 'global_field_config'}">Campos Globais</a>
+      <div class="w-75 h-[60vh] rounded-md border-e border-zinc-700 bg-zinc-900">
+        <h2 class="text-xl mb-6 p-4">Configurações</h2>
+        <div class="flex flex-col gap-1">
+          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('general_settings')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'general_settings'}">
+            <p>Configurações Gerais</p>
+            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'general_settings','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'general_settings' }"></div>
+            </a>
+          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('location_categories')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'location_categories'}">
+            <p>Categorias de Localidade</p>
+            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'location_categories','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'location_categories'}"></div>
+            </a>
+          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('organization_types')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'organization_types'}">
+            <p>Tipos de Organização</p>
+            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'organization_types','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'organization_types'}"></div>
+            </a>
+          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('object_types')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'object_types'}">
+            <p>Tipos de Objeto</p>
+            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'object_types','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'object_types'}"></div>
+            </a>
+          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('event_types')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'event_types'}">
+            <p>Tipos de Evento</p>
+            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'event_types','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'event_types'}"></div>
+            </a>
+          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('dynamic_fields')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'dynamic_fields'}">
+            <p>Campos Dinâmicos</p>
+            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'dynamic_fields','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'dynamic_fields'}"></div>
+            </a>
+          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('global_field_config')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'global_field_config'}">
+            <p>Campos Globais</p>
+            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'global_field_config','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'global_field_config'}"></div>
+            </a>
         </div>
       </div>
-      <div class="flex-1 p-4 h-[60vh] bg-zinc-900 overflow-y-auto scrollbar-dark">
+      <div class="flex-1 p-4 h-[60vh] bg-zinc-925 overflow-y-auto rounded-md scrollbar-dark">
         @switch (currentTab) {
           @case ('location_categories') {
             <div>
@@ -64,7 +85,7 @@ import { EventTypeService } from '../../../services/event-type.service';
                   (onSave)="createCategory($event)"
                   ></app-button>
               </div>
-              <div class="border border-zinc-700 rounded-md bg-zinc-900">
+              <div class=" rounded-md ">
                 @for (item of locationCategories; track item.id) {
                   <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
                     <p>{{item.name}}</p>
@@ -127,7 +148,7 @@ import { EventTypeService } from '../../../services/event-type.service';
                   (onSave)="createOrganizationType($event)"
                   ></app-button>
               </div>
-              <div class="border border-zinc-700 rounded-md bg-zinc-900">
+              <div class=" rounded-md ">
                 @for (item of organizationTypes; track item.id) {
                   <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
                     <p>{{item.name}}</p>
@@ -169,7 +190,7 @@ import { EventTypeService } from '../../../services/event-type.service';
                   (onSave)="createObjectType($event)"
                   ></app-button>
               </div>
-              <div class="border border-zinc-700 rounded-md bg-zinc-900">
+              <div class=" rounded-md ">
                 @for (item of objectTypes; track item.id) {
                   <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
                     <p>{{item.name}}</p>
@@ -211,7 +232,7 @@ import { EventTypeService } from '../../../services/event-type.service';
                   (onSave)="createEventType($event)"
                   ></app-button>
               </div>
-              <div class="border border-zinc-700 rounded-md bg-zinc-900">
+              <div class="rounded-md ">
                 @for (item of eventTypes; track item.id) {
                   <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
                     <p>{{item.name}}</p>

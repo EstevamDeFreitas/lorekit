@@ -1,8 +1,8 @@
 .grid-surface {
   position: relative;
-  border: 1px solid #3f3f46;
+  border: 1px solid var(--color-zinc-900);
   border-radius: 0.75rem;
-  background-color: #18181b;
+  background-color: var(--color-zinc-950);
   background-image:
     linear-gradient(to right, rgba(63, 63, 70, 0.5) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(63, 63, 70, 0.5) 1px, transparent 1px);
@@ -10,9 +10,9 @@
 
 .layout-item {
   position: absolute;
-  border: 1px solid #10b981;
+  border: 1px solid var(--color-yellow-400);
   border-radius: 0.5rem;
-  background: rgba(16, 185, 129, 0.1);
+  background: oklch(from var(--color-yellow-400) l c h / 0.3);
   overflow: hidden;
   cursor: move;
 }
@@ -23,7 +23,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.35rem 0.5rem;
-  background: rgba(16, 185, 129, 0.2);
+  background: oklch(from var(--color-yellow-400) l c h / 0.2);
   color: #ecfdf5;
   font-size: 12px;
 }
@@ -44,16 +44,18 @@
 }
 
 .catalog-item {
-  border: 1px solid #3f3f46;
+  border: 1px solid var(--color-yellow-400);
   border-radius: 0.5rem;
   padding: 0.5rem;
-  background: #27272a;
+  background: oklch(from var(--color-yellow-400) l c h / 0.3);
   cursor: grab;
 }
 
 .catalog-item--disabled {
   opacity: 0.45;
   cursor: default;
+  background: var(--color-zinc-900);
+  border: none !important;
 }
 
 .resize-handle-right,
@@ -84,7 +86,7 @@
   bottom: 0;
   width: 12px;
   height: 12px;
-  background: #10b981;
+  background: var(--color-yellow-400);
   border-top-left-radius: 3px;
   cursor: nwse-resize;
 }
