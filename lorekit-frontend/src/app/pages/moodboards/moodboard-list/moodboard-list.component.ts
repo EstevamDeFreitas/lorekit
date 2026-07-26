@@ -40,7 +40,6 @@ export class MoodboardListComponent implements OnInit {
   filteredMoodboardTreeNodes: TreeViewNode[] = [];
   availableWorlds: World[] = [];
   selectedWorldId = '';
-  manualWorldFilter = '';
   selectedMoodboardId = '';
   searchTerm = '';
   readonly canReparentMoodboard = (draggedId: string, newParentId: string | null) =>
@@ -52,9 +51,6 @@ export class MoodboardListComponent implements OnInit {
 
     this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       this.selectedWorldId = world?.id || '';
-      if (this.selectedWorldId) {
-        this.manualWorldFilter = '';
-      }
       this.loadMoodboards();
     });
 
@@ -62,8 +58,7 @@ export class MoodboardListComponent implements OnInit {
   }
 
   loadMoodboards(): void {
-    const activeWorldId = this.selectedWorldId || this.manualWorldFilter || null;
-    this.moodboards = this.moodboardService.getMoodboards(activeWorldId);
+    this.moodboards = this.moodboardService.getMoodboards(this.selectedWorldId || null);
     this.moodboardTreeNodes = buildTreeViewNodes(this.moodboards, moodboard => moodboard.name || 'Moodboard', moodboard => moodboard.ParentMoodboard?.id);
     this.filterMoodboards();
 
@@ -85,7 +80,7 @@ export class MoodboardListComponent implements OnInit {
       {
         key: 'world',
         label: 'Mundo',
-        value: this.selectedWorldId || this.manualWorldFilter || '',
+        value: this.selectedWorldId || '',
         options: this.availableWorlds,
         optionCompareProp: 'id',
         optionDisplayProp: 'name',
@@ -103,7 +98,7 @@ export class MoodboardListComponent implements OnInit {
 
     const child = this.moodboardService.saveMoodboard(
       new Moodboard('', name),
-      parent.ParentWorld?.id || this.selectedWorldId || this.manualWorldFilter || null
+      parent.ParentWorld?.id || this.selectedWorldId || null
     );
     this.entityHierarchyService.reparent('Moodboard', child.id, parent.id);
     this.loadMoodboards();
@@ -123,7 +118,7 @@ export class MoodboardListComponent implements OnInit {
       return;
     }
 
-    const worldId = this.selectedWorldId || this.manualWorldFilter || formData['world'] || null;
+    const worldId = this.selectedWorldId || formData['world'] || null;
     const moodboard = this.moodboardService.saveMoodboard(new Moodboard('', name), worldId);
     this.loadMoodboards();
     this.openMoodboard(moodboard.id);

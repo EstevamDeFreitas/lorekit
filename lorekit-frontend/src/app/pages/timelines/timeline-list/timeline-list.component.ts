@@ -27,11 +27,9 @@ import { WorldStateService } from '../../../services/world-state.service';
         <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
           <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
 
-            @if (!selectedWorldId) {
-              <div class="mb-4">
-                <app-combo-box class="w-full" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name" [(comboValue)]="manualWorldFilter" (comboValueChange)="onWorldSelect()"></app-combo-box>
-              </div>
-            }
+            <div class="mb-4">
+              <app-combo-box class="w-full" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name" [(comboValue)]="selectedWorldId" (comboValueChange)="onWorldSelect()"></app-combo-box>
+            </div>
 
             <div class="flex flex-row items-center gap-1 mb-4">
               <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus-within:border-white">
@@ -46,7 +44,7 @@ import { WorldStateService } from '../../../services/world-state.service';
               [allowCreate]="true"
               [useCustomCreate]="true"
               [dragEnabled]="!searchTerm.trim()"
-              [dragContextId]="'timeline-list:' + (selectedWorldId || manualWorldFilter || 'root')"
+              [dragContextId]="'timeline-list:' + (selectedWorldId || 'root')"
               [canReparent]="canReparentTimeline"
               [fallbackIcon]="'fa-timeline'"
               [createTitle]="'Criar Linha do Tempo'"
@@ -105,7 +103,6 @@ export class TimelineListComponent implements OnInit {
   searchTerm = '';
   availableWorlds: World[] = [];
   selectedWorldId = '';
-  manualWorldFilter = '';
   panelMode = input<boolean>(false);
   tabManager = inject(TabManagerService);
   showsidebar = true;
@@ -121,9 +118,6 @@ export class TimelineListComponent implements OnInit {
 
     this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       this.selectedWorldId = world?.id || '';
-      if (this.selectedWorldId) {
-        this.manualWorldFilter = '';
-      }
       this.loadTimelines();
     });
 
@@ -131,8 +125,7 @@ export class TimelineListComponent implements OnInit {
   }
 
   loadTimelines() {
-    const activeWorldId = this.selectedWorldId || this.manualWorldFilter || undefined;
-    this.timelines = this.timelineService.getTimelines(activeWorldId).sort((a, b) => a.name.localeCompare(b.name));
+    this.timelines = this.timelineService.getTimelines(this.selectedWorldId || undefined).sort((a, b) => a.name.localeCompare(b.name));
     this.timelineTreeNodes = buildTreeViewNodes(this.timelines, timeline => timeline.name, timeline => timeline.ParentTimeline?.id);
     this.filterTimelines();
 
@@ -167,7 +160,7 @@ export class TimelineListComponent implements OnInit {
   getFormFields(): FormField[] {
     return [
       { key: 'name', label: 'Nome', value: '' },
-      { key: 'world', label: 'Mundo', value: this.selectedWorldId || this.manualWorldFilter || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
+      { key: 'world', label: 'Mundo', value: this.selectedWorldId || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
     ];
   }
 
@@ -180,7 +173,7 @@ export class TimelineListComponent implements OnInit {
 
     const child = this.timelineService.saveTimeline(
       new Timeline('', name, ''),
-      parent.ParentWorld?.id || this.selectedWorldId || this.manualWorldFilter || null
+      parent.ParentWorld?.id || this.selectedWorldId || null
     );
     this.entityHierarchyService.reparent('Timeline', child.id, parent.id);
     this.loadTimelines();
@@ -201,7 +194,7 @@ export class TimelineListComponent implements OnInit {
       return;
     }
 
-    this.timelineService.saveTimeline(new Timeline('', name, ''), this.selectedWorldId || this.manualWorldFilter || formData['world'] || null);
+    this.timelineService.saveTimeline(new Timeline('', name, ''), this.selectedWorldId || formData['world'] || null);
     this.loadTimelines();
   }
 

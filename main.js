@@ -41,7 +41,15 @@ function registerIpc() {
     }
   });
   ipcMain.handle('write-file', async (_e, filePath, data) => {
-    await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+    const parentDirectory = path.dirname(filePath);
+    const driveRoot = path.parse(parentDirectory).root;
+
+    // On Windows, mkdir on an existing drive root (for example, B:\) can fail
+    // with EPERM. The root already exists, so only create directories below it.
+    if (parentDirectory !== driveRoot) {
+      await fs.promises.mkdir(parentDirectory, { recursive: true });
+    }
+
     await fs.promises.writeFile(filePath, Buffer.from(data));
     return true;
   });

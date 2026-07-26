@@ -21,7 +21,7 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
   selector: 'app-relation-graph',
   imports: [FormsModule, NgClass, SlicePipe, ButtonComponent, ComboBoxComponent, InputComponent, IconButtonComponent],
   template: `
-    <div class="flex flex-col gap-4 @container">
+    <div class="flex flex-col pt-2 gap-4 @container">
       <div class="flex flex-wrap items-end gap-3">
         <app-combo-box
           class="w-56"
