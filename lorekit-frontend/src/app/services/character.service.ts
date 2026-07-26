@@ -20,6 +20,7 @@ export class CharacterService {
       {"table": "Personalization", "firstOnly": true},
       {"table": "Image", "firstOnly": false},
       {"table": "World", "firstOnly":true, "isParent": true},
+      {"table": "Character", "firstOnly":true, "isParent": true},
       {"table": "Species", "firstOnly":true, "isParent": true},
       {"table": "IRPWVocation", "firstOnly":true, "isParent": true},
       {"table": "Location", "firstOnly":true, "isParent": true}
@@ -31,6 +32,7 @@ export class CharacterService {
       {"table": "Personalization", "firstOnly": true},
       {"table": "Image", "firstOnly": false},
       {"table": "World", "firstOnly":true, "isParent": true},
+      {"table": "Character", "firstOnly":true, "isParent": true},
       {"table": "Species", "firstOnly":true, "isParent": true},
       {"table": "IRPWVocation", "firstOnly":true, "isParent": true},
       {"table": "Location", "firstOnly":true, "isParent": true}

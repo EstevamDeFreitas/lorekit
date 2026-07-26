@@ -20,6 +20,7 @@ export class TimelineService {
       { table: 'Personalization', firstOnly: true },
       { table: 'Image', firstOnly: false },
       { table: 'World', firstOnly: true, isParent: true },
+      { table: 'Timeline', firstOnly: true, isParent: true },
     ], existsRelation);
   }
 
@@ -28,6 +29,7 @@ export class TimelineService {
       { table: 'Personalization', firstOnly: true },
       { table: 'Image', firstOnly: false },
       { table: 'World', firstOnly: true, isParent: true },
+      { table: 'Timeline', firstOnly: true, isParent: true },
     ]);
   }
 

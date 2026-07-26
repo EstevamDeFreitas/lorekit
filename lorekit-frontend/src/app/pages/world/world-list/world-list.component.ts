@@ -13,52 +13,65 @@ import { IconButtonComponent } from '../../../components/icon-button/icon-button
 import { TabManagerService } from '../../../services/tab-manager.service';
 
 import { Dialog } from '@angular/cdk/dialog';
-import { ContextMenuOption } from '../../../models/context-menu-option.interface';
 import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
-import {
-  ContextMenuDirective
-} from '../../../directives/context-menu.directive';
 
+import { FormsModule } from '@angular/forms';
+import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { TreeViewListComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
+import { buildFlatTreeViewNodes, filterFlatTreeViewNodes, TreeViewNode } from '../../../components/entity-lateral-menu/tree-view.models';
 @Component({
   selector: 'app-world-list',
-  imports: [CommonModule, IconButtonComponent, NgClass, OverlayModule, FormOverlayDirective,ContextMenuDirective],
+  imports: [CommonModule, FormsModule, IconButtonComponent, ComboBoxComponent, NgClass, OverlayModule, FormOverlayDirective, TreeViewListComponent],
   template: `
   <div class="flex flex-col h-full relative" >
     <div class="flex flex-row h-full gap-4">
       <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
         <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
-          <div class="flex flex-row justify-between mb-6">
+          <div>
             <h2 class="text-base mb-4">Mundos</h2>
-            <app-icon-button
-              size="sm"
-              buttonType="secondary"
-              icon="fa-solid fa-plus"
-              appFormOverlay
-              [title]="'Criar Mundo'"
-              [fields]="getFormFields()"
-              (onSave)="createWorld($event)"
-              ></app-icon-button>
           </div>
-          <div class="flex flex-row items-center gap-1 mb-4 w-full">
-            <div class="flex flex-col gap-3 w-full">
-              @for (world of worlds; track world.id) {
-                <div class="grid w-full" style="grid-template-columns: 1fr 1.5rem;"
-                  appContextMenu
-                  [options]="menuOptions"
-                  [contextId]="world.id"
-                (click)="selectEntity(world.id)">
-                  <button  class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2" [ngClass]="[getTextClass(getPersonalizationValue(world, 'color')), currentWorldId === world.id ? 'text-yellow-300' : 'text-zinc-400']" >
-                    <div class="flex flex-row items-center">
-                      <i class="fa-solid " [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-earth'"></i>
-                    </div>
-                    <h2 [title]="world.name" class=" text-xs">{{ world.name }}</h2>
-                  </button>
-                  <app-icon-button [title]="currentWorldId === world.id ? 'Mundo Padrão' : 'Definir como Mundo Padrão'" size="xs" [buttonType]="currentWorldId === world.id ? 'primary' : 'secondary'" icon="fa-solid fa-star" (click)="setWorldAsDefault(world)"></app-icon-button>
-                </div>
-              }
-            </div>
 
+          <div class="mb-4">
+            <app-combo-box
+              class="w-full"
+              label="Filtro de mundo"
+              [items]="worlds"
+              compareProp="id"
+              displayProp="name"
+              [clearable]="true"
+              [(comboValue)]="selectedWorldFilter"
+              (comboValueChange)="filterWorlds()">
+            </app-combo-box>
           </div>
+
+          <div class="flex flex-row items-center gap-1 mb-4">
+            <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus-within:border-white">
+              <div class="w-8 h-5 flex flex-row justify-center items-center"><i class="fa fa-search"></i></div>
+              <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="filterWorlds()" placeholder="Pesquisar..." class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10" />
+            </div>
+            @if (selectedEntityId) {
+              <app-icon-button
+                size="sm"
+                [buttonType]="currentWorldId === selectedEntityId ? 'primary' : 'secondary'"
+                icon="fa-solid fa-star"
+                [title]="currentWorldId === selectedEntityId ? 'Desfixar mundo padrão' : 'Definir como mundo padrão'"
+                (click)="setSelectedWorldAsDefault()">
+              </app-icon-button>
+            }
+            <app-icon-button size="sm" buttonType="secondary" icon="fa-solid fa-plus" appFormOverlay [title]="'Criar Mundo'" [fields]="getFormFields()" (onSave)="createWorld($event)"></app-icon-button>
+          </div>
+
+          <app-tree-view-list
+            [openInDialog]="false"
+            [allowCreate]="false"
+            [dragEnabled]="false"
+            [fallbackIcon]="'fa-earth'"
+            [emptyChildrenLabel]="'Nenhum mundo encontrado'"
+            (onDocumentSelect)="selectEntity($event.id)"
+            (onDelete)="deleteWorld($event)"
+            (onDocumentNewTab)="openNewTabEntity($event)"
+            [documentArray]="filteredWorldTreeNodes">
+          </app-tree-view-list>
         </div>
       </div>
         @if (!panelMode()) {
@@ -154,10 +167,6 @@ export class WorldListComponent {
 
   safeDeleteDialog = inject(Dialog);
 
-  menuOptions : ContextMenuOption[] = [
-    { label: 'Abrir nova guia', action: (id: string) => this.openNewTabEntity(id), customIcon: 'fa-arrow-up-right-from-square' },
-    { label: 'Excluir', action: (id: string) => this.deleteWorld(id), customClass: 'text-red-500', customIcon: 'fa-trash' },
-  ];
 
   deleteWorld(worldId: string) {
 
@@ -175,6 +184,10 @@ export class WorldListComponent {
   }
 
   worlds: World[] = [];
+  worldTreeNodes: TreeViewNode[] = [];
+  filteredWorldTreeNodes: TreeViewNode[] = [];
+  selectedWorldFilter = '';
+  searchTerm = '';
 
   currentWorldId = '';
   selectedEntityId = '';
@@ -196,8 +209,24 @@ export class WorldListComponent {
 
   loadWorlds() {
     this.worlds = this.worldService.getWorlds().sort((a, b) => a.name.localeCompare(b.name));
+    this.worldTreeNodes = buildFlatTreeViewNodes(this.worlds, world => world.name);
+    this.filterWorlds();
   }
 
+  filterWorlds() {
+    const worldNodes = this.selectedWorldFilter
+      ? this.worldTreeNodes.filter(node => node.id === this.selectedWorldFilter)
+      : this.worldTreeNodes;
+
+    this.filteredWorldTreeNodes = filterFlatTreeViewNodes(worldNodes, this.searchTerm);
+  }
+
+  setSelectedWorldAsDefault() {
+    const world = this.worlds.find(item => item.id === this.selectedEntityId);
+    if (world) {
+      this.setWorldAsDefault(world);
+    }
+  }
   onWorldSelected(worldId : string) {
     const world = this.worlds.find(w => w.id === worldId);
 

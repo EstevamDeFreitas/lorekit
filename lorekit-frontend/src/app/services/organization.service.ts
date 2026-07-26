@@ -18,6 +18,7 @@ export class OrganizationService {
       {"table": "Personalization", "firstOnly": true},
       {"table": "Image", "firstOnly": false},
       {"table": "World", "firstOnly":true, "isParent": true},
+      {"table": "Organization", "firstOnly":true, "isParent": true},
       {"table": "Location", "firstOnly":true, "isParent": true},
       {"table": "OrganizationType", "firstOnly":true}
     ]);
@@ -30,6 +31,7 @@ export class OrganizationService {
       {"table": "Personalization", "firstOnly": true},
       {"table": "Image", "firstOnly": false},
       {"table": "World", "firstOnly":true, "isParent": true},
+      {"table": "Organization", "firstOnly":true, "isParent": true},
       {"table": "Location", "firstOnly":true, "isParent": true},
       {"table": "OrganizationType", "firstOnly":true}
     ], existsRelation);

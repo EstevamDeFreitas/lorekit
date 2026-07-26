@@ -19,6 +19,7 @@ export class Character{
   appearance?: string | null;
 
   ParentWorld?:World | null;
+  ParentCharacter?: Character | null;
   ParentSpecies?:Specie | null;
   ParentIRPWVocation?: IrpwVocation | null;
   Images?: Image[];

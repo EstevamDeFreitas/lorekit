@@ -1,6 +1,7 @@
 import { CommonModule, NgClass } from '@angular/common';
 import { inject, DestroyRef, Component, input, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
@@ -15,31 +16,21 @@ import { getPersonalizationValue, getTextClass, getTextColorStyle } from '../../
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
 import { Dialog } from '@angular/cdk/dialog';
-import { ContextMenuOption } from '../../../models/context-menu-option.interface';
 import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
-import {
-  ContextMenuDirective
-} from '../../../directives/context-menu.directive';
 
+import { TreeViewListComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
+import { buildTreeViewNodes, filterTreeViewNodes, TreeViewNode, TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
+import { EntityHierarchyService } from '../../../services/entity-hierarchy.service';
 @Component({
   selector: 'app-culture-list',
-  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, ContextMenuDirective],
+  imports: [CommonModule, NgClass, FormsModule, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, TreeViewListComponent],
   template: `
     <div class="flex flex-col h-full relative">
       <div class="flex flex-row h-full gap-4">
         <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
           <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
-            <div class="flex flex-row justify-between mb-6">
+            <div>
               <h2 class="text-base mb-4">Culturas</h2>
-              <app-icon-button
-                size="sm"
-                buttonType="secondary"
-                icon="fa-solid fa-plus"
-                appFormOverlay
-                [title]="'Criar Cultura'"
-                [fields]="getFormFields()"
-                (onSave)="createCulture($event)">
-              </app-icon-button>
             </div>
 
             @if (!worldId()) {
@@ -56,28 +47,47 @@ import {
               </div>
             }
 
-            <div class="flex flex-col gap-3 w-full">
-              @for (culture of cultures; track culture.id) {
-                <button
-                  type="button"
-                  appContextMenu
-                  [options]="menuOptions"
-                  [contextId]="culture.id"
-                  class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
-                  [ngClass]="selectedCultureId === culture.id ? 'text-yellow-300' : 'text-zinc-400'"
-                  [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(culture, 'color'))}"
-                  (click)="selectCulture(culture.id)">
-                  <div class="flex flex-row items-center">
-                    <i class="fa-solid" [ngClass]="getPersonalizationValue(culture, 'icon') || 'fa-mortar-pestle'"></i>
-                  </div>
-                  <h2 [title]="culture.name" class="text-xs">{{ culture.name }}</h2>
-                </button>
-              }
-
-              @if (cultures.length === 0) {
-                <p class="text-xs text-zinc-500">Nenhuma cultura encontrada.</p>
-              }
+            <div class="flex flex-row items-center gap-1 mb-4">
+              <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus-within:border-white">
+                <div class="w-8 h-5 flex flex-row justify-center items-center">
+                  <i class="fa fa-search"></i>
+                </div>
+                <input
+                  type="text"
+                  [(ngModel)]="searchTerm"
+                  (ngModelChange)="filterCultures()"
+                  placeholder="Pesquisar..."
+                  class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10" />
+              </div>
+              <app-icon-button
+                size="sm"
+                buttonType="secondary"
+                icon="fa-solid fa-plus"
+                appFormOverlay
+                [title]="'Criar Cultura'"
+                [fields]="getFormFields()"
+                (onSave)="createCulture($event)">
+              </app-icon-button>
             </div>
+
+            <app-tree-view-list
+              [openInDialog]="false"
+              [allowCreate]="true"
+              [useCustomCreate]="true"
+              [dragEnabled]="!searchTerm.trim()"
+              [dragContextId]="'culture-list:' + (worldId() || selectedWorld || 'root')"
+              [canReparent]="canReparentCulture"
+              [fallbackIcon]="'fa-mortar-pestle'"
+              [createTitle]="'Criar Cultura'"
+              [createFieldLabel]="'Nome'"
+              [emptyChildrenLabel]="'Nenhuma cultura encontrada'"
+              (onDocumentSelect)="selectCulture($event.id)"
+              (onCreateChild)="createChildCulture($event)"
+              (onReparentRequested)="reparentCulture($event)"
+              (onDelete)="deleteCulture($event)"
+              (onDocumentNewTab)="openNewTabCulture($event)"
+              [documentArray]="filteredCultureTreeNodes">
+            </app-tree-view-list>
           </div>
         </div>
 
@@ -120,6 +130,7 @@ export class CultureListComponent implements OnInit {
   private locationService = inject(LocationService);
   private worldStateService = inject(WorldStateService);
   private entityChangeService = inject(EntityChangeService);
+  private entityHierarchyService = inject(EntityHierarchyService);
 
   worldId = input<string>();
   panelMode = input<boolean>(false);
@@ -128,6 +139,11 @@ export class CultureListComponent implements OnInit {
   availableLocations: Location[] = [];
   selectedWorld = '';
   cultures: Culture[] = [];
+  cultureTreeNodes: TreeViewNode[] = [];
+  filteredCultureTreeNodes: TreeViewNode[] = [];
+  searchTerm = '';
+  readonly canReparentCulture = (draggedId: string, newParentId: string | null) =>
+    this.entityHierarchyService.canReparent('Culture', draggedId, newParentId);
 
   selectedCultureId = '';
   showCultureEditor = false;
@@ -137,10 +153,6 @@ export class CultureListComponent implements OnInit {
 
   safeDeleteDialog = inject(Dialog);
 
-  menuOptions : ContextMenuOption[] = [
-    { label: 'Abrir nova guia', action: (id: string) => this.openNewTabCulture(id), customIcon: 'fa-arrow-up-right-from-square' },
-    { label: 'Excluir', action: (id: string) => this.deleteCulture(id), customClass: 'text-red-500', customIcon: 'fa-trash' },
-  ];
 
   deleteCulture(cultureId: string) {
 
@@ -198,6 +210,8 @@ export class CultureListComponent implements OnInit {
 
   getCultures() {
     this.cultures = this.cultureService.getCultures(this.worldId() || this.selectedWorld || null).sort((a, b) => a.name.localeCompare(b.name));
+    this.cultureTreeNodes = buildTreeViewNodes(this.cultures, item => item.name, item => item.ParentCulture?.id);
+    this.filterCultures();
 
     if (this.selectedCultureId && !this.cultures.some(culture => culture.id === this.selectedCultureId)) {
       this.selectedCultureId = '';
@@ -205,6 +219,9 @@ export class CultureListComponent implements OnInit {
     }
   }
 
+  filterCultures() {
+    this.filteredCultureTreeNodes = filterTreeViewNodes(this.cultureTreeNodes, this.searchTerm);
+  }
   onWorldSelect() {
     this.getAvailableLocations();
     this.getCultures();
@@ -270,6 +287,30 @@ export class CultureListComponent implements OnInit {
     }, 0);
   }
 
+  createChildCulture(event: { parentId: string, formData: Record<string, string> }) {
+    const name = event.formData['name']?.trim();
+    const parent = this.cultures.find(culture => culture.id === event.parentId);
+    if (!name || !parent) {
+      return;
+    }
+
+    const child = this.cultureService.saveCulture(
+      new Culture('', name, ''),
+      parent.ParentWorld?.id || this.worldId() || this.selectedWorld || null,
+      parent.ParentLocation?.id || null
+    ) as Culture;
+    this.entityHierarchyService.reparent('Culture', child.id, parent.id);
+    this.getCultures();
+  }
+
+  reparentCulture(event: TreeViewReparentRequest) {
+    try {
+      this.entityHierarchyService.reparent('Culture', event.draggedId, event.newParentId);
+      this.getCultures();
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Falha ao reorganizar a cultura.');
+    }
+  }
   createCulture(formData: Record<string, string>) {
     const name = formData['name']?.trim();
     if (!name) {

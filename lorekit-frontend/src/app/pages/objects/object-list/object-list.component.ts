@@ -1,6 +1,7 @@
 import { CommonModule, NgClass } from '@angular/common';
 import { inject, DestroyRef, Component, input, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
@@ -17,69 +18,55 @@ import { EntityChangeService } from '../../../services/entity-change.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
 
 import { Dialog } from '@angular/cdk/dialog';
-import { ContextMenuOption } from '../../../models/context-menu-option.interface';
 import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
-import {
-  ContextMenuDirective
-} from '../../../directives/context-menu.directive';
 
+import { TreeViewListComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
+import { buildTreeViewNodes, filterTreeViewNodes, TreeViewNode, TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
+import { EntityHierarchyService } from '../../../services/entity-hierarchy.service';
 @Component({
   selector: 'app-object-list',
-  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, ContextMenuDirective],
+  imports: [CommonModule, NgClass, FormsModule, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, TreeViewListComponent],
   template: `
     <div class="flex flex-col h-full relative">
       <div class="flex flex-row h-full gap-4">
         <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
           <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
-            <div class="flex flex-row justify-between mb-6">
+            <div>
               <h2 class="text-base mb-4">Objetos</h2>
-              <app-icon-button
-                size="sm"
-                buttonType="secondary"
-                icon="fa-solid fa-plus"
-                appFormOverlay
-                [title]="'Criar Objeto'"
-                [fields]="getFormFields()"
-                (onSave)="createObject($event)">
-              </app-icon-button>
             </div>
 
             @if (!worldId()) {
               <div class="mb-4">
-                <app-combo-box
-                  class="w-full"
-                  label="Filtro de mundo"
-                  [items]="availableWorlds"
-                  compareProp="id"
-                  displayProp="name"
-                  [(comboValue)]="selectedWorld"
-                  (comboValueChange)="onWorldSelect()">
-                </app-combo-box>
+                <app-combo-box class="w-full" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name" [(comboValue)]="selectedWorld" (comboValueChange)="onWorldSelect()"></app-combo-box>
               </div>
             }
 
-            <div class="flex flex-col gap-3 w-full">
-              @for (object of objects; track object.id) {
-                <button
-                  type="button"
-                  appContextMenu
-                  [options]="menuOptions"
-                  [contextId]="object.id"
-                  class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
-                  [ngClass]="selectedObjectId === object.id ? 'text-yellow-300' : 'text-zinc-400'"
-                  [ngStyle]="{'color':getTextColorStyle(getPersonalizationValue(object, 'color'))}"
-                  (click)="selectObject(object.id)">
-                  <div class="flex flex-row items-center">
-                    <i class="fa-solid" [ngClass]="getPersonalizationValue(object, 'icon') || 'fa-cube'"></i>
-                  </div>
-                  <h2 [title]="object.name" class="text-xs">{{ object.name }}</h2>
-                </button>
-              }
-
-              @if (objects.length === 0) {
-                <p class="text-xs text-zinc-500">Nenhum objeto encontrado.</p>
-              }
+            <div class="flex flex-row items-center gap-1 mb-4">
+              <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus-within:border-white">
+                <div class="w-8 h-5 flex flex-row justify-center items-center"><i class="fa fa-search"></i></div>
+                <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="filterObjects()" placeholder="Pesquisar..." class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10" />
+              </div>
+              <app-icon-button size="sm" buttonType="secondary" icon="fa-solid fa-plus" appFormOverlay [title]="'Criar Objeto'" [fields]="getFormFields()" (onSave)="createObject($event)"></app-icon-button>
             </div>
+
+            <app-tree-view-list
+              [openInDialog]="false"
+              [allowCreate]="true"
+              [useCustomCreate]="true"
+              [dragEnabled]="!searchTerm.trim()"
+              [dragContextId]="'object-list:' + (worldId() || selectedWorld || 'root')"
+              [canReparent]="canReparentObject"
+              [fallbackIcon]="'fa-cube'"
+              [createTitle]="'Criar Objeto'"
+              [createFieldLabel]="'Nome'"
+              [emptyChildrenLabel]="'Nenhum objeto encontrado'"
+              (onDocumentSelect)="selectObject($event.id)"
+              (onCreateChild)="createChildObject($event)"
+              (onReparentRequested)="reparentObject($event)"
+              (onDelete)="deleteObject($event)"
+              (onDocumentNewTab)="openNewTabObject($event)"
+              [documentArray]="filteredObjectTreeNodes">
+            </app-tree-view-list>
           </div>
         </div>
 
@@ -123,6 +110,7 @@ export class ObjectListComponent implements OnInit {
   private locationService = inject(LocationService);
   private worldStateService = inject(WorldStateService);
   private entityChangeService = inject(EntityChangeService);
+  private entityHierarchyService = inject(EntityHierarchyService);
 
   worldId = input<string>();
   panelMode = input<boolean>(false);
@@ -132,16 +120,17 @@ export class ObjectListComponent implements OnInit {
   availableObjectTypes: ObjectType[] = [];
   selectedWorld = '';
   objects: WorldObject[] = [];
+  objectTreeNodes: TreeViewNode[] = [];
+  filteredObjectTreeNodes: TreeViewNode[] = [];
+  searchTerm = '';
+  readonly canReparentObject = (draggedId: string, newParentId: string | null) =>
+    this.entityHierarchyService.canReparent('Object', draggedId, newParentId);
   public getPersonalizationValue = getPersonalizationValue;
   public getTextClass = getTextClass;
   public getTextColorStyle = getTextColorStyle;
 
   safeDeleteDialog = inject(Dialog);
 
-  menuOptions : ContextMenuOption[] = [
-    { label: 'Abrir nova guia', action: (id: string) => this.openNewTabObject(id), customIcon: 'fa-arrow-up-right-from-square' },
-    { label: 'Excluir', action: (id: string) => this.deleteObject(id), customClass: 'text-red-500', customIcon: 'fa-trash' },
-  ];
 
   deleteObject(objectId: string) {
 
@@ -206,6 +195,8 @@ export class ObjectListComponent implements OnInit {
 
   getObjects() {
     this.objects = this.objectService.getObjects(this.worldId() || this.selectedWorld || null).sort((a, b) => a.name.localeCompare(b.name));
+    this.objectTreeNodes = buildTreeViewNodes(this.objects, item => item.name, item => item.ParentObject?.id);
+    this.filterObjects();
 
     if (this.selectedObjectId && !this.objects.some(object => object.id === this.selectedObjectId)) {
       this.selectedObjectId = '';
@@ -213,6 +204,9 @@ export class ObjectListComponent implements OnInit {
     }
   }
 
+  filterObjects() {
+    this.filteredObjectTreeNodes = filterTreeViewNodes(this.objectTreeNodes, this.searchTerm);
+  }
   onWorldSelect() {
     this.getAvailableLocations();
     this.getObjects();
@@ -279,6 +273,31 @@ export class ObjectListComponent implements OnInit {
     }, 0);
   }
 
+  createChildObject(event: { parentId: string, formData: Record<string, string> }) {
+    const name = event.formData['name']?.trim();
+    const parent = this.objects.find(object => object.id === event.parentId);
+    if (!name || !parent) {
+      return;
+    }
+
+    const child = this.objectService.saveObject(
+      new WorldObject('', name),
+      parent.ParentWorld?.id || this.worldId() || this.selectedWorld || null,
+      parent.ParentLocation?.id || null,
+      parent.ObjectType?.id || null
+    );
+    this.entityHierarchyService.reparent('Object', child.id, parent.id);
+    this.getObjects();
+  }
+
+  reparentObject(event: TreeViewReparentRequest) {
+    try {
+      this.entityHierarchyService.reparent('Object', event.draggedId, event.newParentId);
+      this.getObjects();
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Falha ao reorganizar o objeto.');
+    }
+  }
   createObject(formData: Record<string, string>) {
     const name = formData['name']?.trim();
     if (!name) {

@@ -1,78 +1,67 @@
+import { Dialog } from '@angular/cdk/dialog';
 import { CommonModule, NgClass } from '@angular/common';
-import { inject, DestroyRef, ChangeDetectionStrategy, Component, input, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { TreeViewListComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
+import { buildTreeViewNodes, filterTreeViewNodes, TreeViewNode, TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
+import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
 import { Timeline } from '../../../models/timeline.model';
 import { World } from '../../../models/world.model';
+import { EntityHierarchyService } from '../../../services/entity-hierarchy.service';
+import { TabManagerService } from '../../../services/tab-manager.service';
 import { TimelineService } from '../../../services/timeline.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
-import { TabManagerService } from '../../../services/tab-manager.service';
-import { ContextMenuOption } from '../../../models/context-menu-option.interface';
-import { Dialog } from '@angular/cdk/dialog';
-import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete.component';
-import {
-  ContextMenuDirective
-} from '../../../directives/context-menu.directive';
+
 @Component({
   selector: 'app-timeline-list',
   standalone: true,
-  imports: [CommonModule, NgClass, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, ContextMenuDirective],
+  imports: [CommonModule, NgClass, FormsModule, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, TreeViewListComponent],
   template: `
     <div class="flex flex-col h-full relative">
       <div class="flex flex-row h-full gap-4">
         <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
           <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
-            <div class="flex flex-row justify-between mb-6">
+            <div>
               <h2 class="text-base mb-4">Linhas do Tempo</h2>
-              <app-icon-button
-                size="sm"
-                buttonType="secondary"
-                icon="fa-solid fa-plus"
-                appFormOverlay
-                [title]="'Criar Linha do Tempo'"
-                [fields]="getFormFields()"
-                (onSave)="createTimeline($event)">
-              </app-icon-button>
             </div>
 
             @if (!selectedWorldId) {
               <div class="mb-4">
-                <app-combo-box
-                  class="w-full"
-                  label="Filtro de mundo"
-                  [items]="availableWorlds"
-                  compareProp="id"
-                  displayProp="name"
-                  [(comboValue)]="manualWorldFilter"
-                  (comboValueChange)="onWorldSelect()">
-                </app-combo-box>
+                <app-combo-box class="w-full" label="Filtro de mundo" [items]="availableWorlds" compareProp="id" displayProp="name" [(comboValue)]="manualWorldFilter" (comboValueChange)="onWorldSelect()"></app-combo-box>
               </div>
             }
 
-            <div class="flex flex-col gap-3 w-full">
-              @for (timeline of timelines; track timeline.id) {
-                <button
-                  type="button"
-                  class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
-                  [ngClass]="selectedTimelineId === timeline.id ? 'text-yellow-300' : 'text-zinc-400'"
-                  appContextMenu
-                  [options]="menuOptions"
-                  [contextId]="timeline.id"
-                  (click)="selectTimeline(timeline.id)">
-                  <div class="flex flex-row items-center">
-                    <i class="fa-solid" [ngClass]="'fa-timeline'"></i>
-                  </div>
-                  <h2 [title]="timeline.name" class="text-xs">{{ timeline.name }}</h2>
-                </button>
-              }
-
-              @if (timelines.length === 0) {
-                <p class="text-xs text-zinc-500">Nenhuma linha do tempo encontrada.</p>
-              }
+            <div class="flex flex-row items-center gap-1 mb-4">
+              <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus-within:border-white">
+                <div class="w-8 h-5 flex flex-row justify-center items-center"><i class="fa fa-search"></i></div>
+                <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="filterTimelines()" placeholder="Pesquisar..." class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10" />
+              </div>
+              <app-icon-button size="sm" buttonType="secondary" icon="fa-solid fa-plus" appFormOverlay [title]="'Criar Linha do Tempo'" [fields]="getFormFields()" (onSave)="createTimeline($event)"></app-icon-button>
             </div>
+
+            <app-tree-view-list
+              [openInDialog]="false"
+              [allowCreate]="true"
+              [useCustomCreate]="true"
+              [dragEnabled]="!searchTerm.trim()"
+              [dragContextId]="'timeline-list:' + (selectedWorldId || manualWorldFilter || 'root')"
+              [canReparent]="canReparentTimeline"
+              [fallbackIcon]="'fa-timeline'"
+              [createTitle]="'Criar Linha do Tempo'"
+              [createFieldLabel]="'Nome'"
+              [emptyChildrenLabel]="'Nenhuma linha do tempo encontrada'"
+              (onDocumentSelect)="selectTimeline($event.id)"
+              (onCreateChild)="createChildTimeline($event)"
+              (onReparentRequested)="reparentTimeline($event)"
+              (onDelete)="deleteTimeline($event)"
+              (onDocumentNewTab)="newTabTimeline($event)"
+              [documentArray]="filteredTimelineTreeNodes">
+            </app-tree-view-list>
           </div>
         </div>
 
@@ -90,16 +79,12 @@ import {
                   <ng-container *ngComponentOutlet="timelineEditComponent; inputs: { timelineIdInput: selectedTimelineId }"></ng-container>
                 }
                 @else {
-                  <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
-                    Carregando linha do tempo...
-                  </div>
+                  <div class="h-full rounded-md flex items-center justify-center text-zinc-500">Carregando linha do tempo...</div>
                 }
               </div>
             }
             @else {
-              <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
-                Selecione uma linha do tempo para editar
-              </div>
+              <div class="h-full rounded-md flex items-center justify-center text-zinc-500">Selecione uma linha do tempo para editar</div>
             }
           </div>
         }
@@ -111,29 +96,28 @@ import {
 })
 export class TimelineListComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
-  private timelineService = inject(TimelineService);
-  private worldService = inject(WorldService);
-  private worldStateService = inject(WorldStateService);
+  private readonly timelineService = inject(TimelineService);
+  private readonly worldService = inject(WorldService);
+  private readonly worldStateService = inject(WorldStateService);
+  private readonly entityHierarchyService = inject(EntityHierarchyService);
+  private readonly safeDeleteDialog = inject(Dialog);
 
   timelines: Timeline[] = [];
+  timelineTreeNodes: TreeViewNode[] = [];
+  filteredTimelineTreeNodes: TreeViewNode[] = [];
+  searchTerm = '';
   availableWorlds: World[] = [];
   selectedWorldId = '';
   manualWorldFilter = '';
   panelMode = input<boolean>(false);
   tabManager = inject(TabManagerService);
-
   showsidebar = true;
-
   selectedTimelineId = '';
   showTimelineEditor = false;
   timelineEditComponent: any = null;
 
-  safeDeleteDialog = inject(Dialog);
-
-  menuOptions : ContextMenuOption[] = [
-      { label: 'Abrir nova guia', action: (id: string) => this.newTabTimeline(id), customIcon: 'fa-arrow-up-right-from-square' },
-      { label: 'Excluir', action: (id: string) => this.deleteTimeline(id), customClass: 'text-red-500', customIcon: 'fa-trash' },
-    ];
+  readonly canReparentTimeline = (draggedId: string, newParentId: string | null) =>
+    this.entityHierarchyService.canReparent('Timeline', draggedId, newParentId);
 
   ngOnInit() {
     this.availableWorlds = this.worldService.getWorlds();
@@ -151,7 +135,9 @@ export class TimelineListComponent implements OnInit {
 
   loadTimelines() {
     const activeWorldId = this.selectedWorldId || this.manualWorldFilter || undefined;
-    this.timelines = this.timelineService.getTimelines(activeWorldId);
+    this.timelines = this.timelineService.getTimelines(activeWorldId).sort((a, b) => a.name.localeCompare(b.name));
+    this.timelineTreeNodes = buildTreeViewNodes(this.timelines, timeline => timeline.name, timeline => timeline.ParentTimeline?.id);
+    this.filterTimelines();
 
     if (this.selectedTimelineId && !this.timelines.some(timeline => timeline.id === this.selectedTimelineId)) {
       this.selectedTimelineId = '';
@@ -159,22 +145,26 @@ export class TimelineListComponent implements OnInit {
     }
   }
 
+  filterTimelines() {
+    this.filteredTimelineTreeNodes = filterTreeViewNodes(this.timelineTreeNodes, this.searchTerm);
+  }
+
   onWorldSelect() {
     this.loadTimelines();
   }
 
-  deleteTimeline(timelineId: string){
-    let timeline = this.timelineService.getTimelineById(timelineId);
+  deleteTimeline(timelineId: string) {
+    const timeline = this.timelineService.getTimelineById(timelineId);
 
     this.safeDeleteDialog.open(SafeDeleteComponent, {
-          data: {
-            entityName: timeline.name,
-            entityTable: 'Timeline',
-            entityId: timelineId
-          },
-          panelClass: 'screen-dialog',
-          width: '400px',
-        });
+      data: {
+        entityName: timeline.name,
+        entityTable: 'Timeline',
+        entityId: timelineId
+      },
+      panelClass: 'screen-dialog',
+      width: '400px',
+    });
   }
 
   getFormFields(): FormField[] {
@@ -182,6 +172,30 @@ export class TimelineListComponent implements OnInit {
       { key: 'name', label: 'Nome', value: '' },
       { key: 'world', label: 'Mundo', value: this.selectedWorldId || this.manualWorldFilter || '', options: this.availableWorlds, optionCompareProp: 'id', optionDisplayProp: 'name', clearable: true },
     ];
+  }
+
+  createChildTimeline(event: { parentId: string, formData: Record<string, string> }) {
+    const name = event.formData['name']?.trim();
+    const parent = this.timelines.find(timeline => timeline.id === event.parentId);
+    if (!name || !parent) {
+      return;
+    }
+
+    const child = this.timelineService.saveTimeline(
+      new Timeline('', name, ''),
+      parent.ParentWorld?.id || this.selectedWorldId || this.manualWorldFilter || null
+    );
+    this.entityHierarchyService.reparent('Timeline', child.id, parent.id);
+    this.loadTimelines();
+  }
+
+  reparentTimeline(event: TreeViewReparentRequest) {
+    try {
+      this.entityHierarchyService.reparent('Timeline', event.draggedId, event.newParentId);
+      this.loadTimelines();
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Falha ao reorganizar a linha do tempo.');
+    }
   }
 
   createTimeline(formData: Record<string, string>) {
@@ -196,7 +210,7 @@ export class TimelineListComponent implements OnInit {
 
   async newTabTimeline(timelineId: string) {
     if (this.panelMode()) {
-      const timeline = this.timelines.find(t => t.id === timelineId);
+      const timeline = this.timelines.find(item => item.id === timelineId);
       this.tabManager.openTab('Timeline', timelineId, timeline?.name ?? 'Linha do Tempo', 'fa-solid fa-timeline');
       this.selectedTimelineId = timelineId;
       return;
@@ -221,7 +235,7 @@ export class TimelineListComponent implements OnInit {
 
   async selectTimeline(timelineId: string) {
     if (this.panelMode()) {
-      const timeline = this.timelines.find(t => t.id === timelineId);
+      const timeline = this.timelines.find(item => item.id === timelineId);
       this.tabManager.substituteCurrentTab('Timeline', timelineId, timeline?.name ?? 'Linha do Tempo', 'fa-solid fa-timeline');
       this.selectedTimelineId = timelineId;
       return;

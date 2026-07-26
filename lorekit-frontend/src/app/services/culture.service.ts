@@ -19,6 +19,7 @@ export class CultureService {
       {"table": "Personalization", "firstOnly": true},
       {"table": "Image", "firstOnly": false},
       {"table": "World", "firstOnly":true, "isParent": true},
+      {"table": "Culture", "firstOnly":true, "isParent": true},
       {"table": "Location", "firstOnly":true, "isParent": true}
     ], existsRelation);
   }
@@ -28,6 +29,7 @@ export class CultureService {
       {"table": "Personalization", "firstOnly": true},
       {"table": "Image", "firstOnly": false},
       {"table": "World", "firstOnly":true, "isParent": true},
+      {"table": "Culture", "firstOnly":true, "isParent": true},
       {"table": "Location", "firstOnly":true, "isParent": true}
     ]);
   }

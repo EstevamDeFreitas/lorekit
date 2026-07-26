@@ -1,4 +1,5 @@
 import { Personalization } from "./personalization.model";
+import { World } from "./world.model";
 
 export class Moodboard {
   id: string;
@@ -6,6 +7,8 @@ export class Moodboard {
 
   MoodboardItems?: MoodboardItem[] = [];
   Personalization?: Personalization
+  ParentWorld?: World | null;
+  ParentMoodboard?: Moodboard | null;
 
   constructor(id: string = '', name: string = '') {
     this.id = id;

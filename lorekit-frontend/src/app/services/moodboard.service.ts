@@ -40,7 +40,8 @@ export class MoodboardService {
     return (this.crud.findAll('Moodboard', {}, [
       { "table": "Personalization", "firstOnly": true },
       { "table": "Image", "firstOnly": false },
-      { "table": "World", "firstOnly": true, "isParent": true }
+      { "table": "World", "firstOnly": true, "isParent": true },
+      { "table": "Moodboard", "firstOnly": true, "isParent": true },
     ], existsRelation) || [])
       .sort((a: Moodboard, b: Moodboard) => (a.name || '').localeCompare(b.name || ''));
   }
@@ -50,6 +51,7 @@ export class MoodboardService {
       { "table": "Personalization", "firstOnly": true },
       { "table": "Image", "firstOnly": false },
       { "table": "World", "firstOnly": true, "isParent": true },
+      { "table": "Moodboard", "firstOnly": true, "isParent": true },
       { "table": "MoodboardItem", "firstOnly": false }
     ]) as Moodboard | null;
 

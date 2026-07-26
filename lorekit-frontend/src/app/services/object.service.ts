@@ -18,6 +18,7 @@ export class ObjectService {
       { "table": "Personalization", "firstOnly": true },
       { "table": "Image", "firstOnly": false },
       { "table": "World", "firstOnly": true, "isParent": true },
+      { "table": "Object", "firstOnly": true, "isParent": true },
       { "table": "Location", "firstOnly": true, "isParent": true },
       { "table": "ObjectType", "firstOnly": true }
     ]);
@@ -30,6 +31,7 @@ export class ObjectService {
       { "table": "Personalization", "firstOnly": true },
       { "table": "Image", "firstOnly": false },
       { "table": "World", "firstOnly": true, "isParent": true },
+      { "table": "Object", "firstOnly": true, "isParent": true },
       { "table": "Location", "firstOnly": true, "isParent": true },
       { "table": "ObjectType", "firstOnly": true }
     ], existsRelation);

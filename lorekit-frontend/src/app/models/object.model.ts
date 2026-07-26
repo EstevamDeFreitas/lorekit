@@ -13,6 +13,7 @@ export class WorldObject {
   Images?: Image[];
   Personalization?: any;
   ParentWorld?: World;
+  ParentObject?: WorldObject | null;
   ParentLocation?: Location;
   ObjectType?: ObjectType;
 

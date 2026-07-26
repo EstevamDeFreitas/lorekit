@@ -11,6 +11,7 @@ export class Timeline {
   Personalization?: Personalization | null;
   Images?: Image[];
   ParentWorld?: World | null;
+  ParentTimeline?: Timeline | null;
 
   constructor(id: string = '', name: string = '', description: string = '') {
     this.id = id;

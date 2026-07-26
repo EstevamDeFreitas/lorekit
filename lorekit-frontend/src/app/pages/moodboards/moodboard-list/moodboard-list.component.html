@@ -43,41 +43,24 @@
           </div>
         </div>
 
-        <div class="flex flex-col gap-3">
-          @for (moodboard of filteredMoodboards; track moodboard.id) {
-            <div
-              class="group flex flex-row items-center gap-2 rounded-md border px-2 py-2 transition"
-              [ngClass]="selectedMoodboardId === moodboard.id ? 'border-yellow-400 bg-yellow-400/10' : 'border-zinc-800 bg-zinc-900'">
-              <button
-                type="button"
-                class="min-w-0 flex-1 cursor-pointer text-left"
-                (click)="selectMoodboard(moodboard.id)">
-                <div class="flex flex-row items-center gap-2 min-w-0">
-                  <i class="fa-solid fa-table-cells-large text-xs text-zinc-400"></i>
-                  <span class="text-xs truncate" [title]="moodboard.name">{{ moodboard.name }}</span>
-                </div>
-              </button>
-              <button
-                type="button"
-                class="w-6 h-6 rounded text-zinc-500 hover:text-white hover:bg-zinc-800 cursor-pointer"
-                title="Abrir nova guia"
-                (click)="openMoodboard(moodboard.id)">
-                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-              </button>
-              <button
-                type="button"
-                class="w-6 h-6 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-800 cursor-pointer"
-                title="Excluir"
-                (click)="deleteMoodboard(moodboard)">
-                <i class="fa-solid fa-trash text-[10px]"></i>
-              </button>
-            </div>
-          }
-
-          @if (filteredMoodboards.length === 0) {
-            <p class="text-xs text-zinc-500">Nenhum moodboard encontrado.</p>
-          }
-        </div>
+        <app-tree-view-list
+          [openInDialog]="false"
+          [allowCreate]="true"
+          [useCustomCreate]="true"
+          [dragEnabled]="!searchTerm.trim()"
+          [dragContextId]="'moodboard-list:' + (selectedWorldId || manualWorldFilter || 'root')"
+          [canReparent]="canReparentMoodboard"
+          [fallbackIcon]="'fa-table-cells-large'"
+          [createTitle]="'Criar Moodboard'"
+          [createFieldLabel]="'Nome'"
+          [emptyChildrenLabel]="'Nenhum moodboard encontrado'"
+          (onDocumentSelect)="selectMoodboard($event.id)"
+          (onCreateChild)="createChildMoodboard($event)"
+          (onReparentRequested)="reparentMoodboard($event)"
+          (onDelete)="deleteMoodboard($event)"
+          (onDocumentNewTab)="openMoodboard($event)"
+          [documentArray]="filteredMoodboardTreeNodes">
+        </app-tree-view-list>
       </div>
     </div>
 

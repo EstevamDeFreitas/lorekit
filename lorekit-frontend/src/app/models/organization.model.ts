@@ -10,6 +10,7 @@ export class Organization {
 
   Images?: Image[];
   ParentWorld?: World;
+  ParentOrganization?: Organization | null;
   ParentLocation?: Location;
   OrganizationType?: OrganizationType;
 

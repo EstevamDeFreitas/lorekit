@@ -16,6 +16,7 @@ export class Culture {
   language?: string;
 
   ParentWorld?:World;
+  ParentCulture?: Culture | null;
   ParentLocation?:Location;
   Images?: Image[];
 
