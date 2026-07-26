@@ -38,7 +38,7 @@ import { WorldStateService } from '../../../services/world-state.service';
 import { FLUSH_PENDING_SAVES_EVENT } from '../../../utils/pending-save-event';
 
 type MoodboardTool = 'select' | 'text' | 'draw' | MoodboardShapeType;
-type DragMode = 'none' | 'pan' | 'item' | 'resize' | 'rotate' | 'pendingCreate' | 'create' | 'endpoint' | 'draw' | 'marquee';
+type DragMode = 'none' | 'pan' | 'item' | 'resize' | 'rotate' | 'pendingCreate' | 'create' | 'endpoint' | 'draw' | 'marquee' | 'groupResize' | 'groupRotate';
 type ResizeHandle = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 type LineEndpoint = 'start' | 'end';
 
@@ -65,6 +65,15 @@ type CanvasPoint = {
 type CanvasRect = CanvasPoint & {
   width: number;
   height: number;
+};
+
+type GroupTransformItem = {
+  id: string;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+  config: MoodboardItemConfig;
 };
 
 type DrawingGeometry = {
@@ -187,6 +196,10 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     return this.items().find(view => view.item.id === this.selectedItemId()) || null;
   });
 
+  readonly selectionReferenceItem = computed(() =>
+    this.items().find(view => view.item.id === this.selectedItemId()) || null
+  );
+
   readonly groupSelectionBounds = computed(() => {
     const selectedIds = new Set(this.selectedItemIds());
     if (selectedIds.size < 2) {
@@ -220,6 +233,9 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   private marqueeBaseSelection: readonly string[] = [];
   private draggedItemIds: readonly string[] = [];
   private dragItemStartPositions = new Map<string, CanvasPoint>();
+  private groupTransformStartBounds: CanvasRect | null = null;
+  private groupTransformItems = new Map<string, GroupTransformItem>();
+  private groupRotationStartAngle = 0;
   private removeMouseMove?: () => void;
   private removeMouseUp?: () => void;
   private removeKeyDown?: () => void;
@@ -275,12 +291,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
 
   setFillColor(color: string): void {
     this.fillColor.set(color);
-    const selectedId = this.selectedItemId();
-    if (!selectedId) {
-      return;
-    }
-
-    this.updateItemConfig(selectedId, config => ({ ...config, fill: color }));
+    this.updateSelectedItemConfigs(config => ({ ...config, fill: color }));
   }
 
   setDrawingColor(color: string): void {
@@ -289,21 +300,11 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
 
   setStrokeColor(color: string): void {
     this.strokeColor.set(color);
-    const selectedId = this.selectedItemId();
-    if (!selectedId) {
-      return;
-    }
-
-    this.updateItemConfig(selectedId, config => ({ ...config, stroke: color }));
+    this.updateSelectedItemConfigs(config => ({ ...config, stroke: color }));
   }
 
   clearFillColor(): void {
-    const selectedId = this.selectedItemId();
-    if (!selectedId) {
-      return;
-    }
-
-    this.updateItemConfig(selectedId, config => ({ ...config, fill: 'transparent' }));
+    this.updateSelectedItemConfigs(config => ({ ...config, fill: 'transparent' }));
   }
 
   isTransparentFill(view: MoodboardCanvasItem | null): boolean {
@@ -311,21 +312,34 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   setTextAlign(align: MoodboardTextAlign): void {
-    const selectedId = this.selectedItemId();
-    if (!selectedId) {
-      return;
-    }
-
-    this.updateItemConfig(selectedId, config => ({ ...config, textAlign: align }));
+    this.updateSelectedItemConfigs(config => ({ ...config, textAlign: align }));
   }
 
   setVerticalAlign(align: MoodboardVerticalAlign): void {
-    const selectedId = this.selectedItemId();
-    if (!selectedId) {
+    this.updateSelectedItemConfigs(config => ({ ...config, verticalAlign: align }));
+  }
+
+  private updateSelectedItemConfigs(updater: (config: MoodboardItemConfig) => MoodboardItemConfig): void {
+    const selectedIds = new Set(this.selectedItemIds());
+    if (!selectedIds.size) {
       return;
     }
 
-    this.updateItemConfig(selectedId, config => ({ ...config, verticalAlign: align }));
+    this.items.update(items => items.map(view => {
+      if (!selectedIds.has(view.item.id)) {
+        return view;
+      }
+
+      const config = updater(view.config);
+      return {
+        ...view,
+        config,
+        item: { ...view.item, configJson: JSON.stringify(config) },
+      };
+    }));
+
+    selectedIds.forEach(id => this.scheduleSave(id));
+    this.cdr.markForCheck();
   }
 
   private selectItem(view: MoodboardCanvasItem): void {
@@ -559,6 +573,71 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       centerX: (view.item.posX ?? 0) + width / 2,
       centerY: (view.item.posY ?? 0) + height / 2,
     };
+  }
+
+  startGroupResize(event: MouseEvent, bounds: CanvasRect, handle: ResizeHandle): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.captureGroupTransform(bounds);
+    const point = this.clientToCanvasPoint(event.clientX, event.clientY);
+    this.dragState = {
+      ...this.emptyDragState(),
+      mode: 'groupResize',
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startCanvasX: point.x,
+      startCanvasY: point.y,
+      startItemX: bounds.x,
+      startItemY: bounds.y,
+      startWidth: bounds.width,
+      startHeight: bounds.height,
+      resizeHandle: handle,
+      centerX: bounds.x + bounds.width / 2,
+      centerY: bounds.y + bounds.height / 2,
+    };
+  }
+
+  startGroupRotate(event: MouseEvent, bounds: CanvasRect): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.captureGroupTransform(bounds);
+    const point = this.clientToCanvasPoint(event.clientX, event.clientY);
+    const centerX = bounds.x + bounds.width / 2;
+    const centerY = bounds.y + bounds.height / 2;
+    this.groupRotationStartAngle = Math.atan2(point.y - centerY, point.x - centerX) * 180 / Math.PI;
+    this.dragState = {
+      ...this.emptyDragState(),
+      mode: 'groupRotate',
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startCanvasX: point.x,
+      startCanvasY: point.y,
+      centerX,
+      centerY,
+    };
+  }
+
+  private captureGroupTransform(bounds: CanvasRect): void {
+    const selectedIds = new Set(this.selectedItemIds());
+    this.groupTransformStartBounds = { ...bounds };
+    this.groupTransformItems = new Map(
+      this.items()
+        .filter(view => selectedIds.has(view.item.id))
+        .map(view => {
+          const width = this.itemWidth(view);
+          const height = this.itemHeight(view);
+          return [view.item.id, {
+            id: view.item.id,
+            width,
+            height,
+            centerX: (view.item.posX ?? 0) + width / 2,
+            centerY: (view.item.posY ?? 0) + height / 2,
+            config: { ...view.config },
+          }];
+        })
+    );
   }
 
   startLineEndpointDrag(event: MouseEvent, view: MoodboardCanvasItem, endpoint: LineEndpoint): void {
@@ -1404,6 +1483,16 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (state.mode === 'groupResize') {
+      this.resizeGroupFromHandle(point);
+      return;
+    }
+
+    if (state.mode === 'groupRotate') {
+      this.rotateGroup(point, event.ctrlKey);
+      return;
+    }
+
     const view = this.items().find(item => item.item.id === state.itemId);
     if (!view) {
       return;
@@ -1468,12 +1557,18 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       for (const id of this.draggedItemIds) {
         this.saveItemNow(id);
       }
+    } else if (this.dragState.mode === 'groupResize' || this.dragState.mode === 'groupRotate') {
+      for (const id of this.groupTransformItems.keys()) {
+        this.saveItemNow(id);
+      }
     } else if (this.dragState.mode !== 'none' && this.dragState.itemId) {
       this.saveItemNow(this.dragState.itemId);
     }
 
     this.draggedItemIds = [];
     this.dragItemStartPositions.clear();
+    this.groupTransformStartBounds = null;
+    this.groupTransformItems.clear();
     this.dragState = this.emptyDragState();
   }
 
@@ -1764,6 +1859,143 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   private roundSvgNumber(value: number): number {
     return Math.round(value * 10) / 10;
   }
+
+  private resizeGroupFromHandle(point: CanvasPoint): void {
+    const bounds = this.groupTransformStartBounds;
+    const handle = this.dragState.resizeHandle;
+    const snapshots = [...this.groupTransformItems.values()];
+    if (!bounds || !handle || !snapshots.length) {
+      return;
+    }
+
+    const minimumScaleX = Math.max(...snapshots.map(item => MIN_ITEM_SIZE / item.width));
+    const minimumScaleY = Math.max(...snapshots.map(item => MIN_ITEM_SIZE / item.height));
+    const minimumWidth = bounds.width * minimumScaleX;
+    const minimumHeight = bounds.height * minimumScaleY;
+    let nextX = bounds.x;
+    let nextY = bounds.y;
+    let nextWidth = bounds.width;
+    let nextHeight = bounds.height;
+
+    if (handle.includes('e')) {
+      nextWidth = Math.max(minimumWidth, point.x - bounds.x);
+    }
+
+    if (handle.includes('s')) {
+      nextHeight = Math.max(minimumHeight, point.y - bounds.y);
+    }
+
+    if (handle.includes('w')) {
+      const right = bounds.x + bounds.width;
+      nextX = Math.min(point.x, right - minimumWidth);
+      nextWidth = right - nextX;
+    }
+
+    if (handle.includes('n')) {
+      const bottom = bounds.y + bounds.height;
+      nextY = Math.min(point.y, bottom - minimumHeight);
+      nextHeight = bottom - nextY;
+    }
+
+    const scaleX = nextWidth / bounds.width;
+    const scaleY = nextHeight / bounds.height;
+    this.items.update(items => items.map(view => {
+      const snapshot = this.groupTransformItems.get(view.item.id);
+      if (!snapshot) {
+        return view;
+      }
+
+      const width = Math.max(MIN_ITEM_SIZE, snapshot.width * scaleX);
+      const height = Math.max(MIN_ITEM_SIZE, snapshot.height * scaleY);
+      const centerX = nextX + (snapshot.centerX - bounds.x) * scaleX;
+      const centerY = nextY + (snapshot.centerY - bounds.y) * scaleY;
+      let config: MoodboardItemConfig = {
+        ...snapshot.config,
+        width: Math.round(width),
+        height: Math.round(height),
+      };
+
+      if (snapshot.config.kind === 'shape' && (snapshot.config.shapeType === 'line' || snapshot.config.shapeType === 'arrow')) {
+        config = {
+          ...config,
+          x1: (snapshot.config.x1 ?? 0) * scaleX,
+          y1: (snapshot.config.y1 ?? snapshot.height / 2) * scaleY,
+          x2: (snapshot.config.x2 ?? snapshot.width) * scaleX,
+          y2: (snapshot.config.y2 ?? snapshot.height / 2) * scaleY,
+        };
+      }
+
+      return {
+        ...view,
+        item: {
+          ...view.item,
+          posX: Math.round(centerX - width / 2),
+          posY: Math.round(centerY - height / 2),
+          configJson: JSON.stringify(config),
+        },
+        config,
+      };
+    }));
+
+    this.groupTransformItems.forEach(item => this.scheduleSave(item.id));
+    this.cdr.markForCheck();
+  }
+
+  private rotateGroup(point: CanvasPoint, snapToGrid: boolean): void {
+    const bounds = this.groupTransformStartBounds;
+    if (!bounds || !this.groupTransformItems.size) {
+      return;
+    }
+
+    const centerX = bounds.x + bounds.width / 2;
+    const centerY = bounds.y + bounds.height / 2;
+    const currentAngle = Math.atan2(point.y - centerY, point.x - centerX) * 180 / Math.PI;
+    let angleDelta = currentAngle - this.groupRotationStartAngle;
+
+    while (angleDelta > 180) {
+      angleDelta -= 360;
+    }
+    while (angleDelta < -180) {
+      angleDelta += 360;
+    }
+
+    if (snapToGrid) {
+      angleDelta = Math.round(angleDelta / 15) * 15;
+    }
+
+    const radians = angleDelta * Math.PI / 180;
+    const cosine = Math.cos(radians);
+    const sine = Math.sin(radians);
+
+    this.items.update(items => items.map(view => {
+      const snapshot = this.groupTransformItems.get(view.item.id);
+      if (!snapshot) {
+        return view;
+      }
+
+      const offsetX = snapshot.centerX - centerX;
+      const offsetY = snapshot.centerY - centerY;
+      const rotatedCenterX = centerX + offsetX * cosine - offsetY * sine;
+      const rotatedCenterY = centerY + offsetX * sine + offsetY * cosine;
+      const rotation = Math.round((((snapshot.config.rotation ?? 0) + angleDelta + 180) % 360 + 360) % 360 - 180);
+      const config = { ...snapshot.config, rotation };
+
+      return {
+        ...view,
+        item: {
+          ...view.item,
+          posX: Math.round(rotatedCenterX - snapshot.width / 2),
+          posY: Math.round(rotatedCenterY - snapshot.height / 2),
+          configJson: JSON.stringify(config),
+        },
+        config,
+      };
+    }));
+
+    this.groupTransformItems.forEach(item => this.scheduleSave(item.id));
+    this.cdr.markForCheck();
+  }
+
   private resizeItemFromHandle(id: string, point: { x: number; y: number }): void {
     const state = this.dragState;
     const handle = state.resizeHandle;

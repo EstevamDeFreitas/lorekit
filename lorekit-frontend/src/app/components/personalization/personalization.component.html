@@ -141,9 +141,10 @@
   </div>
 
   <div class="mt-4 flex flex-row justify-end gap-2">
-    <app-button label="Salvar" (click)="savePersonalization()"></app-button>
+    <app-icon-button icon="fa-solid fa-floppy-disk" title="Salvar" (click)="savePersonalization()"></app-icon-button>
     <app-button
       label="Cancelar"
+      size="xs"
       buttonType="secondary"
       (click)="dialogref.close()">
     </app-button>

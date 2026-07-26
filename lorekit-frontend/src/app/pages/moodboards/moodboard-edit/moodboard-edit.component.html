@@ -69,11 +69,13 @@
           </label>
         </div>
       } @else {
-        @if (selectedItem(); as selected) {
+        @if (selectionReferenceItem(); as selected) {
         <div class="moodboard-item-toolbar" (mousedown)="$event.stopPropagation()">
-          <button type="button" class="tool-button" title="Editar texto" (click)="editingItemId.set(selected.item.id)">
-            <i class="fa-solid fa-pen"></i>
-          </button>
+          @if (selectedItemIds().length === 1) {
+            <button type="button" class="tool-button" title="Editar texto" (click)="editingItemId.set(selected.item.id)">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+          }
 
           <label class="color-control" title="Cor">
             <input type="color" [ngModel]="fillColor()" (ngModelChange)="setFillColor($event)" />
@@ -398,6 +400,17 @@
             [style.top.px]="group.y"
             [style.width.px]="group.width"
             [style.height.px]="group.height">
+            <button type="button" class="moodboard-rotate-handle" title="Rotacionar grupo" (mousedown)="startGroupRotate($event, group)">
+              <i class="fa-solid fa-rotate-right"></i>
+            </button>
+            <button type="button" class="moodboard-resize-handle moodboard-resize-nw" title="Redimensionar grupo" (mousedown)="startGroupResize($event, group, 'nw')"></button>
+            <button type="button" class="moodboard-resize-handle moodboard-resize-n" title="Redimensionar grupo" (mousedown)="startGroupResize($event, group, 'n')"></button>
+            <button type="button" class="moodboard-resize-handle moodboard-resize-ne" title="Redimensionar grupo" (mousedown)="startGroupResize($event, group, 'ne')"></button>
+            <button type="button" class="moodboard-resize-handle moodboard-resize-e" title="Redimensionar grupo" (mousedown)="startGroupResize($event, group, 'e')"></button>
+            <button type="button" class="moodboard-resize-handle moodboard-resize-se" title="Redimensionar grupo" (mousedown)="startGroupResize($event, group, 'se')"></button>
+            <button type="button" class="moodboard-resize-handle moodboard-resize-s" title="Redimensionar grupo" (mousedown)="startGroupResize($event, group, 's')"></button>
+            <button type="button" class="moodboard-resize-handle moodboard-resize-sw" title="Redimensionar grupo" (mousedown)="startGroupResize($event, group, 'sw')"></button>
+            <button type="button" class="moodboard-resize-handle moodboard-resize-w" title="Redimensionar grupo" (mousedown)="startGroupResize($event, group, 'w')"></button>
           </div>
         }
 

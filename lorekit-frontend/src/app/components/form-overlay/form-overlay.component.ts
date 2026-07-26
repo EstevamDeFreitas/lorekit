@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { InputComponent } from '../input/input.component';
 import { ButtonComponent } from '../button/button.component';
 import { ComboBoxComponent } from "../combo-box/combo-box.component";
+import { IconButtonComponent } from "../icon-button/icon-button.component";
 
 export interface FormField {
   key: string;
@@ -20,10 +21,10 @@ export interface FormField {
 
 @Component({
   selector: 'app-form-overlay',
-  imports: [InputComponent, ButtonComponent, ComboBoxComponent, FormsModule],
+  imports: [InputComponent, ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent],
   template: `
-    <div class="bg-zinc-800 p-2 rounded-md min-w-64 shadow-lg border border-zinc-700">
-      <div class="mb-3 font-semibold text-white">{{ title() }}</div>
+    <div class="bg-zinc-900 p-4 rounded-md min-w-64 shadow-lg border border-zinc-800">
+      <div class="mb-3 text-sm text-white">{{ title() }}</div>
       <div class="flex flex-col gap-3">
         @for (field of fields(); track field.key) {
           @if (field.options && field.options.length > 0) {
@@ -39,10 +40,10 @@ export interface FormField {
           }
           @else if (field.type === 'boolean') {
             <label class="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-              <input 
-                type="checkbox" 
-                name="{{field.key}}" 
-                id="{{field.key}}" 
+              <input
+                type="checkbox"
+                name="{{field.key}}"
+                id="{{field.key}}"
                 [checked]="field.value === 'true'"
                 (change)="field.value = $any($event.target).checked ? 'true' : 'false'"
                 class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
@@ -59,13 +60,15 @@ export interface FormField {
           }
         }
         <div class="flex gap-2">
-          <app-button
-            [label]="saveLabel()"
+          <app-icon-button
+            [title]="saveLabel()"
+            icon="fa-solid fa-floppy-disk"
             buttonType="primary"
             (click)="handleSave()">
-          </app-button>
+          </app-icon-button>
           <app-button
             label="Cancelar"
+            size="xs"
             buttonType="secondary"
             (click)="handleCancel()">
           </app-button>

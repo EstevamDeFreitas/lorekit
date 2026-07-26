@@ -113,6 +113,15 @@
 
   <footer class="flex justify-end gap-2 border-t border-zinc-800 pt-4">
     <div class="w-fit">
+      <app-icon-button
+        title="Salvar galeria"
+        icon="fa-solid fa-floppy-disk"
+        size="xs"
+        [disabled]="isSaving()"
+        (click)="confirm()">
+      </app-icon-button>
+    </div>
+    <div class="w-fit">
       <app-button
         label="Cancelar"
         buttonType="secondary"
@@ -121,14 +130,6 @@
         (click)="cancel()">
       </app-button>
     </div>
-    <div class="w-fit">
-      <app-button
-        label="Salvar galeria"
-        icon="fa-check"
-        size="xs"
-        [disabled]="isSaving()"
-        (click)="confirm()">
-      </app-button>
-    </div>
+
   </footer>
 </section>

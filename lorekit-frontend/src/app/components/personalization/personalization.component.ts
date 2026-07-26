@@ -9,6 +9,7 @@ import { ButtonComponent } from '../button/button.component';
 import { IconSelectorComponent } from '../icon-selector/icon-selector.component';
 import { ImageUploaderComponent } from '../ImageUploader/image-uploader.component';
 import { InputComponent } from '../input/input.component';
+import { IconButtonComponent } from "../icon-button/icon-button.component";
 
 @Component({
   selector: 'app-personalization',
@@ -17,7 +18,8 @@ import { InputComponent } from '../input/input.component';
     ButtonComponent,
     FormsModule,
     IconSelectorComponent,
-  ],
+    IconButtonComponent
+],
   templateUrl: './personalization.component.html',
   styleUrl: './personalization.component.css',
   changeDetection: ChangeDetectionStrategy.Default,

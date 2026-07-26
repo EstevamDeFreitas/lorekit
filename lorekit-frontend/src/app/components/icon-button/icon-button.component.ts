@@ -40,10 +40,10 @@ export class IconButtonComponent {
         currentTypeStyle = 'bg-red-500' + (this.disabled() ? ' text-zinc-600' : ' text-white ');
         break;
       case 'primaryActive':
-        currentTypeStyle = (this.disabled() ? ' text-zinc-600' : ' text-yellow-600');
+        currentTypeStyle = 'hover:bg-yellow-800 hover:text-zinc-900 ' +  (this.disabled() ? ' text-zinc-600' : ' text-yellow-600');
         break;
       case 'secondaryActive':
-        currentTypeStyle = (this.disabled() ? ' text-zinc-600' : ' text-zinc-600');
+        currentTypeStyle = 'hover:bg-zinc-800 hover:text-zinc-50 ' +  (this.disabled() ? ' text-zinc-600' : ' text-zinc-600');
         break;
       case 'whiteActive':
         currentTypeStyle = (this.disabled() ? ' text-zinc-600' : ' text-white');

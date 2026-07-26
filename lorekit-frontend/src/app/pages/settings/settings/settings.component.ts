@@ -744,7 +744,7 @@ export class SettingsComponent implements OnInit{
     }
 
     const ref = this.dialog.open(UiFieldConfigEditorComponent, {
-      panelClass: 'screen-dialog',
+      panelClass: ['screen-dialog', 'overflow-y-auto',  'scrollbar-dark'],
       width: '95vw',
       maxWidth: '1400px',
       height: '90vh',

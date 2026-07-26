@@ -33,7 +33,7 @@ interface SelectOptionItem {
   selector: 'app-ui-field-config-editor',
   imports: [NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent, InputComponent],
   template: `
-    <div class=" flex flex-col gap-4 overflow-y-auto scrollbar-dark h-full">
+    <div class=" flex flex-col gap-4 h-full">
       <div class="flex flex-row items-center justify-between gap-3 border-b border-zinc-800 pb-4">
         <div>
           @if (scopeMode === 'template' && activeTemplateName) {
@@ -44,7 +44,7 @@ interface SelectOptionItem {
           <p class="text-sm text-zinc-400">Arraste campos para o grid e redimensione pelas bordas.</p>
         </div>
         @if (isDialogMode) {
-          <app-icon-button title="Fechar" icon="fa-solid fa-xmark" buttonType="secondary" size="base" (click)="closeDialog()"></app-icon-button>
+          <app-icon-button title="Fechar" icon="fa-solid fa-xmark" buttonType="secondaryActive" size="base" (click)="closeDialog()"></app-icon-button>
         } @else {
           <app-button label="Voltar" buttonType="secondary" size="xs" [route]="backRoute"></app-button>
         }
@@ -242,7 +242,7 @@ interface SelectOptionItem {
                   <span class="text-[11px] text-zinc-400">{{ field.source }}{{ field.fieldType && field.fieldType !== 'text' ? ' · ' + field.fieldType : '' }}{{ field.isEditorField && field.fieldType === 'text' ? ' - editor' : '' }}</span>
                 </div>
                 @if (isTokenPlaced(field.token)){
-                  <div class="absolute top-1 right-1" >
+                  <div class="absolute bottom-1 right-2" >
                     <p class="text-xs">Presente no Grid</p>
                   </div>
                 }

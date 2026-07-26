@@ -122,7 +122,7 @@ const SIDEBAR_SECTIONS: Record<string, SidebarSectionEntry> = {
       @if (resolvedComponent()) {
         <div [ngClass]="layout.sidebarVisible ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0'" class="flex flex-col border-r bg-zinc-925 border-zinc-700 h-full overflow-hidden">
           <!-- Section header -->
-          <div class="flex flex-row items-center justify-between px-4 py-2 border-b border-zinc-700 shrink-0">
+          <div class="flex flex-row items-center justify-between px-4 py-2  shrink-0">
             <div class="flex flex-row items-center gap-2 p-[0.1rem] text-xs font-semibold text-zinc-400 uppercase tracking-wider">
               <i [class]="currentSectionIcon()" class="text-[10px]"></i>
               <span>{{ currentSectionLabel() }}</span>

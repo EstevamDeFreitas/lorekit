@@ -27,9 +27,6 @@ import { buildFlatTreeViewNodes, filterFlatTreeViewNodes, TreeViewNode } from '.
     <div class="flex flex-row h-full gap-4">
       <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
         <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
-          <div>
-            <h2 class="text-base mb-4">Mundos</h2>
-          </div>
 
           <div class="mb-4">
             <app-combo-box
@@ -58,7 +55,7 @@ import { buildFlatTreeViewNodes, filterFlatTreeViewNodes, TreeViewNode } from '.
                 (click)="setSelectedWorldAsDefault()">
               </app-icon-button>
             }
-            <app-icon-button size="sm" buttonType="secondary" icon="fa-solid fa-plus" appFormOverlay [title]="'Criar Mundo'" [fields]="getFormFields()" (onSave)="createWorld($event)"></app-icon-button>
+            <app-icon-button size="sm" buttonType="secondaryActive" icon="fa-solid fa-plus" appFormOverlay [title]="'Criar Mundo'" [fields]="getFormFields()" (onSave)="createWorld($event)"></app-icon-button>
           </div>
 
           <app-tree-view-list
