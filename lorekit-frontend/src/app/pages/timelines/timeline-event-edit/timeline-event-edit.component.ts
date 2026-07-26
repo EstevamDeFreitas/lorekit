@@ -19,6 +19,8 @@ import { MentionEntity, EntityMentionService } from '../../../services/entity-me
 import { EventService } from '../../../services/event.service';
 import { EventTypeService } from '../../../services/event-type.service';
 import { LocationService } from '../../../services/location.service';
+import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
+import { getPersonalizationValue, hexToRgba } from '../../../models/personalization.model';
 
 interface TimelineEventDialogData {
   id?: string;
@@ -30,29 +32,33 @@ interface TimelineEventDialogData {
 @Component({
   selector: 'app-timeline-event-edit',
   standalone: true,
-  imports: [ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
+  imports: [ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent, SafeDeleteButtonComponent],
   template: `
     <div class=" flex flex-col gap-4">
-      <div class="flex items-center justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-bold">{{ event.id ? 'Editar Evento' : 'Novo Evento' }}</h2>
-          <p class="text-sm text-zinc-400">A ordem real da timeline é controlada pelo campo de ordem cronológica.</p>
-        </div>
-        <div class="flex items-center gap-2">
+      <div class="flex justify-between gap-3">
+        <input
+            type="text"
+            class="flex-1 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-none"
+            [(ngModel)]="event.name"
+          />
+        <div class="flex justify-center items-end h-auto gap-2">
           @if (event.id) {
-            <app-personalization-button [entityId]="event.id" [entityTable]="'Event'" [size]="'lg'"></app-personalization-button>
+            <app-personalization-button [entityId]="event.id" [entityTable]="'Event'" [size]="'xl'"></app-personalization-button>
+            <app-safe-delete-button [entityName]="event.name" [entityId]="event.id" [entityTable]="'Event'" [size]="'xl'"></app-safe-delete-button>
+            <!-- <app-button label="Excluir" buttonType="danger" size="sm" (click)="deleteEvent()"></app-button> -->
           }
-          <app-icon-button icon="fa-solid fa-xmark" buttonType="secondary" size="lg" (click)="dialogRef.close()"></app-icon-button>
+          <app-icon-button icon="fa-solid fa-xmark" buttonType="secondary" size="xl" (click)="dialogRef.close()"></app-icon-button>
         </div>
       </div>
 
-      <app-input label="Nome" [(value)]="event.name"></app-input>
-      <div class="grid grid-cols-2 gap-3">
+
+      <div class=" gap-3">
         <!-- <app-text-area label="Conceito" height="h-42" [(value)]="event.concept"></app-text-area> -->
-        <div class="flex flex-col gap-3">
-          <app-input label="Data exibida" [(value)]="event.date"></app-input>
+        <div class="flex flex-row justify-between gap-3">
+          <app-input class="w-full" label="Data exibida" size="xs" [(value)]="event.date"></app-input>
           <app-combo-box
             label="Tipo do evento"
+            class="w-full"
             [items]="eventTypes"
             compareProp="id"
             displayProp="name"
@@ -60,6 +66,7 @@ interface TimelineEventDialogData {
           </app-combo-box>
           <app-combo-box
             label="Local principal"
+            class="w-full"
             [items]="locations"
             compareProp="id"
             displayProp="name"
@@ -79,7 +86,7 @@ interface TimelineEventDialogData {
 
         <div class="flex flex-wrap gap-2 min-h-10">
           @for (item of relatedEntities; track item.entityTable + '-' + item.entityId) {
-            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800 border border-zinc-700 text-sm">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-sm" [style]="'border: solid 1px ' + (getPersonalizationValue(item, 'color') || 'var(--color-zinc-900)') + ';' + ' background: ' + hexToRgba(getPersonalizationValue(item, 'color') || 'var(--color-zinc-800)', 0.25)">
               <span class="text-zinc-200">{{ item.label }}</span>
               <span class="text-zinc-500 text-xs">{{ item.subtitle }}</span>
               <button type="button" class="text-zinc-400 hover:text-white cursor-pointer" (click)="removeRelatedEntity(item)">
@@ -123,12 +130,11 @@ interface TimelineEventDialogData {
       <div class="flex justify-between gap-2 pt-2">
         <div>
           @if (event.id) {
-            <app-button label="Excluir" buttonType="danger" size="sm" (click)="deleteEvent()"></app-button>
+            <!-- <app-button label="Excluir" buttonType="danger" size="sm" (click)="deleteEvent()"></app-button> -->
           }
         </div>
         <div class="flex gap-2">
-          <app-button label="Cancelar" buttonType="secondary" size="sm" (click)="dialogRef.close()"></app-button>
-          <app-button label="Salvar" buttonType="primary" size="sm" (click)="saveEvent()"></app-button>
+          <app-icon-button title="Salvar" icon="fa-solid fa-floppy-disk" buttonType="primary" size="xl" (click)="saveEvent()"></app-icon-button>
         </div>
       </div>
     </div>
@@ -144,6 +150,9 @@ export class TimelineEventEditComponent {
   private readonly locationService = inject(LocationService);
   private readonly mentionService = inject(EntityMentionService);
   private readonly confirm = inject(ConfirmService);
+
+  public getPersonalizationValue = getPersonalizationValue;
+  public hexToRgba = hexToRgba;
 
   event = new TimelineEvent('', '', '', this.data.defaultSortOrder, this.data.defaultSortOrder);
   eventTypes: EventType[] = [];
@@ -161,6 +170,8 @@ export class TimelineEventEditComponent {
 
     if (this.data.id) {
       this.event = this.eventService.getEventById(this.data.id);
+      console.log("Evento", this.event);
+
       this.initialChronologyOrder = this.event.chronologyOrder;
       this.selectedEventTypeId = this.event.ParentEventType?.id || null;
       this.selectedLocationId = this.event.ParentLocation?.id || null;

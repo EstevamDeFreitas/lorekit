@@ -44,7 +44,7 @@ interface SelectOptionItem {
           <p class="text-sm text-zinc-400">Arraste campos para o grid e redimensione pelas bordas.</p>
         </div>
         @if (isDialogMode) {
-          <app-icon-button label="Fechar" icon="fa-solid fa-xmark" buttonType="secondary" size="base" (click)="closeDialog()"></app-icon-button>
+          <app-icon-button title="Fechar" icon="fa-solid fa-xmark" buttonType="secondary" size="base" (click)="closeDialog()"></app-icon-button>
         } @else {
           <app-button label="Voltar" buttonType="secondary" size="xs" [route]="backRoute"></app-button>
         }
@@ -113,8 +113,8 @@ interface SelectOptionItem {
         <div class="flex flex-col items-end gap-1 ms-auto">
           <div class="flex flex-row gap-2">
             @if (scopeMode !== 'template') {
-              <app-icon-button title="Padrão do Sistema" icon="fa-solid fa-computer" buttonType="secondary" size="base" (click)="confirmResetToDefault()"></app-icon-button>
-              <app-icon-button title="Criar Template" icon="fa-solid fa-bookmark" buttonType="secondary" size="base" (click)="toggleCreateTemplateForm()"></app-icon-button>
+              <app-icon-button title="Padrão do Sistema" icon="fa-solid fa-computer" buttonType="white" size="base" (click)="confirmResetToDefault()"></app-icon-button>
+              <app-icon-button title="Criar Template" icon="fa-solid fa-bookmark" buttonType="white" size="base" (click)="toggleCreateTemplateForm()"></app-icon-button>
             }
             <app-icon-button title="Salvar Layout" icon="fa-solid fa-floppy-disk" buttonType="primary" size="base" (click)="save()"></app-icon-button>
           </div>
@@ -218,13 +218,13 @@ interface SelectOptionItem {
 
 
               <div class="flex justify-end">
-                <app-button
-                  label="Criar Campo"
-                  buttonType="secondary"
+                <app-icon-button
+                  title="Criar Campo"
+                  buttonType="primary"
                   size="xs"
                   [disabled]="creatingDynamicField"
                   (click)="createDynamicField()">
-                </app-button>
+                </app-icon-button>
               </div>
             </div>
           </div>

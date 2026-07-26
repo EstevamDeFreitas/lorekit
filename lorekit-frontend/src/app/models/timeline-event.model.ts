@@ -29,6 +29,7 @@ export interface TimelineEventRelatedEntity {
   entityId: string;
   label: string;
   subtitle: string;
+  Personalization?:Personalization;
 }
 
 export class TimelineEvent {
@@ -74,11 +75,11 @@ export class TimelineEvent {
 export function buildTimelineEventRelatedEntities(event: TimelineEvent): TimelineEventRelatedEntity[] {
   const refs: TimelineEventRelatedEntity[] = [];
 
-  const pushItems = <T extends { id: string }>(
+  const pushItems = <T extends { id: string, Personalization?: Personalization }>(
     items: T[] | undefined,
     entityTable: TimelineEventRelationTable,
     getLabel: (item: T) => string,
-    subtitle: string,
+    subtitle: string
   ) => {
     for (const item of items || []) {
       refs.push({
@@ -86,6 +87,7 @@ export function buildTimelineEventRelatedEntities(event: TimelineEvent): Timelin
         entityId: item.id,
         label: getLabel(item),
         subtitle,
+        Personalization:item.Personalization
       });
     }
   };

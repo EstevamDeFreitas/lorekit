@@ -104,6 +104,7 @@ import { UiFieldConfigService } from '../../../services/ui-field-config.service'
                   @else {
                     <app-input
                       [label]="dynamicTemplate.name"
+                      size="xs"
                       [value]="getDynamicFieldValue(dynamicTemplate.id).value"
                       (valueChange)="onDynamicTextChange(dynamicTemplate.id, $event)">
                     </app-input>

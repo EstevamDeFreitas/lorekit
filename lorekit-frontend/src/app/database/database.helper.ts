@@ -1,7 +1,7 @@
 import initSqlJs from 'sql.js/dist/sql-wasm.js';
 import { schema, TableDef } from './schema';
 
-type IncludeDef = {table:string, firstOnly?: boolean, isParent?: boolean};
+type IncludeDef = {table:string, firstOnly?: boolean, isParent?: boolean, subInclude?: IncludeDef[]};
 
 declare const window: any;
 
@@ -300,6 +300,7 @@ export class CrudHelper {
       const inc = this.loadIncludes(table, id, include);
       Object.assign(row, inc);
     }
+
     return row;
   }
 
@@ -358,8 +359,20 @@ export class CrudHelper {
           if (this.debugging) {
             console.log(dataSql, [r.entityId]);
           }
-          const dataRes = this.db.exec(dataSql, [r.entityId]);
-          entities.push(...mapResult(dataRes));
+          const dataRes = mapResult(this.db.exec(dataSql, [r.entityId]));
+
+          if (relTable.subInclude && relTable.subInclude.length > 0) {
+
+            const inc = this.loadIncludes(relTable.table, r.entityId, relTable.subInclude);
+
+            dataRes.forEach((res: any) => {
+
+              Object.assign(res, inc);
+
+            });
+          }
+
+          entities.push(...dataRes);
         }
         if (relTable.firstOnly) {
           // Keep existing shape: singular key returns single object (or null)

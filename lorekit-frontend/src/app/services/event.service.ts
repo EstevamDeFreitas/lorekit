@@ -34,7 +34,7 @@ export class EventService {
   }
 
   getEventById(eventId: string): TimelineEvent {
-    return this.crud.findById('Event', eventId, this.getEventIncludes()) as TimelineEvent;
+    return this.crud.findById('Event', eventId, this.getEventIncludes());
   }
 
   saveEvent(event: TimelineEvent, payload: SaveTimelineEventPayload): TimelineEvent {
@@ -72,7 +72,7 @@ export class EventService {
       { table: 'Timeline', firstOnly: true, isParent: true },
       { table: 'EventType', firstOnly: true, isParent: true },
       { table: 'Location', firstOnly: true, isParent: true },
-      ...timelineEventRelationTables.map(table => ({ table, firstOnly: false })),
+      ...timelineEventRelationTables.map(table => ({ table, firstOnly: false, subInclude: [{table: "Personalization", firstOnly: true}] })),
     ];
   }
 

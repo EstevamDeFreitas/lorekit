@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
   selector: 'app-input',
   imports: [FormsModule, CommonModule],
   template: `
-    <div class="flex flex-col">
+    <div class="flex flex-col ">
       @if (label() != '') {
         <label class="mb-1 text-xs text-white" [ngClass]="{'!text-red-500':errorMessage() != ''}">{{ label() }}</label>
       }
@@ -16,7 +16,7 @@ import { CommonModule } from '@angular/common';
         (blur)="markAsTouched()"
         [placeholder]="placeholder()"
         [ngClass]="{'!ring-red-500':errorMessage() != ''}"
-        class="rounded-lg px-3 py-2 ring-1 bg-zinc-925 text-sm ring-zinc-800 transition focus:outline-none focus:ring-zinc-100 focus:ring-1 placeholder:text-white/10"
+        class="rounded-lg px-3 py-2 ring-1 bg-zinc-925 text-{{size()}} ring-zinc-800 transition focus:outline-none focus:ring-zinc-100 focus:ring-1 placeholder:text-white/10"
       />
       @if (errorMessage() != '') {
         <span class="text-red-500 text-xs mt-1">
@@ -34,8 +34,11 @@ export class InputComponent {
   type = input<string>('text');
   value = model<any>('');
   required = input<boolean>(false);
+  size = input<string>('sm')
 
   touched = signal(false);
+
+
 
   markAsTouched() {
     this.touched.set(true);
