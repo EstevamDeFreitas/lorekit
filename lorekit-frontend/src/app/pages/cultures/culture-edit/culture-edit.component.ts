@@ -22,6 +22,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { CultureConfiguredFieldsComponent } from '../culture-configured-fields/culture-configured-fields.component';
 import { EntityChangeService } from '../../../services/entity-change.service';
+import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
 
 @Component({
   selector: 'app-culture-edit',
@@ -69,8 +70,8 @@ import { EntityChangeService } from '../../../services/entity-change.service';
       <div class="flex flex-col @2xl:flex-row gap-4 mt-10">
         <div class="flex-1 h-auto  flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
-            <app-nav-button [label]="'Principal'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
-            <app-nav-button [label]="'Informações adicionais'" size="sm" [active]="currentTab === 'description'" (click)="currentTab = 'description'"></app-nav-button>
+            <app-nav-button [label]="'Principal'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button>
+            <app-nav-button [label]="'Informações adicionais'" size="sm" [active]="currentTab === 'description'" (click)="selectTab('description')"></app-nav-button>
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
             @if (!isLoading) {
@@ -104,6 +105,7 @@ export class CultureEditComponent {
   private locationService = inject(LocationService);
   private cultureService = inject(CultureService);
   private entityChangeService = inject(EntityChangeService);
+  private currentEntityPageStateService = inject(CurrentEntityPageStateService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
 
@@ -143,7 +145,17 @@ export class CultureEditComponent {
   availableWorlds : World[] = [];
   availableLocations : Location[] = [];
 
+  selectTab(tab: string): void {
+    this.currentTab = tab;
+    this.currentEntityPageStateService.setCurrentTab('Culture', this.cultureId(), tab);
+  }
+
+  private restoreCurrentTab(): void {
+    this.currentTab = this.currentEntityPageStateService.getCurrentTab('Culture', this.cultureId(), 'properties');
+  }
+
   ngOnInit(): void {
+    this.restoreCurrentTab();
     this.getCulture();
     this.getWorldsAndLocations();
     this.isLoading = false;

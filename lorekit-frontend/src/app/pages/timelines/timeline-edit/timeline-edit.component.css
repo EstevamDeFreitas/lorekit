@@ -1,3 +1,22 @@
 :host {
   display: block;
 }
+
+.timeline-section {
+  isolation: isolate;
+}
+
+.timeline-section::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background-image: var(--timeline-section-background-image, none);
+  background-position: center;
+  background-size: cover;
+  background-attachment: local;
+  content: '';
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%);
+}

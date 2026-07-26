@@ -21,6 +21,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { LocationConfiguredFieldsComponent } from '../location-configured-fields/location-configured-fields.component';
 import { EntityChangeService } from '../../../services/entity-change.service';
+import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
 
 @Component({
   selector: 'app-location-edit',
@@ -68,9 +69,9 @@ import { EntityChangeService } from '../../../services/entity-change.service';
       <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
         <div class="flex-1 flex flex-col ">
           <div class="flex flex-row gap-4 ms-1">
-            <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="currentTab = 'details'"></app-nav-button>
+            <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
             @if(hasDynamicFields) {
-              <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
+              <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button>
             }
             <!-- <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button> -->
           </div>
@@ -114,6 +115,7 @@ export class LocationEditComponent implements OnInit {
   private activatedRoute = inject(ActivatedRoute);
   private locationService = inject(LocationService);
   private entityChangeService = inject(EntityChangeService);
+  private currentEntityPageStateService = inject(CurrentEntityPageStateService);
   private worldService = inject(WorldService);
   private locationCategoryService = inject(LocationCategoriesService);
   public getPersonalizationValue = getPersonalizationValue;
@@ -160,7 +162,17 @@ export class LocationEditComponent implements OnInit {
 
   fields: FormField[] = [];
 
+  selectTab(tab: string): void {
+    this.currentTab = tab;
+    this.currentEntityPageStateService.setCurrentTab('Location', this.locationId(), tab);
+  }
+
+  private restoreCurrentTab(): void {
+    this.currentTab = this.currentEntityPageStateService.getCurrentTab('Location', this.locationId(), 'details');
+  }
+
   ngOnInit(): void {
+    this.restoreCurrentTab();
     this.getLocation();
     this.getCategories();
   }
@@ -200,7 +212,7 @@ export class LocationEditComponent implements OnInit {
   }
 
   openLocalitiesTab() {
-    this.currentTab = 'localities';
+    this.selectTab('localities');
 
     if (this.locationListComponent) {
       return;

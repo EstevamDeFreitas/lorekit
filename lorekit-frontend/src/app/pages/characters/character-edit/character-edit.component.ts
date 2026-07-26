@@ -24,6 +24,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { CharacterConfiguredFieldsComponent } from '../character-configured-fields/character-configured-fields.component';
 import { EntityChangeService } from '../../../services/entity-change.service';
+import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
 
 @Component({
   selector: 'app-character-edit',
@@ -76,8 +77,8 @@ import { EntityChangeService } from '../../../services/entity-change.service';
       <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
         <div class="flex-1 flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
-            <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
-            <app-nav-button [label]="'Backstory'" size="sm" [active]="currentTab === 'backstory'" (click)="currentTab = 'backstory'"></app-nav-button>
+            <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button>
+            <app-nav-button [label]="'Backstory'" size="sm" [active]="currentTab === 'backstory'" (click)="selectTab('backstory')"></app-nav-button>
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
             @if (!isLoading) {
@@ -111,6 +112,7 @@ export class CharacterEditComponent implements OnInit {
   private specieService = inject(SpecieService);
   private characterService = inject(CharacterService);
   private entityChangeService = inject(EntityChangeService);
+  private currentEntityPageStateService = inject(CurrentEntityPageStateService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
 
@@ -150,7 +152,17 @@ export class CharacterEditComponent implements OnInit {
   availableWorlds : World[] = [];
   availableSpecies : Specie[] = [];
 
+  selectTab(tab: string): void {
+    this.currentTab = tab;
+    this.currentEntityPageStateService.setCurrentTab('Character', this.characterId(), tab);
+  }
+
+  private restoreCurrentTab(): void {
+    this.currentTab = this.currentEntityPageStateService.getCurrentTab('Character', this.characterId(), 'properties');
+  }
+
   ngOnInit(): void {
+    this.restoreCurrentTab();
     this.getCharacter();
     this.getWorldsAndSpecies();
     this.isLoading = false;

@@ -10,6 +10,7 @@ import { IrpwCharacterSheet } from '../../../models/irpw-character-sheet.model';
 import { World } from '../../../models/world.model';
 import { CharacterService } from '../../../services/character.service';
 import { EntityChangeService } from '../../../services/entity-change.service';
+import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
 import { IrpwCharacterSheetService } from '../../../services/irpw-character-sheet.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
@@ -525,10 +526,10 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                   <div class="col-span-2 p-3">
                     <div class="flex-4 flex flex-col">
                       <div class="flex flex-row gap-4 ms-1">
-                        <app-nav-button buttonType="pink" [label]="'Geral'" size="sm" [active]="currentTab === 'general'" (click)="currentTab = 'general'"></app-nav-button>
-                        <app-nav-button buttonType="pink" [label]="'Marcos'" size="sm" [active]="currentTab === 'marks'" (click)="currentTab = 'marks'"></app-nav-button>
-                        <app-nav-button buttonType="pink" [label]="'Inventário'" size="sm" [active]="currentTab === 'inventory'" (click)="currentTab = 'inventory'"></app-nav-button>
-                        <app-nav-button buttonType="pink" [label]="'Habilidades'" size="sm" [active]="currentTab === 'skills'" (click)="currentTab = 'skills'"></app-nav-button>
+                        <app-nav-button buttonType="pink" [label]="'Geral'" size="sm" [active]="currentTab === 'general'" (click)="selectTab('general')"></app-nav-button>
+                        <app-nav-button buttonType="pink" [label]="'Marcos'" size="sm" [active]="currentTab === 'marks'" (click)="selectTab('marks')"></app-nav-button>
+                        <app-nav-button buttonType="pink" [label]="'Inventário'" size="sm" [active]="currentTab === 'inventory'" (click)="selectTab('inventory')"></app-nav-button>
+                        <app-nav-button buttonType="pink" [label]="'Habilidades'" size="sm" [active]="currentTab === 'skills'" (click)="selectTab('skills')"></app-nav-button>
                       </div>
                       <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
                           @switch (currentTab) {
@@ -1092,6 +1093,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private worldService = inject(WorldService);
   private worldStateService = inject(WorldStateService);
   private entityChangeService = inject(EntityChangeService);
+  private currentEntityPageStateService = inject(CurrentEntityPageStateService);
   private sheetService = inject(IrpwCharacterSheetService);
 
   characterIdInput = input<string>('');
@@ -1199,7 +1201,17 @@ export class IrpwCharacterSheetComponent implements OnInit {
   rollResults: RollResult[] = [];
   lastRollFormula = '';
 
+  selectTab(tab: string): void {
+    this.currentTab = tab;
+    this.currentEntityPageStateService.setCurrentTab('CharacterSheet', this.selectedCharacterId || this.characterIdInput(), tab);
+  }
+
+  private restoreCurrentTab(characterId: string): void {
+    this.currentTab = this.currentEntityPageStateService.getCurrentTab('CharacterSheet', characterId, 'general');
+  }
+
   ngOnInit() {
+    this.restoreCurrentTab(this.characterIdInput());
     this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
       if (this.characterIdInput()) {
         return;
@@ -1292,6 +1304,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     if (!force && this.selectedCharacterId === characterId) return;
 
     this.selectedCharacterId = characterId;
+    this.restoreCurrentTab(characterId);
     this.selectedCharacter = this.characters.find(c => c.id === characterId) ?? null;
     if (!this.selectedCharacter) {
       try {
@@ -2591,4 +2604,3 @@ export class IrpwCharacterSheetComponent implements OnInit {
     return Math.floor(Math.random() * sides) + 1;
   }
 }
-

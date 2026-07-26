@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AsyncPipe, NgComponentOutlet } from '@angular/common';
 import { TabManagerService } from '../../services/tab-manager.service';
 import { NgClass } from '@angular/common';
+import { ComponentRefreshService } from '../../services/component-refresh.service';
 
 interface SidebarSectionEntry {
   label: string;
@@ -136,9 +137,15 @@ const SIDEBAR_SECTIONS: Record<string, SidebarSectionEntry> = {
           </div>
           <!-- List component rendered in panel mode -->
           <div class="flex-1 h-full overflow-y-auto scrollbar-dark">
-            <ng-container
-              *ngComponentOutlet="resolvedComponent()!; inputs: { panelMode: true }">
-            </ng-container>
+            @if (componentRefresh.usePrimaryOutlet()) {
+              <ng-container
+                *ngComponentOutlet="resolvedComponent()!; inputs: { panelMode: true }">
+              </ng-container>
+            } @else {
+              <ng-container
+                *ngComponentOutlet="resolvedComponent()!; inputs: { panelMode: true }">
+              </ng-container>
+            }
           </div>
         </div>
         <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-11 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[layout.sidebarVisible ? 'start-88' : 'start-12']" (click)="tabManager.toggleSidebar()">
@@ -152,6 +159,7 @@ const SIDEBAR_SECTIONS: Record<string, SidebarSectionEntry> = {
 export class SidebarPanelComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   tabManager = inject(TabManagerService);
+  readonly componentRefresh = inject(ComponentRefreshService);
   layout$ = this.tabManager.layout$;
 
   resolvedComponent = signal<Type<any> | null>(null);

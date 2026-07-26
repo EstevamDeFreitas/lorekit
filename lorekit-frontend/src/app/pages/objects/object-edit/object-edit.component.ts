@@ -24,6 +24,7 @@ import { NavButtonComponent } from '../../../components/nav-button/nav-button.co
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { ObjectConfiguredFieldsComponent } from '../object-configured-fields/object-configured-fields.component';
 import { EntityChangeService } from '../../../services/entity-change.service';
+import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
 
 @Component({
   selector: 'app-object-edit',
@@ -74,10 +75,10 @@ import { EntityChangeService } from '../../../services/entity-change.service';
       <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
         <div class="flex-1 h-auto flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
-            <!-- <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button> -->
-            <app-nav-button [label]="'História'" size="sm" [active]="currentTab === 'history'" (click)="currentTab = 'history'"></app-nav-button>
+            <!-- <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button> -->
+            <app-nav-button [label]="'História'" size="sm" [active]="currentTab === 'history'" (click)="selectTab('history')"></app-nav-button>
             @if(hasDynamicFields) {
-              <app-nav-button [label]="'Campos Configurados'" size="sm" [active]="currentTab === 'configured'" (click)="currentTab = 'configured'"></app-nav-button>
+              <app-nav-button [label]="'Campos Configurados'" size="sm" [active]="currentTab === 'configured'" (click)="selectTab('configured')"></app-nav-button>
             }
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
@@ -115,6 +116,7 @@ export class ObjectEditComponent implements OnInit {
   private locationService = inject(LocationService);
   private objectService = inject(ObjectService);
   private entityChangeService = inject(EntityChangeService);
+  private currentEntityPageStateService = inject(CurrentEntityPageStateService);
   private objectTypeService = inject(ObjectTypeService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
@@ -160,7 +162,17 @@ export class ObjectEditComponent implements OnInit {
   availableWorlds: World[] = [];
   availableLocations: Location[] = [];
 
+  selectTab(tab: string): void {
+    this.currentTab = tab;
+    this.currentEntityPageStateService.setCurrentTab('Object', this.objectId(), tab);
+  }
+
+  private restoreCurrentTab(): void {
+    this.currentTab = this.currentEntityPageStateService.getCurrentTab('Object', this.objectId(), 'history');
+  }
+
   ngOnInit(): void {
+    this.restoreCurrentTab();
     this.getObject();
     this.getWorldsAndLocations();
     this.isLoading = false;

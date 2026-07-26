@@ -42,4 +42,17 @@ describe('AppComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('app-search')).not.toBeNull();
   });
+  it('uses F5 to refresh components without reloading the window', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const app = fixture.componentInstance;
+    const refreshSpy = spyOn(app, 'refreshComponents').and.resolveTo();
+    const event = new KeyboardEvent('keydown', { key: 'F5', cancelable: true });
+
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBeTrue();
+    expect(refreshSpy).toHaveBeenCalledTimes(1);
+    fixture.destroy();
+  });
 });

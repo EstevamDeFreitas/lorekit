@@ -25,6 +25,7 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world-configured-fields.component';
+import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
 
 @Component({
   selector: 'app-world-info',
@@ -68,11 +69,11 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
       <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
         <div class="flex-1 flex flex-col">
           <div class="flex flex-row gap-4 ms-1">
-            <app-nav-button [label]="'Detalhes do mundo'" size="sm" [active]="currentTab === 'details'" (click)="currentTab = 'details'"></app-nav-button>
-            <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="currentTab = 'properties'"></app-nav-button>
+            <app-nav-button [label]="'Detalhes do mundo'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
+            <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button>
             <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button>
-            <!-- <app-nav-button [label]="'Personagens'" size="sm" [active]="currentTab === 'characters'" (click)="currentTab = 'characters'"></app-nav-button>
-            <app-nav-button [label]="'Objetos'" size="sm" [active]="currentTab === 'objects'" (click)="currentTab = 'objects'"></app-nav-button> -->
+            <!-- <app-nav-button [label]="'Personagens'" size="sm" [active]="currentTab === 'characters'" (click)="selectTab('characters')"></app-nav-button>
+            <app-nav-button [label]="'Objetos'" size="sm" [active]="currentTab === 'objects'" (click)="selectTab('objects')"></app-nav-button> -->
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
             @if (!isLoading) {
@@ -116,6 +117,7 @@ import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world
 })
 export class WorldInfoComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
+  private readonly currentEntityPageStateService = inject(CurrentEntityPageStateService);
   dialogref = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
   worldIdInput = input<string>('');
@@ -185,7 +187,18 @@ export class WorldInfoComponent implements OnInit {
   }
 
   ngOnInit() {
+    const restoredTab = this.currentEntityPageStateService.getCurrentTab('World', this.worldId(), 'details');
+    if (restoredTab === 'localities') {
+      this.openLocalitiesTab();
+      return;
+    }
 
+    this.currentTab = restoredTab;
+  }
+
+  selectTab(tab: string): void {
+    this.currentTab = tab;
+    this.currentEntityPageStateService.setCurrentTab('World', this.worldId(), tab);
   }
 
   getWorld() {
@@ -228,7 +241,7 @@ export class WorldInfoComponent implements OnInit {
   }
 
   openLocalitiesTab() {
-    this.currentTab = 'localities';
+    this.selectTab('localities');
 
     if (this.locationListComponent) {
       return;

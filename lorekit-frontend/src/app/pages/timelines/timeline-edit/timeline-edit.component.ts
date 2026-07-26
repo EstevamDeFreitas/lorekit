@@ -291,7 +291,7 @@ export class TimelineEventDocumentsDialogComponent {
               @for (section of sections; track section.id; let sectionIndex = $index) {
 
                 <div
-                  class="relative rounded-md px-6 py-8 transition-colors"
+                  class="timeline-section relative rounded-md px-6 py-8 transition-colors"
                   [ngStyle]="buildSectionStyle(section)"
                 >
                 <div class="absolute left-1/2 top-0 bottom-0 w-[3px] -translate-x-1/2 z-0 bg-zinc-400"></div>
@@ -659,16 +659,13 @@ export class TimelineEditComponent {
 
     if (image?.filePath) {
       return {
-        'background-image': `
+        '--timeline-section-background-image': `
           linear-gradient(
             rgba(24,24,27,.90),
             rgba(24,24,27,.82)
           ),
           url(${buildImageUrl(image.filePath)})
         `,
-        'background-size': 'cover',
-        'background-position': 'center',
-        'background-attachment': 'local',
         'border-color': this.hexToRgba(color, .25),
       };
     }

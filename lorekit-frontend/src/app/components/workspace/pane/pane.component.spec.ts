@@ -1,6 +1,8 @@
 import { Component, OnDestroy } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { DbProvider } from '../../../app.config';
 import { ComponentRegistryService } from '../../../services/component-registry.service';
+import { ComponentRefreshService } from '../../../services/component-refresh.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
 import { WorkspacePaneComponent } from './pane.component';
 
@@ -42,6 +44,12 @@ describe('WorkspacePaneComponent', () => {
           provide: ComponentRegistryService,
           useValue: {
             getTabInputs: () => ({}),
+          },
+        },
+        {
+          provide: DbProvider,
+          useValue: {
+            getCrudHelper: () => ({}),
           },
         },
       ],
@@ -86,6 +94,32 @@ describe('WorkspacePaneComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelectorAll('.test-editor').length).toBe(1);
+    expect(TestEditorComponent.activeInstances).toBe(1);
+    expect(TestEditorComponent.createdInstances).toBe(2);
+  });
+
+  it('remounts the active component when a refresh is requested', () => {
+    const tab = {
+      id: 'tab-1',
+      title: 'Tab',
+      icon: 'fa-file',
+      entityType: 'Document' as const,
+      entityId: 'document-1',
+      paneId: 'pane-1',
+      isDirty: false,
+      resolvedComponent: TestEditorComponent,
+    };
+
+    fixture.componentRef.setInput('pane', {
+      id: 'pane-1',
+      tabs: [tab],
+      activeTabId: tab.id,
+    });
+    fixture.detectChanges();
+
+    TestBed.inject(ComponentRefreshService).refresh();
+    fixture.detectChanges();
+
     expect(TestEditorComponent.activeInstances).toBe(1);
     expect(TestEditorComponent.createdInstances).toBe(2);
   });

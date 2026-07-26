@@ -9,6 +9,7 @@ import { WorkspacePane } from '../../../models/workspace.model';
 import { WorkspaceTabBarComponent } from '../tab-bar/tab-bar.component';
 import { TabManagerService } from '../../../services/tab-manager.service';
 import { ComponentRegistryService } from '../../../services/component-registry.service';
+import { ComponentRefreshService } from '../../../services/component-refresh.service';
 
 @Component({
   selector: 'app-workspace-pane',
@@ -47,9 +48,15 @@ import { ComponentRegistryService } from '../../../services/component-registry.s
             @if (tab.id === pane().activeTabId) {
               <div class="absolute inset-0 overflow-y-auto scrollbar-dark px-3">
                 @if (tab.resolvedComponent) {
-                  <ng-container
-                    *ngComponentOutlet="tab.resolvedComponent; inputs: getTabInputs(tab)">
-                  </ng-container>
+                  @if (componentRefresh.usePrimaryOutlet()) {
+                    <ng-container
+                      *ngComponentOutlet="tab.resolvedComponent; inputs: getTabInputs(tab)">
+                    </ng-container>
+                  } @else {
+                    <ng-container
+                      *ngComponentOutlet="tab.resolvedComponent; inputs: getTabInputs(tab)">
+                    </ng-container>
+                  }
                 } @else {
                   <!-- Loading -->
                   <div class="h-full flex items-center justify-center text-zinc-500 text-sm">
@@ -69,6 +76,7 @@ export class WorkspacePaneComponent {
   flexRatio = input<number>(100);
 
   tabManager = inject(TabManagerService);
+  readonly componentRefresh = inject(ComponentRefreshService);
   private registry = inject(ComponentRegistryService);
 
 
