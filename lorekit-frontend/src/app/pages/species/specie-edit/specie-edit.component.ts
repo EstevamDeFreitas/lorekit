@@ -49,8 +49,8 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/specie"></app-icon-button>
         }
-        <input type="text" (blur)="saveSpecie()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="specie.name" />
-        <div class="flex flex-row gap-2">
+        <input type="text" (blur)="saveSpecie()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="specie.name" />
+        <div class="flex flex-row flex-wrap gap-2 ms-auto">
           <!-- <app-entity-transfer-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-entity-transfer-button> -->
           <app-ui-field-config-button
             [entityTable]="'Species'"
@@ -75,7 +75,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       </div>
       <div class="flex flex-col @2xl:flex-row gap-4 mt-10">
         <div class="flex-1 flex flex-col">
-          <div class="flex flex-row gap-4 ms-1">
+          <div class="flex flex-row flex-wrap gap-4 ms-1">
             <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button>
             <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
             <app-nav-button [label]="'Variações'" size="sm" [active]="currentTab === 'subspecies'" (click)="selectTab('subspecies')"></app-nav-button>

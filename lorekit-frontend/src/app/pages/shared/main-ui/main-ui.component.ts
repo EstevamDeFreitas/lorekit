@@ -12,16 +12,16 @@ import { TabManagerService } from '../../../services/tab-manager.service';
   imports: [AsyncPipe, NavButtonComponent, WorkspaceComponent, SidebarPanelComponent],
   template: `
   @if (tabManager.layout$ | async; as layout) {
-  <div class="h-screen w-screen overflow-hidden flex flex-col pt-9">
-  <div class="flex flex-row flex-1 overflow-hidden">
+  <div class="h-dvh w-full overflow-hidden flex flex-col pt-9">
+  <div class="relative flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden" (touchstart)="onLayoutTouchStart($event)" (touchend)="onLayoutTouchEnd($event)">
 
     <!-- Activity bar (icon strip) -->
-    <div class="flex flex-col bg-zinc-900 justify-between ps-4 w-15 border-r pt-4 pb-4 border-zinc-700 shrink-0">
-      <div>
-        <div class="pr-3 mb-8">
+    <div class="flex flex-row md:flex-col bg-zinc-900 items-center md:items-stretch md:justify-between px-2 md:ps-4 md:w-15 h-14 md:h-auto border-b md:border-b-0 md:border-r py-2 md:pt-4 md:pb-4 border-zinc-700 shrink-0 overflow-x-auto scrollbar-hide">
+      <div class="flex flex-row md:flex-col items-center md:items-stretch min-w-max shrink-0">
+        <div class="w-8 shrink-0 me-4 md:me-0 md:pr-3 md:mb-8">
           <img src="assets/lorekit-logo.png" alt="Lorekit">
         </div>
-        <div class="flex flex-col gap-4 mb-4">
+        <div class="flex flex-row md:flex-col gap-3 md:gap-4 mb-0 md:mb-4">
           <app-nav-button [label]="'Mundos'" [showLabel]="false" [icon]="'fa-solid fa-earth'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'world'"
             activeColor="yellow-400"
@@ -73,7 +73,7 @@ import { TabManagerService } from '../../../services/tab-manager.service';
         </div>
       </div>
 
-      <div>
+      <div class="ms-3 md:ms-0 shrink-0">
         <app-nav-button [label]="'Configurações'" (click)="openSettings()" [showLabel]="false" [icon]="'fa-solid fa-gears'" size="xl" [fullWidth]="true" [direction]="'right'"></app-nav-button>
       </div>
     </div>
@@ -82,7 +82,7 @@ import { TabManagerService } from '../../../services/tab-manager.service';
     <app-sidebar-panel />
 
     <!-- Workspace (tabbed editor panes) -->
-    <div class="flex-1 h-full overflow-hidden">
+    <div class="flex-1 min-h-0 min-w-0 h-full overflow-hidden">
       <app-workspace />
     </div>
 
@@ -96,6 +96,25 @@ import { TabManagerService } from '../../../services/tab-manager.service';
 export class MainUiComponent {
   settingsDialog = inject(Dialog);
   tabManager = inject(TabManagerService);
+
+  private layoutTouchStartX: number | null = null;
+
+  onLayoutTouchStart(event: TouchEvent): void {
+    this.layoutTouchStartX = event.touches[0]?.clientX ?? null;
+  }
+
+  onLayoutTouchEnd(event: TouchEvent): void {
+    const endX = event.changedTouches[0]?.clientX;
+    if (
+      this.layoutTouchStartX !== null &&
+      endX !== undefined &&
+      this.layoutTouchStartX <= 24 &&
+      endX - this.layoutTouchStartX > 60
+    ) {
+      this.tabManager.setSidebarVisible(true);
+    }
+    this.layoutTouchStartX = null;
+  }
 
   openSettings() {
     this.settingsDialog.open(SettingsComponent, {

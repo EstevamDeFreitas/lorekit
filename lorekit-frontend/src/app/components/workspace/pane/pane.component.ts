@@ -16,9 +16,9 @@ import { ComponentRefreshService } from '../../../services/component-refresh.ser
   standalone: true,
   imports: [NgComponentOutlet, WorkspaceTabBarComponent],
   host: {
-    'class': 'flex flex-col overflow-hidden',
+    'class': 'flex flex-col min-h-0 min-w-0 md:min-w-[200px] overflow-hidden',
     '[style.flex-basis.%]': 'flexRatio()',
-    '[style.min-width.px]': '200',
+
     '(mousedown)': 'tabManager.setFocusedPane(pane().id)',
   },
   template: `
@@ -46,7 +46,7 @@ import { ComponentRefreshService } from '../../../services/component-refresh.ser
         } @else {
           @for (tab of pane().tabs; track tab.id) {
             @if (tab.id === pane().activeTabId) {
-              <div class="absolute inset-0 overflow-y-auto scrollbar-dark px-3">
+              <div class="absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-dark px-3">
                 @if (tab.resolvedComponent) {
                   @if (componentRefresh.usePrimaryOutlet()) {
                     <ng-container

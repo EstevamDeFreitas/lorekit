@@ -3,7 +3,7 @@
     <div class="flex flex-row flex-wrap items-center gap-2">
       <input
         type="text"
-        class="min-w-48 flex-1 bg-transparent text-lg font-semibold outline-none border-0 focus:ring-0"
+        class="min-w-0 md:min-w-48 flex-1 bg-transparent text-lg font-semibold outline-none border-0 focus:ring-0"
         [ngModel]="moodboard().name"
         (ngModelChange)="updateMoodboardName($event)"
         (blur)="saveMoodboardName()" />
@@ -60,7 +60,7 @@
     </div>
   </div>
 
-  <div class="min-h-0 flex-1 grid grid-cols-[minmax(0,1fr)_19rem]">
+  <div class="min-h-0 flex-1 grid grid-cols-1 grid-rows-[minmax(22rem,1fr)_auto] overflow-y-auto md:grid-cols-[minmax(0,1fr)_19rem] md:grid-rows-1 md:overflow-hidden">
     <div #stage class="moodboard-stage">
       @if (activeTool() === 'draw') {
         <div class="moodboard-item-toolbar moodboard-draw-toolbar" (mousedown)="$event.stopPropagation()">
@@ -131,6 +131,7 @@
         [style.height.px]="canvasHeight"
         [style.transform]="canvasTransform()"
         (mousedown)="onCanvasMouseDown($event)"
+        (touchstart)="onCanvasTouchStart($event)"
         (auxclick)="$event.preventDefault()"
         (dblclick)="onCanvasDoubleClick($event)"
         (wheel)="onCanvasWheel($event)"
@@ -179,6 +180,7 @@
               [style.transform]="'rotate(' + (view.config.rotation || 0) + 'deg)'"
               [style.z-index]="layerZIndex(view)"
               (mousedown)="onItemMouseDown($event, view)"
+              (touchstart)="onItemTouchStart($event, view)"
               (dblclick)="editItem($event, view)">
               <svg class="moodboard-shape-svg" [attr.width]="itemWidth(view)" [attr.height]="itemHeight(view)">
                 <defs>
@@ -255,6 +257,7 @@
               [style.transform]="'rotate(' + (view.config.rotation || 0) + 'deg)'"
               [style.z-index]="layerZIndex(view)"
               (mousedown)="onItemMouseDown($event, view)"
+              (touchstart)="onItemTouchStart($event, view)"
               (dblclick)="editItem($event, view)">
               @switch (view.config.kind) {
                 @case ('text') {

@@ -23,6 +23,9 @@ import { getEntityStyle } from '../../../models/entity-colors';
 
 @Component({
   selector: 'app-workspace-tab-bar',
+  host: {
+    '(window:resize)': 'syncMobileViewport()',
+  },
   standalone: true,
   imports: [NgClass, CdkDrag, CdkDropList, CdkDragPlaceholder, NgStyle],
   template: `
@@ -30,6 +33,7 @@ import { getEntityStyle } from '../../../models/entity-colors';
       class="flex flex-row items-stretch h-9 bg-zinc-925 border-b border-zinc-700 overflow-x-auto scrollbar-hide shrink-0"
       cdkDropList
       cdkDropListOrientation="horizontal"
+      [cdkDropListDisabled]="isMobileViewport()"
       [cdkDropListData]="{ paneId: pane().id }"
       [id]="'drop-' + pane().id"
       (cdkDropListDropped)="onDrop($event)"
@@ -40,6 +44,7 @@ import { getEntityStyle } from '../../../models/entity-colors';
         <div
           cdkDrag
           [cdkDragData]="{ tabId: tab.id, paneId: pane().id }"
+          [cdkDragDisabled]="isMobileViewport()"
           class="flex flex-row items-center gap-1.5 px-3 h-full text-xs border-r border-zinc-700 cursor-pointer select-none shrink-0 group relative max-w-48 min-w-20"
           [ngClass]="getTabClasses(tab)"
           [style.border-top-color]="getTabAccentColor(tab)"
@@ -76,7 +81,7 @@ import { getEntityStyle } from '../../../models/entity-colors';
       <!-- Split pane button -->
       <button
         type="button"
-        class="ml-auto flex items-center px-2 h-full text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 shrink-0 transition-colors"
+        class="ml-auto hidden md:flex items-center px-2 h-full text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 shrink-0 transition-colors"
         title="Dividir painel"
         (click)="tabManager.splitPane(pane().id)">
         <i class="fa-solid fa-table-columns text-xs"></i>
@@ -103,7 +108,7 @@ import { getEntityStyle } from '../../../models/entity-colors';
   `,
   styles: [`
     .scrollbar-hide::-webkit-scrollbar { display: none; }
-    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; touch-action: pan-x; }
     .cdk-drag-preview {
       background: #3f3f46;
       color: #e4e4e7;
@@ -118,7 +123,7 @@ import { getEntityStyle } from '../../../models/entity-colors';
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class WorkspaceTabBarComponent{
+export class WorkspaceTabBarComponent implements OnInit {
   pane = input.required<WorkspacePane>();
 
   tabManager = inject(TabManagerService);
@@ -135,6 +140,15 @@ export class WorkspaceTabBarComponent{
   }
 
   contextMenu = signal<{ x: number; y: number; tab: WorkspaceTab } | null>(null);
+  readonly isMobileViewport = signal(false);
+
+  ngOnInit(): void {
+    this.syncMobileViewport();
+  }
+
+  syncMobileViewport(): void {
+    this.isMobileViewport.set(window.matchMedia('(max-width: 767px)').matches);
+  }
 
   getTabClasses(tab: WorkspaceTab): Record<string, boolean> {
     const isActive = tab.id === this.pane().activeTabId;

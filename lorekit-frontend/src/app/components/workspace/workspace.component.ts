@@ -24,7 +24,7 @@ import { WorkspaceLayout } from '../../models/workspace.model';
   template: `
     @if (layout$ | async; as layout) {
       <div
-        class="flex flex-row h-full overflow-hidden"
+        class="flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden"
         cdkDropListGroup>
         @for (pane of layout.panes; track pane.id; let i = $index) {
           <!-- Resize handle before pane (skip first) -->

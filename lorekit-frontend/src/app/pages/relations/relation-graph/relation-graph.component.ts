@@ -20,6 +20,11 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
 @Component({
   selector: 'app-relation-graph',
   imports: [FormsModule, NgClass, SlicePipe, ButtonComponent, ComboBoxComponent, InputComponent, IconButtonComponent],
+  host: {
+    '(window:touchmove)': 'onGraphTouchMove($event)',
+    '(window:touchend)': 'onGraphTouchEnd()',
+    '(window:touchcancel)': 'onGraphTouchEnd()',
+  },
   template: `
     <div class="flex flex-col pt-2 gap-4 @container">
       <div class="flex flex-wrap items-end gap-3">
@@ -35,7 +40,7 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
         />
 
         <app-combo-box
-          class="w-80"
+          class="w-full md:w-80"
           label="Entidade Principal"
           [items]="entityOptions"
           compareProp="id"
@@ -77,18 +82,19 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
       @if (graphView; as graph) {
         <div class="grid grid-cols-1 @4xl:grid-cols-[1fr_21rem] gap-4">
           <div
-            class="rounded-lg border border-zinc-800 bg-zinc-925 overflow-hidden relative cursor-grab"
+            class="rounded-lg border border-zinc-800 bg-zinc-925 overflow-hidden relative cursor-grab touch-none"
             [ngClass]="{'!cursor-grabbing': isPanning}"
             (click)="closeContextMenu()"
             (wheel)="onGraphWheel($event)"
             (mousedown)="startPan($event)"
+            (touchstart)="onGraphTouchStart($event)"
           >
             <div class="absolute z-20 top-2 right-2 flex flex-row gap-1 rounded-md border border-zinc-700 bg-zinc-900/90 p-1">
               <button class="w-7 h-7 rounded hover:bg-zinc-800 cursor-pointer" (click)="$event.stopPropagation(); zoomOut()">-</button>
               <button class="w-7 h-7 rounded hover:bg-zinc-800 cursor-pointer" (click)="$event.stopPropagation(); zoomIn()">+</button>
             </div>
 
-            <svg #graphSvg class="w-full h-[calc(100vh-10.5rem)]" [attr.viewBox]="graphViewBox">
+            <svg #graphSvg class="w-full h-[min(60dvh,32rem)] md:h-[calc(100vh-10.5rem)]" [attr.viewBox]="graphViewBox">
               <defs>
                 <marker
                   id="arrow-head"
@@ -134,6 +140,7 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
                   (contextmenu)="openNodeContextMenu($event, node)"
                   (click)="$event.stopPropagation(); selectNode(node);"
                   (mousedown)="startNodeDrag($event, node)"
+                  (touchstart)="startNodeTouchDrag($event, node)"
                 >
                   <rect
                     [attr.x]="nodeRect(node).x"
@@ -487,6 +494,48 @@ export class RelationGraphComponent implements OnInit {
     this.currentSelectedId = node.id;
   }
 
+  onGraphTouchStart(event: TouchEvent): void {
+    const mouseEvent = this.touchToMouseEvent(event, 'mousedown');
+    if (!mouseEvent) return;
+
+    event.preventDefault();
+    this.startPan(mouseEvent);
+  }
+
+  startNodeTouchDrag(event: TouchEvent, node: GraphNode): void {
+    const mouseEvent = this.touchToMouseEvent(event, 'mousedown');
+    if (!mouseEvent) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.startNodeDrag(mouseEvent, node);
+  }
+
+  onGraphTouchMove(event: TouchEvent): void {
+    if (!this.isPanning && !this.isNodeDragging && !this.isNodeResizing) return;
+
+    const mouseEvent = this.touchToMouseEvent(event, 'mousemove');
+    if (!mouseEvent) return;
+
+    event.preventDefault();
+    this.onPanMove(mouseEvent);
+  }
+
+  onGraphTouchEnd(): void {
+    this.stopPan();
+  }
+
+  private touchToMouseEvent(event: TouchEvent, type: string): MouseEvent | null {
+    const touch = event.touches[0] ?? event.changedTouches[0];
+    if (!touch) return null;
+
+    return new MouseEvent(type, {
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      button: 0,
+      buttons: 1,
+    });
+  }
   startNodeDrag(event: MouseEvent, node: GraphNode): void {
     event.stopPropagation();
 

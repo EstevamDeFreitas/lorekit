@@ -120,7 +120,15 @@ const SIDEBAR_SECTIONS: Record<string, SidebarSectionEntry> = {
   template: `
     @if (layout$ | async; as layout) {
       @if (resolvedComponent()) {
-        <div [ngClass]="layout.sidebarVisible ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0'" class="flex flex-col border-r bg-zinc-925 border-zinc-700 h-full overflow-hidden">
+        @if (layout.sidebarVisible) {
+          <button
+            type="button"
+            class="absolute inset-0 z-[60] bg-black/40 md:hidden"
+            aria-label="Fechar menu lateral"
+            (click)="tabManager.setSidebarVisible(false)">
+          </button>
+        }
+        <div [ngClass]="layout.sidebarVisible ? 'transition-all duration-300 overflow-clip shrink-0 w-[min(20rem,calc(100vw-2rem))] md:w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0'" class="absolute md:relative inset-y-0 start-0 z-[70] md:z-auto flex flex-col border-r bg-zinc-925 border-zinc-700 h-full overflow-hidden shadow-2xl md:shadow-none" (touchstart)="onDrawerTouchStart($event)" (touchend)="onDrawerTouchEnd($event)">
           <!-- Section header -->
           <div class="flex flex-row items-center justify-between px-4 py-2  shrink-0">
             <div class="flex flex-row items-center gap-2 p-[0.1rem] text-xs font-semibold text-zinc-400 uppercase tracking-wider">
@@ -148,7 +156,7 @@ const SIDEBAR_SECTIONS: Record<string, SidebarSectionEntry> = {
             }
           </div>
         </div>
-        <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-11 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[layout.sidebarVisible ? 'start-88' : 'start-12']" (click)="tabManager.toggleSidebar()">
+        <small class="border absolute md:fixed z-[80] md:z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-2 md:top-11 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[layout.sidebarVisible ? 'start-[min(20rem,calc(100vw-2rem))] md:start-88' : 'start-2 md:start-12']" (click)="tabManager.toggleSidebar()">
           <i class="fa-solid text-zinc-400" [ngClass]="[layout.sidebarVisible ? 'fa-angles-left' : 'fa-angles-right']"></i>
         </small>
       }
@@ -166,7 +174,20 @@ export class SidebarPanelComponent implements OnInit {
   currentSectionLabel = signal<string>('');
   currentSectionIcon = signal<string>('');
 
+  private drawerTouchStartX: number | null = null;
   private lastSection = '';
+
+  onDrawerTouchStart(event: TouchEvent): void {
+    this.drawerTouchStartX = event.touches[0]?.clientX ?? null;
+  }
+
+  onDrawerTouchEnd(event: TouchEvent): void {
+    const endX = event.changedTouches[0]?.clientX;
+    if (this.drawerTouchStartX !== null && endX !== undefined && endX - this.drawerTouchStartX < -60) {
+      this.tabManager.setSidebarVisible(false);
+    }
+    this.drawerTouchStartX = null;
+  }
 
   ngOnInit(): void {
     this.layout$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(layout => {

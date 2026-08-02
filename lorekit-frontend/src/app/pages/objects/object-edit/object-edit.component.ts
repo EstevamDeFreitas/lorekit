@@ -47,12 +47,12 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
         <img [src]="profileImg | assetUrl" class="h-[27vh] absolute top-3 left-3 object-cover rounded-md">
       }
       <br>
-      <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">
+      <div class="flex flex-row flex-wrap items-center gap-y-2 sticky py-2 top-0 z-50 bg-zinc-950">
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/object"></app-icon-button>
         }
-        <input type="text" (blur)="saveObject()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="object.name" />
-        <div class="flex flex-row gap-2">
+        <input type="text" (blur)="saveObject()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="object.name" />
+        <div class="flex flex-row flex-wrap gap-2 ms-auto">
           <app-ui-field-config-button
             [entityTable]="'Object'"
             [entityId]="object.id"
@@ -75,7 +75,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       </div>
       <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
         <div class="flex-1 h-auto flex flex-col">
-          <div class="flex flex-row gap-4 ms-1">
+          <div class="flex flex-row flex-wrap gap-4 ms-1">
             <!-- <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button> -->
             <app-nav-button [label]="'História'" size="sm" [active]="currentTab === 'history'" (click)="selectTab('history')"></app-nav-button>
             @if(hasDynamicFields) {

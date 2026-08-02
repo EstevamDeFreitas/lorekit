@@ -133,6 +133,11 @@ export class TabManagerService {
     this.update(l => ({ ...l, sidebarVisible: !l.sidebarVisible }));
   }
 
+  setSidebarVisible(visible: boolean): void {
+    if (this.snapshot.sidebarVisible === visible) return;
+    this.update(l => ({ ...l, sidebarVisible: visible }));
+  }
+
   // ── Tab management ──────────────────────────────────────────────────────────
 
   /**

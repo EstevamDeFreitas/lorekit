@@ -48,12 +48,12 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
         <img [src]="profileImg | assetUrl" class="h-[27vh] absolute top-3 left-3 object-cover rounded-md">
       }
       <br>
-      <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">
+      <div class="flex flex-row flex-wrap items-center gap-y-2 sticky py-2 top-0 z-50 bg-zinc-950">
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/character"></app-icon-button>
         }
-        <input type="text" (blur)="saveCharacter()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="character.name" />
-        <div class="flex flex-row gap-2">
+        <input type="text" (blur)="saveCharacter()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="character.name" />
+        <div class="flex flex-row flex-wrap gap-2 ms-auto">
           <!-- <app-entity-transfer-button [entityId]="character.id" [entityTable]="'Character'" [size]="'xl'"></app-entity-transfer-button> -->
           <app-ui-field-config-button
             [entityTable]="'Character'"
@@ -77,7 +77,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       </div>
       <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
         <div class="flex-1 flex flex-col">
-          <div class="flex flex-row gap-4 ms-1">
+          <div class="flex flex-row flex-wrap gap-4 ms-1">
             <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button>
             <app-nav-button [label]="'Backstory'" size="sm" [active]="currentTab === 'backstory'" (click)="selectTab('backstory')"></app-nav-button>
           </div>

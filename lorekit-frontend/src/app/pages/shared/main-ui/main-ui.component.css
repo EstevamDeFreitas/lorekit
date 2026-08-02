@@ -2,6 +2,15 @@
   display: block;
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 ::ng-deep .cdk-dialog-container {
   outline: none !important;
   border: none !important;

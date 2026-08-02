@@ -52,7 +52,7 @@ interface SelectOptionItem {
 
       <div class="flex flex-wrap gap-4 items-end bg-zinc-925 p-3 rounded-lg border border-zinc-800">
         <app-combo-box
-          class="min-w-56"
+          class="min-w-0 md:min-w-56"
           label="Escopo"
           [items]="scopeModeItems"
           compareProp="value"
@@ -62,7 +62,7 @@ interface SelectOptionItem {
 
         @if (scopeMode === 'template') {
           <app-combo-box
-            class="min-w-72"
+            class="min-w-0 md:min-w-72"
             label="Template"
             [items]="availableTemplates"
             compareProp="value"
@@ -73,7 +73,7 @@ interface SelectOptionItem {
 
           @if (activeTemplateId) {
             <app-input
-              class="min-w-56"
+              class="min-w-0 md:min-w-56"
               label="Nome do template"
               [(value)]="activeTemplateName">
             </app-input>
@@ -82,7 +82,7 @@ interface SelectOptionItem {
 
         @if (scopeMode === 'parent' && parentScopeOptions.length > 0) {
           <app-combo-box
-            class="min-w-72"
+            class="min-w-0 md:min-w-72"
             label="Pai"
             [items]="parentScopeItems"
             compareProp="value"
@@ -93,7 +93,7 @@ interface SelectOptionItem {
 
         @if (scopeMode === 'parent' && allowParentSelection) {
           <app-combo-box
-            class="min-w-48"
+            class="min-w-0 md:min-w-48"
             label="Tabela Pai"
             [items]="parentSelectableTables"
             [comboValue]="selectedParentTable"
@@ -101,7 +101,7 @@ interface SelectOptionItem {
           </app-combo-box>
 
           <app-combo-box
-            class="min-w-72"
+            class="min-w-0 md:min-w-72"
             label="Entidade Pai"
             [items]="parentEntityItems"
             compareProp="id"

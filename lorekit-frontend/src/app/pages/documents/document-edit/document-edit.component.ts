@@ -21,12 +21,12 @@ import { World } from '../../../models/world.model';
   imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, SafeDeleteButtonComponent, EntityLateralMenuButtonComponent],
   template: `
   <div class="flex flex-col relative @container">
-    <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">
+    <div class="flex flex-row flex-wrap items-center gap-y-2 sticky py-2 top-0 z-50 bg-zinc-950">
       @if (isRouteComponent()){
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" [route]="getReturnUrl()"></app-icon-button>
       }
-      <input type="text" (blur)="saveDocument()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="document.title" />
-      <div class="flex flex-row gap-2">
+      <input type="text" (blur)="saveDocument()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="document.title" />
+      <div class="flex flex-row flex-wrap gap-2 ms-auto">
         <!-- <app-entity-transfer-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-entity-transfer-button> -->
         @if (!isLoading && showLateralMenu()) {
           <app-entity-lateral-menu-button

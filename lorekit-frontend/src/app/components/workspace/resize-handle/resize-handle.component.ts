@@ -18,7 +18,7 @@ import {
   standalone: true,
   template: `
     <div
-      class="w-1 cursor-col-resize h-full relative group flex items-center justify-center shrink-0"
+      class="hidden md:flex w-1 cursor-col-resize h-full relative group items-center justify-center shrink-0"
       (mousedown)="onMouseDown($event)">
       <div class="w-px h-full bg-zinc-700 group-hover:bg-zinc-500 transition-colors duration-150"></div>
     </div>

@@ -19,7 +19,7 @@ interface IconsData {
   selector: 'app-icon-selector-overlay',
   imports: [NgClass, InputComponent],
   template: `
-    <div class="bg-zinc-900 p-4 rounded-md w-96 shadow-lg border border-zinc-700">
+    <div class="bg-zinc-900 p-4 rounded-md w-96 max-w-[calc(100vw-2rem)] shadow-lg border border-zinc-700">
       <div class="mb-3 font-semibold text-white">Selecionar Ícone</div>
       <div class="flex flex-col gap-4">
         <app-input

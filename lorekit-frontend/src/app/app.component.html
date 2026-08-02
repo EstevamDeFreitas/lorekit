@@ -1,7 +1,7 @@
 <main>
   @if (dbProvider.ready()) {
-  <div class="text-xs absolute left-1/2 -translate-x-1/2 p-1 flex flex-row items-center gap-2 z-10 justify-center">
-    <app-search style="-webkit-app-region: no-drag;"></app-search>
+  <div class="text-xs absolute left-2 right-2 md:left-1/2 md:right-auto md:-translate-x-1/2 p-1 flex flex-row min-w-0 items-center gap-2 z-10 justify-start md:justify-center">
+    <app-search class="min-w-0 flex-1 md:flex-none" style="-webkit-app-region: no-drag;"></app-search>
     <button
       type="button"
       style="-webkit-app-region: no-drag;"

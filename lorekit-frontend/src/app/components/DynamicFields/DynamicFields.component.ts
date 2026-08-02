@@ -10,7 +10,7 @@ import { EditorComponent } from "../editor/editor.component";
   selector: 'app-dynamic-fields',
   imports: [ComboBoxComponent, InputComponent, EditorComponent],
   template: `
-    <div class="grid grid-cols-3 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       @for(field of fields; track field.template.id) {
         @if (isFieldComboBox(field.template)) {
             <app-combo-box

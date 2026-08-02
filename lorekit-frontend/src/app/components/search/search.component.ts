@@ -17,7 +17,7 @@ import { EntityTransferService } from '../../services/entity-transfer.service';
     <div
         cdkOverlayOrigin
         #trigger="cdkOverlayOrigin"
-        class="w-90 flex flex-row items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white"
+        class="w-full md:w-90 flex flex-row items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus:outline-none focus-within:border-white"
       >
       <div class="w-8 h-5 flex flex-row justify-center items-center">
           <i class="fa fa-search "></i>
@@ -53,7 +53,7 @@ import { EntityTransferService } from '../../services/entity-transfer.service';
       [cdkConnectedOverlayOffsetY]="4"
       (overlayOutsideClick)="isOpen = false"
     >
-      <div class="bg-zinc-900 border w-90 border-zinc-700 rounded-md shadow-lg p-2 flex flex-col gap-2 text-sm text-zinc-300">
+      <div class="bg-zinc-900 border w-[min(22.5rem,calc(100vw-1rem))] border-zinc-700 rounded-md shadow-lg p-2 flex flex-col gap-2 text-sm text-zinc-300">
         @if (searchResultKeys.length === 0){
           <div>
             Nenhum resultado encontrado.

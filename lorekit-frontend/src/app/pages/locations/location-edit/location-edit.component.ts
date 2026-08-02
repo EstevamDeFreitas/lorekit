@@ -40,12 +40,12 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
         <div class="w-full h-[30vh] object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(location, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
       }
       <br>
-      <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">
+      <div class="flex flex-row flex-wrap items-center gap-y-2 sticky py-2 top-0 z-50 bg-zinc-950">
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/location"></app-icon-button>
         }
-        <input type="text" (blur)="saveLocation()" class="flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="location.name" />
-        <div class="flex flex-row gap-2">
+        <input type="text" (blur)="saveLocation()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="location.name" />
+        <div class="flex flex-row flex-wrap gap-2 ms-auto">
           <!-- <app-entity-transfer-button [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'"></app-entity-transfer-button> -->
           <app-ui-field-config-button
             [entityTable]="'Location'"
@@ -69,7 +69,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       </div>
       <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
         <div class="flex-1 flex flex-col ">
-          <div class="flex flex-row gap-4 ms-1">
+          <div class="flex flex-row flex-wrap gap-4 ms-1">
             <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
             @if(hasDynamicFields) {
               <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button>

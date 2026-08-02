@@ -106,6 +106,7 @@
   top: 0;
   transform-origin: 0 0;
   cursor: default;
+  touch-action: none;
 }
 
 .moodboard-content-pannable {

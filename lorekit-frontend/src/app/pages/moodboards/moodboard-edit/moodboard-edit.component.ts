@@ -238,6 +238,8 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   private groupRotationStartAngle = 0;
   private removeMouseMove?: () => void;
   private removeMouseUp?: () => void;
+  private removeTouchMove?: () => void;
+  private removeTouchEnd?: () => void;
   private removeKeyDown?: () => void;
   private removePendingSaveListener?: () => void;
   private removeKeyUp?: () => void;
@@ -266,6 +268,8 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
 
     this.removeMouseMove = this.renderer.listen('window', 'mousemove', (event: MouseEvent) => this.onWindowMouseMove(event));
     this.removeMouseUp = this.renderer.listen('window', 'mouseup', () => this.onWindowMouseUp());
+    this.removeTouchMove = this.renderer.listen('window', 'touchmove', (event: TouchEvent) => this.onWindowTouchMove(event));
+    this.removeTouchEnd = this.renderer.listen('window', 'touchend', () => this.onWindowTouchEnd());
     this.removePendingSaveListener = this.renderer.listen('window', FLUSH_PENDING_SAVES_EVENT, () => this.flushPendingSaves());
     this.removeKeyDown = this.renderer.listen('window', 'keydown', (event: KeyboardEvent) => this.onWindowKeyDown(event));
     this.removeKeyUp = this.renderer.listen('window', 'keyup', (event: KeyboardEvent) => this.onWindowKeyUp(event));
@@ -276,6 +280,8 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.removeMouseMove?.();
     this.removePendingSaveListener?.();
     this.removeMouseUp?.();
+    this.removeTouchMove?.();
+    this.removeTouchEnd?.();
     this.removeKeyDown?.();
     this.removeKeyUp?.();
   }
@@ -387,6 +393,22 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.moodboard.set(saved);
   }
 
+  onCanvasTouchStart(event: TouchEvent): void {
+    const mouseEvent = this.touchToMouseEvent(event, 'mousedown');
+    if (!mouseEvent) return;
+
+    event.preventDefault();
+    this.startPanDrag(mouseEvent);
+  }
+
+  onItemTouchStart(event: TouchEvent, view: MoodboardCanvasItem): void {
+    const mouseEvent = this.touchToMouseEvent(event, 'mousedown');
+    if (!mouseEvent) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    this.onItemMouseDown(mouseEvent, view);
+  }
   onCanvasMouseDown(event: MouseEvent): void {
     if (this.isPanGesture(event)) {
       this.startPanDrag(event);
@@ -1428,6 +1450,31 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.editingItemId.set('');
   }
 
+  private onWindowTouchMove(event: TouchEvent): void {
+    if (this.dragState.mode === 'none') return;
+
+    const mouseEvent = this.touchToMouseEvent(event, 'mousemove');
+    if (!mouseEvent) return;
+
+    event.preventDefault();
+    this.onWindowMouseMove(mouseEvent);
+  }
+
+  private onWindowTouchEnd(): void {
+    this.onWindowMouseUp();
+  }
+
+  private touchToMouseEvent(event: TouchEvent, type: string): MouseEvent | null {
+    const touch = event.touches[0] ?? event.changedTouches[0];
+    if (!touch) return null;
+
+    return new MouseEvent(type, {
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      button: 0,
+      buttons: 1,
+    });
+  }
   private onWindowMouseMove(event: MouseEvent): void {
     const state = this.dragState;
     if (state.mode === 'none') {

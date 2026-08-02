@@ -23,7 +23,7 @@ export interface FormField {
   selector: 'app-form-overlay',
   imports: [InputComponent, ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent],
   template: `
-    <div class="bg-zinc-900 p-4 rounded-md min-w-64 shadow-lg border border-zinc-800">
+    <div class="bg-zinc-900 p-4 rounded-md min-w-64 max-w-[calc(100vw-2rem)] shadow-lg border border-zinc-800">
       <div class="mb-3 text-sm text-white">{{ title() }}</div>
       <div class="flex flex-col gap-3">
         @for (field of fields(); track field.key) {
