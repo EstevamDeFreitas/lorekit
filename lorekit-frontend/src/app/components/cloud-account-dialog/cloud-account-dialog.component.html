@@ -1,0 +1,27 @@
+<section class="screen-dialog w-96 max-w-[calc(100vw-2rem)] shadow-2xl" aria-labelledby="cloud-account-title">
+  <header class="mb-5 flex items-start justify-between gap-4">
+    <div>
+      <div class="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-yellow-500/10 text-yellow-400">
+        <i class="fa-solid fa-cloud"></i>
+      </div>
+      <h2 id="cloud-account-title" class="text-lg font-semibold text-white">Adicionar conta</h2>
+      <p class="mt-1 text-xs leading-5 text-zinc-400">
+        A conta habilita backup e sincronização na nuvem. O Lorekit desktop continua funcionando offline sem ela.
+      </p>
+    </div>
+    <button
+      type="button"
+      class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-800 hover:text-white"
+      aria-label="Fechar"
+      (click)="close()"
+    >
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </header>
+
+  <app-account-login-form (authenticated)="close(true)" />
+
+  <p class="mt-4 text-center text-[11px] text-zinc-500">
+    Contas são criadas manualmente pelo administrador do Lorekit.
+  </p>
+</section>

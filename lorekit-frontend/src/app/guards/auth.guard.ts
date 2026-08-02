@@ -1,24 +1,15 @@
-import { Injectable } from '@angular/core';
-import {
-  CanActivate,
-  Router,
-  UrlTree,
-  ActivatedRouteSnapshot,
-  RouterStateSnapshot
-} from '@angular/router';
+import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { isElectronRuntime } from '../utils/runtime-platform';
 
-@Injectable({ providedIn: 'root' })
-export class AuthGuard implements CanActivate {
-  constructor(private auth: AuthService, private router: Router) {}
+export const webAuthGuard: CanActivateFn = (_route, state) => {
+  if (isElectronRuntime()) return true;
 
-  canActivate(
-    route: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot
-  ): boolean | UrlTree {
-    if (this.auth.isAuthenticated()) {
-      return true;
-    }
-    return this.router.parseUrl('/login');
-  }
-}
+  const auth = inject(AuthService);
+  if (auth.isAuthenticated()) return true;
+
+  return inject(Router).createUrlTree(['/login'], {
+    queryParams: { returnUrl: state.url },
+  });
+};

@@ -1,0 +1,163 @@
+services:
+  postgres:
+    image: postgres:17.10-bookworm
+    container_name: lorekit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lorekit
+      POSTGRES_USER: lorekit_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
+      POSTGRES_INITDB_ARGS: --data-checksums --auth-host=scram-sha-256
+    command:
+      - postgres
+      - -c
+      - max_connections=40
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - log_min_duration_statement=1000
+    shm_size: 256mb
+    mem_limit: 1g
+    stop_grace_period: 1m
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    secrets:
+      - postgres_admin_password
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lorekit_admin -d lorekit"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+
+  migrate:
+    image: lorekit-server:0.1.0
+    profiles: ["tools"]
+    environment:
+      NODE_ENV: production
+      DATABASE_HOST: postgres
+      DATABASE_NAME: lorekit
+      DATABASE_USER: lorekit_api
+      DATABASE_MIGRATOR_USER: lorekit_migrator
+      DATABASE_MIGRATOR_PASSWORD_FILE: /run/secrets/postgres_migrator_password
+    command: ["node", "dist/database/migrate.js"]
+    secrets:
+      - postgres_migrator_password
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  api:
+    image: lorekit-server:0.1.0
+    container_name: lorekit-api
+    restart: unless-stopped
+    mem_limit: 512m
+    pids_limit: 200
+    environment:
+      NODE_ENV: production
+      APP_VERSION: 0.1.0
+      PORT: 3000
+      DATABASE_HOST: postgres
+      DATABASE_NAME: lorekit
+      DATABASE_USER: lorekit_api
+      DATABASE_PASSWORD_FILE: /run/secrets/postgres_api_password
+      DATABASE_MAX_CONNECTIONS: 10
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      JWT_ISSUER: https://api.lorekit.online
+      JWT_AUDIENCE: lorekit
+      ACCESS_TOKEN_TTL_SECONDS: 900
+      REFRESH_TOKEN_TTL_DAYS: 30
+      CORS_ORIGINS: "https://app.lorekit.online,lorekit://app"
+    secrets:
+      - postgres_api_password
+      - jwt_secret
+    volumes:
+      - /opt/lorekit/data/blobs:/data/blobs
+    networks:
+      - backend
+      - edge
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    container_name: lorekit-caddy
+    restart: unless-stopped
+    mem_limit: 256m
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /opt/lorekit/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/lorekit/web:/srv/web:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:2019/config/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres_data:
+    name: lorekit-postgres-data
+  caddy_data:
+    name: lorekit-caddy-data
+  caddy_config:
+    name: lorekit-caddy-config
+
+secrets:
+  postgres_admin_password:
+    file: ./secrets/postgres_admin_password
+  postgres_api_password:
+    file: ./secrets/postgres_api_password
+  postgres_migrator_password:
+    file: ./secrets/postgres_migrator_password
+  jwt_secret:
+    file: ./secrets/jwt_secret
+
+networks:
+  backend:
+    name: lorekit-backend
+    internal: true
+  edge:
+    name: lorekit-edge

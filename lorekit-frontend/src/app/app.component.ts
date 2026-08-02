@@ -1,7 +1,8 @@
 import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { RouterOutlet, RouterLink } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { SearchComponent } from './components/search/search.component';
 import { BackupButtonComponent } from './components/backup-button/backup-button.component';
+import { CloudButtonComponent } from './components/cloud-button/cloud-button.component';
 import { DbProvider } from './app.config';
 import { ComponentRefreshService } from './services/component-refresh.service';
 import { FLUSH_PENDING_SAVES_EVENT, PendingSaveEventDetail } from './utils/pending-save-event';
@@ -11,7 +12,7 @@ declare const window: any;
 @Component({
   standalone: true,
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, SearchComponent, BackupButtonComponent],
+  imports: [RouterOutlet, SearchComponent, BackupButtonComponent, CloudButtonComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {

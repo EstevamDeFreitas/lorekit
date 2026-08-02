@@ -19,6 +19,18 @@ function requiredOption(args: string[], name: string): string {
 
 function password(args: string[]): string {
   const explicitFile = option(args, '--password-file');
+  const fromStdin = args.includes('--password-stdin');
+  if (explicitFile && fromStdin) {
+    throw new Error('Use either --password-file or --password-stdin, not both');
+  }
+  if (fromStdin) {
+    const value = readFileSync(0, 'utf8').replace(/\r?\n$/, '');
+    if (!value) throw new Error('Password received from stdin is empty');
+    if (/[\r\n]/.test(value)) {
+      throw new Error('Password received from stdin must contain a single line');
+    }
+    return value;
+  }
   if (explicitFile) {
     const value = readFileSync(explicitFile, 'utf8').trim();
     if (!value) throw new Error('Password file is empty');
@@ -31,13 +43,15 @@ function printHelp(): void {
   console.log(`Lorekit administrative CLI
 
 Commands:
-  user:create --email EMAIL [--name NAME] [--vault-name NAME] --password-file PATH
+  user:create --email EMAIL [--name NAME] [--vault-name NAME] [--password-file PATH | --password-stdin]
   user:list
   user:disable --email EMAIL
   user:enable --email EMAIL
-  user:reset-password --email EMAIL --password-file PATH
+  user:reset-password --email EMAIL [--password-file PATH | --password-stdin]
 
 Instead of --password-file, set LOREKIT_NEW_USER_PASSWORD_FILE.
+Use --password-stdin with the VPS helper so the password is neither an argument
+nor a temporary file.
 Passwords are intentionally not accepted as command-line arguments.`);
 }
 

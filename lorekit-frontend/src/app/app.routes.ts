@@ -1,11 +1,12 @@
 import { Routes } from '@angular/router';
-import { AuthGuard } from './guards/auth.guard';
+import { webAuthGuard } from './guards/auth.guard';
 import { LoginComponent } from './pages/auth/login/login.component';
 import { MainUiComponent } from './pages/shared/main-ui/main-ui.component';
 
 export const routes: Routes = [
   {path: '', redirectTo: 'app', pathMatch: 'full'},
-  {path: 'app', component: MainUiComponent, children: [
+  {path: 'login', component: LoginComponent},
+  {path: 'app', component: MainUiComponent, canActivate: [webAuthGuard], children: [
       {path: 'world', children:[
         {path: '', loadComponent: () =>
           import('./pages/world/world-list/world-list.component')

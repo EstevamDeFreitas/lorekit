@@ -1,13 +1,65 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, safeStorage, protocol, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { pathToFileURL } = require('url');
 const { autoUpdater } = require('electron-updater');
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'lorekit',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, codeCache: true },
+  },
+]);
 
 let mainWindow;
 let updateWindow; // ADDED
 let hasOpenedMain = false; // ADDED: evita abrir múltiplas janelas
 let rendererReady = false;
 let pendingRendererTransition = null;
+
+function isTrustedRenderer(event) {
+  try {
+    const rendererUrl = new URL(event.senderFrame?.url ?? '');
+    if (rendererUrl.protocol === 'lorekit:' && rendererUrl.host === 'app') return true;
+    if (!app.isPackaged) {
+      return rendererUrl.origin === 'http://localhost:4401'
+        || rendererUrl.origin === 'http://127.0.0.1:4401';
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function registerAppProtocol() {
+  const rendererRoot = path.resolve(__dirname, 'lorekit-frontend/dist/lorekit-frontend/browser');
+  protocol.handle('lorekit', request => {
+    let requestUrl;
+    try {
+      requestUrl = new URL(request.url);
+    } catch {
+      return new Response('Bad request', { status: 400 });
+    }
+    if (requestUrl.host !== 'app') {
+      return new Response('Not found', { status: 404 });
+    }
+
+    let relativePath;
+    try {
+      relativePath = decodeURIComponent(requestUrl.pathname).replace(/^[/\\]+/, '');
+    } catch {
+      return new Response('Bad request', { status: 400 });
+    }
+    if (!relativePath) relativePath = 'index.html';
+    const filePath = path.resolve(rendererRoot, relativePath);
+    const rendererPrefix = `${rendererRoot}${path.sep}`;
+    if (filePath !== rendererRoot && !filePath.startsWith(rendererPrefix)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
+}
 
 function requestRendererTransition(onSuccess, onFailure = () => {}) {
   if (!mainWindow || mainWindow.isDestroyed() || !rendererReady) {
@@ -76,6 +128,50 @@ function registerIpc() {
   ipcMain.handle('get-app-version', () => {
     return app.getVersion();
   });
+  ipcMain.handle('cloud-session:read', async (event) => {
+    if (!isTrustedRenderer(event)) throw new Error('Untrusted renderer.');
+
+    const sessionPath = path.join(app.getPath('userData'), 'cloud-session.bin');
+    try {
+      const encrypted = await fs.promises.readFile(sessionPath);
+      if (!safeStorage.isEncryptionAvailable()) {
+        throw new Error('Secure storage is unavailable.');
+      }
+      return safeStorage.decryptString(encrypted);
+    } catch (error) {
+      if (error?.code === 'ENOENT') return null;
+      console.error('Failed to read the encrypted cloud session.');
+      throw error;
+    }
+  });
+  ipcMain.handle('cloud-session:write', async (_event, value) => {
+    if (!isTrustedRenderer(_event)) {
+      throw new Error('Untrusted renderer.');
+    }
+
+    if (typeof value !== 'string' || value.length > 65_536) {
+      throw new Error('Invalid cloud session payload.');
+    }
+    if (!safeStorage.isEncryptionAvailable()) {
+      throw new Error('Secure storage is unavailable.');
+    }
+
+    const sessionPath = path.join(app.getPath('userData'), 'cloud-session.bin');
+    const encrypted = safeStorage.encryptString(value);
+    await fs.promises.writeFile(sessionPath, encrypted, { mode: 0o600 });
+    return true;
+  });
+  ipcMain.handle('cloud-session:clear', async (event) => {
+    if (!isTrustedRenderer(event)) throw new Error('Untrusted renderer.');
+
+    const sessionPath = path.join(app.getPath('userData'), 'cloud-session.bin');
+    try {
+      await fs.promises.unlink(sessionPath);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+    return true;
+  });
   ipcMain.handle('backup:save-dialog', async (_e, defaultName) => {
     const win = mainWindow || BrowserWindow.getFocusedWindow();
     const result = await dialog.showSaveDialog(win, {
@@ -95,7 +191,7 @@ function registerIpc() {
         if (isDev) {
           mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL || 'http://localhost:4401');
         } else {
-          mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');
+          mainWindow.loadURL('lorekit://app/index.html');
         }
         resolve(true);
       }, () => resolve(false));
@@ -279,7 +375,7 @@ function createWindow() {
     //mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
   else {
-    mainWindow.loadFile('lorekit-frontend/dist/lorekit-frontend/browser/index.html');
+    mainWindow.loadURL('lorekit://app/index.html');
   }
 
 
@@ -369,6 +465,7 @@ function startUpdateFlow() {
 }
 
 app.whenReady().then(() => {
+  registerAppProtocol();
   registerIpc();
   startUpdateFlow();
 });

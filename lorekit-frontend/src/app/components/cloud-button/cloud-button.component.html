@@ -1,0 +1,76 @@
+<div class="relative">
+  <button
+    type="button"
+    class="relative flex h-7 w-7 items-center justify-center rounded-md border border-zinc-700 bg-zinc-925 text-white transition-colors hover:border-white"
+    [class.border-white]="isOpen"
+    [attr.title]="auth.indicatorLabel()"
+    [attr.aria-label]="auth.indicatorLabel()"
+    [attr.aria-expanded]="isOpen"
+    (click)="onTriggerClick()"
+  >
+    <i class="fa-solid fa-cloud text-xs" [class.fa-beat-fade]="auth.busy()"></i>
+    <span
+      class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-zinc-925"
+      [class.bg-yellow-400]="auth.indicatorColor() === 'yellow'"
+      [class.bg-emerald-400]="auth.indicatorColor() === 'green'"
+      [class.bg-red-500]="auth.indicatorColor() === 'red'"
+    ></span>
+  </button>
+
+  @if (isOpen && auth.user(); as user) {
+    <div class="absolute right-0 top-full z-50 mt-1 w-72 overflow-hidden rounded-md border border-zinc-700 bg-zinc-900 shadow-xl">
+      <div class="border-b border-zinc-800 px-3 py-3">
+        <div class="flex items-center gap-2 text-sm font-medium text-white">
+          <i class="fa-solid fa-circle-user text-zinc-400"></i>
+          <span class="truncate">{{ user.displayName || user.email }}</span>
+        </div>
+        @if (user.displayName) {
+          <p class="mt-1 truncate pl-6 text-xs text-zinc-500">{{ user.email }}</p>
+        }
+      </div>
+
+      @if (auth.lastError(); as error) {
+        <div class="flex gap-2 border-b border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+          <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+          <span>{{ error }}</span>
+        </div>
+      } @else {
+        <div class="flex gap-2 border-b border-zinc-800 px-3 py-2 text-xs text-zinc-400">
+          <i class="fa-solid fa-circle-check mt-0.5 text-emerald-400"></i>
+          <span>
+            Conta conectada. A sincronização será executada pelo mecanismo de sync da próxima etapa.
+          </span>
+        </div>
+      }
+
+      <button
+        type="button"
+        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition-colors hover:bg-zinc-800"
+        (click)="toggleSync()"
+      >
+        <i class="fa-solid w-4 text-center" [class.fa-pause]="auth.syncEnabled()" [class.fa-play]="!auth.syncEnabled()"></i>
+        {{ auth.syncEnabled() ? 'Pausar sincronização' : 'Habilitar sincronização' }}
+      </button>
+
+      @if (auth.lastError()) {
+        <button
+          type="button"
+          class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition-colors hover:bg-zinc-800"
+          (click)="reconnect()"
+        >
+          <i class="fa-solid fa-rotate w-4 text-center"></i>
+          Conectar novamente
+        </button>
+      }
+
+      <button
+        type="button"
+        class="flex w-full items-center gap-2 border-t border-zinc-800 px-3 py-2 text-left text-sm text-red-300 transition-colors hover:bg-zinc-800"
+        (click)="logout()"
+      >
+        <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+        Remover conta deste dispositivo
+      </button>
+    </div>
+  }
+</div>

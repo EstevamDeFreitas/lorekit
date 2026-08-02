@@ -1,0 +1,49 @@
+<form class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="submit()">
+  <label class="flex flex-col gap-1 text-xs text-zinc-200">
+    E-mail
+    <input
+      type="email"
+      autocomplete="username"
+      formControlName="email"
+      class="rounded-lg bg-zinc-925 px-3 py-2 text-sm text-white ring-1 ring-zinc-700 transition focus:outline-none focus:ring-zinc-100"
+      placeholder="autor@exemplo.com"
+    />
+    @if (form.controls.email.touched && form.controls.email.invalid) {
+      <span class="text-red-400">Informe um e-mail válido.</span>
+    }
+  </label>
+
+  <label class="flex flex-col gap-1 text-xs text-zinc-200">
+    Senha
+    <input
+      type="password"
+      autocomplete="current-password"
+      formControlName="password"
+      class="rounded-lg bg-zinc-925 px-3 py-2 text-sm text-white ring-1 ring-zinc-700 transition focus:outline-none focus:ring-zinc-100"
+    />
+    @if (form.controls.password.touched && form.controls.password.invalid) {
+      <span class="text-red-400">Informe a senha da conta.</span>
+    }
+  </label>
+
+  @if (auth.lastError(); as error) {
+    <div class="flex items-start gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300" role="alert">
+      <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+      <span>{{ error }}</span>
+    </div>
+  }
+
+  <button
+    type="submit"
+    [disabled]="auth.busy()"
+    class="flex items-center justify-center gap-2 rounded-lg bg-yellow-500 px-4 py-2 text-sm font-medium text-zinc-900 transition hover:brightness-90 disabled:cursor-wait disabled:opacity-60"
+  >
+    @if (auth.busy()) {
+      <i class="fa-solid fa-circle-notch fa-spin"></i>
+      Conectando...
+    } @else {
+      <i class="fa-solid fa-cloud"></i>
+      Conectar conta
+    }
+  </button>
+</form>

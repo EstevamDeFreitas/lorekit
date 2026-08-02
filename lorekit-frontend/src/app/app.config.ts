@@ -1,12 +1,12 @@
-import { APP_INITIALIZER, ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter, withHashLocation } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideAnimations } from '@angular/platform-browser/animations';
 
 import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { tokenInterceptor } from './interceptors/token.interceptor';
 import { CrudHelper, DatabasePersistenceCoordinator, openDbAndEnsureSchema } from './database/database.helper';
+import { AuthService } from './services/auth.service';
 
 export class DbProvider {
   private db: any | null = null;
@@ -41,11 +41,15 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes, withHashLocation()),
     provideAnimationsAsync(),
-    provideHttpClient(),
+    provideHttpClient(withInterceptors([tokenInterceptor])),
     DbProvider,
     provideAppInitializer(async () => {
       const dbProvider = inject(DbProvider);
-      const db = await openDbAndEnsureSchema();
+      const auth = inject(AuthService);
+      const [db] = await Promise.all([
+        openDbAndEnsureSchema(),
+        auth.initialize(),
+      ]);
       dbProvider.setDb(db);
     }),
   ]
