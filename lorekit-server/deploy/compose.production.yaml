@@ -80,7 +80,7 @@ services:
       JWT_AUDIENCE: lorekit
       ACCESS_TOKEN_TTL_SECONDS: 900
       REFRESH_TOKEN_TTL_DAYS: 30
-      CORS_ORIGINS: "https://app.lorekit.online,lorekit://app"
+      CORS_ORIGINS: "https://app.lorekit.online,lorekit://app,http://localhost:4401,http://127.0.0.1:4401"
     secrets:
       - postgres_api_password
       - jwt_secret

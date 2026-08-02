@@ -875,7 +875,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.updateItemConfig(view.item.id, config => ({
       ...config,
       imageId: image.id,
-      imagePath: image.filePath,
+      imagePath: this.imageService.referenceFor(image),
     }));
     this.saveItemNow(view.item.id);
   }

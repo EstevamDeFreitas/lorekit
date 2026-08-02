@@ -1,12 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, Length } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString, Length } from 'class-validator';
 
 export class RefreshDto {
-  @ApiProperty({
-    description: 'Opaque refresh token returned by login or refresh.',
+  @ApiPropertyOptional({
+    description: 'Opaque refresh token for Electron. Web clients use the HttpOnly cookie.',
     format: 'password',
   })
   @IsString()
+  @IsOptional()
   @Length(40, 512)
-  refreshToken!: string;
+  refreshToken?: string;
 }

@@ -75,7 +75,7 @@ try {
     ))
 
   Write-Host '4/5 Construindo e publicando na VPS...'
-  $remoteCommand = "sudo -v && bash $remotePublisher $remoteArchive"
+  $remoteCommand = "sudo -v && sed -i 's/\r$//' $remotePublisher && bash $remotePublisher $remoteArchive"
   Invoke-Checked -Command 'ssh' -Arguments ($sshOptions + @('-tt', $Server, $remoteCommand))
 
   Write-Host '5/5 Deploy concluído com sucesso.' -ForegroundColor Green

@@ -1,4 +1,5 @@
 <main>
+  @if (dbProvider.ready()) {
   <div class="text-xs absolute left-1/2 -translate-x-1/2 p-1 flex flex-row items-center gap-2 z-10 justify-center">
     <app-search style="-webkit-app-region: no-drag;"></app-search>
     <button
@@ -17,5 +18,6 @@
     <app-backup-button style="-webkit-app-region: no-drag;"></app-backup-button>
     <app-cloud-button style="-webkit-app-region: no-drag;"></app-cloud-button>
   </div>
+  }
   <router-outlet />
 </main>

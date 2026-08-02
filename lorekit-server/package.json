@@ -21,6 +21,7 @@
     "admin:prod": "node dist/admin-cli.js"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.0.0",
     "@fastify/helmet": "^13.0.2",
     "@nestjs/common": "^11.1.28",
     "@nestjs/core": "^11.1.28",

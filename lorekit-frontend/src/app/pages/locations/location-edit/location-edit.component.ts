@@ -22,16 +22,17 @@ import { UiFieldConfigButtonComponent } from '../../../components/ui-field-confi
 import { LocationConfiguredFieldsComponent } from '../location-configured-fields/location-configured-fields.component';
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
+import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NgStyle, NavButtonComponent, UiFieldConfigButtonComponent, LocationConfiguredFieldsComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NgStyle, NavButtonComponent, UiFieldConfigButtonComponent, LocationConfiguredFieldsComponent, AssetUrlPipe],
   template: `
     <div class="flex flex-col @container">
       @if(getImageByUsageKey(location.Images, 'default') != null){
         @let img = getImageByUsageKey(location.Images, 'default');
         <div class="relative w-full h-[30vh]  overflow-hidden">
-          <img [src]="img?.filePath" class="w-full h-full object-cover">
+          <img [src]="img | assetUrl" class="w-full h-full object-cover">
           <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
         </div>
       }

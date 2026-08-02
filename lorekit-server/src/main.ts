@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -13,17 +14,29 @@ import { EnvironmentService } from './config/environment.service';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ trustProxy: true }),
+    new FastifyAdapter({
+      trustProxy: true,
+      exposeHeadRoutes: false,
+    }),
   );
   const environment = app.get(EnvironmentService).values;
 
+  app.getHttpAdapter().getInstance().addContentTypeParser(
+    /^image\/(?:png|jpeg|webp|gif|avif)$/,
+    { parseAs: 'buffer', bodyLimit: 25 * 1024 * 1024 },
+    (_request, body, done) => {
+      done(null, body);
+    },
+  );
+
+  await app.register(cookie);
   await app.register(helmet, {
     contentSecurityPolicy: environment.nodeEnv === 'production' ? undefined : false,
   });
   app.enableCors({
     origin: environment.corsOrigins,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
   app.useGlobalPipes(
     new ValidationPipe({

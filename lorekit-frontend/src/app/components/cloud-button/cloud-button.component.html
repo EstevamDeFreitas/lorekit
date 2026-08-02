@@ -18,7 +18,7 @@
   </button>
 
   @if (isOpen && auth.user(); as user) {
-    <div class="absolute right-0 top-full z-50 mt-1 w-72 overflow-hidden rounded-md border border-zinc-700 bg-zinc-900 shadow-xl">
+    <div class="absolute right-0 top-full z-50 mt-1 w-[32rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-md border border-zinc-700 bg-zinc-900 shadow-xl">
       <div class="border-b border-zinc-800 px-3 py-3">
         <div class="flex items-center gap-2 text-sm font-medium text-white">
           <i class="fa-solid fa-circle-user text-zinc-400"></i>
@@ -36,12 +36,26 @@
         </div>
       } @else {
         <div class="flex gap-2 border-b border-zinc-800 px-3 py-2 text-xs text-zinc-400">
-          <i class="fa-solid fa-circle-check mt-0.5 text-emerald-400"></i>
-          <span>
-            Conta conectada. A sincronização será executada pelo mecanismo de sync da próxima etapa.
-          </span>
+          <i class="fa-solid mt-0.5 text-emerald-400" [class.fa-rotate]="syncEngine.syncing()" [class.fa-spin]="syncEngine.syncing()" [class.fa-circle-check]="!syncEngine.syncing()"></i>
+          @if (syncEngine.syncing()) {
+            <span>Sincronizando alterações...</span>
+          } @else if (syncEngine.lastSyncAt()) {
+            <span>Última sincronização: {{ syncEngine.lastSyncAt() }}</span>
+          } @else {
+            <span>Conta conectada. Aguardando a primeira sincronização.</span>
+          }
         </div>
       }
+
+      <button
+        type="button"
+        [disabled]="syncEngine.syncing() || !auth.syncEnabled()"
+        class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-200 transition-colors hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-50"
+        (click)="syncNow()"
+      >
+        <i class="fa-solid fa-cloud-arrow-up w-4 text-center" [class.fa-beat-fade]="syncEngine.syncing()"></i>
+        Sincronizar agora
+      </button>
 
       <button
         type="button"
@@ -51,6 +65,44 @@
         <i class="fa-solid w-4 text-center" [class.fa-pause]="auth.syncEnabled()" [class.fa-play]="!auth.syncEnabled()"></i>
         {{ auth.syncEnabled() ? 'Pausar sincronização' : 'Habilitar sincronização' }}
       </button>
+
+      @if (conflicts().length > 0) {
+        <section class="max-h-96 overflow-y-auto border-t border-amber-500/30 bg-amber-500/5 p-3">
+          <h3 class="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-300">
+            <i class="fa-solid fa-code-compare"></i>
+            {{ conflicts().length }} conflito(s) aguardando decisão
+          </h3>
+          @for (conflict of conflicts(); track conflict.entityType + ':' + conflict.entityId) {
+            <article class="mb-3 rounded-md border border-zinc-700 bg-zinc-950 p-2 last:mb-0">
+              <p class="mb-2 text-xs font-medium text-white">
+                {{ conflict.entityType }} · {{ conflict.entityId }}
+              </p>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <span class="text-[10px] font-semibold uppercase text-zinc-400">Minha versão</span>
+                  <pre class="mt-1 max-h-28 overflow-auto whitespace-pre-wrap break-all rounded bg-zinc-900 p-2 text-[10px] text-zinc-300">{{ formatPayload(conflict.localPayload) }}</pre>
+                </div>
+                <div>
+                  <span class="text-[10px] font-semibold uppercase text-zinc-400">Nuvem</span>
+                  <pre class="mt-1 max-h-28 overflow-auto whitespace-pre-wrap break-all rounded bg-zinc-900 p-2 text-[10px] text-zinc-300">{{ formatPayload(conflict.remotePayload) }}</pre>
+                </div>
+              </div>
+              <div class="mt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  class="rounded border border-zinc-600 px-2 py-1 text-[11px] text-zinc-200 hover:border-white"
+                  (click)="useCloud(conflict)"
+                >Usar versão da nuvem</button>
+                <button
+                  type="button"
+                  class="rounded bg-amber-400 px-2 py-1 text-[11px] font-medium text-zinc-950 hover:brightness-90"
+                  (click)="keepMine(conflict)"
+                >Manter minha versão</button>
+              </div>
+            </article>
+          }
+        </section>
+      }
 
       @if (auth.lastError()) {
         <button

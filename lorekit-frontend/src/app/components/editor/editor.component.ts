@@ -128,7 +128,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
                 return {
                   success: 1,
                   file: {
-                    url: image.filePath
+                    url: this.imageService.referenceFor(image)
                   }
                 };
               } catch (error) {

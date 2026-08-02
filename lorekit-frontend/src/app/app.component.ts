@@ -20,7 +20,7 @@ declare const window: any;
   },
 })
 export class AppComponent implements OnInit, OnDestroy {
-  private readonly dbProvider = inject(DbProvider);
+  protected readonly dbProvider = inject(DbProvider);
   private readonly componentRefresh = inject(ComponentRefreshService);
   private removePrepareToCloseListener?: () => void;
   private isPreparingToClose = false;

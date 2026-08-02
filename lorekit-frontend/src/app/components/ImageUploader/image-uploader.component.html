@@ -25,7 +25,7 @@
     (drop)="dropFile($event)">
     @if (images()[0]; as image) {
       <img
-        [src]="image.filePath"
+        [src]="image | assetUrl"
         alt="Imagem atual"
         class="h-36 w-full object-contain">
       <button

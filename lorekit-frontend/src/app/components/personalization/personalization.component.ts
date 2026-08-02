@@ -10,6 +10,7 @@ import { IconSelectorComponent } from '../icon-selector/icon-selector.component'
 import { ImageUploaderComponent } from '../ImageUploader/image-uploader.component';
 import { InputComponent } from '../input/input.component';
 import { IconButtonComponent } from "../icon-button/icon-button.component";
+import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-personalization',
@@ -18,7 +19,8 @@ import { IconButtonComponent } from "../icon-button/icon-button.component";
     ButtonComponent,
     FormsModule,
     IconSelectorComponent,
-    IconButtonComponent
+    IconButtonComponent,
+    AssetUrlPipe,
 ],
   templateUrl: './personalization.component.html',
   styleUrl: './personalization.component.css',

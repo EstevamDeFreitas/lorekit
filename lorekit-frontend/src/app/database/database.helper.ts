@@ -1,5 +1,6 @@
 import initSqlJs from 'sql.js/dist/sql-wasm.js';
 import { schema, TableDef } from './schema';
+import { runLocalMigrations } from './local-migrations';
 
 type IncludeDef = {table:string, firstOnly?: boolean, isParent?: boolean, subInclude?: IncludeDef[]};
 
@@ -18,21 +19,26 @@ export const ElectronSafeAPI = {
 };
 
 export async function openDbAndEnsureSchema() {
-  const SQL = await initSqlJs({
-    locateFile: (file) => `assets/${file}`,
-  });
-
   // AGORA aguardando IPC/bridge corretamente
   const dbPath = await ElectronSafeAPI.electron.getDbPath();
   const data: Uint8Array | null = await ElectronSafeAPI.electron.readFile(dbPath);
-
-  const db = data ? new SQL.Database(new Uint8Array(data)) : new SQL.Database();
-  db.exec("PRAGMA foreign_keys = ON");
-
-  ensureSchema(db);
+  const db = await openSqliteDatabase(data);
 
   // garante que o arquivo inicial existe/atualiza schema no disco
   await persistDbToDisk(db);
+
+  return db;
+}
+
+export async function openSqliteDatabase(data: Uint8Array | null = null) {
+  const SQL = await initSqlJs({
+    locateFile: file => `assets/${file}`,
+  });
+  const db = data ? new SQL.Database(new Uint8Array(data)) : new SQL.Database();
+  db.exec('PRAGMA foreign_keys = ON');
+
+  ensureSchema(db);
+  runLocalMigrations(db);
 
   return db;
 }
@@ -122,29 +128,14 @@ export class DatabasePersistenceCoordinator {
   }
 }
 
-function ensureSchema(db: any) {
+export function ensureSchema(db: any) {
   for (const t of schema) {
     db.exec(buildCreateTableSQL(t));
 
-    const existing = getExistingColumns(db, t.name);
-    const schemaColumns = new Set(t.columns.map(c => c.name));
 
     // Adiciona colunas que faltam
-    for (const col of t.columns) {
-      if (!existing.has(col.name)) {
-        db.exec(`ALTER TABLE "${t.name}" ADD COLUMN ${col.def}`);
-      }
-    }
 
     // Remove colunas que não existem mais no schema
-    const columnsToRemove = Array.from(existing).filter(col => !schemaColumns.has(col));
-    if (columnsToRemove.length > 0) {
-      console.log(`Removing columns from "${t.name}": ${columnsToRemove.join(", ")}`);
-
-      for (const col of columnsToRemove) {
-        db.exec(`ALTER TABLE "${t.name}" DROP COLUMN "${col}"`);
-      }
-    }
 
     if (t.indexes) for (const idx of t.indexes) db.exec(idx);
 
@@ -185,10 +176,12 @@ export class CrudHelper {
   private debugging: boolean = false;
   constructor(
     private db: any,
-    private readonly schedulePersist: () => void
+    private readonly schedulePersist: () => void,
+    private readonly assertWritable: () => void = () => undefined,
   ) {}
 
   create(table: string, data: Record<string, any>) {
+    this.assertWritable();
     const existing = getExistingColumns(this.db, table);
 
     // garante ID quando a tabela tem coluna 'id'
@@ -214,6 +207,7 @@ export class CrudHelper {
   }
 
   updateKey(table: string, key: string, value : string) {
+    this.assertWritable();
     const sql = `UPDATE "${table}" SET Value = ? WHERE key = ?`;
 
     if(this.debugging){
@@ -225,6 +219,7 @@ export class CrudHelper {
   }
 
   update(table: string, id: string, data: Record<string, any>) {
+    this.assertWritable();
     const existing = getExistingColumns(this.db, table);
     const keys = Object.keys(data).filter(k => existing.has(k) && k !== 'id');
     if (keys.length === 0) return;
@@ -244,6 +239,7 @@ export class CrudHelper {
   }
 
   deleteWhen(table: string, where: Record<string, any>) {
+    this.assertWritable();
     const clauses = Object.keys(where).map(k => `"${k}" = ?`);
 
     if (clauses.length === 0) throw new Error('deleteWhen requires at least one condition');
@@ -260,6 +256,7 @@ export class CrudHelper {
   }
 
   delete(table: string, id: string, deleteRelatedItems: boolean = false) {
+    this.assertWritable();
     const relsAsParent = mapResult(
       this.db.exec(
         `SELECT * FROM "Relationship" WHERE parentTable = ? AND parentId = ?`,

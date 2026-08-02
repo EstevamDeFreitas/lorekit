@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { Image } from '../../models/image.model';
 import { ImageService } from '../../services/image.service';
+import { AssetUrlPipe } from '../../pipes/asset-url.pipe';
 import {
   ImageCropDialogComponent,
   ImageCropDialogData,
@@ -23,7 +24,7 @@ interface ImageUploaderData {
 
 @Component({
   selector: 'app-image-uploader',
-  imports: [],
+  imports: [AssetUrlPipe],
   templateUrl: './image-uploader.component.html',
   styleUrl: './image-uploader.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

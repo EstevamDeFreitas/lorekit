@@ -1,13 +1,17 @@
 const { app, BrowserWindow, ipcMain, dialog, safeStorage, protocol, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const { pathToFileURL } = require('url');
+const { fileURLToPath, pathToFileURL } = require('url');
 const { autoUpdater } = require('electron-updater');
 
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'lorekit',
     privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, codeCache: true },
+  },
+  {
+    scheme: 'lorekit-local',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true },
   },
 ]);
 
@@ -58,6 +62,52 @@ function registerAppProtocol() {
     }
 
     return net.fetch(pathToFileURL(filePath).toString());
+  });
+}
+
+function registerLocalImageProtocol() {
+  protocol.handle('lorekit-local', async request => {
+    let requestUrl;
+    try {
+      requestUrl = new URL(request.url);
+    } catch {
+      return new Response('Bad request', { status: 400 });
+    }
+
+    if (requestUrl.host !== 'image') {
+      return new Response('Not found', { status: 404 });
+    }
+
+    const rawPath = requestUrl.searchParams.get('path');
+    if (!rawPath) {
+      return new Response('Bad request', { status: 400 });
+    }
+
+    let requestedPath;
+    try {
+      requestedPath = rawPath.startsWith('file:') ? fileURLToPath(rawPath) : rawPath;
+    } catch {
+      return new Response('Bad request', { status: 400 });
+    }
+
+    try {
+      const imagesRoot = await fs.promises.realpath(path.join(app.getPath('userData'), 'images'));
+      const imagePath = await fs.promises.realpath(path.resolve(requestedPath));
+      const relativePath = path.relative(imagesRoot, imagePath);
+      if (relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
+        return new Response('Forbidden', { status: 403 });
+      }
+
+      const stats = await fs.promises.stat(imagePath);
+      if (!stats.isFile()) {
+        return new Response('Not found', { status: 404 });
+      }
+
+      return net.fetch(pathToFileURL(imagePath).toString());
+    } catch (error) {
+      if (error?.code === 'ENOENT') return new Response('Not found', { status: 404 });
+      return new Response('Unable to read image', { status: 500 });
+    }
   });
 }
 
@@ -466,6 +516,7 @@ function startUpdateFlow() {
 
 app.whenReady().then(() => {
   registerAppProtocol();
+  registerLocalImageProtocol();
   registerIpc();
   startUpdateFlow();
 });

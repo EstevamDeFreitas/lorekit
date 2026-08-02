@@ -1,6 +1,10 @@
 import { Dialog } from '@angular/cdk/dialog';
 import { ChangeDetectionStrategy, Component, ElementRef, inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { WorkspaceRuntimeService } from '../../services/workspace-runtime.service';
+import { isElectronRuntime } from '../../utils/runtime-platform';
 import { AuthService } from '../../services/auth.service';
+import { LocalSyncConflict, SyncEngineService } from '../../services/sync-engine.service';
 import { CloudAccountDialogComponent } from '../cloud-account-dialog/cloud-account-dialog.component';
 
 @Component({
@@ -15,8 +19,11 @@ import { CloudAccountDialogComponent } from '../cloud-account-dialog/cloud-accou
 })
 export class CloudButtonComponent {
   protected readonly auth = inject(AuthService);
+  protected readonly syncEngine = inject(SyncEngineService);
   private readonly dialog = inject(Dialog);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
+  private readonly workspace = inject(WorkspaceRuntimeService);
+  private readonly router = inject(Router);
   protected isOpen = false;
 
   protected onTriggerClick(): void {
@@ -27,19 +34,53 @@ export class CloudButtonComponent {
     this.isOpen = !this.isOpen;
   }
 
-  protected toggleSync(): void {
+  protected async toggleSync(): Promise<void> {
     this.auth.setSyncEnabled(!this.auth.syncEnabled());
+    if (this.auth.syncEnabled()) {
+      await this.workspace.connectAuthenticatedAccount();
+    } else {
+      this.syncEngine.stop();
+    }
+  }
+
+  protected async syncNow(): Promise<void> {
+    await this.syncEngine.syncNow();
   }
 
   protected async logout(): Promise<void> {
     this.isOpen = false;
+    if (!isElectronRuntime()) {
+      await this.workspace.closeWebWorkspace(true);
+    }
     await this.auth.logout();
+    if (!isElectronRuntime()) {
+      await this.router.navigate(['/login']);
+    }
   }
 
   protected async reconnect(): Promise<void> {
     this.isOpen = false;
+    if (!isElectronRuntime()) {
+      await this.workspace.closeWebWorkspace(true);
+    }
     await this.auth.logout();
     this.openAccountDialog();
+  }
+
+  protected conflicts(): LocalSyncConflict[] {
+    return this.syncEngine.conflicts();
+  }
+
+  protected formatPayload(payload: Record<string, unknown> | null): string {
+    return payload === null ? '(excluído)' : JSON.stringify(payload, null, 2);
+  }
+
+  protected async keepMine(conflict: LocalSyncConflict): Promise<void> {
+    await this.syncEngine.keepMine(conflict);
+  }
+
+  protected async useCloud(conflict: LocalSyncConflict): Promise<void> {
+    await this.syncEngine.useCloud(conflict);
   }
 
   protected onDocumentClick(event: MouseEvent): void {

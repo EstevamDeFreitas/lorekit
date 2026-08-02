@@ -13,8 +13,6 @@ declare global {
   }
 }
 
-const WEB_SESSION_KEY = 'lorekit.cloud.session.v1';
-
 @Injectable({ providedIn: 'root' })
 export class CloudSessionStorageService {
   async read(): Promise<string | null> {
@@ -22,7 +20,7 @@ export class CloudSessionStorageService {
       return await window.electronAPI?.readCloudSession?.() ?? null;
     }
 
-    return sessionStorage.getItem(WEB_SESSION_KEY);
+    return null;
   }
 
   async write(value: string): Promise<void> {
@@ -34,7 +32,7 @@ export class CloudSessionStorageService {
       return;
     }
 
-    sessionStorage.setItem(WEB_SESSION_KEY, value);
+    // Web mantém apenas o access token em memória; o refresh fica em cookie HttpOnly.
   }
 
   async clear(): Promise<void> {
@@ -43,6 +41,6 @@ export class CloudSessionStorageService {
       return;
     }
 
-    sessionStorage.removeItem(WEB_SESSION_KEY);
+    // Não há credencial acessível ao JavaScript para remover no navegador.
   }
 }

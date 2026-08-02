@@ -43,7 +43,7 @@
         @if (backgroundImage) {
           <img
             class="h-full w-full cursor-pointer bg-zinc-900 object-contain transition hover:opacity-50"
-            [src]="backgroundImage.filePath"
+            [src]="backgroundImage | assetUrl"
             alt="Imagem de fundo"
             draggable="false">
         } @else {
@@ -78,7 +78,7 @@
           @if (fullBodyImage) {
             <img
               class="h-full w-full cursor-pointer bg-zinc-900 object-contain transition hover:opacity-50"
-              [src]="fullBodyImage.filePath"
+              [src]="fullBodyImage | assetUrl"
               alt="Imagem da espécie"
               draggable="false">
           } @else {
@@ -118,7 +118,7 @@
           @if (profileImage) {
             <img
               class="h-full w-full cursor-pointer bg-zinc-900 object-contain transition hover:opacity-50"
-              [src]="profileImage.filePath"
+              [src]="profileImage | assetUrl"
               alt="Imagem de perfil"
               draggable="false">
           } @else {

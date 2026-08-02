@@ -1,12 +1,16 @@
 import { provideHttpClient } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { AccountLoginFormComponent } from './account-login-form.component';
+import { WorkspaceRuntimeService } from '../../services/workspace-runtime.service';
 
 describe('AccountLoginFormComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AccountLoginFormComponent],
-      providers: [provideHttpClient()],
+      providers: [
+        provideHttpClient(),
+        { provide: WorkspaceRuntimeService, useValue: { connectAuthenticatedAccount: () => Promise.resolve() } },
+      ],
     }).compileComponents();
   });
 

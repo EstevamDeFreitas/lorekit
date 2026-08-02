@@ -17,7 +17,7 @@ export type AuthenticatedRequest = {
 
 export type AuthResponse = {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
   tokenType: 'Bearer';
   expiresIn: number;
   user: {

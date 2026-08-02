@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
+import { WorkspaceRuntimeService } from '../../services/workspace-runtime.service';
 
 @Component({
   selector: 'app-account-login-form',
@@ -12,6 +13,7 @@ import { AuthService } from '../../services/auth.service';
 export class AccountLoginFormComponent {
   protected readonly auth = inject(AuthService);
   readonly authenticated = output<void>();
+  private readonly workspace = inject(WorkspaceRuntimeService);
 
   protected readonly form = new FormGroup({
     email: new FormControl('', {
@@ -33,6 +35,7 @@ export class AccountLoginFormComponent {
     const { email, password } = this.form.getRawValue();
     try {
       await this.auth.login(email, password);
+      await this.workspace.connectAuthenticatedAccount();
       this.form.controls.password.reset();
       this.authenticated.emit();
     } catch {

@@ -6,9 +6,6 @@
   <base href="./">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <script src="https://kit.fontawesome.com/27c3448b16.js" crossorigin="anonymous"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body class="bg-zinc-950 text-white relative overflow-hidden">
   <div id="titlebar"
@@ -29,13 +26,6 @@
     </div>
   </div>
   <app-root></app-root>
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('win-min')?.addEventListener('click', () => window.electronAPI?.minimize());
-      document.getElementById('win-max')?.addEventListener('click', () => window.electronAPI?.toggleMaximize());
-      document.getElementById('win-close')?.addEventListener('click', () => window.electronAPI?.close());
-      document.getElementById('titlebar')?.addEventListener('dblclick', () => window.electronAPI?.toggleMaximize());
-    });
-  </script>
+  <script src="assets/window-controls.js" defer></script>
 </body>
 </html>

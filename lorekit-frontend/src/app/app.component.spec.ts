@@ -14,6 +14,7 @@ describe('AppComponent', () => {
         {
           provide: DbProvider,
           useValue: {
+            ready: () => true,
             getCrudHelper: () => ({
               searchInTable: () => [],
             }),

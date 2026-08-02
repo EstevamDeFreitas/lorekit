@@ -27,16 +27,17 @@ import { UiFieldConfigButtonComponent } from '../../../components/ui-field-confi
 import { OrganizationConfiguredFieldsComponent } from '../organization-configured-fields/organization-configured-fields.component';
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
+import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-organization-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, OrganizationConfiguredFieldsComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, OrganizationConfiguredFieldsComponent, AssetUrlPipe],
   template: `
     <div class="flex flex-col relative @container">
       @if(getImageByUsageKey(organization.Images, 'default') != null){
         @let img = getImageByUsageKey(organization.Images, 'default');
         <div class="relative w-full h-[30vh]  overflow-hidden">
-          <img [src]="img?.filePath" class="w-full h-full object-cover">
+          <img [src]="img | assetUrl" class="w-full h-full object-cover">
           <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
         </div>
       }
@@ -45,7 +46,7 @@ import { CurrentEntityPageStateService } from '../../../services/current-entity-
       }
       @if(getImageByUsageKey(organization.Images, 'profile') != null){
         @let profileImg = getImageByUsageKey(organization.Images, 'profile');
-        <img [src]="profileImg?.filePath" class="h-[27vh] absolute top-3 left-3 object-cover rounded-md">
+        <img [src]="profileImg | assetUrl" class="h-[27vh] absolute top-3 left-3 object-cover rounded-md">
       }
       <br>
       <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950">

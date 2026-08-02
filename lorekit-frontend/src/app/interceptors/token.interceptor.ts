@@ -9,9 +9,10 @@ export const tokenInterceptor: HttpInterceptorFn = (request, next) => {
 
   const auth = inject(AuthService);
   const token = auth.getAccessToken();
-  const authenticatedRequest = token
-    ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
-    : request;
+  const authenticatedRequest = request.clone({
+    withCredentials: true,
+    setHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+  });
 
   return next(authenticatedRequest).pipe(
     catchError((error: unknown) => {
@@ -27,6 +28,7 @@ export const tokenInterceptor: HttpInterceptorFn = (request, next) => {
         switchMap(refreshedToken => {
           if (!refreshedToken) return throwError(() => error);
           return next(request.clone({
+            withCredentials: true,
             setHeaders: { Authorization: `Bearer ${refreshedToken}` },
           }));
         }),

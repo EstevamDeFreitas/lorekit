@@ -26,16 +26,17 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
 import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world-configured-fields.component';
 import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
+import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-world-info',
-  imports: [NgStyle, NgComponentOutlet, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, WorldConfiguredFieldsComponent],
+  imports: [NgStyle, NgComponentOutlet, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, WorldConfiguredFieldsComponent, AssetUrlPipe],
   template: `
     <div class="flex flex-col @container">
       @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
         @let img = getImageByUsageKey(currentWorld.Images, 'default');
         <div class="relative w-full h-[30vh]  overflow-hidden">
-          <img [src]="img?.filePath" class="w-full h-full object-cover">
+          <img [src]="img | assetUrl" class="w-full h-full object-cover">
           <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
         </div>
       }

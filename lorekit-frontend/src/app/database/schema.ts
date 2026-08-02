@@ -65,6 +65,10 @@ export const schema: TableDef[] = [
       { name: "id",       def: `"id" TEXT NOT NULL PRIMARY KEY` },
       { name: "usageKey", def: `"usageKey" TEXT NOT NULL` },
       { name: "filePath", def: `"filePath" TEXT NOT NULL` },
+      { name: "blobId",       def: `"blobId" TEXT` },
+      { name: "originalName", def: `"originalName" TEXT` },
+      { name: "mimeType",     def: `"mimeType" TEXT` },
+      { name: "sha256",       def: `"sha256" TEXT` },
     ]
   },
   {
@@ -347,12 +351,6 @@ export const schema: TableDef[] = [
       { name: "basehealth",          def: `"basehealth" TEXT` },
       { name: "basedefense",          def: `"basedefense" TEXT` },
       { name: "attributes",          def: `"attributes" TEXT` },
-    ]
-  },
-  {
-    name:"",
-    columns:[
-      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
     ]
   },
 ];

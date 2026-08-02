@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuthTokenService } from './auth-token.service';
 import { PasswordService } from './password.service';
+import { WebSessionCookieService } from './web-session-cookie.service';
 
 @Module({
   imports: [JwtModule.register({})],
@@ -14,7 +15,8 @@ import { PasswordService } from './password.service';
     AuthService,
     AuthTokenService,
     PasswordService,
+    WebSessionCookieService,
   ],
-  exports: [AuthService, PasswordService],
+  exports: [AccessTokenGuard, AuthService, AuthTokenService, PasswordService],
 })
 export class AuthModule {}

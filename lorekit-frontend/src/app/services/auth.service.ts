@@ -15,7 +15,7 @@ export type CloudUser = {
 
 type AuthResponse = {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
   tokenType: 'Bearer';
   expiresIn: number;
   user: CloudUser;
@@ -55,6 +55,17 @@ export class AuthService {
   });
 
   async initialize(): Promise<void> {
+    if (!isElectronRuntime()) {
+      try {
+        await this.refreshAccessToken();
+        this.syncEnabled.set(this.authenticated());
+      } catch {
+        await this.clearLocalSession();
+        this.lastError.set(null);
+      }
+      return;
+    }
+
     try {
       const rawSession = await this.storage.read();
       if (!rawSession) return;
@@ -93,7 +104,7 @@ export class AuthService {
           deviceName: isElectronRuntime() ? 'Lorekit desktop' : 'Lorekit web',
           platform: isElectronRuntime() ? 'desktop' : 'web',
           appVersion: await this.getAppVersion(),
-        }),
+        }, { withCredentials: true }),
       );
       await this.acceptSession(response);
       this.setSyncEnabled(true);
@@ -110,11 +121,12 @@ export class AuthService {
     if (this.refreshInFlight) return this.refreshInFlight;
 
     const currentSession = this.session();
-    if (!currentSession?.refreshToken) return null;
+    if (isElectronRuntime() && !currentSession?.refreshToken) return null;
+    const refreshBody = isElectronRuntime() ? { refreshToken: currentSession?.refreshToken } : {};
 
     this.refreshInFlight = firstValueFrom(
-      this.http.post<AuthResponse>(`${this.apiUrl}/refresh`, {
-        refreshToken: currentSession.refreshToken,
+      this.http.post<AuthResponse>(`${this.apiUrl}/refresh`, refreshBody, {
+        withCredentials: true,
       }),
     )
       .then(async response => {
@@ -139,7 +151,7 @@ export class AuthService {
     const hadSession = this.authenticated();
     try {
       if (hadSession) {
-        await firstValueFrom(this.http.post<void>(`${this.apiUrl}/logout`, {}));
+        await firstValueFrom(this.http.post<void>(`${this.apiUrl}/logout`, {}, { withCredentials: true }));
       }
     } catch {
       // O logout local deve funcionar mesmo sem rede.
@@ -201,7 +213,8 @@ export class AuthService {
     return Boolean(
       value
       && typeof value.accessToken === 'string'
-      && typeof value.refreshToken === 'string'
+      && (!isElectronRuntime() || typeof value.refreshToken === 'string')
+      && (isElectronRuntime() || value.refreshToken === undefined)
       && typeof value.accessTokenExpiresAt === 'number'
       && typeof value.deviceId === 'string'
       && value.user

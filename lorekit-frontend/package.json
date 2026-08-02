@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:web": "ng build --configuration production,web",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -29,6 +30,7 @@
     "@editorjs/list": "^2.0.8",
     "@editorjs/quote": "^2.7.6",
     "@editorjs/table": "^2.4.5",
+    "@fortawesome/fontawesome-free": "^7.3.1",
     "@primeuix/themes": "^1.2.1",
     "@tailwindcss/postcss": "^4.3.3",
     "postcss": "^8.5.6",

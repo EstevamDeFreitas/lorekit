@@ -34,6 +34,7 @@
               "src/assets"
             ],
             "styles": [
+              "node_modules/@fortawesome/fontawesome-free/css/all.min.css",
               "src/styles.scss"
             ],
             "scripts": []
@@ -50,7 +51,17 @@
                   "maximumWarning": "4kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "optimization": {
+                "styles": { "inlineCritical": false },
+                "fonts": false
+              }
+            },
+            "web": {
+              "index": {
+                "input": "src/index.web.html",
+                "output": "index.html"
+              }
             },
             "development": {
               "fileReplacements": [
@@ -97,7 +108,9 @@
               {
                 "glob": "**/*",
                 "input": "public"
-              }
+              },
+              { "glob": "sql-wasm.wasm", "input": "node_modules/sql.js/dist", "output": "assets" },
+              "src/assets"
             ],
             "styles": [
               "src/styles.scss"
