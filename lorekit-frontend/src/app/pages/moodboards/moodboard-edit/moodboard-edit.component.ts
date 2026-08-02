@@ -236,6 +236,9 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   private groupTransformStartBounds: CanvasRect | null = null;
   private groupTransformItems = new Map<string, GroupTransformItem>();
   private groupRotationStartAngle = 0;
+  private canvasPinchStartDistance = 0;
+  private canvasPinchStartZoom = 1;
+  private itemTouchTransform: { itemId: string; distance: number; angle: number; width: number; height: number; rotation: number } | null = null;
   private removeMouseMove?: () => void;
   private removeMouseUp?: () => void;
   private removeTouchMove?: () => void;
@@ -394,6 +397,12 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   onCanvasTouchStart(event: TouchEvent): void {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+      this.startCanvasPinch(event);
+      return;
+    }
+
     const mouseEvent = this.touchToMouseEvent(event, 'mousedown');
     if (!mouseEvent) return;
 
@@ -402,12 +411,37 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   onItemTouchStart(event: TouchEvent, view: MoodboardCanvasItem): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.touches.length === 2) {
+      this.selectItem(view);
+      this.startItemTouchTransform(event, view);
+      return;
+    }
+
     const mouseEvent = this.touchToMouseEvent(event, 'mousedown');
     if (!mouseEvent) return;
 
-    event.preventDefault();
-    event.stopPropagation();
     this.onItemMouseDown(mouseEvent, view);
+  }
+
+  private startCanvasPinch(event: TouchEvent): void {
+    this.canvasPinchStartDistance = this.touchDistance(event);
+    this.canvasPinchStartZoom = this.zoom();
+    this.itemTouchTransform = null;
+  }
+
+  private startItemTouchTransform(event: TouchEvent, view: MoodboardCanvasItem): void {
+    this.itemTouchTransform = {
+      itemId: view.item.id,
+      distance: this.touchDistance(event),
+      angle: this.touchAngle(event),
+      width: this.itemWidth(view),
+      height: this.itemHeight(view),
+      rotation: view.config.rotation ?? 0,
+    };
+    this.canvasPinchStartDistance = 0;
   }
   onCanvasMouseDown(event: MouseEvent): void {
     if (this.isPanGesture(event)) {
@@ -1451,6 +1485,18 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   private onWindowTouchMove(event: TouchEvent): void {
+    if (event.touches.length === 2 && this.itemTouchTransform) {
+      event.preventDefault();
+      this.updateItemTouchTransform(event);
+      return;
+    }
+
+    if (event.touches.length === 2 && this.canvasPinchStartDistance > 0) {
+      event.preventDefault();
+      this.updateCanvasPinch(event);
+      return;
+    }
+
     if (this.dragState.mode === 'none') return;
 
     const mouseEvent = this.touchToMouseEvent(event, 'mousemove');
@@ -1461,7 +1507,61 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   private onWindowTouchEnd(): void {
+    if (this.itemTouchTransform) {
+      this.saveItemNow(this.itemTouchTransform.itemId);
+    }
+    this.itemTouchTransform = null;
+    this.canvasPinchStartDistance = 0;
     this.onWindowMouseUp();
+  }
+
+  private updateCanvasPinch(event: TouchEvent): void {
+    const distance = this.touchDistance(event);
+    if (!distance) return;
+
+    const nextZoom = Math.max(0.25, Math.min(2.5, this.canvasPinchStartZoom * distance / this.canvasPinchStartDistance));
+    const midpoint = this.touchMidpoint(event);
+    this.zoomBy(nextZoom - this.zoom(), midpoint);
+  }
+
+  private updateItemTouchTransform(event: TouchEvent): void {
+    const transform = this.itemTouchTransform;
+    if (!transform) return;
+
+    const distance = this.touchDistance(event);
+    if (!distance || !transform.distance) return;
+
+    const scale = distance / transform.distance;
+    const rotation = transform.rotation + (this.touchAngle(event) - transform.angle);
+    this.updateItemConfig(transform.itemId, config => ({
+      ...config,
+      width: Math.max(MIN_ITEM_SIZE, Math.round(transform.width * scale)),
+      height: Math.max(MIN_ITEM_SIZE, Math.round(transform.height * scale)),
+      rotation: Math.round(rotation),
+    }));
+  }
+
+  private touchDistance(event: TouchEvent): number {
+    const first = event.touches[0];
+    const second = event.touches[1];
+    if (!first || !second) return 0;
+    return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+  }
+
+  private touchAngle(event: TouchEvent): number {
+    const first = event.touches[0];
+    const second = event.touches[1];
+    if (!first || !second) return 0;
+    return Math.atan2(second.clientY - first.clientY, second.clientX - first.clientX) * 180 / Math.PI;
+  }
+
+  private touchMidpoint(event: TouchEvent): { clientX: number; clientY: number } {
+    const first = event.touches[0];
+    const second = event.touches[1];
+    return {
+      clientX: ((first?.clientX ?? 0) + (second?.clientX ?? 0)) / 2,
+      clientY: ((first?.clientY ?? 0) + (second?.clientY ?? 0)) / 2,
+    };
   }
 
   private touchToMouseEvent(event: TouchEvent, type: string): MouseEvent | null {

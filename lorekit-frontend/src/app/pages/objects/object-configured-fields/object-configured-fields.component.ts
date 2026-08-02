@@ -10,12 +10,13 @@ import { WorldObject } from '../../../models/object.model';
 import { UiFieldCatalogItem, UiFieldLayoutItem } from '../../../models/ui-field-config.model';
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { UiFieldConfigService } from '../../../services/ui-field-config.service';
+import { MobilePinchZoomDirective } from '../../../directives/mobile-pinch-zoom.directive';
 
 @Component({
   selector: 'app-object-configured-fields',
-  imports: [NgStyle, InputComponent, EditorComponent, ComboBoxComponent, DynamicImageFieldComponent],
+  imports: [MobilePinchZoomDirective, NgStyle, InputComponent, EditorComponent, ComboBoxComponent, DynamicImageFieldComponent],
   template: `
-    <div class="w-full p-1">
+    <div class="config-grid-scroll scrollbar-dark w-full p-1" appMobilePinchZoom>
       @if (!visibleItems.length) {
         <div class="text-sm text-zinc-400">Nenhum campo configurado para exibir.</div>
       }

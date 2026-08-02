@@ -12,3 +12,17 @@
   flex-direction: column;
   height: 100%;
 }
+@media (max-width: 767px) {
+  .config-grid-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 0.5rem;
+    touch-action: pan-x pan-y;
+  }
+
+  .config-grid {
+    width: 1080px;
+    min-width: 1080px;
+    zoom: var(--mobile-grid-zoom, 1);
+  }
+}

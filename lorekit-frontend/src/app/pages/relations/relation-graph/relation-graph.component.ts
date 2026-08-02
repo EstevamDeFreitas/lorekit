@@ -327,6 +327,8 @@ export class RelationGraphComponent implements OnInit {
   private panOriginX = 0;
   private panOriginY = 0;
   private movedDuringPan = false;
+  private pinchStartDistance = 0;
+  private pinchStartZoom = 1;
   isNodeDragging = false;
   private draggedNode: GraphNode | null = null;
   private movedDuringNodeDrag = false;
@@ -495,6 +497,14 @@ export class RelationGraphComponent implements OnInit {
   }
 
   onGraphTouchStart(event: TouchEvent): void {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+      this.isPanning = false;
+      this.pinchStartDistance = this.touchDistance(event);
+      this.pinchStartZoom = this.zoomLevel;
+      return;
+    }
+
     const mouseEvent = this.touchToMouseEvent(event, 'mousedown');
     if (!mouseEvent) return;
 
@@ -512,6 +522,19 @@ export class RelationGraphComponent implements OnInit {
   }
 
   onGraphTouchMove(event: TouchEvent): void {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+      if (!this.pinchStartDistance) {
+        this.pinchStartDistance = this.touchDistance(event);
+        this.pinchStartZoom = this.zoomLevel;
+      }
+      const distance = this.touchDistance(event);
+      if (distance && this.pinchStartDistance) {
+        this.zoomLevel = Math.max(this.minZoom, Math.min(this.maxZoom, +(this.pinchStartZoom * distance / this.pinchStartDistance).toFixed(2)));
+      }
+      return;
+    }
+
     if (!this.isPanning && !this.isNodeDragging && !this.isNodeResizing) return;
 
     const mouseEvent = this.touchToMouseEvent(event, 'mousemove');
@@ -522,7 +545,15 @@ export class RelationGraphComponent implements OnInit {
   }
 
   onGraphTouchEnd(): void {
+    this.pinchStartDistance = 0;
     this.stopPan();
+  }
+
+  private touchDistance(event: TouchEvent): number {
+    const first = event.touches[0];
+    const second = event.touches[1];
+    if (!first || !second) return 0;
+    return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
   }
 
   private touchToMouseEvent(event: TouchEvent, type: string): MouseEvent | null {

@@ -11,12 +11,13 @@ import { UiFieldCatalogItem, UiFieldLayoutItem } from '../../../models/ui-field-
 import { World } from '../../../models/world.model';
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { UiFieldConfigService } from '../../../services/ui-field-config.service';
+import { MobilePinchZoomDirective } from '../../../directives/mobile-pinch-zoom.directive';
 
 @Component({
   selector: 'app-world-configured-fields',
-  imports: [NgStyle, InputComponent, EditorComponent, ComboBoxComponent, TextAreaComponent, DynamicImageFieldComponent],
+  imports: [MobilePinchZoomDirective, NgStyle, InputComponent, EditorComponent, ComboBoxComponent, TextAreaComponent, DynamicImageFieldComponent],
   template: `
-    <div class="w-full p-1">
+    <div class="config-grid-scroll scrollbar-dark w-full p-1" appMobilePinchZoom>
       <div class="config-grid" [ngStyle]="gridStyle()">
         @for (item of visibleItems; track item.token) {
           <div class="config-grid-item" [ngStyle]="itemStyle(item)">
