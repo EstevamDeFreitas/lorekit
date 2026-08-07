@@ -12,6 +12,7 @@ import {
 } from '../database/sync-entity-registry';
 import { AuthService } from './auth.service';
 import { AssetResolverService } from './asset-resolver.service';
+import { CloudTransferPacerService } from './cloud-transfer-pacer.service';
 import { LegacyAssetMigrationService } from './legacy-asset-migration.service';
 import {
   CloudSyncApiService,
@@ -30,6 +31,9 @@ export interface LocalSyncConflict {
   detectedAt: string;
 }
 
+export const SYNC_MUTATION_DEBOUNCE_MS = 15_000;
+const RATE_LIMIT_MIN_RETRY_MS = 15_000;
+
 @Injectable({ providedIn: 'root' })
 export class SyncEngineService {
   private readonly dbProvider = inject(DbProvider);
@@ -38,6 +42,7 @@ export class SyncEngineService {
   private vaultId: string | null = null;
   private readonly browserStorage = inject(BrowserDatabaseStorageService);
   private readonly assetResolver = inject(AssetResolverService);
+  private readonly transferPacer = inject(CloudTransferPacerService);
   private readonly legacyAssetMigration = inject(LegacyAssetMigrationService);
   private syncInFlight: Promise<void> | null = null;
   private intervalId: number | null = null;
@@ -92,7 +97,7 @@ export class SyncEngineService {
       .catch(error => {
         const message = error instanceof Error ? error.message : 'Falha desconhecida de sincronização.';
         this.auth.markSyncError(message);
-        this.scheduleRetry();
+        this.scheduleRetry(error);
       })
       .finally(() => {
         this.syncInFlight = null;
@@ -213,6 +218,7 @@ export class SyncEngineService {
       try {
         if (state === 'delete') {
           try {
+            await this.transferPacer.waitForTurn();
             await this.api.deleteBlob(vaultId, blobId);
           } catch (error) {
             if (!isHttpStatus(error, 404)) throw error;
@@ -228,6 +234,7 @@ export class SyncEngineService {
             bytes = (await this.browserStorage.readBlob(user.id, vaultId, blobId))?.bytes ?? null;
           }
           if (!bytes) throw new Error(`Arquivo local n??o encontrado para o blob ${blobId}.`);
+          await this.transferPacer.waitForTurn();
           await this.api.uploadBlob(
             vaultId,
             blobId,
@@ -598,18 +605,19 @@ export class SyncEngineService {
     this.debounceTimerId = window.setTimeout(() => {
       this.debounceTimerId = null;
       void this.syncNow();
-    }, 1_000);
+    }, SYNC_MUTATION_DEBOUNCE_MS);
   }
 
-  private scheduleRetry(): void {
+  private scheduleRetry(error: unknown): void {
     if (!this.canSync()) return;
     if (this.retryTimerId !== null) window.clearTimeout(this.retryTimerId);
     const baseDelay = Math.min(300_000, 2_000 * 2 ** this.retryAttempt++);
     const jitteredDelay = Math.round(baseDelay * (0.75 + Math.random() * 0.5));
+    const retryDelay = Math.max(jitteredDelay, rateLimitRetryDelay(error) ?? 0);
     this.retryTimerId = window.setTimeout(() => {
       this.retryTimerId = null;
       void this.syncNow();
-    }, jitteredDelay);
+    }, retryDelay);
   }
 
   private canSync(): boolean {
@@ -670,4 +678,28 @@ function toSqlValue(value: unknown): SqlValue {
 
 function isHttpStatus(error: unknown, status: number): boolean {
   return typeof error === 'object' && error !== null && 'status' in error && error.status === status;
+}
+
+export function rateLimitRetryDelay(error: unknown): number | null {
+  if (!isHttpStatus(error, 429)) return null;
+
+  const headers = (error as { headers?: unknown }).headers;
+  let retryAfter: string | null = null;
+  if (headers && typeof headers === 'object' && 'get' in headers) {
+    const getHeader = (headers as { get(name: string): string | null }).get;
+    if (typeof getHeader === 'function') retryAfter = getHeader.call(headers, 'Retry-After');
+  }
+
+  let requestedDelay = 0;
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds >= 0) {
+      requestedDelay = Math.ceil(seconds * 1_000);
+    } else {
+      const retryAt = Date.parse(retryAfter);
+      if (Number.isFinite(retryAt)) requestedDelay = Math.max(0, retryAt - Date.now());
+    }
+  }
+
+  return Math.max(RATE_LIMIT_MIN_RETRY_MS, requestedDelay);
 }

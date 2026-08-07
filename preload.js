@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getImagePath: () => ipcRenderer.invoke('get-image-path'),
   readFile: (p) => ipcRenderer.invoke('read-file', p),
   writeFile: (p, data) => ipcRenderer.invoke('write-file', p, data),
+  writeFileAtomic: (p, data) => ipcRenderer.invoke('write-file-atomic', p, data),
   deleteFile: (p) => ipcRenderer.invoke('delete-file', p),
   minimize: () => ipcRenderer.invoke('window:minimize'),
   toggleMaximize: () => ipcRenderer.invoke('window:toggle-maximize'),

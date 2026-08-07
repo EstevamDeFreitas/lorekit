@@ -13,7 +13,8 @@ export const ElectronSafeAPI = {
       getDbPath: async () => 'browser-mode.db',
       getImagePath: async () => 'browser-images',
       readFile: async () => null,
-      writeFile: async () => null
+      writeFile: async () => null,
+      writeFileAtomic: async () => null,
     };
   }
 };
@@ -35,6 +36,7 @@ export async function openSqliteDatabase(data: Uint8Array | null = null) {
     locateFile: file => `assets/${file}`,
   });
   const db = data ? new SQL.Database(new Uint8Array(data)) : new SQL.Database();
+  assertDatabaseIntegrity(db);
   db.exec('PRAGMA foreign_keys = ON');
 
   ensureSchema(db);
@@ -43,10 +45,34 @@ export async function openSqliteDatabase(data: Uint8Array | null = null) {
   return db;
 }
 
+export function assertDatabaseIntegrity(db: any): void {
+  try {
+    const result = db.exec('PRAGMA quick_check');
+    const messages = result.flatMap((entry: any) => entry.values)
+      .flat()
+      .map((value: unknown) => String(value));
+    if (messages.length !== 1 || messages[0].toLowerCase() !== 'ok') {
+      const detail = messages.length > 0 ? messages.join('; ') : 'sem resultado';
+      throw new Error(`SQLite integrity check failed: ${detail}`);
+    }
+  } catch (error) {
+    try {
+      db.close();
+    } catch {
+      // Preserve the integrity-check error.
+    }
+    throw error;
+  }
+}
 export async function persistDbToDisk(db: any): Promise<void> {
   const dbPath = await ElectronSafeAPI.electron.getDbPath();
   const binary = db.export();
-  await ElectronSafeAPI.electron.writeFile(dbPath, binary);
+  const electron = ElectronSafeAPI.electron;
+  if (typeof electron.writeFileAtomic === 'function') {
+    await electron.writeFileAtomic(dbPath, binary);
+  } else {
+    await electron.writeFile(dbPath, binary);
+  }
 }
 
 type PersistWriter = (db: any) => Promise<void>;

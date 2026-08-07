@@ -1,23 +1,80 @@
 <main>
-  @if (dbProvider.ready()) {
-  <div class="text-xs absolute left-2 right-2 md:left-1/2 md:right-auto md:-translate-x-1/2 p-1 flex flex-row min-w-0 items-center gap-2 z-10 justify-start md:justify-center">
-    <app-search class="min-w-0 flex-1 md:flex-none" style="-webkit-app-region: no-drag;"></app-search>
-    <button
-      type="button"
-      style="-webkit-app-region: no-drag;"
-      class="h-7 w-7 flex items-center justify-center rounded-md bg-zinc-925 border border-zinc-700 text-white hover:border-white transition-colors disabled:cursor-wait disabled:opacity-60"
-      [disabled]="isRefreshing()"
-      title="Recarregar componentes (F5)"
-      aria-label="Recarregar componentes (F5)"
-      (click)="refreshComponents()">
-      <i
-        class="fa-solid fa-rotate-right text-xs"
-        [class.fa-spin]="isRefreshing()">
-      </i>
-    </button>
-    <app-backup-button style="-webkit-app-region: no-drag;"></app-backup-button>
-    <app-cloud-button style="-webkit-app-region: no-drag;"></app-cloud-button>
-  </div>
+  @if (workspace.desktopRecoveryRequired()) {
+    <div class="absolute left-1/2 top-0 z-50 flex -translate-x-1/2 items-center p-1">
+      <app-cloud-button style="-webkit-app-region: no-drag;"></app-cloud-button>
+    </div>
+
+    <section class="flex min-h-screen items-center justify-center bg-zinc-950 px-6 text-white">
+      <div class="w-full max-w-xl rounded-xl border border-red-500/30 bg-zinc-900 p-6 shadow-2xl">
+        <div class="mb-4 flex items-start gap-4">
+          <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-400">
+            <i class="fa-solid fa-database text-xl"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-semibold">O banco local n&atilde;o p&ocirc;de ser aberto</h1>
+            <p class="mt-1 text-sm leading-6 text-zinc-400">
+              O Lorekit manteve a interface de recupera&ccedil;&atilde;o ativa para que seus dados da nuvem continuem acess&iacute;veis.
+              O arquivo danificado n&atilde;o ser&aacute; descartado.
+            </p>
+          </div>
+        </div>
+
+        @if (workspace.error(); as error) {
+          <div class="mb-4 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+            {{ error }}
+          </div>
+        }
+
+        @if (workspace.recoveryBackupPath(); as backupPath) {
+          <div class="mb-4 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+            <p class="font-medium">C&oacute;pia do banco danificado preservada:</p>
+            <p class="mt-1 break-all text-emerald-300/80">{{ backupPath }}</p>
+          </div>
+        }
+
+        @if (auth.isAuthenticated()) {
+          <button
+            type="button"
+            class="flex w-full items-center justify-center gap-2 rounded-md bg-emerald-500 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-400 disabled:cursor-wait disabled:opacity-60"
+            [disabled]="workspace.recovering()"
+            (click)="recoverFromCloud()"
+          >
+            <i
+              class="fa-solid"
+              [class.fa-cloud-arrow-down]="!workspace.recovering()"
+              [class.fa-circle-notch]="workspace.recovering()"
+              [class.fa-spin]="workspace.recovering()"
+            ></i>
+            {{ workspace.recovering() ? 'Baixando dados da nuvem...' : 'Baixar dados da nuvem' }}
+          </button>
+        } @else {
+          <div class="rounded-md border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100">
+            <p class="font-medium">Conecte sua conta para continuar.</p>
+            <p class="mt-1 text-xs text-yellow-200/70">
+              Use o bot&atilde;o de nuvem no topo da tela e depois escolha baixar os dados da nuvem.
+            </p>
+          </div>
+        }
+      </div>
+    </section>
+  } @else {
+    @if (dbProvider.ready()) {
+      <div class="text-xs absolute left-2 right-2 md:left-1/2 md:right-auto md:-translate-x-1/2 p-1 flex flex-row min-w-0 items-center gap-2 z-10 justify-start md:justify-center">
+        <app-search class="min-w-0 flex-1 md:flex-none" style="-webkit-app-region: no-drag;"></app-search>
+        <button
+          type="button"
+          style="-webkit-app-region: no-drag;"
+          class="h-7 w-7 flex items-center justify-center rounded-md bg-zinc-925 border border-zinc-700 text-white hover:border-white transition-colors disabled:cursor-wait disabled:opacity-60"
+          [disabled]="isRefreshing()"
+          title="Recarregar componentes (F5)"
+          aria-label="Recarregar componentes (F5)"
+          (click)="refreshComponents()">
+          <i class="fa-solid fa-rotate-right text-xs" [class.fa-spin]="isRefreshing()"></i>
+        </button>
+        <app-backup-button style="-webkit-app-region: no-drag;"></app-backup-button>
+        <app-cloud-button style="-webkit-app-region: no-drag;"></app-cloud-button>
+      </div>
+    }
+    <router-outlet />
   }
-  <router-outlet />
 </main>

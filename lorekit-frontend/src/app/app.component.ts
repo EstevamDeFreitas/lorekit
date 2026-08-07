@@ -6,6 +6,8 @@ import { CloudButtonComponent } from './components/cloud-button/cloud-button.com
 import { DbProvider } from './app.config';
 import { ComponentRefreshService } from './services/component-refresh.service';
 import { FLUSH_PENDING_SAVES_EVENT, PendingSaveEventDetail } from './utils/pending-save-event';
+import { AuthService } from './services/auth.service';
+import { WorkspaceRuntimeService } from './services/workspace-runtime.service';
 
 declare const window: any;
 
@@ -21,6 +23,8 @@ declare const window: any;
 })
 export class AppComponent implements OnInit, OnDestroy {
   protected readonly dbProvider = inject(DbProvider);
+  protected readonly auth = inject(AuthService);
+  protected readonly workspace = inject(WorkspaceRuntimeService);
   private readonly componentRefresh = inject(ComponentRefreshService);
   private removePrepareToCloseListener?: () => void;
   private isPreparingToClose = false;
@@ -65,6 +69,23 @@ export class AppComponent implements OnInit, OnDestroy {
       console.error('Falha ao recarregar os componentes.', error);
     } finally {
       this.isRefreshing.set(false);
+    }
+  }
+
+  protected async recoverFromCloud(): Promise<void> {
+    if (this.workspace.recovering() || !this.auth.isAuthenticated()) return;
+    const confirmed = window.confirm([
+      'Baixar a vers\u00e3o da nuvem e substituir o banco local corrompido?',
+      '',
+      'O arquivo local atual ser\u00e1 preservado como .bak antes da substitui\u00e7\u00e3o.',
+      'As imagens locais n\u00e3o ser\u00e3o apagadas.',
+    ].join('\n'));
+    if (!confirmed) return;
+
+    try {
+      await this.workspace.recoverDesktopFromCloud();
+    } catch (error) {
+      console.error('Falha ao recuperar o banco pela nuvem.', error);
     }
   }
 

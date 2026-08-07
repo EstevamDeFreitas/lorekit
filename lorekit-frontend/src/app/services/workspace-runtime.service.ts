@@ -5,6 +5,7 @@ import { environment } from '../../enviroments/environment';
 import { DbProvider } from '../database/db-provider.service';
 import { BrowserDatabaseStorageService } from '../database/browser-database-storage.service';
 import { openDbAndEnsureSchema, openSqliteDatabase } from '../database/database.helper';
+import { ElectronSafeAPI, persistDbToDisk } from '../database/database.helper';
 import { WorkspaceLockService } from '../database/workspace-lock.service';
 import { isElectronRuntime } from '../utils/runtime-platform';
 import { AuthService } from './auth.service';
@@ -32,15 +33,24 @@ export class WorkspaceRuntimeService {
 
   readonly vault = signal<CloudVault | null>(null);
   readonly error = signal<string | null>(null);
+  readonly desktopRecoveryRequired = signal(false);
+  readonly recovering = signal(false);
+  readonly recoveryBackupPath = signal<string | null>(null);
 
   async initializeDesktop(): Promise<void> {
     if (!isElectronRuntime()) return;
     if (this.dbProvider.ready()) return;
-    const database = await openDbAndEnsureSchema();
-    this.dbProvider.setDb(database);
-    this.assetResolver.hydrateLocalAssets();
-    if (this.auth.isAuthenticated() && this.auth.syncEnabled()) {
-      await this.connectAuthenticatedAccount();
+    try {
+      const database = await openDbAndEnsureSchema();
+      this.dbProvider.setDb(database);
+      this.assetResolver.hydrateLocalAssets();
+      if (this.auth.isAuthenticated() && this.auth.syncEnabled()) {
+        await this.connectAuthenticatedAccount();
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Falha desconhecida ao abrir o SQLite.';
+      this.desktopRecoveryRequired.set(true);
+      this.error.set(`O banco local n\u00e3o p\u00f4de ser aberto: ${detail}`);
     }
   }
 
@@ -67,6 +77,7 @@ export class WorkspaceRuntimeService {
     const vault = vaults[0];
     if (!vault) throw new Error('Nenhum vault foi atribuído a esta conta.');
     this.vault.set(vault);
+    if (this.desktopRecoveryRequired()) return;
     if (this.auth.syncEnabled()) {
       await this.syncEngine.start(vault.id);
     }
@@ -87,6 +98,68 @@ export class WorkspaceRuntimeService {
     if (clearCache && user) {
       await this.browserStorage.deleteUser(user.id);
     }
+  }
+
+  async recoverDesktopFromCloud(): Promise<void> {
+    if (!isElectronRuntime() || this.recovering()) return;
+    if (!this.auth.isAuthenticated()) {
+      const message = 'Conecte uma conta antes de baixar a vers\u00e3o da nuvem.';
+      this.error.set(message);
+      throw new Error(message);
+    }
+
+    this.recovering.set(true);
+    this.error.set(null);
+    try {
+      const vault = this.vault() ?? await this.loadFirstVault();
+      this.vault.set(vault);
+
+      if (!this.dbProvider.ready()) {
+        const backupPath = await this.preserveCorruptDesktopDatabase();
+        this.recoveryBackupPath.set(backupPath);
+        const database = await openSqliteDatabase();
+        this.dbProvider.setDb(database);
+        await persistDbToDisk(database);
+      }
+
+      this.auth.setSyncEnabled(true);
+      this.auth.clearError();
+      await this.syncEngine.start(vault.id);
+      const syncError = this.auth.lastError();
+      if (syncError) throw new Error(syncError);
+
+      await this.dbProvider.flushPendingWrites();
+      this.desktopRecoveryRequired.set(false);
+      this.error.set(null);
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : 'N\u00e3o foi poss\u00edvel baixar a vers\u00e3o da nuvem.';
+      this.error.set(message);
+      this.auth.markSyncError(message);
+      throw error;
+    } finally {
+      this.recovering.set(false);
+    }
+  }
+
+  private async loadFirstVault(): Promise<CloudVault> {
+    const vaults = await firstValueFrom(
+      this.http.get<CloudVault[]>(`${environment.apiUrl}/vaults`, { withCredentials: true }),
+    );
+    const vault = vaults[0];
+    if (!vault) throw new Error('Nenhum vault foi atribu\u00eddo a esta conta.');
+    return vault;
+  }
+
+  private async preserveCorruptDesktopDatabase(): Promise<string | null> {
+    const dbPath = await ElectronSafeAPI.electron.getDbPath();
+    const bytes = await ElectronSafeAPI.electron.readFile(dbPath);
+    if (!bytes) return null;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupPath = `${dbPath}.corrupt-${timestamp}.bak`;
+    await ElectronSafeAPI.electron.writeFile(backupPath, bytes);
+    return backupPath;
   }
 
   private async openAuthenticatedWebWorkspace(): Promise<void> {

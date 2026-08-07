@@ -10,6 +10,7 @@ import { SYNC_ENTITIES } from '../database/sync-entity-registry';
 import { buildImageUrl, clearAssetUrl, registerAssetUrl } from '../models/image.model';
 import { isElectronRuntime } from '../utils/runtime-platform';
 import { AuthService } from './auth.service';
+import { CloudTransferPacerService } from './cloud-transfer-pacer.service';
 
 const ASSET_REFERENCE_PATTERN = /lorekit-asset:\/\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/gi;
 
@@ -19,6 +20,7 @@ export class AssetResolverService {
   private readonly auth = inject(AuthService);
   private readonly dbProvider = inject(DbProvider);
   private readonly browserStorage = inject(BrowserDatabaseStorageService);
+  private readonly transferPacer = inject(CloudTransferPacerService);
   private readonly objectUrls = new Map<string, string>();
 
   hydrateLocalAssets(): void {
@@ -139,6 +141,7 @@ export class AssetResolverService {
       if (cached) return this.createObjectUrl(blobId, cached.bytes, cached.mimeType);
     }
 
+    await this.transferPacer.waitForTurn();
     const blob = await firstValueFrom(this.http.get(
       `${environment.apiUrl}/vaults/${vaultId}/blobs/${blobId}`,
       { responseType: 'blob' },

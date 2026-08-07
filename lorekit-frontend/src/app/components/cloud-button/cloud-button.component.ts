@@ -22,7 +22,7 @@ export class CloudButtonComponent {
   protected readonly syncEngine = inject(SyncEngineService);
   private readonly dialog = inject(Dialog);
   private readonly elementRef = inject(ElementRef<HTMLElement>);
-  private readonly workspace = inject(WorkspaceRuntimeService);
+  protected readonly workspace = inject(WorkspaceRuntimeService);
   private readonly router = inject(Router);
   protected isOpen = false;
 
@@ -45,6 +45,23 @@ export class CloudButtonComponent {
 
   protected async syncNow(): Promise<void> {
     await this.syncEngine.syncNow();
+  }
+
+  protected async downloadCloudCopy(): Promise<void> {
+    if (this.workspace.recovering()) return;
+    const confirmed = window.confirm([
+      'Baixar a vers\u00e3o da nuvem e substituir o banco local corrompido?',
+      '',
+      'Uma c\u00f3pia .bak do arquivo atual ser\u00e1 criada antes da substitui\u00e7\u00e3o.',
+    ].join('\n'));
+    if (!confirmed) return;
+
+    try {
+      await this.workspace.recoverDesktopFromCloud();
+      this.isOpen = false;
+    } catch (error) {
+      console.error('Falha ao baixar a vers\u00e3o da nuvem.', error);
+    }
   }
 
   protected async logout(): Promise<void> {

@@ -155,6 +155,39 @@ function registerIpc() {
     await fs.promises.writeFile(filePath, Buffer.from(data));
     return true;
   });
+  ipcMain.handle('write-file-atomic', async (_e, filePath, data) => {
+    const parentDirectory = path.dirname(filePath);
+    const driveRoot = path.parse(parentDirectory).root;
+    if (parentDirectory !== driveRoot) {
+      await fs.promises.mkdir(parentDirectory, { recursive: true });
+    }
+
+    const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+    let temporaryHandle;
+    try {
+      temporaryHandle = await fs.promises.open(temporaryPath, 'w');
+      await temporaryHandle.writeFile(Buffer.from(data));
+      await temporaryHandle.sync();
+      await temporaryHandle.close();
+      temporaryHandle = undefined;
+      await fs.promises.rename(temporaryPath, filePath);
+      return true;
+    } catch (error) {
+      if (temporaryHandle) {
+        try {
+          await temporaryHandle.close();
+        } catch {
+          // Preserve the original error.
+        }
+      }
+      try {
+        await fs.promises.rm(temporaryPath, { force: true });
+      } catch {
+        // A stale temporary file is harmless and can be replaced on the next write.
+      }
+      throw error;
+    }
+  });
   ipcMain.handle('delete-file', async (_e, filePath) => {
     if (fs.existsSync(filePath)) {
       await fs.promises.unlink(filePath);
