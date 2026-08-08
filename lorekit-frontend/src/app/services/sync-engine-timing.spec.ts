@@ -1,6 +1,8 @@
 import {
   compareSyncClock,
+  isOwnSyncChange,
   rateLimitRetryDelay,
+  syncPayloadsEqual,
   SYNC_MUTATION_DEBOUNCE_MS,
 } from './sync-engine.service';
 
@@ -49,5 +51,45 @@ describe('sync engine timing', () => {
       { modifiedAt: '9007199254740993', changeId: '0'.repeat(32) },
       { modifiedAt: '9007199254740992', changeId: 'f'.repeat(32) },
     )).toBe(1);
+  });
+
+  it('does not treat a new clock with identical content as a visible change', () => {
+    expect(syncPayloadsEqual(
+      { id: 'record-1', nested: { second: 2, first: 1 }, tags: ['a', 'b'] },
+      { tags: ['a', 'b'], nested: { first: 1, second: 2 }, id: 'record-1' },
+    )).toBeTrue();
+  });
+
+  it('detects an actual payload or tombstone change', () => {
+    expect(syncPayloadsEqual(
+      { id: 'record-1', name: 'Anterior' },
+      { id: 'record-1', name: 'Novo' },
+    )).toBeFalse();
+    expect(syncPayloadsEqual({ id: 'record-1' }, null)).toBeFalse();
+    expect(syncPayloadsEqual(null, null)).toBeTrue();
+  });
+
+  it('recognizes changes reported by the current device as local echoes', () => {
+    expect(isOwnSyncChange(
+      { changeId: 'remote-id', actorDeviceId: 'device-1' },
+      'device-1',
+      new Set(),
+    )).toBeTrue();
+  });
+
+  it('recognizes a recently pushed change even with an older API response', () => {
+    expect(isOwnSyncChange(
+      { changeId: 'local-id' },
+      'device-1',
+      new Set(['local-id']),
+    )).toBeTrue();
+  });
+
+  it('keeps changes from another device eligible for a screen refresh', () => {
+    expect(isOwnSyncChange(
+      { changeId: 'remote-id', actorDeviceId: 'device-2' },
+      'device-1',
+      new Set(['local-id']),
+    )).toBeFalse();
   });
 });

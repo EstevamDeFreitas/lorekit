@@ -122,6 +122,7 @@ export class SyncService {
       payload: row.payload,
       modifiedAt: row.modifiedAt.toString(),
       changeId: row.changeId,
+      actorDeviceId: row.actorDeviceId,
       createdAt: row.createdAt.toISOString(),
     }));
     const cursor = changes.at(-1)?.sequence ?? query.after;

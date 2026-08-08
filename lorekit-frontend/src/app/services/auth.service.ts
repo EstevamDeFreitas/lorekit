@@ -41,6 +41,7 @@ export class AuthService {
   readonly lastError = signal<string | null>(null);
   readonly syncEnabled = signal(this.readBoolean(SYNC_ENABLED_KEY));
   readonly user = computed(() => this.session()?.user ?? null);
+  readonly deviceId = computed(() => this.session()?.deviceId ?? null);
   readonly authenticated = computed(() => Boolean(this.session()));
   readonly indicatorColor = computed<CloudIndicatorColor>(() => {
     if (this.lastError()) return 'red';

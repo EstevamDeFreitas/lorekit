@@ -59,6 +59,7 @@ export interface RemoteSyncChange {
   payload: Record<string, unknown> | null;
   modifiedAt: string;
   changeId: string;
+  actorDeviceId?: string | null;
   createdAt: string;
 }
 

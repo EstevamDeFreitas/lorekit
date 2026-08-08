@@ -36,10 +36,6 @@ export interface LocalSyncConflict {
   detectedAt: string;
 }
 
-export interface LocalSyncResolution extends SyncResolution {
-  createdAt: string;
-  expiresAt: string;
-}
 
 export interface SyncStartOptions {
   initialTimeoutMs?: number;
@@ -76,11 +72,11 @@ export class SyncEngineService {
   private debounceTimerId: number | null = null;
   private retryAttempt = 0;
   private unsubscribeMutation: (() => void) | null = null;
+  private readonly recentlyPushedChangeIds = new Set<string>();
 
   readonly syncing = signal(false);
   readonly lastSyncAt = signal<string | null>(null);
   readonly conflictCount = signal(0);
-  readonly resolutionCount = signal(0);
 
   async start(vaultId: string, options: SyncStartOptions = {}): Promise<void> {
     if (this.vaultId === vaultId && this.intervalId !== null) {
@@ -136,6 +132,7 @@ export class SyncEngineService {
     this.intervalId = null;
     this.retryTimerId = null;
     this.debounceTimerId = null;
+    this.recentlyPushedChangeIds.clear();
   }
 
   async syncNow(): Promise<void> {
@@ -172,29 +169,6 @@ export class SyncEngineService {
     }));
   }
 
-  resolutions(): LocalSyncResolution[] {
-    if (!this.dbProvider.ready()) return [];
-    this.pruneResolutionHistory();
-    return rows(this.db().exec(`
-      SELECT * FROM "_SyncResolutionHistory"
-      ORDER BY "createdAt" DESC
-      LIMIT 50
-    `)).map(row => ({
-      resolutionKey: String(row['resolutionKey']),
-      entityType: String(row['entityType']),
-      entityId: String(row['entityId']),
-      winnerOperation: row['winnerOperation'] as SyncOperation,
-      winnerPayload: parseJson(row['winnerPayload']),
-      winnerModifiedAt: String(row['winnerModifiedAt']),
-      winnerChangeId: String(row['winnerChangeId']),
-      loserOperation: row['loserOperation'] as SyncOperation,
-      loserPayload: parseJson(row['loserPayload']),
-      loserModifiedAt: String(row['loserModifiedAt']),
-      loserChangeId: String(row['loserChangeId']),
-      createdAt: String(row['createdAt']),
-      expiresAt: String(row['expiresAt']),
-    }));
-  }
 
   async keepMine(conflict: LocalSyncConflict): Promise<void> {
     const operation = conflict.localPayload === null ? 'delete' : 'upsert';
@@ -282,7 +256,6 @@ export class SyncEngineService {
       await this.syncPendingBlobs(vaultId, 'delete');
       await this.pullAll(vaultId, deadline);
       await this.reportResolutionHistory(vaultId);
-      await this.refreshResolutionHistory(vaultId);
       await this.assetResolver.hydrateImages(vaultId);
       await this.assetResolver.hydrateCanonicalReferences(vaultId);
     }
@@ -521,6 +494,7 @@ export class SyncEngineService {
         changeId: String(row['changeId']),
         ...(row['payload'] === null ? {} : { payload: parseJson(row['payload']) ?? {} }),
       }));
+      this.rememberLocalChanges(operations);
       this.db().run(
         `UPDATE "_SyncOutbox" SET "attempts" = "attempts" + 1, "lastError" = NULL
          WHERE "operationId" IN (${batch.map(() => '?').join(', ')})`,
@@ -642,28 +616,52 @@ export class SyncEngineService {
   private async applyRemoteBatch(changes: RemoteSyncChange[]): Promise<void> {
     if (!changes.length) return;
 
-    const containsUnseenChanges = changes.some(change =>
-      this.clockFor(change.entityType, change.entityId)?.changeId !== change.changeId
+    const containsExternalContentChanges = changes.some(change =>
+      !this.isOwnChange(change)
+      && !syncPayloadsEqual(this.localContent(change), this.remoteContent(change))
     );
-    if (containsUnseenChanges) {
+    if (containsExternalContentChanges) {
       await flushPendingComponentSaves();
       await this.dbProvider.flushPendingWrites();
     }
 
-    const appliedChanges = await this.dbProvider.runInTransaction(async () => {
-      let appliedChanges = 0;
+    const contentBefore = new Map<string, Record<string, unknown> | null>();
+    const lastChangeByKey = new Map<string, RemoteSyncChange>();
+    for (const change of changes) {
+      const key = this.contentKey(change);
+      if (!contentBefore.has(key)) contentBefore.set(key, this.localContent(change));
+      lastChangeByKey.set(key, change);
+    }
+
+    await this.dbProvider.runInTransaction(async () => {
       this.setCaptureSuppressed(true);
-      for (const change of changes) {
-        if (await this.reconcileRemoteChange(change)) appliedChanges++;
-      }
+      for (const change of changes) await this.reconcileRemoteChange(change);
       this.setCaptureSuppressed(false);
-      return appliedChanges;
     });
 
-    if (appliedChanges > 0) this.componentRefresh.refreshFromRemote();
+    const externalContentChanged = [...lastChangeByKey.entries()].some(([key, change]) =>
+      !this.isOwnChange(change)
+      && !syncPayloadsEqual(contentBefore.get(key) ?? null, this.localContent(change))
+    );
+    for (const change of changes) this.recentlyPushedChangeIds.delete(change.changeId);
+    if (externalContentChanged) this.componentRefresh.refreshFromRemote();
   }
 
   private async reconcileRemoteChange(change: RemoteSyncChange): Promise<boolean> {
+    if (syncPayloadsEqual(this.localContent(change), this.remoteContent(change))) {
+      this.clearLocalPending(change.entityType, change.entityId);
+      this.setKnownVersion(change.entityType, change.entityId, change.version);
+      this.setRecordClock(
+        change.entityType,
+        change.entityId,
+        change.operation,
+        change.modifiedAt,
+        change.changeId,
+        'remote',
+      );
+      return false;
+    }
+
     const hasLocalChange = Number(scalar(this.db().exec(`
       SELECT EXISTS(
         SELECT 1 FROM "_SyncDirty" WHERE "entityType" = ? AND "entityId" = ?
@@ -673,11 +671,6 @@ export class SyncEngineService {
     `, [change.entityType, change.entityId, change.entityType, change.entityId])) ?? 0) === 1;
 
     if (!hasLocalChange) {
-      const currentClock = this.clockFor(change.entityType, change.entityId);
-      if (currentClock?.changeId === change.changeId) {
-        this.setKnownVersion(change.entityType, change.entityId, change.version);
-        return false;
-      }
       this.applyRemoteChange(change);
       return true;
     }
@@ -691,16 +684,8 @@ export class SyncEngineService {
     };
     if (local?.changeId === remote.changeId) {
       this.clearLocalPending(change.entityType, change.entityId);
-      this.setKnownVersion(change.entityType, change.entityId, change.version);
-      this.setRecordClock(
-        change.entityType,
-        change.entityId,
-        change.operation,
-        change.modifiedAt,
-        change.changeId,
-        'remote',
-      );
-      return false;
+      this.applyRemoteChange(change);
+      return true;
     }
 
     if (!local) {
@@ -721,6 +706,36 @@ export class SyncEngineService {
     return true;
   }
 
+  private localContent(change: Pick<RemoteSyncChange, 'entityType' | 'entityId'>): Record<string, unknown> | null {
+    return this.localPayload(getSyncEntity(change.entityType), change.entityId);
+  }
+
+  private remoteContent(change: RemoteSyncChange): Record<string, unknown> | null {
+    if (change.operation === 'delete') return null;
+    const definition = getSyncEntity(change.entityType);
+    return {
+      ...(change.payload ?? {}),
+      [definition.primaryKey]: change.entityId,
+    };
+  }
+
+  private contentKey(change: Pick<RemoteSyncChange, 'entityType' | 'entityId'>): string {
+    return `${change.entityType}\u0000${change.entityId}`;
+  }
+
+
+  private isOwnChange(change: Pick<RemoteSyncChange, 'changeId' | 'actorDeviceId'>): boolean {
+    return isOwnSyncChange(change, this.auth.deviceId(), this.recentlyPushedChangeIds);
+  }
+
+  private rememberLocalChanges(operations: readonly SyncPushOperation[]): void {
+    for (const operation of operations) this.recentlyPushedChangeIds.add(operation.changeId);
+    while (this.recentlyPushedChangeIds.size > 2_000) {
+      const oldest = this.recentlyPushedChangeIds.values().next().value;
+      if (typeof oldest !== 'string') break;
+      this.recentlyPushedChangeIds.delete(oldest);
+    }
+  }
 
   private applyRemoteChange(change: RemoteSyncChange): void {
     const definition = getSyncEntity(change.entityType);
@@ -1030,39 +1045,6 @@ export class SyncEngineService {
     }
   }
 
-  private async refreshResolutionHistory(vaultId: string): Promise<void> {
-    try {
-      const response = await this.api.resolutions(vaultId);
-      for (const resolution of response.resolutions) {
-        this.db().run(
-          `INSERT OR IGNORE INTO "_SyncResolutionHistory" (
-            "resolutionKey", "entityType", "entityId",
-            "winnerOperation", "winnerPayload", "winnerModifiedAt", "winnerChangeId",
-            "loserOperation", "loserPayload", "loserModifiedAt", "loserChangeId",
-            "createdAt", "expiresAt"
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            resolution.resolutionKey,
-            resolution.entityType,
-            resolution.entityId,
-            resolution.winnerOperation,
-            resolution.winnerPayload === null ? null : JSON.stringify(resolution.winnerPayload),
-            resolution.winnerModifiedAt,
-            resolution.winnerChangeId,
-            resolution.loserOperation,
-            resolution.loserPayload === null ? null : JSON.stringify(resolution.loserPayload),
-            resolution.loserModifiedAt,
-            resolution.loserChangeId,
-            resolution.createdAt ?? new Date().toISOString(),
-            resolution.expiresAt ?? new Date(Date.now() + RESOLUTION_RETENTION_MS).toISOString(),
-          ],
-        );
-      }
-    } catch {
-      // O histórico não bloqueia a sincronização de conteúdo.
-    }
-  }
-
   private resolutionFromRow(row: Record<string, SqlValue>): SyncResolution {
     return {
       resolutionKey: String(row['resolutionKey']),
@@ -1200,9 +1182,6 @@ export class SyncEngineService {
     this.conflictCount.set(Number(scalar(this.db().exec(
       `SELECT COUNT(*) FROM "_SyncConflicts"`,
     )) ?? 0));
-    this.resolutionCount.set(Number(scalar(this.db().exec(
-      `SELECT COUNT(*) FROM "_SyncResolutionHistory"`,
-    )) ?? 0));
   }
 
   private subscribe(): void {
@@ -1291,11 +1270,38 @@ export function compareSyncClock(
   return left.changeId > right.changeId ? 1 : -1;
 }
 
+export function syncPayloadsEqual(
+  left: Record<string, unknown> | null,
+  right: Record<string, unknown> | null,
+): boolean {
+  return JSON.stringify(canonicalizeSyncValue(left)) === JSON.stringify(canonicalizeSyncValue(right));
+}
+
 function payloadsEqual(
   left: Record<string, unknown> | null,
   right: Record<string, unknown> | null,
 ): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+  return syncPayloadsEqual(left, right);
+}
+
+export function isOwnSyncChange(
+  change: Pick<RemoteSyncChange, 'changeId' | 'actorDeviceId'>,
+  currentDeviceId: string | null,
+  recentlyPushedChangeIds: ReadonlySet<string>,
+): boolean {
+  return Boolean(
+    (currentDeviceId && change.actorDeviceId === currentDeviceId)
+    || recentlyPushedChangeIds.has(change.changeId)
+  );
+}
+
+function canonicalizeSyncValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalizeSyncValue);
+  if (typeof value !== 'object' || value === null) return value;
+  return Object.fromEntries(
+    Object.entries(value).sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => [key, canonicalizeSyncValue(nested)]),
+  );
 }
 
 function randomChangeId(): string {
