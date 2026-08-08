@@ -1,6 +1,6 @@
 <main>
   @if (workspace.desktopRecoveryRequired()) {
-    <div class="absolute left-1/2 top-0 z-50 flex -translate-x-1/2 items-center p-1">
+    <div class="absolute left-1/2 top-0 z-[20000] flex -translate-x-1/2 items-center p-1">
       <app-cloud-button style="-webkit-app-region: no-drag;"></app-cloud-button>
     </div>
 
@@ -59,7 +59,7 @@
     </section>
   } @else {
     @if (dbProvider.ready()) {
-      <div class="text-xs absolute left-2 right-2 md:left-1/2 md:right-auto md:-translate-x-1/2 p-1 flex flex-row min-w-0 items-center gap-2 z-10 justify-start md:justify-center">
+      <div class="text-xs absolute left-2 right-2 md:left-1/2 md:right-auto md:-translate-x-1/2 p-1 flex flex-row min-w-0 items-center gap-2 z-[20000] justify-start md:justify-center">
         <app-search class="min-w-0 flex-1 md:flex-none" style="-webkit-app-region: no-drag;"></app-search>
         <button
           type="button"

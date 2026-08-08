@@ -1,14 +1,26 @@
 import { DestroyRef } from '@angular/core';
+import {
+  DISCARD_PENDING_SAVES_EVENT,
+  FLUSH_PENDING_SAVES_EVENT,
+} from './pending-save-event';
 
 export class FlushableDebounce {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private pendingTask: (() => void) | null = null;
+  private readonly onFlushPendingSaves = (): void => this.flush();
+  private readonly onDiscardPendingSaves = (): void => this.discard();
 
   constructor(
     destroyRef: DestroyRef,
     private readonly delayMs: number
   ) {
-    destroyRef.onDestroy(() => this.flush());
+    window.addEventListener(FLUSH_PENDING_SAVES_EVENT, this.onFlushPendingSaves);
+    window.addEventListener(DISCARD_PENDING_SAVES_EVENT, this.onDiscardPendingSaves);
+    destroyRef.onDestroy(() => {
+      window.removeEventListener(FLUSH_PENDING_SAVES_EVENT, this.onFlushPendingSaves);
+      window.removeEventListener(DISCARD_PENDING_SAVES_EVENT, this.onDiscardPendingSaves);
+      this.flush();
+    });
   }
 
   schedule(task: () => void): void {
@@ -25,6 +37,11 @@ export class FlushableDebounce {
 
     this.clearTimer();
     this.runPendingTask();
+  }
+
+  discard(): void {
+    this.clearTimer();
+    this.pendingTask = null;
   }
 
   private runPendingTask(): void {

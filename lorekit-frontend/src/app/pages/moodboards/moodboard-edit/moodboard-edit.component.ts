@@ -35,7 +35,10 @@ import {
 } from '../../../services/moodboard.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
 import { WorldStateService } from '../../../services/world-state.service';
-import { FLUSH_PENDING_SAVES_EVENT } from '../../../utils/pending-save-event';
+import {
+  DISCARD_PENDING_SAVES_EVENT,
+  FLUSH_PENDING_SAVES_EVENT,
+} from '../../../utils/pending-save-event';
 
 type MoodboardTool = 'select' | 'text' | 'draw' | MoodboardShapeType;
 type DragMode = 'none' | 'pan' | 'item' | 'resize' | 'rotate' | 'pendingCreate' | 'create' | 'endpoint' | 'draw' | 'marquee' | 'groupResize' | 'groupRotate';
@@ -245,7 +248,10 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   private removeTouchEnd?: () => void;
   private removeKeyDown?: () => void;
   private removePendingSaveListener?: () => void;
+  private removeDiscardPendingSaveListener?: () => void;
   private removeKeyUp?: () => void;
+  private moodboardNameDirty = false;
+  private discardPendingSaveOnDestroy = false;
 
   readonly moodboardId = computed(() => {
     const inputId = this.moodboardIdInput();
@@ -274,14 +280,16 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.removeTouchMove = this.renderer.listen('window', 'touchmove', (event: TouchEvent) => this.onWindowTouchMove(event));
     this.removeTouchEnd = this.renderer.listen('window', 'touchend', () => this.onWindowTouchEnd());
     this.removePendingSaveListener = this.renderer.listen('window', FLUSH_PENDING_SAVES_EVENT, () => this.flushPendingSaves());
+    this.removeDiscardPendingSaveListener = this.renderer.listen('window', DISCARD_PENDING_SAVES_EVENT, () => this.discardPendingSaves());
     this.removeKeyDown = this.renderer.listen('window', 'keydown', (event: KeyboardEvent) => this.onWindowKeyDown(event));
     this.removeKeyUp = this.renderer.listen('window', 'keyup', (event: KeyboardEvent) => this.onWindowKeyUp(event));
   }
 
   ngOnDestroy(): void {
-    this.flushPendingSaves();
+    if (!this.discardPendingSaveOnDestroy) this.flushPendingSaves();
     this.removeMouseMove?.();
     this.removePendingSaveListener?.();
+    this.removeDiscardPendingSaveListener?.();
     this.removeMouseUp?.();
     this.removeTouchMove?.();
     this.removeTouchEnd?.();
@@ -384,16 +392,18 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
 
   updateMoodboardName(name: string): void {
     this.moodboard.update(current => ({ ...current, name }));
+    this.moodboardNameDirty = true;
   }
 
   saveMoodboardName(): void {
     const current = this.moodboard();
-    if (!current.id || !current.name?.trim()) {
+    if (!this.moodboardNameDirty || !current.id || !current.name?.trim()) {
       return;
     }
 
     const saved = this.moodboardService.saveMoodboard(current, this.worldId);
     this.moodboard.set(saved);
+    this.moodboardNameDirty = false;
   }
 
   onCanvasTouchStart(event: TouchEvent): void {
@@ -1464,6 +1474,12 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     for (const id of Array.from(this.saveTimers.keys())) {
       this.saveItemNow(id);
     }
+  }
+
+  private discardPendingSaves(): void {
+    this.discardPendingSaveOnDestroy = true;
+    for (const timer of this.saveTimers.values()) clearTimeout(timer);
+    this.saveTimers.clear();
   }
 
   private saveActiveTextEdit(): void {

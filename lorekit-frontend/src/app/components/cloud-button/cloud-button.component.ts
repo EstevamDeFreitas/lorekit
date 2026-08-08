@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { WorkspaceRuntimeService } from '../../services/workspace-runtime.service';
 import { isElectronRuntime } from '../../utils/runtime-platform';
 import { AuthService } from '../../services/auth.service';
-import { LocalSyncConflict, SyncEngineService } from '../../services/sync-engine.service';
+import { LocalSyncConflict, LocalSyncResolution, SyncEngineService } from '../../services/sync-engine.service';
 import { CloudAccountDialogComponent } from '../cloud-account-dialog/cloud-account-dialog.component';
 
 @Component({
@@ -86,6 +86,17 @@ export class CloudButtonComponent {
 
   protected conflicts(): LocalSyncConflict[] {
     return this.syncEngine.conflicts();
+  }
+
+  protected resolutions(): LocalSyncResolution[] {
+    return this.syncEngine.resolutions();
+  }
+
+  protected formatModifiedAt(value: string): string {
+    const timestamp = Number(value);
+    return Number.isFinite(timestamp)
+      ? new Date(timestamp).toLocaleString()
+      : value;
   }
 
   protected formatPayload(payload: Record<string, unknown> | null): string {

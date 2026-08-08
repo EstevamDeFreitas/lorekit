@@ -81,6 +81,45 @@ describe('local database migrations', () => {
     )[0].values;
     expect(dirty).toEqual([['theme', 'upsert']]);
   });
+
+  it('records a new clock for edits and keeps a tombstone clock after deletion', () => {
+    const db = new SQL.Database();
+    ensureSchema(db);
+    runLocalMigrations(db);
+    db.exec(`UPDATE "_SyncState" SET "value" = '60000' WHERE "key" = 'clockOffsetMs'`);
+
+    db.run(
+      `INSERT INTO "World" ("id", "name", "description") VALUES (?, ?, ?)`,
+      ['world-clock', 'Relógio', 'Teste'],
+    );
+    const inserted = db.exec(`
+      SELECT "operation", "modifiedAt", "changeId", "capturedOffsetMs", "source"
+      FROM "_SyncRecordClock" WHERE "entityType" = 'World' AND "entityId" = 'world-clock'
+    `)[0].values[0];
+    expect(inserted[0]).toBe('upsert');
+    expect(String(inserted[1])).toMatch(/^\d{13}$/);
+    expect(String(inserted[2])).toMatch(/^[0-9a-f]{32}$/);
+    expect(inserted[3]).toBe(60_000);
+    expect(inserted[4]).toBe('local');
+
+    const firstChangeId = String(inserted[2]);
+    db.run(`UPDATE "World" SET "description" = ? WHERE "id" = ?`, ['Atualizado', 'world-clock']);
+    const updatedChangeId = String(scalar(
+      db,
+      `SELECT "changeId" FROM "_SyncRecordClock" WHERE "entityType" = 'World' AND "entityId" = 'world-clock'`,
+    ));
+    expect(updatedChangeId).not.toBe(firstChangeId);
+
+    db.run(`DELETE FROM "World" WHERE "id" = ?`, ['world-clock']);
+    expect(scalar(
+      db,
+      `SELECT "operation" FROM "_SyncRecordClock" WHERE "entityType" = 'World' AND "entityId" = 'world-clock'`,
+    )).toBe('delete');
+    expect(scalar(
+      db,
+      `SELECT "operation" FROM "_SyncDirty" WHERE "entityType" = 'World' AND "entityId" = 'world-clock'`,
+    )).toBe('delete');
+  });
 });
 
 function columnNames(db: Database, tableName: string): string[] {

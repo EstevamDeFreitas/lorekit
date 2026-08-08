@@ -5,7 +5,7 @@ import { BackupButtonComponent } from './components/backup-button/backup-button.
 import { CloudButtonComponent } from './components/cloud-button/cloud-button.component';
 import { DbProvider } from './app.config';
 import { ComponentRefreshService } from './services/component-refresh.service';
-import { FLUSH_PENDING_SAVES_EVENT, PendingSaveEventDetail } from './utils/pending-save-event';
+import { flushPendingComponentSaves } from './utils/pending-save-event';
 import { AuthService } from './services/auth.service';
 import { WorkspaceRuntimeService } from './services/workspace-runtime.service';
 
@@ -107,12 +107,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private async flushPendingSaves(): Promise<void> {
-    const event = new CustomEvent<PendingSaveEventDetail>(FLUSH_PENDING_SAVES_EVENT, {
-      detail: { flushes: [] },
-    });
-    window.dispatchEvent(event);
-
-    await Promise.all(event.detail.flushes);
+    await flushPendingComponentSaves();
     await this.dbProvider.flushPendingWrites();
   }
 }

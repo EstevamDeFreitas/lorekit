@@ -40,12 +40,24 @@ export class SyncOperationDto {
   @Max(1)
   schemaVersion!: number;
 
+  @IsOptional()
+  @Matches(/^\d{1,16}$/)
+  modifiedAt?: string;
+
+  @IsOptional()
+  @Matches(/^[0-9a-f]{32}$/)
+  changeId?: string;
+
   @ValidateIf(operation => operation.operation === 'upsert')
   @IsObject()
   payload?: Record<string, unknown>;
 }
 
 export class PushSyncDto {
+  @IsOptional()
+  @IsIn([1, 2])
+  protocolVersion = 1;
+
   @IsArray()
   @ArrayMaxSize(SYNC_PUSH_LIMIT)
   @ValidateNested({ each: true })

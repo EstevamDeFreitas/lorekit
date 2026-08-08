@@ -50,4 +50,21 @@ describe('DatabasePersistenceCoordinator', () => {
     expect(writeCount).toBe(2);
     expect(maxActiveWrites).toBe(1);
   });
+
+  it('defers an already scheduled export while a transaction is active', async () => {
+    const writer = jasmine.createSpy('writer').and.resolveTo();
+    const coordinator = new DatabasePersistenceCoordinator({}, writer);
+
+    coordinator.requestPersist();
+    coordinator.pause();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(writer).not.toHaveBeenCalled();
+
+    coordinator.resume();
+    await coordinator.flush();
+
+    expect(writer).toHaveBeenCalledTimes(1);
+  });
 });

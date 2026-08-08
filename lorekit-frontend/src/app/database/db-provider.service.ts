@@ -54,6 +54,35 @@ export class DbProvider {
     this.mutationListeners.forEach(listener => listener());
   }
 
+  async runInTransaction<T>(operation: () => Promise<T>): Promise<T> {
+    this.assertWritable();
+    const db = this.db;
+    const persistence = this.persistence;
+    if (!db || !persistence) throw new Error('DB not initialized');
+
+    persistence.pause();
+    let transactionActive = false;
+    try {
+      db.exec('BEGIN IMMEDIATE');
+      transactionActive = true;
+      const result = await operation();
+      db.exec('COMMIT');
+      transactionActive = false;
+      return result;
+    } catch (error) {
+      if (transactionActive) {
+        try {
+          db.exec('ROLLBACK');
+        } catch (rollbackError) {
+          console.error('Failed to rollback SQLite transaction', rollbackError);
+        }
+      }
+      throw error;
+    } finally {
+      persistence.resume();
+    }
+  }
+
   async flushPendingWrites(): Promise<void> {
     await this.persistence?.flush();
   }

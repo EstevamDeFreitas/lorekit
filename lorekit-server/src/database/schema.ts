@@ -120,6 +120,10 @@ export const syncRecords = appSchema.table(
     payload: jsonb('payload').$type<Record<string, unknown>>(),
     version: bigint('version', { mode: 'bigint' }).notNull().default(sql`1`),
     schemaVersion: integer('schema_version').notNull().default(1),
+    modifiedAt: bigint('modified_at', { mode: 'bigint' })
+      .notNull()
+      .default(sql`(extract(epoch from clock_timestamp()) * 1000)::bigint`),
+    changeId: text('change_id').notNull().default(sql`md5(random()::text || clock_timestamp()::text)`),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     ...timestamps,
   },
@@ -143,6 +147,10 @@ export const syncChanges = appSchema.table(
     entityId: text('entity_id').notNull(),
     operation: text('operation').notNull(),
     recordVersion: bigint('record_version', { mode: 'bigint' }).notNull(),
+    modifiedAt: bigint('modified_at', { mode: 'bigint' })
+      .notNull()
+      .default(sql`(extract(epoch from clock_timestamp()) * 1000)::bigint`),
+    changeId: text('change_id').notNull().default(sql`md5(random()::text || clock_timestamp()::text)`),
     payload: jsonb('payload').$type<Record<string, unknown>>(),
     actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
     actorDeviceId: uuid('actor_device_id').references(() => devices.id, {
@@ -177,6 +185,33 @@ export const syncOperations = appSchema.table(
       table.operationId,
     ),
     index('sync_operations_created_at_idx').on(table.createdAt),
+  ],
+);
+
+export const syncResolutionHistory = appSchema.table(
+  'sync_resolution_history',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    resolutionKey: text('resolution_key').notNull(),
+    vaultId: uuid('vault_id').notNull().references(() => vaults.id, { onDelete: 'cascade' }),
+    entityType: text('entity_type').notNull(),
+    entityId: text('entity_id').notNull(),
+    winnerOperation: text('winner_operation').notNull(),
+    winnerPayload: jsonb('winner_payload').$type<Record<string, unknown>>(),
+    winnerModifiedAt: bigint('winner_modified_at', { mode: 'bigint' }).notNull(),
+    winnerChangeId: text('winner_change_id').notNull(),
+    loserOperation: text('loser_operation').notNull(),
+    loserPayload: jsonb('loser_payload').$type<Record<string, unknown>>(),
+    loserModifiedAt: bigint('loser_modified_at', { mode: 'bigint' }).notNull(),
+    loserChangeId: text('loser_change_id').notNull(),
+    resolvedByDeviceId: uuid('resolved_by_device_id').references(() => devices.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    uniqueIndex('sync_resolution_history_key_uidx').on(table.vaultId, table.resolutionKey),
+    index('sync_resolution_history_vault_created_idx').on(table.vaultId, table.createdAt),
+    index('sync_resolution_history_expires_idx').on(table.expiresAt),
   ],
 );
 

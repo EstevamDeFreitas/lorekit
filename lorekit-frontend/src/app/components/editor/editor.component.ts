@@ -16,7 +16,11 @@ import { IconButtonComponent } from '../icon-button/icon-button.component';
 import { GlobalParameterService } from '../../services/global-parameter.service';
 import { ImageService } from '../../services/image.service';
 import { EntityMentionService } from '../../services/entity-mention.service';
-import { FLUSH_PENDING_SAVES_EVENT, PendingSaveEventDetail } from '../../utils/pending-save-event';
+import {
+  DISCARD_PENDING_SAVES_EVENT,
+  FLUSH_PENDING_SAVES_EVENT,
+  PendingSaveEventDetail,
+} from '../../utils/pending-save-event';
 
 @Component({
   selector: 'app-editor',
@@ -34,12 +38,18 @@ import { FLUSH_PENDING_SAVES_EVENT, PendingSaveEventDetail } from '../../utils/p
 export class EditorComponent implements AfterViewInit, OnDestroy{
   editor!: EditorJS;
   private lastSaveTime = 0;
+  private changeRevision = 0;
+  private savedRevision = 0;
+  private discardPendingSaveOnDestroy = false;
   private mentionPlugin: TailwindMentionPlugin | null = null;
   private readonly onFlushPendingSaves = (event: Event): void => {
     const detail = (event as CustomEvent<PendingSaveEventDetail>).detail;
-    if (detail && this.editor) {
+    if (detail && this.editor && this.hasPendingChanges()) {
       detail.flushes.push(this.saveContent());
     }
+  };
+  private readonly onDiscardPendingSaves = (): void => {
+    this.discardPendingSaveOnDestroy = true;
   };
   private destroyed = false;
 
@@ -66,6 +76,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
 
   ngAfterViewInit() {
     window.addEventListener(FLUSH_PENDING_SAVES_EVENT, this.onFlushPendingSaves);
+    window.addEventListener(DISCARD_PENDING_SAVES_EVENT, this.onDiscardPendingSaves);
     this.editor = new EditorJS({
       holder: this.editorId,
       placeholder: 'Comece a escrever aqui, use "/" para comandos...',
@@ -188,6 +199,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   }
 
   private async handleChange() {
+    this.changeRevision++;
     await this.saveContent();
   }
 
@@ -223,18 +235,25 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   }
 
   private async saveContent() {
+    const revision = this.changeRevision;
     try {
       const savedData = await this.editor.save();
       this.lastSaveTime = Date.now();
       this.saveDocument.emit(savedData);
+      this.savedRevision = Math.max(this.savedRevision, revision);
     } catch (error) {
       this.lastSaveTime = 0;
     }
   }
 
+  private hasPendingChanges(): boolean {
+    return this.changeRevision > this.savedRevision;
+  }
+
   async ngOnDestroy() {
     this.destroyed = true;
     window.removeEventListener(FLUSH_PENDING_SAVES_EVENT, this.onFlushPendingSaves);
+    window.removeEventListener(DISCARD_PENDING_SAVES_EVENT, this.onDiscardPendingSaves);
 
     if (this.mentionPlugin) {
       this.mentionPlugin.destroy();
@@ -242,7 +261,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     }
 
     if (this.editor) {
-      await this.saveContent();
+      if (!this.discardPendingSaveOnDestroy && this.hasPendingChanges()) {
+        await this.saveContent();
+      }
       this.editor.destroy();
     }
   }

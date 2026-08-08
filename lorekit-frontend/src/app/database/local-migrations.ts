@@ -2,7 +2,7 @@ import type { BindParams, SqlValue } from 'sql.js';
 import { schema, TableDef } from './schema';
 import { SYNC_ENTITIES } from './sync-entity-registry';
 
-export const LOCAL_SCHEMA_VERSION = 2;
+export const LOCAL_SCHEMA_VERSION = 3;
 
 interface SqlDatabase {
   exec(sql: string, params?: BindParams): Array<{
@@ -22,12 +22,7 @@ const migrations: readonly LocalMigration[] = [
     version: 1,
     name: 'baseline-aditivo-do-schema',
     up: db => {
-      for (const table of schema) {
-        addMissingColumns(db, table);
-      }
-
-      // A versão anterior do schema declarava acidentalmente uma tabela vazia.
-      // Esta é uma remoção conhecida e versionada, nunca uma inferência automática.
+      for (const table of schema) addMissingColumns(db, table);
       db.exec('DROP TABLE IF EXISTS ""');
     },
   },
@@ -36,6 +31,15 @@ const migrations: readonly LocalMigration[] = [
     name: 'infraestrutura-local-de-sincronizacao',
     up: db => {
       createSyncTables(db);
+      createSyncTriggers(db);
+    },
+  },
+  {
+    version: 3,
+    name: 'relogio-lww-e-historico-de-resolucoes',
+    up: db => {
+      createSyncTables(db);
+      backfillRecordClocks(db);
       createSyncTriggers(db);
     },
   },
@@ -65,8 +69,6 @@ export function runLocalMigrations(db: SqlDatabase): void {
     }
   }
 
-  // Triggers são declarativos e podem ser recriados com segurança. Isso também
-  // cobre um banco já marcado como v2 após uma atualização do registro.
   if (getCurrentVersion(db) >= 2) {
     createSyncTables(db);
     createSyncTriggers(db);
@@ -100,12 +102,15 @@ function addMissingColumns(db: SqlDatabase, table: TableDef): void {
   }
 }
 
+function addColumnIfMissing(db: SqlDatabase, table: string, column: string, definition: string): void {
+  if (!getExistingColumns(db, table).has(column)) {
+    db.exec(`ALTER TABLE ${quoteIdentifier(table)} ADD COLUMN ${quoteIdentifier(column)} ${definition}`);
+  }
+}
+
 function getExistingColumns(db: SqlDatabase, tableName: string): Set<string> {
   const result = db.exec(`PRAGMA table_info(${quoteIdentifier(tableName)})`);
-  if (!result.length) {
-    return new Set();
-  }
-
+  if (!result.length) return new Set();
   const nameIndex = result[0].columns.indexOf('name');
   return new Set(result[0].values.map(row => String(row[nameIndex])));
 }
@@ -136,7 +141,9 @@ function createSyncTables(db: SqlDatabase): void {
       "payload" TEXT,
       "createdAt" TEXT NOT NULL,
       "attempts" INTEGER NOT NULL DEFAULT 0,
-      "lastError" TEXT
+      "lastError" TEXT,
+      "modifiedAt" TEXT,
+      "changeId" TEXT
     );
     CREATE INDEX IF NOT EXISTS "idx_sync_outbox_created" ON "_SyncOutbox" ("createdAt");
 
@@ -151,6 +158,18 @@ function createSyncTables(db: SqlDatabase): void {
       "key" TEXT NOT NULL PRIMARY KEY,
       "value" TEXT NOT NULL
     );
+    INSERT OR IGNORE INTO "_SyncState" ("key", "value") VALUES ('clockOffsetMs', '0');
+
+    CREATE TABLE IF NOT EXISTS "_SyncRecordClock" (
+      "entityType" TEXT NOT NULL,
+      "entityId" TEXT NOT NULL,
+      "operation" TEXT NOT NULL CHECK ("operation" IN ('upsert', 'delete')),
+      "modifiedAt" TEXT NOT NULL,
+      "changeId" TEXT NOT NULL,
+      "capturedOffsetMs" INTEGER NOT NULL DEFAULT 0,
+      "source" TEXT NOT NULL CHECK ("source" IN ('local', 'remote')),
+      PRIMARY KEY ("entityType", "entityId")
+    );
 
     CREATE TABLE IF NOT EXISTS "_SyncConflicts" (
       "entityType" TEXT NOT NULL,
@@ -161,6 +180,29 @@ function createSyncTables(db: SqlDatabase): void {
       "remoteVersion" TEXT NOT NULL,
       "detectedAt" TEXT NOT NULL,
       PRIMARY KEY ("entityType", "entityId")
+    );
+
+    CREATE TABLE IF NOT EXISTS "_SyncResolutionHistory" (
+      "resolutionKey" TEXT NOT NULL PRIMARY KEY,
+      "entityType" TEXT NOT NULL,
+      "entityId" TEXT NOT NULL,
+      "winnerOperation" TEXT NOT NULL,
+      "winnerPayload" TEXT,
+      "winnerModifiedAt" TEXT NOT NULL,
+      "winnerChangeId" TEXT NOT NULL,
+      "loserOperation" TEXT NOT NULL,
+      "loserPayload" TEXT,
+      "loserModifiedAt" TEXT NOT NULL,
+      "loserChangeId" TEXT NOT NULL,
+      "createdAt" TEXT NOT NULL,
+      "expiresAt" TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS "idx_sync_resolution_created" ON "_SyncResolutionHistory" ("createdAt");
+
+    CREATE TABLE IF NOT EXISTS "_SyncResolutionOutbox" (
+      "resolutionKey" TEXT NOT NULL PRIMARY KEY,
+      "attempts" INTEGER NOT NULL DEFAULT 0,
+      "lastError" TEXT
     );
 
     CREATE TABLE IF NOT EXISTS "_BlobOutbox" (
@@ -182,9 +224,83 @@ function createSyncTables(db: SqlDatabase): void {
       "updatedAt" TEXT NOT NULL
     );
   `);
+
+  addColumnIfMissing(db, '_SyncOutbox', 'modifiedAt', 'TEXT');
+  addColumnIfMissing(db, '_SyncOutbox', 'changeId', 'TEXT');
+  db.exec(`
+    UPDATE "_SyncOutbox"
+    SET
+      "modifiedAt" = COALESCE("modifiedAt", CAST(strftime('%s', "createdAt") AS INTEGER) * 1000),
+      "changeId" = COALESCE("changeId", lower(hex(randomblob(16))))
+    WHERE "modifiedAt" IS NULL OR "changeId" IS NULL
+  `);
+}
+
+function backfillRecordClocks(db: SqlDatabase): void {
+  const offsetExpression = `COALESCE(CAST((SELECT "value" FROM "_SyncState" WHERE "key" = 'clockOffsetMs') AS INTEGER), 0)`;
+  const nowExpression = normalizedNowExpression();
+
+  for (const definition of SYNC_ENTITIES) {
+    const table = quoteIdentifier(definition.entityType);
+    const primaryKey = quoteIdentifier(definition.primaryKey);
+    db.exec(`
+      INSERT OR IGNORE INTO "_SyncRecordClock" (
+        "entityType", "entityId", "operation", "modifiedAt", "changeId", "capturedOffsetMs", "source"
+      )
+      SELECT
+        ${quoteLiteral(definition.entityType)},
+        CAST(record.${primaryKey} AS TEXT),
+        COALESCE(dirty."operation", 'upsert'),
+        CASE
+          WHEN dirty."changedAt" IS NOT NULL
+            THEN CAST(CAST(strftime('%s', dirty."changedAt") AS INTEGER) * 1000 AS TEXT)
+          WHEN versions."version" IS NOT NULL THEN '0'
+          ELSE CAST(${nowExpression} AS TEXT)
+        END,
+        lower(hex(randomblob(16))),
+        ${offsetExpression},
+        CASE WHEN versions."version" IS NOT NULL AND dirty."changedAt" IS NULL THEN 'remote' ELSE 'local' END
+      FROM ${table} record
+      LEFT JOIN "_SyncDirty" dirty
+        ON dirty."entityType" = ${quoteLiteral(definition.entityType)}
+       AND dirty."entityId" = CAST(record.${primaryKey} AS TEXT)
+      LEFT JOIN "_SyncVersions" versions
+        ON versions."entityType" = ${quoteLiteral(definition.entityType)}
+       AND versions."entityId" = CAST(record.${primaryKey} AS TEXT)
+    `);
+  }
+
+  db.exec(`
+    INSERT OR IGNORE INTO "_SyncRecordClock" (
+      "entityType", "entityId", "operation", "modifiedAt", "changeId", "capturedOffsetMs", "source"
+    )
+    SELECT
+      dirty."entityType",
+      dirty."entityId",
+      dirty."operation",
+      CAST(CAST(strftime('%s', dirty."changedAt") AS INTEGER) * 1000 AS TEXT),
+      lower(hex(randomblob(16))),
+      COALESCE(CAST((SELECT "value" FROM "_SyncState" WHERE "key" = 'clockOffsetMs') AS INTEGER), 0),
+      'local'
+    FROM "_SyncDirty" dirty;
+
+    INSERT OR IGNORE INTO "_SyncRecordClock" (
+      "entityType", "entityId", "operation", "modifiedAt", "changeId", "capturedOffsetMs", "source"
+    )
+    SELECT
+      outbox."entityType",
+      outbox."entityId",
+      outbox."operation",
+      outbox."modifiedAt",
+      outbox."changeId",
+      COALESCE(CAST((SELECT "value" FROM "_SyncState" WHERE "key" = 'clockOffsetMs') AS INTEGER), 0),
+      'local'
+    FROM "_SyncOutbox" outbox;
+  `);
 }
 
 function createSyncTriggers(db: SqlDatabase): void {
+  const offsetExpression = `COALESCE(CAST((SELECT "value" FROM "_SyncState" WHERE "key" = 'clockOffsetMs') AS INTEGER), 0)`;
   for (const definition of SYNC_ENTITIES) {
     for (const action of ['INSERT', 'UPDATE', 'DELETE'] as const) {
       const suffix = action.toLowerCase();
@@ -198,14 +314,29 @@ function createSyncTriggers(db: SqlDatabase): void {
         AFTER ${action} ON ${quoteIdentifier(definition.entityType)}
         WHEN COALESCE((SELECT "suppressCapture" FROM "_SyncControl" WHERE "id" = 1), 0) = 0
         BEGIN
-          INSERT INTO "_SyncDirty" (
-            "entityType", "entityId", "operation", "changedAt"
+          INSERT INTO "_SyncRecordClock" (
+            "entityType", "entityId", "operation", "modifiedAt", "changeId", "capturedOffsetMs", "source"
           ) VALUES (
             ${quoteLiteral(definition.entityType)},
             CAST(${rowAlias}.${quoteIdentifier(definition.primaryKey)} AS TEXT),
             ${quoteLiteral(operation)},
-            strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+            CAST(${normalizedNowExpression()} AS TEXT),
+            lower(hex(randomblob(16))),
+            ${offsetExpression},
+            'local'
           )
+          ON CONFLICT("entityType", "entityId") DO UPDATE SET
+            "operation" = excluded."operation",
+            "modifiedAt" = excluded."modifiedAt",
+            "changeId" = excluded."changeId",
+            "capturedOffsetMs" = excluded."capturedOffsetMs",
+            "source" = 'local';
+
+          INSERT INTO "_SyncDirty" ("entityType", "entityId", "operation", "changedAt")
+          SELECT "entityType", "entityId", "operation", "modifiedAt"
+          FROM "_SyncRecordClock"
+          WHERE "entityType" = ${quoteLiteral(definition.entityType)}
+            AND "entityId" = CAST(${rowAlias}.${quoteIdentifier(definition.primaryKey)} AS TEXT)
           ON CONFLICT("entityType", "entityId") DO UPDATE SET
             "operation" = excluded."operation",
             "changedAt" = excluded."changedAt";
@@ -213,6 +344,11 @@ function createSyncTriggers(db: SqlDatabase): void {
       `);
     }
   }
+}
+
+function normalizedNowExpression(): string {
+  return `CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)
+    + COALESCE(CAST((SELECT "value" FROM "_SyncState" WHERE "key" = 'clockOffsetMs') AS INTEGER), 0)`;
 }
 
 function quoteIdentifier(identifier: string): string {

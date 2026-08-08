@@ -81,6 +81,7 @@ export class DatabasePersistenceCoordinator {
   private dirty = false;
   private scheduled = false;
   private activeDrain: Promise<void> | null = null;
+  private pauseDepth = 0;
 
   constructor(
     private readonly db: any,
@@ -92,7 +93,24 @@ export class DatabasePersistenceCoordinator {
     this.scheduleDrain();
   }
 
+  pause(): void {
+    this.pauseDepth++;
+  }
+
+  resume(): void {
+    if (this.pauseDepth <= 0) {
+      throw new Error('Database persistence is not paused');
+    }
+    this.pauseDepth--;
+    if (this.pauseDepth === 0 && this.dirty) {
+      this.scheduleDrain();
+    }
+  }
+
   async flush(): Promise<void> {
+    if (this.pauseDepth > 0) {
+      throw new Error('Cannot flush database persistence during an active transaction');
+    }
     if (this.scheduled) {
       this.scheduled = false;
     }
@@ -104,7 +122,7 @@ export class DatabasePersistenceCoordinator {
   }
 
   private scheduleDrain(): void {
-    if (this.scheduled || this.activeDrain) {
+    if (this.pauseDepth > 0 || this.scheduled || this.activeDrain) {
       return;
     }
 
@@ -125,6 +143,9 @@ export class DatabasePersistenceCoordinator {
     if (this.activeDrain) {
       return this.activeDrain;
     }
+    if (this.pauseDepth > 0) {
+      return Promise.resolve();
+    }
 
     let succeeded = false;
     const drain = this.drain().then(() => {
@@ -142,7 +163,7 @@ export class DatabasePersistenceCoordinator {
   }
 
   private async drain(): Promise<void> {
-    while (this.dirty) {
+    while (this.dirty && this.pauseDepth === 0) {
       this.dirty = false;
       try {
         await this.writer(this.db);

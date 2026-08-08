@@ -1,4 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
+import { DISCARD_PENDING_SAVES_EVENT } from '../utils/pending-save-event';
 
 @Injectable({ providedIn: 'root' })
 export class ComponentRefreshService {
@@ -8,5 +9,10 @@ export class ComponentRefreshService {
 
   refresh(): void {
     this.refreshRevision.update(revision => revision + 1);
+  }
+
+  refreshFromRemote(): void {
+    window.dispatchEvent(new Event(DISCARD_PENDING_SAVES_EVENT));
+    this.refresh();
   }
 }

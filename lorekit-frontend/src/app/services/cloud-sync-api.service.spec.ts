@@ -56,4 +56,41 @@ describe('CloudSyncApiService', () => {
     const bytes = new Uint8Array([4, 5, 6]).buffer;
     expect(exactArrayBuffer(bytes)).toBe(bytes);
   });
+
+  it('declares protocol v2 and sends modification clocks in push operations', async () => {
+    const operation = {
+      operationId: '9c114be3-dc27-4d68-913e-08f7b003df52',
+      entityType: 'World',
+      entityId: 'world-1',
+      operation: 'upsert' as const,
+      baseVersion: '2',
+      schemaVersion: 1,
+      modifiedAt: '1786200000000',
+      changeId: '0123456789abcdef0123456789abcdef',
+      payload: { id: 'world-1', name: 'Mundo' },
+    };
+    const promise = api.push('36c6c098-731d-4f16-8e52-436802ba07eb', [operation]);
+
+    const request = http.expectOne(
+      `${environment.apiUrl}/vaults/36c6c098-731d-4f16-8e52-436802ba07eb/sync/push`,
+    );
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ protocolVersion: 2, operations: [operation] });
+    request.flush({
+      results: [{
+        operationId: operation.operationId,
+        entityType: operation.entityType,
+        entityId: operation.entityId,
+        status: 'applied',
+        version: '3',
+        modifiedAt: operation.modifiedAt,
+        changeId: operation.changeId,
+      }],
+      serverTime: '1786200000010',
+    });
+
+    const response = await promise;
+    expect(response.results[0].status).toBe('applied');
+    expect(response.serverTime).toBe('1786200000010');
+  });
 });

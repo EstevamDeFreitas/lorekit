@@ -1,4 +1,4 @@
-export const SYNC_CONTRACT_VERSION = 1;
+export const SYNC_CONTRACT_VERSION = 2;
 export const SYNC_PUSH_LIMIT = 100;
 export const SYNC_PULL_LIMIT = 500;
 
