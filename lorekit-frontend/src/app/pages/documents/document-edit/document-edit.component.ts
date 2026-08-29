@@ -14,13 +14,27 @@ import { EntityLateralMenuButtonComponent } from "../../../components/entity-lat
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { WorldService } from '../../../services/world.service';
 import { World } from '../../../models/world.model';
+import { getImageByUsageKey } from '../../../models/image.model';
+import { getPersonalizationValue } from '../../../models/personalization.model';
+import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-document-edit',
   standalone: true,
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, SafeDeleteButtonComponent, EntityLateralMenuButtonComponent],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, SafeDeleteButtonComponent, EntityLateralMenuButtonComponent, AssetUrlPipe],
   template: `
   <div class="flex flex-col relative @container">
+    @if(getImageByUsageKey(document.Images, 'default') != null){
+      @let img = getImageByUsageKey(document.Images, 'default');
+      <div class="relative w-full h-[30vh] overflow-hidden">
+        <img [src]="img | assetUrl" class="w-full h-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
+      </div>
+    }
+    @else{
+      <div class="w-full h-[30vh] object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [style.background-image]="'linear-gradient(to bottom, ' + (getPersonalizationValue(document, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950)'"></div>
+    }
+    <br>
     <div class="flex flex-row flex-wrap items-center gap-y-2 sticky py-2 top-0 z-50 bg-zinc-950">
       @if (isRouteComponent()){
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" [route]="getReturnUrl()"></app-icon-button>
@@ -36,7 +50,7 @@ import { World } from '../../../models/world.model';
             [entityId]="document.id">
           </app-entity-lateral-menu-button>
         }
-        <app-personalization-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-personalization-button>
+        <app-personalization-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'" (onClose)="loadDocument()"></app-personalization-button>
         <app-safe-delete-button [entityName]="document.title" [entityId]="document.id" [entityTable]="'Document'" [size]="'xl'"></app-safe-delete-button>
       </div>
     </div>
@@ -64,6 +78,9 @@ export class DocumentEditComponent {
   private worldService = inject(WorldService);
 
   returnUrl?: string;
+  public getImageByUsageKey = getImageByUsageKey;
+  public getPersonalizationValue = getPersonalizationValue;
+
   document:Document = new Document();
   isLoading = true;
   documentArray:Array<Document> = [];

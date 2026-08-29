@@ -29,6 +29,7 @@ export class DocumentService {
 
   private readonly documentIncludes = [
     { table: 'Personalization', firstOnly: true },
+    { table: 'Image', firstOnly: false },
     { table: 'World', firstOnly: true, isParent: true },
     { table: 'Document', firstOnly: true, isParent: true }
   ] as const;
