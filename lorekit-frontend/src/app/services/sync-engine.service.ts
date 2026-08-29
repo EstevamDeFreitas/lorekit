@@ -256,8 +256,7 @@ export class SyncEngineService {
       await this.syncPendingBlobs(vaultId, 'delete');
       await this.pullAll(vaultId, deadline);
       await this.reportResolutionHistory(vaultId);
-      await this.assetResolver.hydrateImages(vaultId);
-      await this.assetResolver.hydrateCanonicalReferences(vaultId);
+      this.assetResolver.prepareAssets(vaultId);
     }
 
     this.retryAttempt = 0;
@@ -1029,10 +1028,16 @@ export class SyncEngineService {
     const resolutions = pending.map(row => this.resolutionFromRow(row));
     try {
       await this.api.reportResolutions(vaultId, resolutions);
+      const resolutionKeys = pending.map(row => String(row['resolutionKey']));
       this.db().run(
         `DELETE FROM "_SyncResolutionOutbox"
          WHERE "resolutionKey" IN (${pending.map(() => '?').join(', ')})`,
-        pending.map(row => String(row['resolutionKey'])),
+        resolutionKeys,
+      );
+      this.db().run(
+        `DELETE FROM "_SyncResolutionHistory"
+         WHERE "resolutionKey" IN (${pending.map(() => '?').join(', ')})`,
+        resolutionKeys,
       );
     } catch (error) {
       const message = describeSyncError(error).slice(0, 500);
@@ -1072,6 +1077,12 @@ export class SyncEngineService {
       [now],
     );
     this.db().run(`DELETE FROM "_SyncResolutionHistory" WHERE "expiresAt" < ?`, [now]);
+    this.db().run(`
+      DELETE FROM "_SyncResolutionHistory"
+      WHERE NOT EXISTS (
+        SELECT 1 FROM "_SyncResolutionOutbox" outbox
+        WHERE outbox."resolutionKey" = "_SyncResolutionHistory"."resolutionKey"
+      )`);
   }
 
   private clearLocalPending(entityType: string, entityId: string): void {

@@ -1,5 +1,10 @@
 // lorekit-frontend/src/app/plugins/tailwindimage.plugin.ts
-import { buildImageUrl } from '../models/image.model';
+import {
+  ASSET_URL_READY_EVENT,
+  assetIdFromReference,
+  AssetUrlReadyDetail,
+  buildImageUrl,
+} from '../models/image.model';
 
 export default class TailwindImage {
   data: any;
@@ -161,7 +166,23 @@ export default class TailwindImage {
     imgWrapper.classList.add('relative', 'inline-block', 'max-w-full');
 
     const img = document.createElement('img');
-    img.src = buildImageUrl(this.data.url);
+    const sourceUrl = typeof this.data.url === 'string' ? this.data.url : '';
+    const resolvedUrl = buildImageUrl(sourceUrl);
+    if (resolvedUrl) img.src = resolvedUrl;
+    const assetId = assetIdFromReference(sourceUrl);
+    if (!resolvedUrl && assetId) {
+      const onAssetReady = (event: Event) => {
+        const detail = (event as CustomEvent<AssetUrlReadyDetail>).detail;
+        if (detail.blobId !== assetId) return;
+        img.src = detail.url;
+        window.removeEventListener(ASSET_URL_READY_EVENT, onAssetReady);
+        window.clearTimeout(cleanupTimer);
+      };
+      const cleanupTimer = window.setTimeout(() => {
+        window.removeEventListener(ASSET_URL_READY_EVENT, onAssetReady);
+      }, 300_000);
+      window.addEventListener(ASSET_URL_READY_EVENT, onAssetReady);
+    }
     img.classList.add('max-w-full', 'h-auto', 'block', 'rounded');
 
     img.onerror = () => {

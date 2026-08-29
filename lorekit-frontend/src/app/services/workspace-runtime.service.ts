@@ -3,7 +3,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, timeout as rxTimeout } from 'rxjs';
 import { environment } from '../../enviroments/environment';
 import { DbProvider } from '../database/db-provider.service';
-import { BrowserDatabaseStorageService } from '../database/browser-database-storage.service';
+import { BrowserDatabaseStorageService, isStorageQuotaError } from '../database/browser-database-storage.service';
 import { openDbAndEnsureSchema, openSqliteDatabase } from '../database/database.helper';
 import { ElectronSafeAPI, persistDbToDisk } from '../database/database.helper';
 import { WorkspaceLockService } from '../database/workspace-lock.service';
@@ -199,6 +199,7 @@ export class WorkspaceRuntimeService {
       }
 
       const workspaceKey = this.browserStorage.workspaceKey(user.id, vault.id);
+      await this.browserStorage.requestPersistentStorage();
       const writerLockAcquired = await this.workspaceLock.acquire(workspaceKey);
       const data = await this.browserStorage.read(user.id, vault.id);
       const database = await openSqliteDatabase(data);
@@ -206,7 +207,17 @@ export class WorkspaceRuntimeService {
       this.dbProvider.setDb(
         database,
         async db => {
-          await this.browserStorage.write(user.id, vault.id, db.export());
+          const protectedBlobIds = new Set<string>();
+          for (const result of db.exec(`SELECT "blobId" FROM "_BlobOutbox"`)) {
+            for (const row of result.values) protectedBlobIds.add(String(row[0]));
+          }
+          try {
+            await this.browserStorage.write(user.id, vault.id, db.export(), { protectedBlobIds });
+          } catch (error) {
+            if (!isStorageQuotaError(error)) throw error;
+            db.exec('VACUUM');
+            await this.browserStorage.write(user.id, vault.id, db.export(), { protectedBlobIds });
+          }
         },
         !writerLockAcquired,
       );

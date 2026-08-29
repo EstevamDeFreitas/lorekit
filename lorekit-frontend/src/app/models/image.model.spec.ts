@@ -4,6 +4,7 @@ import {
   canonicalAssetReference,
   clearAssetUrl,
   registerAssetUrl,
+  setAssetUrlRequestHandler,
 } from './image.model';
 
 describe('image URL resolution', () => {
@@ -14,6 +15,7 @@ describe('image URL resolution', () => {
   });
 
   afterEach(() => {
+    setAssetUrlRequestHandler(null);
     if (originalElectronApi) window.electronAPI = originalElectronApi;
     else delete window.electronAPI;
     clearAssetUrl('6ecce62c-49c2-4eb4-bede-5dbad18cf280');
@@ -42,5 +44,17 @@ describe('image URL resolution', () => {
     registerAssetUrl(blobId, 'blob:resolved-image');
     expect(buildImageRecordUrl(image)).toBe('blob:resolved-image');
     expect(canonicalAssetReference(blobId)).toBe(`lorekit-asset://${blobId}`);
+  });
+  it('requests an unresolved canonical asset only when it is rendered', () => {
+    const blobId = '6ecce62c-49c2-4eb4-bede-5dbad18cf280';
+    const requested: string[] = [];
+    setAssetUrlRequestHandler(id => requested.push(id));
+
+    expect(buildImageUrl(canonicalAssetReference(blobId))).toBe('');
+    expect(requested).toEqual([blobId]);
+
+    registerAssetUrl(blobId, 'blob:on-demand');
+    expect(buildImageUrl(canonicalAssetReference(blobId))).toBe('blob:on-demand');
+    expect(requested).toEqual([blobId]);
   });
 });

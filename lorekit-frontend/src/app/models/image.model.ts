@@ -1,6 +1,10 @@
 const ASSET_PREFIX = 'lorekit-asset://';
 const LOCAL_ASSET_URL = 'lorekit-local://image';
+export const ASSET_URL_READY_EVENT = 'lorekit-asset-url-ready';
 const assetUrls = new Map<string, string>();
+let assetUrlRequestHandler: ((blobId: string) => void) | null = null;
+
+export type AssetUrlReadyDetail = { blobId: string; url: string };
 
 export class Image {
   id: string;
@@ -35,7 +39,17 @@ export function canonicalAssetReference(blobId: string): string {
 }
 
 export function registerAssetUrl(blobId: string, url: string): void {
+  if (assetUrls.get(blobId) === url) return;
   assetUrls.set(blobId, url);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent<AssetUrlReadyDetail>(ASSET_URL_READY_EVENT, {
+      detail: { blobId, url },
+    }));
+  }
+}
+
+export function setAssetUrlRequestHandler(handler: ((blobId: string) => void) | null): void {
+  assetUrlRequestHandler = handler;
 }
 
 export function clearAssetUrl(blobId: string): void {
@@ -49,7 +63,12 @@ export function assetIdFromReference(value: string): string | null {
 export function buildImageUrl(reference: string | undefined | null): string {
   if (!reference) return '';
   const assetId = assetIdFromReference(reference);
-  if (assetId) return assetUrls.get(assetId) ?? '';
+  if (assetId) {
+    const resolved = assetUrls.get(assetId);
+    if (resolved) return resolved;
+    assetUrlRequestHandler?.(assetId);
+    return '';
+  }
 
   if (/^(https?|data|blob|lorekit-local):/i.test(reference)) return reference;
   const normalized = reference.replace(/\\/g, '/');

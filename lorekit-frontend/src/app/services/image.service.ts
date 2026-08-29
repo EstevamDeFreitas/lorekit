@@ -210,6 +210,7 @@ export class ImageService {
       mimeType: file.type,
       sha256,
       updatedAt: new Date().toISOString(),
+      evictable: false,
     });
     return this.assetResolver.registerBrowserBytes(blobId, bytes, file.type);
   }

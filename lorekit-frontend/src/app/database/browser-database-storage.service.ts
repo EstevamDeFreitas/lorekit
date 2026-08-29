@@ -3,6 +3,9 @@ import { Injectable } from '@angular/core';
 const DATABASE_NAME = 'lorekit-workspaces';
 const DATABASE_VERSION = 1;
 const DATABASE_STORE = 'databases';
+const STORAGE_RESERVE_RATIO = 0.15;
+const MINIMUM_STORAGE_RESERVE_BYTES = 5 * 1024 * 1024;
+
 const BLOB_STORE = 'blobs';
 
 export interface BrowserBlobCacheEntry {
@@ -14,6 +17,11 @@ export interface BrowserBlobCacheEntry {
   readonly mimeType: string;
   readonly sha256: string;
   readonly updatedAt: string;
+  readonly evictable: boolean;
+}
+
+export interface BrowserDatabaseWriteOptions {
+  readonly protectedBlobIds?: ReadonlySet<string>;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -30,15 +38,50 @@ export class BrowserDatabaseStorageService {
     return value ? new Uint8Array(value) : null;
   }
 
-  async write(userId: string, vaultId: string, bytes: Uint8Array): Promise<void> {
-    const database = await this.open();
+  async write(
+    userId: string,
+    vaultId: string,
+    bytes: Uint8Array,
+    options: BrowserDatabaseWriteOptions = {},
+  ): Promise<void> {
     const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-    await transactionAsPromise(
-      database,
-      DATABASE_STORE,
-      'readwrite',
-      store => store.put(copy, this.workspaceKey(userId, vaultId)),
-    );
+    try {
+      await this.putDatabase(userId, vaultId, copy);
+      return;
+    } catch (error) {
+      if (!isStorageQuotaError(error)) throw error;
+    }
+
+    await this.evictWorkspaceBlobs(userId, vaultId, options.protectedBlobIds ?? new Set());
+    try {
+      await this.putDatabase(userId, vaultId, copy);
+      return;
+    } catch (error) {
+      if (!isStorageQuotaError(error)) throw error;
+    }
+
+    await this.evictEvictableBlobs();
+    await this.putDatabase(userId, vaultId, copy);
+  }
+
+  async requestPersistentStorage(): Promise<boolean> {
+    try {
+      if (!navigator.storage?.persist) return false;
+      return await navigator.storage.persist();
+    } catch {
+      return false;
+    }
+  }
+
+  async canCache(byteLength: number): Promise<boolean> {
+    try {
+      if (!navigator.storage?.estimate) return true;
+      const estimate = await navigator.storage.estimate();
+      if (estimate.usage === undefined || estimate.quota === undefined) return true;
+      return hasStorageCapacity(estimate.usage, estimate.quota, byteLength);
+    } catch {
+      return true;
+    }
   }
 
   async deleteWorkspace(userId: string, vaultId: string): Promise<void> {
@@ -79,7 +122,15 @@ export class BrowserDatabaseStorageService {
       ...entry,
       key: this.blobKey(entry.userId, entry.vaultId, entry.blobId),
     };
-    await transactionAsPromise(database, BLOB_STORE, 'readwrite', store => store.put(storedEntry));
+    try {
+      await this.putBlob(database, storedEntry);
+      return;
+    } catch (error) {
+      if (!isStorageQuotaError(error)) throw error;
+    }
+
+    await this.evictEvictableBlobs(storedEntry.key);
+    await this.putBlob(database, storedEntry);
   }
 
   async deleteBlob(userId: string, vaultId: string, blobId: string): Promise<void> {
@@ -98,6 +149,58 @@ export class BrowserDatabaseStorageService {
 
   private blobKey(userId: string, vaultId: string, blobId: string): string {
     return `${this.workspaceKey(userId, vaultId)}:${blobId}`;
+  }
+
+  private async putDatabase(
+    userId: string,
+    vaultId: string,
+    bytes: ArrayBuffer,
+  ): Promise<void> {
+    const database = await this.open();
+    await transactionAsPromise(
+      database,
+      DATABASE_STORE,
+      'readwrite',
+      store => store.put(bytes, this.workspaceKey(userId, vaultId)),
+    );
+  }
+
+  private async putBlob(database: IDBDatabase, entry: BrowserBlobCacheEntry): Promise<void> {
+    await transactionAsPromise(database, BLOB_STORE, 'readwrite', store => store.put(entry));
+  }
+
+  private async evictWorkspaceBlobs(
+    userId: string,
+    vaultId: string,
+    protectedBlobIds: ReadonlySet<string>,
+  ): Promise<void> {
+    const database = await this.open();
+    const prefix = `${this.workspaceKey(userId, vaultId)}:`;
+    await transactionAsPromise(database, BLOB_STORE, 'readwrite', store => {
+      const range = IDBKeyRange.bound(prefix, `${prefix}\uffff`);
+      const cursorRequest = store.openCursor(range);
+      cursorRequest.onsuccess = () => {
+        const cursor = cursorRequest.result;
+        if (!cursor) return;
+        const entry = cursor.value as BrowserBlobCacheEntry;
+        if (!protectedBlobIds.has(entry.blobId)) cursor.delete();
+        cursor.continue();
+      };
+    });
+  }
+
+  private async evictEvictableBlobs(excludedKey?: string): Promise<void> {
+    const database = await this.open();
+    await transactionAsPromise(database, BLOB_STORE, 'readwrite', store => {
+      const cursorRequest = store.openCursor();
+      cursorRequest.onsuccess = () => {
+        const cursor = cursorRequest.result;
+        if (!cursor) return;
+        const entry = cursor.value as BrowserBlobCacheEntry;
+        if (entry.evictable === true && entry.key !== excludedKey) cursor.delete();
+        cursor.continue();
+      };
+    });
   }
 
   private open(): Promise<IDBDatabase> {
@@ -159,4 +262,24 @@ function transactionAsPromise(
     transaction.onerror = () => reject(transaction.error ?? new Error('Transação IndexedDB falhou.'));
     transaction.onabort = () => reject(transaction.error ?? new Error('Transação IndexedDB cancelada.'));
   });
+}
+
+export function isStorageQuotaError(error: unknown): boolean {
+  return error instanceof DOMException
+    ? error.name === 'QuotaExceededError'
+    : typeof error === 'object' && error !== null
+      && 'name' in error && error.name === 'QuotaExceededError';
+}
+
+export function hasStorageCapacity(
+  usage: number,
+  quota: number,
+  incomingBytes: number,
+): boolean {
+  if (!Number.isFinite(usage) || !Number.isFinite(quota) || quota <= 0) return true;
+  const reserve = Math.max(
+    MINIMUM_STORAGE_RESERVE_BYTES,
+    quota * STORAGE_RESERVE_RATIO,
+  );
+  return usage + Math.max(0, incomingBytes) <= Math.max(0, quota - reserve);
 }

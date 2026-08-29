@@ -214,6 +214,7 @@ export class BackupService {
       mimeType: entry.mimeType,
       sha256: entry.sha256,
       updatedAt: new Date().toISOString(),
+      evictable: false,
     });
     return this.assetResolver.registerBrowserBytes(entry.blobId, copy, entry.mimeType);
   }
