@@ -8,10 +8,13 @@ import { SYNC_ENTITIES } from '../database/sync-entity-registry';
 import { isElectronRuntime } from '../utils/runtime-platform';
 import { AssetResolverService } from './asset-resolver.service';
 import { AuthService } from './auth.service';
+import { CloudSyncApiService } from './cloud-sync-api.service';
 import { SyncEngineService } from './sync-engine.service';
 import { WorkspaceRuntimeService } from './workspace-runtime.service';
 
 declare const window: any;
+
+const CLOUD_BACKUP_MAGIC = new TextEncoder().encode('LOREKIT-CLOUD-BACKUP-1\0');
 
 export type BackupStatus =
   | { state: 'idle' }
@@ -55,11 +58,16 @@ export class BackupService {
     private readonly workspace: WorkspaceRuntimeService,
     private readonly assetResolver: AssetResolverService,
     private readonly syncEngine: SyncEngineService,
+    private readonly cloudApi: CloudSyncApiService,
   ) {}
 
   async exportBackup(): Promise<void> {
     this.status$.next({ state: 'processing' });
     try {
+      if (this.usesCloudBackup()) {
+        await this.exportCloudBackup();
+        return;
+      }
       await this.dbProvider.flushPendingWrites();
       const db = this.dbProvider.getDb<Database>();
       const blobs = await this.collectBlobs(db);
@@ -71,7 +79,7 @@ export class BackupService {
         version: 2,
         exportedAt: new Date().toISOString(),
         appVersion,
-        database: this.uint8ToBase64(db.export()),
+        database: await this.uint8ToBase64(db.export()),
         blobs,
       };
       const filename = `lorekit-backup-${new Date().toISOString().slice(0, 10)}.lorekit`;
@@ -94,7 +102,22 @@ export class BackupService {
   }
 
   async importBackup(file: File): Promise<void> {
-    if (!window.confirm('Restaurar este backup substituirá os dados locais atuais. Deseja continuar?')) return;
+    const isCloudBackup = await this.isCloudBackupFile(file);
+    if (isCloudBackup) {
+      if (!this.usesCloudBackup()) {
+        this.status$.next({
+          state: 'error',
+          message: 'Este backup foi gerado pela nuvem. Conecte a conta e habilite a sincronização para restaurá-lo.',
+        });
+        return;
+      }
+      await this.restoreCloudBackup(file);
+      return;
+    }
+    const legacyMessage = this.usesCloudBackup()
+      ? 'Este backup legado será restaurado localmente. Ao reiniciar, confirme o envio para a nuvem se desejar vinculá-lo à conta atual. Esta ação não pode ser desfeita. Deseja continuar?'
+      : 'Restaurar este backup substituirá os dados locais atuais. Esta ação não pode ser desfeita. Deseja continuar?';
+    if (!window.confirm(legacyMessage)) return;
     this.status$.next({ state: 'processing' });
     try {
       const bundle = this.parseBundle(await file.text());
@@ -115,6 +138,77 @@ export class BackupService {
       }, 800);
     } catch (error) {
       this.status$.next({ state: 'error', message: errorMessage(error, 'Erro ao restaurar backup.') });
+    }
+  }
+
+  private async isCloudBackupFile(file: File): Promise<boolean> {
+    const prefix = new Uint8Array(await file.slice(0, CLOUD_BACKUP_MAGIC.length).arrayBuffer());
+    return prefix.length === CLOUD_BACKUP_MAGIC.length
+      && prefix.every((value, index) => value === CLOUD_BACKUP_MAGIC[index]);
+  }
+
+  private usesCloudBackup(): boolean {
+    return Boolean(
+      this.auth.isAuthenticated()
+      && this.auth.syncEnabled()
+      && this.workspace.vault()
+      && navigator.onLine,
+    );
+  }
+
+  private async exportCloudBackup(): Promise<void> {
+    const vault = this.workspace.vault();
+    if (!vault) throw new Error('Nenhum vault sincronizado está disponível para exportação.');
+
+    this.auth.clearError();
+    await this.dbProvider.flushPendingWrites();
+    await this.syncEngine.syncNow();
+    if (this.auth.lastError()) {
+      throw new Error(`A sincronização precisa terminar antes do backup: ${this.auth.lastError()}`);
+    }
+
+    const backup = await this.cloudApi.downloadBackup(vault.id);
+    const filename = `lorekit-backup-${new Date().toISOString().slice(0, 10)}.lorekit`;
+    if (isElectronRuntime()) {
+      const chosenPath: string | null = await (window?.electronAPI?.showSaveDialog?.(filename) ?? null);
+      if (!chosenPath) {
+        this.status$.next({ state: 'idle' });
+        return;
+      }
+      await ElectronSafeAPI.electron.writeFile(chosenPath, new Uint8Array(await backup.arrayBuffer()));
+    } else {
+      this.downloadBlob(filename, backup);
+    }
+    this.status$.next({ state: 'success', message: 'Backup da nuvem exportado com sucesso!' });
+  }
+
+  private async restoreCloudBackup(file: File): Promise<void> {
+    const vault = this.workspace.vault();
+    if (!vault) throw new Error('Nenhum vault sincronizado está disponível para restauração.');
+    const accepted = window.confirm(
+      'A restauração substituirá definitivamente o vault na nuvem para todos os dispositivos vinculados. Esta ação não pode ser desfeita. Deseja continuar?',
+    );
+    if (!accepted) return;
+
+    this.status$.next({ state: 'processing' });
+    try {
+      await this.cloudApi.restoreBackup(vault.id, file);
+      this.syncEngine.stop();
+      this.assetResolver.revokeAll();
+      if (isElectronRuntime()) {
+        await ElectronSafeAPI.electron.clearWorkspaceForCloudRestore?.();
+      } else {
+        const user = this.auth.user();
+        this.dbProvider.close();
+        if (user) await this.browserStorage.deleteUser(user.id);
+      }
+      this.status$.next({ state: 'success', message: 'Backup restaurado na nuvem! Reiniciando...' });
+      setTimeout(() => {
+        if (isElectronRuntime()) void ElectronSafeAPI.electron.restartApp?.();
+        else window.location.reload();
+      }, 800);
+    } catch (error) {
+      this.status$.next({ state: 'error', message: errorMessage(error, 'Erro ao restaurar backup na nuvem.') });
     }
   }
 
@@ -159,7 +253,7 @@ export class BackupService {
         mimeType: metadata.mimeType,
         sha256: metadata.sha256 || await sha256Hex(binary),
         originalName: metadata.originalName,
-        dataBase64: this.uint8ToBase64(binary),
+        dataBase64: await this.uint8ToBase64(binary),
       });
     }
     return result;
@@ -275,7 +369,11 @@ export class BackupService {
 
   private download(filename: string, bytes: Uint8Array): void {
     const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-    const url = URL.createObjectURL(new Blob([copy], { type: 'application/x-lorekit-backup' }));
+    this.downloadBlob(filename, new Blob([copy], { type: 'application/x-lorekit-backup' }));
+  }
+
+  private downloadBlob(filename: string, blob: Blob): void {
+    const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = filename;
@@ -283,13 +381,15 @@ export class BackupService {
     setTimeout(() => URL.revokeObjectURL(url));
   }
 
-  private uint8ToBase64(bytes: Uint8Array): string {
-    let binary = '';
-    const chunkSize = 0x8000;
-    for (let index = 0; index < bytes.length; index += chunkSize) {
-      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
-    }
-    return btoa(binary);
+  private async uint8ToBase64(bytes: Uint8Array): Promise<string> {
+    const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error ?? new Error('Não foi possível codificar o arquivo do backup.'));
+      reader.readAsDataURL(new Blob([copy]));
+    });
+    return dataUrl.slice(dataUrl.indexOf(',') + 1);
   }
 
   private base64ToUint8(base64: string): Uint8Array {

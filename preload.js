@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearCloudSession: () => ipcRenderer.invoke('cloud-session:clear'),
   showSaveDialog: (defaultName) => ipcRenderer.invoke('backup:save-dialog', defaultName),
   reloadApp: () => ipcRenderer.invoke('app:reload'),
+  clearWorkspaceForCloudRestore: () => ipcRenderer.invoke('workspace:clear-for-cloud-restore'),
+  restartApp: () => ipcRenderer.invoke('app:restart'),
   rendererReady: () => ipcRenderer.invoke('app:renderer-ready'),
   onPrepareToClose: (callback) => {
     const listener = () => callback();

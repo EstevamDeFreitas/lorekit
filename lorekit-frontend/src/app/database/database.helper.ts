@@ -15,6 +15,8 @@ export const ElectronSafeAPI = {
       readFile: async () => null,
       writeFile: async () => null,
       writeFileAtomic: async () => null,
+      clearWorkspaceForCloudRestore: async () => null,
+      restartApp: async () => null,
     };
   }
 };

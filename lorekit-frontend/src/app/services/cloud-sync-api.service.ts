@@ -153,6 +153,21 @@ export class CloudSyncApiService {
     return firstValueFrom(this.http.delete<void>(`${this.apiUrl}/vaults/${vaultId}/blobs/${blobId}`));
   }
 
+  downloadBackup(vaultId: string): Promise<Blob> {
+    return firstValueFrom(this.http.get(
+      `${this.apiUrl}/vaults/${vaultId}/backup`,
+      { responseType: 'blob' },
+    ));
+  }
+
+  restoreBackup(vaultId: string, file: Blob): Promise<{ vaultId: string }> {
+    return firstValueFrom(this.http.put<{ vaultId: string }>(
+      `${this.apiUrl}/vaults/${vaultId}/backup`,
+      file,
+      { headers: { 'Content-Type': 'application/x-lorekit-cloud-backup' } },
+    ));
+  }
+
   changes(
     vaultId: string,
     after: string,

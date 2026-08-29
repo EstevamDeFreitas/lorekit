@@ -29,6 +29,11 @@ async function bootstrap(): Promise<void> {
     },
   );
 
+  app.getHttpAdapter().getInstance().addContentTypeParser(
+    'application/x-lorekit-cloud-backup',
+    (_request, payload, done) => done(null, payload),
+  );
+
   await app.register(cookie);
   await app.register(helmet, {
     contentSecurityPolicy: environment.nodeEnv === 'production' ? undefined : false,

@@ -264,6 +264,21 @@ function registerIpc() {
     });
     return result.canceled ? null : result.filePath;
   });
+  ipcMain.handle('workspace:clear-for-cloud-restore', async (event) => {
+    if (!isTrustedRenderer(event)) throw new Error('Untrusted renderer.');
+    const userData = app.getPath('userData');
+    await Promise.all([
+      fs.promises.rm(path.join(userData, 'lorekit.db'), { force: true }),
+      fs.promises.rm(path.join(userData, 'images'), { recursive: true, force: true }),
+    ]);
+    return true;
+  });
+  ipcMain.handle('app:restart', (event) => {
+    if (!isTrustedRenderer(event)) throw new Error('Untrusted renderer.');
+    app.relaunch();
+    app.exit(0);
+    return true;
+  });
   ipcMain.handle('app:reload', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return false;
 
