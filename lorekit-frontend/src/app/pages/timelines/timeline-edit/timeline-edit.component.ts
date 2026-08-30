@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Age } from '../../../models/age.model';
 import { GreatMark } from '../../../models/great-mark.model';
+import { buildImageRecordUrl, getImageByUsageKey, Image } from '../../../models/image.model';
 import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
 import { TimelineEvent } from '../../../models/timeline-event.model';
 import { Timeline } from '../../../models/timeline.model';
@@ -49,7 +50,7 @@ interface TimelineDrag {
           @if (isRouteComponent()) {
             <app-icon-button buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/timeline"></app-icon-button>
           }
-          <input class="min-w-0 flex-1 bg-transparent text-2xl font-bold outline-none" [(ngModel)]="timeline.name" (blur)="saveTimeline()" aria-label="Nome da timeline">
+          <div class="min-w-0 flex-1"><input class="w-full min-w-0 bg-transparent text-2xl font-bold outline-none" [(ngModel)]="timeline.name" (blur)="saveTimeline()" aria-label="Nome da timeline"><label class="timeline-unit-field">Unidade de tempo<input [(ngModel)]="timeline.timeUnitName" (blur)="saveTimeline()" aria-label="Nome da unidade de tempo"></label></div>
         </div>
         <div class="flex shrink-0 items-center gap-2">
           <app-icon-button title="Nova era" icon="fa-solid fa-layer-group" buttonType="white" size="xl" (click)="openAgeDialog(defaultDate())"></app-icon-button>
@@ -63,10 +64,10 @@ interface TimelineDrag {
         <summary>Resumo da timeline</summary>
         <app-editor [entityId]="timeline.id" docTitle="Descrição" entityTable="Timeline" [entityName]="timeline.name" [document]="timeline.description || ''" (saveDocument)="timelineDescriptionChange($event)"></app-editor>
       </details>
-      <section #viewport class="timeline-viewport scrollbar-dark">
+      <section #viewport class="timeline-viewport scrollbar-dark" (wheel)="onTimelineWheel($event)">
         <div #canvas class="timeline-canvas" [style.width.px]="canvasWidth" [style.height.px]="canvasHeight">
           <div class="timeline-ruler">
-            <div class="timeline-ruler-title">Anos</div>
+            <div class="timeline-ruler-title">{{ timeline.timeUnitName || 'Anos' }}</div>
             @for (year of yearTicks; track year) {
               <div class="year-tick" [style.left.px]="dateToX(year)">
                 <span>{{ formatYear(year) }}</span>
@@ -78,7 +79,8 @@ interface TimelineDrag {
               class="age-context"
               [style.left.px]="dateToX(age.startDate)"
               [style.width.px]="ageContextWidth(age.startDate, age.endDate)"
-              [style.background-color]="rgba(colorOf(age), .16)">
+              [style.background-color]="rgba(colorOf(age), .16)"
+              [style.background-image]="ageBackgroundImage(age)">
             </div>
             <article
               class="age-bar"
@@ -86,7 +88,6 @@ interface TimelineDrag {
               [style.top.px]="ageTop(age)"
               [style.width.px]="ageRangeWidth(age.startDate, age.endDate)"
               [style.--age-color]="colorOf(age)"
-              [title]="formatText(age.description, age.startDate, age.endDate)"
               (pointerdown)="startDrag($event, 'age-move', age)">
               <button class="range-handle start" aria-label="Alterar início da era" (pointerdown)="startDrag($event, 'age-start', age)"></button>
               <div class="age-content">
@@ -94,6 +95,11 @@ interface TimelineDrag {
                   @if (iconOf(age)) { <i [class]="itemIconClass(age)"></i> }
                   {{ formatText(age.name, age.startDate, age.endDate) }}
                 </span>
+              </div>
+              <div class="timeline-tooltip" role="tooltip">
+                <strong>{{ formatText(age.name, age.startDate, age.endDate) }}</strong>
+                <span>{{ formatYear(age.startDate) }} — {{ formatYear(age.endDate) }}</span>
+                @if (age.description) { <p>{{ formatText(age.description, age.startDate, age.endDate) }}</p> }
               </div>
               <button class="range-handle end" aria-label="Alterar fim da era" (pointerdown)="startDrag($event, 'age-end', age)"></button>
             </article>
@@ -106,13 +112,18 @@ interface TimelineDrag {
                 [style.top.px]="markTop"
                 [style.--mark-color]="colorOf(mark)"
                 (pointerdown)="startDrag($event, 'mark-move', mark)">
-                <span class="great-mark-dot"><i [class]="greatMarkIconClass(mark)"></i></span>
-                <span class="great-mark-name">{{ formatText(mark.name, mark.date, mark.date) }}</span>
-                <span class="great-mark-date">{{ formatYear(mark.date) }}</span>
+                <span class="great-mark-dot" [style.background-image]="markBackgroundImage(mark)"><i [class]="greatMarkIconClass(mark)"></i></span>
+                <span class="great-mark-name">{{ formatText(mark.name, mark.startDate, mark.endDate) }}</span>
+                <span class="great-mark-date">{{ formatText(mark.displayDate || '{AutoGenDate}', mark.startDate, mark.endDate) }}</span>
+                <div class="timeline-tooltip" role="tooltip">
+                  <strong>{{ formatText(mark.name, mark.startDate, mark.endDate) }}</strong>
+                  <span>{{ formatText(mark.displayDate || '{AutoGenDate}', mark.startDate, mark.endDate) }}</span>
+                  @if (mark.description) { <p>{{ formatText(mark.description, mark.startDate, mark.endDate) }}</p> }
+                </div>
               </article>
             }
           </div>
-          <div class="events-label" [style.top.px]="eventTopBase - 28">Eventos — arraste para posicionar; mova verticalmente para organizar em faixas</div>
+          <div class="events-label" [style.top.px]="eventTopBase - 28">Eventos — arraste para posicionar; mova verticalmente para organizar em faixas. Ctrl: 10, Shift: 100, ambos: 1000.</div>
           @for (event of events; track event.id) {
             <article
               class="event-bar"
@@ -121,12 +132,17 @@ interface TimelineDrag {
               [style.width.px]="rangeWidth(event.startDate, event.endDate)"
               [style.--event-color]="colorOf(event)"
               [class]="getTextClass(colorOf(event))"
+              [style.background-image]="eventBackgroundImage(event)"
               (pointerdown)="startDrag($event, 'event-move', event)">
               <button class="range-handle start" aria-label="Alterar início do evento" (pointerdown)="startDrag($event, 'event-start', event)"></button>
               <div class="event-content">
                 <div class="event-heading">{{ formatText(event.name, event.startDate, event.endDate) }}</div>
                 <div class="event-meta">{{ formatText(event.date || '{AutoGenDate}', event.startDate, event.endDate) }}</div>
-                @if (event.description) { <div class="event-description">{{ formatText(event.description, event.startDate, event.endDate) }}</div> }
+              </div>
+              <div class="timeline-tooltip" role="tooltip">
+                <strong>{{ formatText(event.name, event.startDate, event.endDate) }}</strong>
+                <span>{{ formatText(event.date || '{AutoGenDate}', event.startDate, event.endDate) }}</span>
+                @if (event.description) { <p>{{ formatText(event.description, event.startDate, event.endDate) }}</p> }
               </div>
               <button class="range-handle end" aria-label="Alterar fim do evento" (pointerdown)="startDrag($event, 'event-end', event)"></button>
             </article>
@@ -164,6 +180,7 @@ export class TimelineEditComponent implements OnDestroy {
   private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 500);
   private readonly destroyRef = inject(DestroyRef);
   @ViewChild('canvas') private canvas?: ElementRef<HTMLElement>;
+  @ViewChild('viewport') private viewport?: ElementRef<HTMLElement>;
   dialogRef = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
   timelineIdInput = input<string | null>(null);
@@ -178,6 +195,7 @@ export class TimelineEditComponent implements OnDestroy {
   minDate = 0;
   maxDate = 100;
   pixelsPerYear = 8;
+  private zoomFactor = 1;
   canvasWidth = 1400;
   canvasHeight = 520;
   yearTicks: number[] = [0];
@@ -204,10 +222,31 @@ export class TimelineEditComponent implements OnDestroy {
     const id = this.timelineId();
     if (!id) return;
     this.timeline = this.timelineService.getTimelineById(id);
+    this.timeline.timeUnitName ||= 'Anos';
     this.ages = this.ageService.getAgesByTimelineId(id);
     this.greatMarks = this.greatMarkService.getGreatMarksByTimelineId(id);
     this.events = this.eventService.getEventsByTimelineId(id);
     this.refreshLayout();
+  }
+  onTimelineWheel(event: WheelEvent): void {
+    const viewport = this.viewport?.nativeElement;
+    if (!viewport) return;
+    event.preventDefault();
+
+    if (!event.ctrlKey) {
+      viewport.scrollLeft += event.deltaX || event.deltaY;
+      return;
+    }
+
+    const direction = Math.sign(event.deltaY || event.deltaX);
+    if (!direction) return;
+    const bounds = viewport.getBoundingClientRect();
+    const pointerOffset = event.clientX - bounds.left;
+    const dateAtPointer = this.minDate + (viewport.scrollLeft + pointerOffset - 54) / this.pixelsPerYear;
+    this.zoomFactor = Math.max(.25, Math.min(8, this.zoomFactor * (direction < 0 ? 1.12 : .89)));
+    this.refreshLayout();
+    viewport.scrollLeft = Math.max(0, this.dateToX(dateAtPointer) - pointerOffset);
+    this.cdr.markForCheck();
   }
   timelineDescriptionChange(value: unknown): void {
     this.timeline.description = JSON.stringify(value);
@@ -215,6 +254,7 @@ export class TimelineEditComponent implements OnDestroy {
   }
   saveTimeline(): void {
     if (!this.timeline.id || !this.timeline.name.trim()) return;
+    this.timeline.timeUnitName = this.timeline.timeUnitName?.trim() || 'Anos';
     this.saveTask.schedule(() => {
       this.timelineService.saveTimeline(this.timeline, this.timeline.ParentWorld?.id || null);
       this.entityChangeService.notifySave('Timeline', this.timeline.id);
@@ -253,7 +293,23 @@ export class TimelineEditComponent implements OnDestroy {
   greatMarkIconClass(mark: GreatMark): string {
     return `${this.itemIconClass(mark)} great-mark-icon`;
   }
-  formatYear(value: number): string {
+  ageBackgroundImage(age: Age): string | null {
+    return this.itemBackgroundImage(age, 'linear-gradient(rgb(9 9 11 / .78), rgb(9 9 11 / .78))');
+  }
+  eventBackgroundImage(event: TimelineEvent): string | null {
+    return this.itemBackgroundImage(
+      event,
+      `linear-gradient(105deg, ${this.rgba(this.colorOf(event), .82)}, rgb(9 9 11 / .72))`,
+    );
+  }
+  markBackgroundImage(mark: GreatMark): string | null {
+    return this.itemBackgroundImage(mark, 'linear-gradient(rgb(9 9 11 / .72), rgb(9 9 11 / .72))');
+  }
+  private itemBackgroundImage(item: { Images?: Image[] }, overlay: string): string | null {
+    const image = getImageByUsageKey(item.Images, 'default');
+    const url = buildImageRecordUrl(image);
+    return url ? `${overlay}, url("${url.replaceAll('"', '\\"')}")` : null;
+  }  formatYear(value: number): string {
     return String(Math.round(value));
   }
   formatText(value: string | null | undefined, startDate: number, endDate: number): string {
@@ -312,16 +368,16 @@ export class TimelineEditComponent implements OnDestroy {
     const dateDelta = Math.round(deltaX / drag.pixelsPerYear);
     if (drag.kind === 'mark-move') {
       const mark = drag.item as GreatMark;
-      mark.date = Math.round((drag.date ?? mark.date) + dateDelta);
+      mark.date = this.snapDate((drag.date ?? mark.date) + dateDelta, event);
     } else {
       const item = drag.item as Age | TimelineEvent;
       if (drag.kind === 'age-start' || drag.kind === 'event-start') {
-        item.startDate = Math.min(Math.round(drag.startDate + dateDelta), drag.endDate - 1);
+        item.startDate = Math.min(this.snapDate(drag.startDate + dateDelta, event), drag.endDate - 1);
       } else if (drag.kind === 'age-end' || drag.kind === 'event-end') {
-        item.endDate = Math.max(Math.round(drag.endDate + dateDelta), drag.startDate + 1);
+        item.endDate = Math.max(this.snapDate(drag.endDate + dateDelta, event), drag.startDate + 1);
       } else {
         const duration = drag.endDate - drag.startDate;
-        item.startDate = Math.round(drag.startDate + dateDelta);
+        item.startDate = this.snapDate(drag.startDate + dateDelta, event);
         item.endDate = item.startDate + duration;
       }
 
@@ -387,15 +443,18 @@ export class TimelineEditComponent implements OnDestroy {
     this.openDialog(AgeEditComponent, { id: ageId, timelineId: this.timeline.id, defaultStartDate });
   }
   openGreatMarkDialog(defaultDate: number, markId?: string): void {
-    this.openDialog(GreatMarkEditComponent, { id: markId, timelineId: this.timeline.id, defaultSortOrder: defaultDate });
+    this.openDialog(GreatMarkEditComponent, { id: markId, timelineId: this.timeline.id, defaultSortOrder: defaultDate, worldId: this.timeline.ParentWorld?.id || null }, '90vw', '980px');
   }
   openEventDialog(defaultDate: number, eventId?: string): void {
     this.openDialog(TimelineEventEditComponent, { id: eventId, timelineId: this.timeline.id, defaultSortOrder: defaultDate, worldId: this.timeline.ParentWorld?.id || null }, '90vw', '980px');
   }
   private openDialog(component: unknown, data: object, width = '36rem', maxWidth = '92vw'): void {
     const ref = this.dialog.open(component as any, { panelClass: ['screen-dialog', 'overflow-visible'], width, maxWidth, data });
-    ref.closed.subscribe((result: any) => {
-      if (result?.saved || result?.deleted) this.zone.run(() => this.loadTimeline());
+    ref.closed.subscribe(() => {
+      this.zone.run(() => {
+        this.loadTimeline();
+        this.cdr.markForCheck();
+      });
     });
   }
   private isTimelineItemChange(table: string, id: string): boolean {
@@ -416,7 +475,8 @@ export class TimelineEditComponent implements OnDestroy {
     const lastDate = dates.length ? Math.max(...dates) : 100;
     const span = Math.max(1, lastDate - this.minDate);
     this.maxDate = lastDate + Math.max(10, Math.ceil(span * .06));
-    this.pixelsPerYear = span > 5000 ? 1 : span > 1000 ? 2 : span > 250 ? 4 : 8;
+    const basePixelsPerYear = span > 5000 ? 1 : span > 1000 ? 2 : span > 250 ? 4 : 8;
+    this.pixelsPerYear = Math.max(.25, basePixelsPerYear * this.zoomFactor);
     this.canvasWidth = Math.max(1400, (this.maxDate - this.minDate) * this.pixelsPerYear + 140);
     this.assignAgeLanes();
     const maxEventLane = Math.max(0, ...this.events.map(event => Number(event.lane) || 0));
@@ -438,6 +498,10 @@ export class TimelineEditComponent implements OnDestroy {
       lanes[age.id] = lane;
     }
     this.ageLanes = lanes;
+  }
+  private snapDate(value: number, event: PointerEvent): number {
+    const step = event.ctrlKey && event.shiftKey ? 1000 : event.shiftKey ? 100 : event.ctrlKey ? 10 : 1;
+    return Math.round(value / step) * step;
   }
   private buildYearTicks(): number[] {
     const target = 96 / this.pixelsPerYear;

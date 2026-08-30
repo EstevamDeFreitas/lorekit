@@ -196,6 +196,7 @@ export const schema: TableDef[] = [
       { name: "name",        def: `"name" TEXT NOT NULL` },
       { name: "concept",     def: `"concept" TEXT` },
       { name: "description", def: `"description" TEXT NOT NULL` },
+      { name: "timeUnitName", def: `"timeUnitName" TEXT NOT NULL DEFAULT 'Anos'` },
     ]
   },
   {
@@ -206,6 +207,11 @@ export const schema: TableDef[] = [
       { name: "concept",     def: `"concept" TEXT` },
       { name: "description", def: `"description" TEXT NOT NULL` },
       { name: "date",        def: `"date" REAL NOT NULL DEFAULT 0` },
+      { name: "startDate",   def: `"startDate" REAL NOT NULL DEFAULT 0` },
+      { name: "endDate",     def: `"endDate" REAL NOT NULL DEFAULT 0` },
+      { name: "lane",        def: `"lane" INTEGER NOT NULL DEFAULT 0` },
+      { name: "displayDate", def: `"displayDate" TEXT` },
+
       { name: "sortOrder",   def: `"sortOrder" REAL NOT NULL DEFAULT 0` },
     ]
   },

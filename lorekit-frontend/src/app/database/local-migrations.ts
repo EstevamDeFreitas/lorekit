@@ -2,7 +2,7 @@ import type { BindParams, SqlValue } from 'sql.js';
 import { schema, TableDef } from './schema';
 import { SYNC_ENTITIES } from './sync-entity-registry';
 
-export const LOCAL_SCHEMA_VERSION = 5;
+export const LOCAL_SCHEMA_VERSION = 6;
 
 interface SqlDatabase {
   exec(sql: string, params?: BindParams): Array<{
@@ -75,6 +75,21 @@ const migrations: readonly LocalMigration[] = [
     up: db => {
       const eventTable = schema.find(table => table.name === 'Event');
       if (eventTable) addMissingColumns(db, eventTable);
+      createSyncTables(db);
+      createSyncTriggers(db);
+    },
+  },
+  {
+    version: 6,
+    name: 'unidade-de-tempo-e-detalhes-de-grandes-marcos',
+    up: db => {
+      const timelineTable = schema.find(table => table.name === 'Timeline');
+      const markTable = schema.find(table => table.name === 'GreatMark');
+      if (timelineTable) addMissingColumns(db, timelineTable);
+      if (markTable) addMissingColumns(db, markTable);
+      db.exec(`UPDATE "Timeline" SET "timeUnitName" = 'Anos' WHERE TRIM(COALESCE("timeUnitName", '')) = ''`);
+      db.exec(`UPDATE "GreatMark" SET "startDate" = "date" WHERE "startDate" = 0 AND "date" != 0`);
+      db.exec(`UPDATE "GreatMark" SET "endDate" = "startDate" WHERE "endDate" = 0`);
       createSyncTables(db);
       createSyncTriggers(db);
     },

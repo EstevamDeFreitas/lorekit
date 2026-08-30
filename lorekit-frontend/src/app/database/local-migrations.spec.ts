@@ -149,7 +149,36 @@ describe('local database migrations', () => {
       `SELECT "value" FROM "_SchemaMetadata" WHERE "key" = 'schemaVersion'`,
     ))).toBe(LOCAL_SCHEMA_VERSION);
   });
-});
+  it('adds the timeline unit and GreatMark detail fields to databases already marked as version 5', () => {
+    const db = new SQL.Database();
+    ensureSchema(db);
+    runLocalMigrations(db);
+
+    db.exec(`
+      DROP TABLE "Timeline";
+      CREATE TABLE "Timeline" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "name" TEXT NOT NULL,
+        "concept" TEXT,
+        "description" TEXT NOT NULL
+      );
+      DROP TABLE "GreatMark";
+      CREATE TABLE "GreatMark" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "name" TEXT NOT NULL,
+        "concept" TEXT,
+        "description" TEXT NOT NULL,
+        "date" REAL NOT NULL DEFAULT 0,
+        "sortOrder" REAL NOT NULL DEFAULT 0
+      );
+      UPDATE "_SchemaMetadata" SET "value" = '5' WHERE "key" = 'schemaVersion';
+    `);
+
+    runLocalMigrations(db);
+
+    expect(columnNames(db, 'Timeline')).toContain('timeUnitName');
+    expect(columnNames(db, 'GreatMark')).toEqual(jasmine.arrayContaining(['startDate', 'endDate', 'lane', 'displayDate']));
+  });});
 
 function columnNames(db: Database, tableName: string): string[] {
   const result = db.exec(`PRAGMA table_info("${tableName}")`)[0];

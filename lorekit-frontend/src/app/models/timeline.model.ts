@@ -7,6 +7,7 @@ export class Timeline {
   name: string;
   description: string;
   concept?: string | null;
+  timeUnitName: string;
 
   Personalization?: Personalization | null;
   Images?: Image[];
@@ -18,5 +19,6 @@ export class Timeline {
     this.name = name;
     this.description = description;
     this.concept = '';
+    this.timeUnitName = 'Anos';
   }
 }
