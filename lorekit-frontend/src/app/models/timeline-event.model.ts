@@ -38,6 +38,9 @@ export class TimelineEvent {
   description: string;
   concept?: string | null;
   date?: string | null;
+  startDate: number;
+  endDate: number;
+  lane: number;
   sortOrder: number;
   chronologyOrder: number;
 
@@ -61,12 +64,18 @@ export class TimelineEvent {
     description: string = '',
     sortOrder: number = 0,
     chronologyOrder: number = 0,
+    startDate: number = chronologyOrder,
+    endDate: number = chronologyOrder,
+    lane: number = 0,
   ) {
     this.id = id;
     this.name = name;
     this.description = description;
     this.sortOrder = sortOrder;
     this.chronologyOrder = chronologyOrder;
+    this.startDate = startDate;
+    this.endDate = endDate;
+    this.lane = lane;
     this.concept = '';
     this.date = '';
   }

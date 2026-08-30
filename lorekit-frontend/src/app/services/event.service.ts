@@ -30,7 +30,13 @@ export class EventService {
       parentId: timelineId,
     }) as TimelineEvent[];
 
-    return events.sort((a, b) => a.sortOrder - b.sortOrder);
+    return events
+      .map(event => {
+        const lane = Number(event.lane);
+        event.lane = Number.isFinite(lane) ? Math.max(0, Math.round(lane)) : 0;
+        return event;
+      })
+      .sort((a, b) => a.startDate - b.startDate || a.lane - b.lane);
   }
 
   getEventById(eventId: string): TimelineEvent {
@@ -38,6 +44,11 @@ export class EventService {
   }
 
   saveEvent(event: TimelineEvent, payload: SaveTimelineEventPayload): TimelineEvent {
+    event.startDate = Math.round(Number(event.startDate) || 0);
+    event.endDate = Math.max(event.startDate, Math.round(Number(event.endDate) || event.startDate));
+    event.lane = Math.max(0, Math.round(Number(event.lane) || 0));
+    event.sortOrder = event.startDate;
+    event.chronologyOrder = event.startDate;
     if (event.id) {
       this.crud.update('Event', event.id, event);
     } else {
@@ -60,12 +71,25 @@ export class EventService {
       });
     }
   }
+  async saveEventPlacement(eventId: string, startDate: number, endDate: number, lane: number): Promise<void> {
+    const rawStart = Number(startDate);
+    const start = Number.isFinite(rawStart) ? Math.round(rawStart) : 0;
+    this.crud.update('Event', eventId, {
+      startDate: start,
+      endDate: Math.max(start, Math.round(endDate)),
+      lane: Number.isFinite(Number(lane)) ? Math.max(0, Math.round(Number(lane))) : 0,
+      sortOrder: start,
+      chronologyOrder: start,
+    });
+    await this.dbProvider.flushPendingWrites();
+  }
 
   deleteEvent(eventId: string, deleteRelatedItems: boolean = true) {
     return this.crud.delete('Event', eventId, deleteRelatedItems);
   }
 
   private getEventIncludes() {
+
     return [
       { table: 'Image', firstOnly: false },
       { table: 'Personalization', firstOnly: true },

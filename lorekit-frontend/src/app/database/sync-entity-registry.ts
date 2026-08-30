@@ -41,6 +41,7 @@ export const SYNC_ENTITIES = [
   entity('Object'),
   entity('ObjectType'),
   entity('Timeline'),
+  entity('Age'),
   entity('GreatMark'),
   entity('EventType'),
   entity('Event'),

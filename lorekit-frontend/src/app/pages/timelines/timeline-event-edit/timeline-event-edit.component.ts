@@ -34,14 +34,14 @@ interface TimelineEventDialogData {
   standalone: true,
   imports: [ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent, SafeDeleteButtonComponent],
   template: `
-    <div class=" flex flex-col gap-4">
-      <div class="flex justify-between gap-3">
+    <div class="w-full max-w-[980px] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-5">
+      <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <input
             type="text"
-            class="flex-1 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-none"
+            class="min-w-0 flex-1 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-none"
             [(ngModel)]="event.name"
           />
-        <div class="flex justify-center items-end h-auto gap-2">
+        <div class="flex shrink-0 flex-wrap justify-end gap-2">
           @if (event.id) {
             <app-personalization-button [entityId]="event.id" [entityTable]="'Event'" [size]="'xl'"></app-personalization-button>
             <app-safe-delete-button [entityName]="event.name" [entityId]="event.id" [entityTable]="'Event'" [size]="'xl'"></app-safe-delete-button>
@@ -54,8 +54,11 @@ interface TimelineEventDialogData {
 
       <div class=" gap-3">
         <!-- <app-text-area label="Conceito" height="h-42" [(value)]="event.concept"></app-text-area> -->
-        <div class="flex flex-row justify-between gap-3">
-          <app-input class="w-full" label="Data exibida" size="xs" [(value)]="event.date"></app-input>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <app-input class="w-full min-w-0" label="Início (ano)" type="number" size="xs" [(value)]="event.startDate"></app-input>
+          <app-input class="w-full min-w-0" label="Fim (ano)" type="number" size="xs" [(value)]="event.endDate"></app-input>
+          <app-input class="w-full min-w-0" label="Faixa" type="number" size="xs" [(value)]="event.lane"></app-input>
+          <app-input class="w-full min-w-0" label="Data exibida" size="xs" [(value)]="event.date"></app-input>
           <app-combo-box
             label="Tipo do evento"
             class="w-full"
@@ -127,7 +130,7 @@ interface TimelineEventDialogData {
         </div>
       </div>
 
-      <div class="flex justify-between gap-2 pt-2">
+      <div class="flex flex-wrap justify-between gap-3 pt-2">
         <div>
           @if (event.id) {
             <!-- <app-button label="Excluir" buttonType="danger" size="sm" (click)="deleteEvent()"></app-button> -->
@@ -169,13 +172,14 @@ export class TimelineEventEditComponent {
     this.locations = this.data.worldId ? this.locationService.getLocationByWorldId(this.data.worldId) : this.locationService.getLocations();
 
     if (this.data.id) {
-      this.event = this.eventService.getEventById(this.data.id);
-      console.log("Evento", this.event);
-
-      this.initialChronologyOrder = this.event.chronologyOrder;
-      this.selectedEventTypeId = this.event.ParentEventType?.id || null;
-      this.selectedLocationId = this.event.ParentLocation?.id || null;
-      this.relatedEntities = buildTimelineEventRelatedEntities(this.event);
+      const storedEvent = this.eventService.getEventById(this.data.id);
+      if (storedEvent) {
+        this.event = storedEvent;
+        this.initialChronologyOrder = this.event.chronologyOrder;
+        this.selectedEventTypeId = this.event.ParentEventType?.id || null;
+        this.selectedLocationId = this.event.ParentLocation?.id || null;
+        this.relatedEntities = buildTimelineEventRelatedEntities(this.event);
+      }
     }
   }
 
@@ -185,9 +189,11 @@ export class TimelineEventEditComponent {
     }
 
     this.event.description = this.event.description || '';
-    this.event.sortOrder = Number(this.event.chronologyOrder || 0);
-    this.event.chronologyOrder = Number(this.event.chronologyOrder || 0);
-
+    this.event.startDate = Math.round(Number(this.event.startDate) || 0);
+    this.event.endDate = Math.max(this.event.startDate, Math.round(Number(this.event.endDate) || this.event.startDate));
+    this.event.lane = Math.max(0, Math.round(Number(this.event.lane) || 0));
+    this.event.sortOrder = this.event.startDate;
+    this.event.chronologyOrder = this.event.startDate;
     const reorderRequired = !this.event.id || this.initialChronologyOrder !== this.event.chronologyOrder;
 
     const savedEvent = this.eventService.saveEvent(this.event, {

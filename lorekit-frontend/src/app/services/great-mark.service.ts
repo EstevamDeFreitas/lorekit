@@ -20,18 +20,23 @@ export class GreatMarkService {
       { table: 'Timeline', firstOnly: true, isParent: true },
     ], { parentTable: 'Timeline', parentId: timelineId }) as GreatMark[];
 
-    return marks.sort((a, b) => a.sortOrder - b.sortOrder);
+    return marks
+      .map(mark => this.normalizeDate(mark))
+      .sort((a, b) => a.date - b.date);
   }
 
   getGreatMarkById(markId: string): GreatMark {
-    return this.crud.findById('GreatMark', markId, [
+    const mark = this.crud.findById('GreatMark', markId, [
       { table: 'Image', firstOnly: false },
       { table: 'Personalization', firstOnly: true },
       { table: 'Timeline', firstOnly: true, isParent: true },
-    ]);
+    ]) as GreatMark;
+    return mark ? this.normalizeDate(mark) : mark;
   }
 
   saveGreatMark(mark: GreatMark, timelineId: string): GreatMark {
+    mark.date = Math.round(Number(mark.date) || 0);
+    mark.sortOrder = mark.date;
     if (mark.id) {
       mark = this.crud.update('GreatMark', mark.id, mark) as GreatMark;
     } else {
@@ -53,7 +58,23 @@ export class GreatMarkService {
 
     return this.getGreatMarkById(mark.id);
   }
+  async saveDate(markId: string, date: number): Promise<void> {
+    const fallback = this.getGreatMarkById(markId);
+    const rawValue = Number(date);
+    const value = Number.isFinite(rawValue) ? Math.round(rawValue) : Math.round(Number(fallback?.date ?? fallback?.sortOrder ?? 0));
+    this.crud.update('GreatMark', markId, { date: value, sortOrder: value });
+    await this.dbProvider.flushPendingWrites();
+  }
 
+  private normalizeDate(mark: GreatMark): GreatMark {
+    const legacyOrder = Number(mark.sortOrder);
+    const rawDate = Number(mark.date);
+    const hasExplicitDate = mark.date !== null && mark.date !== undefined && Number.isFinite(rawDate);
+    const date = hasExplicitDate ? Math.round(rawDate) : (Number.isFinite(legacyOrder) ? Math.round(legacyOrder) : 0);
+    mark.date = date;
+    mark.sortOrder = Number.isFinite(legacyOrder) ? Math.round(legacyOrder) : date;
+    return mark;
+  }
   deleteGreatMark(markId: string, deleteRelatedItems: boolean = true) {
     return this.crud.delete('GreatMark', markId, deleteRelatedItems);
   }

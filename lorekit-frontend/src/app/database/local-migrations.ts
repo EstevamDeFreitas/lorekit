@@ -2,7 +2,7 @@ import type { BindParams, SqlValue } from 'sql.js';
 import { schema, TableDef } from './schema';
 import { SYNC_ENTITIES } from './sync-entity-registry';
 
-export const LOCAL_SCHEMA_VERSION = 3;
+export const LOCAL_SCHEMA_VERSION = 5;
 
 interface SqlDatabase {
   exec(sql: string, params?: BindParams): Array<{
@@ -40,6 +40,42 @@ const migrations: readonly LocalMigration[] = [
     up: db => {
       createSyncTables(db);
       backfillRecordClocks(db);
+      createSyncTriggers(db);
+    },
+  },
+  {
+    version: 4,
+    name: 'timeline-horizontal-ages-and-ranges',
+    up: db => {
+      const ageTable = schema.find(table => table.name === 'Age');
+      const markTable = schema.find(table => table.name === 'GreatMark');
+      const eventTable = schema.find(table => table.name === 'Event');
+      if (ageTable) addMissingColumns(db, ageTable);
+      if (markTable) addMissingColumns(db, markTable);
+      if (eventTable) addMissingColumns(db, eventTable);
+      db.exec(`UPDATE "GreatMark" SET "date" = "sortOrder" WHERE "date" = 0 AND "sortOrder" != 0`);
+      db.exec(`
+        UPDATE "Event"
+        SET "startDate" = CASE
+          WHEN TRIM(COALESCE("date", '')) GLOB '-[0-9]*' THEN CAST("date" AS REAL)
+          WHEN TRIM(COALESCE("date", '')) GLOB '[0-9]*' THEN CAST("date" AS REAL)
+          WHEN "chronologyOrder" != 0 THEN "chronologyOrder"
+          ELSE "sortOrder"
+        END
+        WHERE "startDate" = 0
+      `);
+      db.exec(`UPDATE "Event" SET "endDate" = "startDate" WHERE "endDate" = 0`);
+      createSyncTables(db);
+      createSyncTriggers(db);
+    },
+  },
+  {
+    version: 5,
+    name: 'repara-faixa-vertical-de-eventos',
+    up: db => {
+      const eventTable = schema.find(table => table.name === 'Event');
+      if (eventTable) addMissingColumns(db, eventTable);
+      createSyncTables(db);
       createSyncTriggers(db);
     },
   },

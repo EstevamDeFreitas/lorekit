@@ -20,13 +20,13 @@ interface GreatMarkDialogData {
   standalone: true,
   imports: [ButtonComponent, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
   template: `
-    <div class="w-[36rem] max-w-[92vw] flex flex-col gap-4">
-      <div class="flex items-center justify-between gap-3">
+    <div class="w-full max-w-[36rem] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-4">
+      <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 class="text-lg font-bold">{{ mark.id ? 'Editar Grande Marco' : 'Novo Grande Marco' }}</h2>
-          <p class="text-sm text-zinc-400">Os grandes marcos dividem as seções visuais da timeline quando você quiser usar.</p>
+          <p class="text-sm text-zinc-400">Marcos são pontos na linha do tempo. Use a personalização para definir o ícone.</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex shrink-0 flex-wrap items-center gap-2">
           @if (mark.id) {
             <app-personalization-button [entityId]="mark.id" [entityTable]="'GreatMark'" [size]="'lg'"></app-personalization-button>
           }
@@ -36,9 +36,10 @@ interface GreatMarkDialogData {
 
       <app-input label="Nome" [(value)]="mark.name"></app-input>
       <!-- <app-input label="Conceito" [(value)]="mark.concept"></app-input> -->
+      <app-input label="Ano" type="number" [(value)]="mark.date"></app-input>
       <app-text-area label="Descrição" [(value)]="mark.description" height="h-28"></app-text-area>
 
-      <div class="flex justify-between gap-2 pt-2">
+      <div class="flex flex-wrap justify-between gap-3 pt-2">
         <div>
           @if (mark.id) {
             <app-button label="Excluir" buttonType="danger" size="sm" (click)="deleteMark()"></app-button>
@@ -64,9 +65,10 @@ export class GreatMarkEditComponent {
 
   constructor() {
     if (this.data.id) {
-      this.mark = this.greatMarkService.getGreatMarkById(this.data.id);
+      const storedMark = this.greatMarkService.getGreatMarkById(this.data.id);
+      if (storedMark) this.mark = storedMark;
     } else {
-      this.mark.sortOrder = this.data.defaultSortOrder;
+      this.mark.date = this.data.defaultSortOrder;
     }
   }
 

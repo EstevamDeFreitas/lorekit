@@ -5,6 +5,7 @@ import { Image } from '../../models/image.model';
 import { Personalization, WeakRelationship } from '../../models/personalization.model';
 import { ImageService } from '../../services/image.service';
 import { PersonalizationService } from '../../services/personalization.service';
+import { EntityChangeService } from '../../services/entity-change.service';
 import { ButtonComponent } from '../button/button.component';
 import { IconSelectorComponent } from '../icon-selector/icon-selector.component';
 import { ImageUploaderComponent } from '../ImageUploader/image-uploader.component';
@@ -45,7 +46,10 @@ export class PersonalizationComponent {
   readonly profileAspectRatio = 1 / 1;
   readonly fullBodyAspectRatio = 20 / 35;
 
-  constructor(private readonly personalizationService: PersonalizationService) {
+  constructor(
+    private readonly personalizationService: PersonalizationService,
+    private readonly entityChangeService: EntityChangeService,
+  ) {
     this.loadPersonalization();
   }
 
@@ -74,6 +78,7 @@ export class PersonalizationComponent {
       this.relationshipInfo.entityTable,
       this.relationshipInfo.entityId
     );
+    this.entityChangeService.notifySave(this.relationshipInfo.entityTable, this.relationshipInfo.entityId);
     this.dialogref.close();
   }
 

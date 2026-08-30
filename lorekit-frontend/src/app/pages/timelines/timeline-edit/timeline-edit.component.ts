@@ -1,1181 +1,465 @@
-import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { Dialog, DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
-import { NgClass, NgStyle } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, DestroyRef, effect, inject, input, NgZone } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, NgZone, OnDestroy, ViewChild, computed, effect, inject, input } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ButtonComponent } from "../../../components/button/button.component";
-import { TreeViewListComponent } from "../../../components/entity-lateral-menu/entity-lateral-menu.component";
-import { TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
-import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
-import { InputComponent } from "../../../components/input/input.component";
-import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
-import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
-import { TextAreaComponent } from "../../../components/text-area/text-area.component";
-import { Document } from '../../../models/document.model';
+import { Age } from '../../../models/age.model';
 import { GreatMark } from '../../../models/great-mark.model';
-import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
 import { TimelineEvent } from '../../../models/timeline-event.model';
 import { Timeline } from '../../../models/timeline.model';
-import { DocumentService } from '../../../services/document.service';
+import { AgeService } from '../../../services/age.service';
+import { EntityChangeService } from '../../../services/entity-change.service';
 import { EventService } from '../../../services/event.service';
 import { GreatMarkService } from '../../../services/great-mark.service';
 import { TimelineService } from '../../../services/timeline.service';
+import { FlushableDebounce } from '../../../utils/flushable-debounce';
+import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
+import { PersonalizationButtonComponent } from '../../../components/personalization-button/personalization-button.component';
+import { SafeDeleteButtonComponent } from '../../../components/safe-delete-button/safe-delete-button.component';
+import { EditorComponent } from '../../../components/editor/editor.component';
+import { AgeEditComponent } from '../age-edit/age-edit.component';
 import { GreatMarkEditComponent } from '../great-mark-edit/great-mark-edit.component';
 import { TimelineEventEditComponent } from '../timeline-event-edit/timeline-event-edit.component';
-import { EditorComponent } from '../../../components/editor/editor.component';
-import { FlushableDebounce } from '../../../utils/flushable-debounce';
-import { EntityChangeService } from '../../../services/entity-change.service';
-
-type EventSide = 'left' | 'right';
-
-interface TimelineSectionViewModel {
-  id: string;
-  kind: 'initial' | 'marked' | 'free' | 'trailing';
-  mark: GreatMark | null;
-  events: TimelineEvent[];
-  color: string | null;
-  dropListId: string;
+type DragKind = 'age-move' | 'age-start' | 'age-end' | 'mark-move' | 'event-move' | 'event-start' | 'event-end';
+type TimelineItem = Age | GreatMark | TimelineEvent;
+interface TimelineDrag {
+  kind: DragKind;
+  item: TimelineItem;
+  clientX: number;
+  startDate: number;
+  clientY: number;
+  endDate: number;
+  date?: number;
+  lane?: number;
+  eventStartTop: number;
+  pointerOffsetY: number;
+  pixelsPerYear: number;
+  pointerId: number;
+  pointerTarget: HTMLElement | null;
+  moved: boolean;
 }
-
-interface TimelineEventDocumentsDialogData {
-  eventId: string;
-  eventName: string;
-}
-
-@Component({
-  selector: 'app-timeline-event-documents-dialog',
-  standalone: true,
-  imports: [ButtonComponent, FormsModule, IconButtonComponent, InputComponent, TreeViewListComponent],
-  template: `
-    <div class="flex flex-col gap-4">
-      <div class="flex items-center justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-bold">Documentos do Evento</h2>
-          <p class="text-sm text-zinc-400">Gerencie os documentos relacionados a {{ data.eventName }}.</p>
-        </div>
-        <app-icon-button icon="fa-solid fa-xmark" buttonType="secondary" size="lg" (click)="dialogRef.close({ updated: changed })"></app-icon-button>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
-        <div class="relative">
-          <label class="block text-xs font-medium">Relacionar documento existente</label>
-          <input
-            type="text"
-            [(ngModel)]="documentSearchTerm"
-            (ngModelChange)="onDocumentSearchChange($event)"
-            placeholder="Pesquisar documentos..."
-            class="mt-1 w-full rounded-lg px-3 py-2 bg-zinc-925 border border-zinc-800 text-sm focus:outline-none focus:border-zinc-100 placeholder:text-white/20"
-          />
-
-          @if (filteredDocuments.length > 0) {
-            <div class="absolute z-20 top-full mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 shadow-lg max-h-56 overflow-y-auto scrollbar-dark">
-              @for (document of filteredDocuments; track document.id) {
-                <button
-                  type="button"
-                  class="w-full text-left px-3 py-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-900 cursor-pointer"
-                  (click)="selectDocument(document)">
-                  <div class="font-medium">{{ document.title }}</div>
-                </button>
-              }
-            </div>
-          }
-        </div>
-        <app-button label="Relacionar" buttonType="secondary" size="sm" (click)="attachSelectedDocument()"></app-button>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
-        <app-input label="Novo documento" [(value)]="newDocumentTitle"></app-input>
-        <app-button label="Criar novo documento" buttonType="primary" size="sm" (click)="createRootDocument()"></app-button>
-      </div>
-
-      <div class="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3 min-h-40 max-h-[60vh] overflow-y-auto scrollbar-dark">
-        <app-tree-view-list
-          [entityTable]="'Event'"
-          [entityId]="data.eventId"
-          [documentArray]="documents"
-          [allowCreate]="true"
-          [useCustomCreate]="true"
-          [dragContextId]="'event-documents:' + data.eventId"
-          [canReparent]="canReparentDocument"
-          [createTitle]="'Criar Documento'"
-          [createFieldLabel]="'Título'"
-          (onCreateChild)="createChildDocument($event)"
-          (onReparentRequested)="reparentDocument($event)">
-        </app-tree-view-list>
-      </div>
-
-      <div class="flex justify-end">
-        <app-button label="Fechar" buttonType="secondary" size="sm" (click)="dialogRef.close({ updated: changed })"></app-button>
-      </div>
-    </div>
-  `,
-  changeDetection: ChangeDetectionStrategy.Default,
-})
-export class TimelineEventDocumentsDialogComponent {
-  readonly dialogRef = inject<DialogRef<any>>(DialogRef<any>);
-  readonly data = inject<TimelineEventDocumentsDialogData>(DIALOG_DATA);
-  private readonly documentService = inject(DocumentService);
-
-  documents: Document[] = [];
-  availableDocuments: Document[] = [];
-  filteredDocuments: Document[] = [];
-  selectedDocumentId: string | null = null;
-  documentSearchTerm = '';
-  newDocumentTitle = '';
-  changed = false;
-
-  readonly canReparentDocument = (draggedId: string, newParentId: string | null) =>
-    this.documentService.canReparentDocument(draggedId, newParentId);
-
-  constructor() {
-    this.loadDocuments();
-  }
-
-  loadDocuments() {
-    this.documents = this.documentService.getDocumentsTree('Event', this.data.eventId);
-    const relatedDocumentIds = this.collectDocumentIds(this.documents);
-    this.availableDocuments = this.documentService.getAllDocuments()
-      .filter(document => !relatedDocumentIds.has(document.id))
-      .sort((a, b) => a.title.localeCompare(b.title));
-    this.onDocumentSearchChange(this.documentSearchTerm);
-  }
-
-  attachSelectedDocument() {
-    if (!this.selectedDocumentId) {
-      return;
-    }
-
-    this.documentService.attachExistingDocument('Event', this.data.eventId, this.selectedDocumentId);
-    this.selectedDocumentId = null;
-    this.documentSearchTerm = '';
-    this.changed = true;
-    this.loadDocuments();
-  }
-
-  createRootDocument() {
-    const title = this.newDocumentTitle.trim();
-    if (!title) {
-      return;
-    }
-
-    this.documentService.saveDocument(new Document('', title, ''), 'Event', this.data.eventId);
-    this.newDocumentTitle = '';
-    this.changed = true;
-    this.loadDocuments();
-  }
-
-  createChildDocument(event: { parentId: string, formData: Record<string, string> }) {
-    const title = event.formData['name']?.trim();
-    if (!title) {
-      return;
-    }
-
-    this.documentService.saveDocument(new Document('', title, ''), 'Document', event.parentId);
-    this.changed = true;
-    this.loadDocuments();
-  }
-
-  reparentDocument(event: TreeViewReparentRequest) {
-    try {
-      this.documentService.reparentDocument(event.draggedId, event.newParentId);
-      this.changed = true;
-      this.loadDocuments();
-    } catch (error: any) {
-      alert(error?.message || 'Falha ao reorganizar o documento.');
-    }
-  }
-
-  onDocumentSearchChange(term: string) {
-    this.documentSearchTerm = term;
-    const normalizedTerm = term.trim().toLocaleLowerCase();
-
-    if (!normalizedTerm) {
-      this.filteredDocuments = [];
-      return;
-    }
-
-    this.filteredDocuments = this.availableDocuments
-      .filter(document => document.title.toLocaleLowerCase().includes(normalizedTerm))
-      .slice(0, 8);
-  }
-
-  selectDocument(document: Document) {
-    this.selectedDocumentId = document.id;
-    this.documentSearchTerm = document.title;
-    this.filteredDocuments = [];
-  }
-
-  private collectDocumentIds(documents: Document[]) {
-    const ids = new Set<string>();
-
-    const visit = (items: Document[]) => {
-      for (const item of items) {
-        ids.add(item.id);
-        if (item.SubDocuments?.length) {
-          visit(item.SubDocuments);
-        }
-      }
-    };
-
-    visit(documents);
-    return ids;
-  }
-}
-
 @Component({
   selector: 'app-timeline-edit',
-  standalone: true,
-  imports: [
-    ButtonComponent,
-    CdkDrag,
-    CdkDropList,
-    FormsModule,
-    IconButtonComponent,
-    NgClass,
-    NgStyle,
-    PersonalizationButtonComponent,
-    SafeDeleteButtonComponent,
-    TextAreaComponent,
-    EditorComponent
-  ],
+  imports: [EditorComponent, FormsModule, IconButtonComponent, PersonalizationButtonComponent, SafeDeleteButtonComponent],
   template: `
-    <div class="flex flex-col pb-20 @container">
-      <div class="sticky top-0 z-50 bg-zinc-950 py-2">
-        <div class="flex items-center gap-3">
+    <div class="timeline-page">
+      <header class="timeline-toolbar">
+        <div class="flex min-w-0 items-center gap-3">
           @if (isRouteComponent()) {
             <app-icon-button buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/timeline"></app-icon-button>
           }
-          <input
-            type="text"
-            class="flex-1 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-none"
-            [(ngModel)]="timeline.name"
-            (blur)="saveTimeline()"
-          />
-          <div class="flex items-center gap-2">
-            <app-icon-button title="Novo Grande Marco" icon="fa-solid fa-calendar-plus" buttonType="white" size="xl" (click)="openGreatMarkDialog(getDefaultTailMarkOrder())"></app-icon-button>
-            <app-personalization-button [entityId]="timeline.id" [entityTable]="'Timeline'" [size]="'xl'" (onClose)="loadTimeline()"></app-personalization-button>
-            <app-safe-delete-button [entityName]="timeline.name" [entityId]="timeline.id" [entityTable]="'Timeline'" [size]="'xl'"></app-safe-delete-button>
-          </div>
+          <input class="min-w-0 flex-1 bg-transparent text-2xl font-bold outline-none" [(ngModel)]="timeline.name" (blur)="saveTimeline()" aria-label="Nome da timeline">
         </div>
-      </div>
-
-      <div class="mt-4 grid grid-cols-1 @4xl:grid-cols-[22rem_1fr] gap-6 items-start">
-        <div class="rounded-md border border-zinc-800 bg-zinc-925 p-4  sticky top-10 flex flex-col gap-4">
-          <div>
-            <h3 class="text-sm text-zinc-500">Resumo</h3>
-          </div>
-
-          <div class="p-1 rounded-lg border border-zinc-800  ">
-            <app-editor [entityId]="timeline.id" docTitle="Descrição" entityTable="Timeline" [entityName]="timeline.name" [document]="timeline.description || ''" (saveDocument)="timelineDescriptionChange($event, 'description')" class="w-full"></app-editor>
-          </div>
+        <div class="flex shrink-0 items-center gap-2">
+          <app-icon-button title="Nova era" icon="fa-solid fa-layer-group" buttonType="white" size="xl" (click)="openAgeDialog(defaultDate())"></app-icon-button>
+          <app-icon-button title="Novo marco" icon="fa-solid fa-location-dot" buttonType="white" size="xl" (click)="openGreatMarkDialog(defaultDate())"></app-icon-button>
+          <app-icon-button title="Novo evento" icon="fa-solid fa-plus" buttonType="white" size="xl" (click)="openEventDialog(defaultDate())"></app-icon-button>
+          <app-personalization-button [entityId]="timeline.id" [entityTable]="'Timeline'" [size]="'xl'"></app-personalization-button>
+          <app-safe-delete-button [entityName]="timeline.name" [entityId]="timeline.id" [entityTable]="'Timeline'" [size]="'xl'"></app-safe-delete-button>
         </div>
-
-        <div class="rounded-md border border-zinc-800 bg-zinc-900/40 min-h-[70vh]">
-          <div class="relative min-h-[60vh]">
-            <div class="absolute left-1/2 top-0 bottom-0 w-[3px] -translate-x-1/2 bg-zinc-400"></div>
-
-            <div class="relative z-10 flex flex-col gap-6">
-              <!-- <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-                <div></div>
-                <button
-                  type="button"
-                  class="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm cursor-pointer hover:border-zinc-400"
-                  (click)="openEventDialog(getInitialInsertOrder())">
-                  Adicionar evento no início
-                </button>
-                <div></div>
-              </div> -->
-
-              @for (section of sections; track section.id; let sectionIndex = $index) {
-
-                <div
-                  class="timeline-section relative rounded-md px-6 py-8 transition-colors"
-                  [ngStyle]="buildSectionStyle(section)"
-                >
-                <div class="absolute left-1/2 top-0 bottom-0 w-[3px] -translate-x-1/2 z-0 bg-zinc-400"></div>
-                  @if (section.mark) {
-                    <div class="sticky top-16 z-30 -mx-6 px-6 py-3 mb-8">
-                      <button
-                        type="button"
-                        class="rounded-md border px-5 py-4 shadow-xl backdrop-blur-xl cursor-pointer"
-                        [ngStyle]="buildGreatMarkHeaderStyle(section.mark)"
-                        (click)="openGreatMarkDialog(section.mark.sortOrder, section.mark.id)">
-
-                        <div class="text-xs text-left uppercase tracking-[0.22em] opacity-60">
-                          Grande Marco
-                        </div>
-
-                        <div class="text-3xl text-left font-bold">
-                          {{ section.mark.name }}
-                        </div>
-
-                      </button>
-                    </div>
-
-                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4 m-4 relative z-1">
-                      <div></div>
-                      <button
-                        type="button"
-                        class="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm cursor-pointer hover:border-zinc-400"
-                        (click)="openEventDialog(getStartOfMarkInsertOrder(sectionIndex))">
-                        Adicionar Evento no Início
-                      </button>
-                      <div></div>
-                    </div>
-                  }
-
-                  <div
-                    cdkDropList
-                    [id]="section.dropListId"
-                    [cdkDropListData]="section.events"
-                    [cdkDropListConnectedTo]="connectedDropLists"
-                    class="flex flex-col gap-5"
-                    (cdkDropListDropped)="onDrop($event)">
-                    @for (event of section.events; track event.id) {
-                      @let side = eventSides[event.id] || 'left';
-                      <div cdkDrag class="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
-                        @if (side === 'left') {
-                          <div
-                            role="button"
-                            tabindex="0"
-                            class="group rounded-2xl border border-zinc-800 p-4 text-left cursor-pointer hover:border-zinc-600"
-
-                            [ngStyle]="buildEventCardStyle(event)"
-                            [class.text-white]="hasBackgroundImage(event)"
-                            [ngClass]="!hasBackgroundImage(event) ? getTextClass(getPersonalizationValue(event, 'color') || undefined) : ''"
-                            (click)="openEventDialog(event.chronologyOrder, event.id)">
-                            <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
-                            <p class="mt-2 text-sm opacity-85 line-clamp-3">{{ event.description || 'Sem descrição definida.' }}</p>
-                            <div class="mt-3 flex flex-wrap gap-2">
-                              @if (event.ParentLocation) {
-                                <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">
-                                  <i class="fa-solid fa-location-dot me-1"></i>{{ event.ParentLocation.name }}
-                                </span>
-                              }
-
-                              @if (event.ParentEventType) {
-                                  <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">{{ event.ParentEventType.name }}</span>
-                                }
-                                <button
-                                  type="button"
-                                  class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white cursor-pointer hover:border-zinc-500"
-                                  (click)="openEventDocuments(event, $event)">
-                                  {{ getEventDocumentsLabel(event) }}
-                                </button>
-                            </div>
-                          </div>
-                        }
-                        @else {
-                          <div></div>
-                        }
-
-                        <div class="flex flex-col items-center gap-2 relative z-1">
-                          <div class="rounded-sm shadow-lg p-1" [style.background-color]="section.color || '#71717A'">
-                            <div class="text-xs uppercase tracking-[0.2em] opacity-70">{{ event.date || 'Sem data' }}</div>
-                          </div>
-                        </div>
-
-                        @if (side === 'right') {
-                          <div
-                            role="button"
-                            tabindex="0"
-                            class="group rounded-2xl border border-zinc-800 p-4 text-left cursor-pointer hover:border-zinc-600"
-
-                            [ngStyle]="buildEventCardStyle(event)"
-                            [class.text-white]="hasBackgroundImage(event)"
-                            [ngClass]="!hasBackgroundImage(event) ? getTextClass(getPersonalizationValue(event, 'color') || undefined) : ''"
-                            (click)="openEventDialog(event.chronologyOrder, event.id)">
-
-                            <h4 class="mt-2 text-base font-semibold">{{ event.name }}</h4>
-                            <p class="mt-2 text-sm opacity-85 line-clamp-3">{{  event.description || 'Sem descrição definida.' }}</p>
-                            <div class="mt-3 flex flex-wrap gap-2">
-                              @if (event.ParentLocation) {
-                                <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">
-                                  <i class="fa-solid fa-location-dot me-1"></i>{{ event.ParentLocation.name }}
-                                </span>
-                              }
-
-                              @if (event.ParentEventType) {
-                                  <span class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white">{{ event.ParentEventType.name }}</span>
-                              }
-                              <button
-                                type="button"
-                                class="text-xs px-2 py-1 rounded-md bg-zinc-950/75 border border-zinc-700 text-white cursor-pointer hover:border-zinc-500"
-                                (click)="openEventDocuments(event, $event)">
-                                {{ getEventDocumentsLabel(event) }}
-                              </button>
-                            </div>
-                          </div>
-                        }
-                        @else {
-                          <div></div>
-                        }
-                      </div>
-                    }
-
-                    @if (section.events.length === 0) {
-                      <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4 relative z-1">
-                        <div></div>
-                        <div class="rounded-lg border border-dashed border-zinc-700 bg-zinc-950/60 px-4 py-3 text-sm text-zinc-500">
-                          Nenhum evento nesta parte da timeline.
-                        </div>
-                        <div></div>
-                      </div>
-                    }
-                  </div>
-
-                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4 m-4 relative z-1">
-                    <div></div>
-                    <button
-                      type="button"
-                      class="rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm cursor-pointer hover:border-zinc-400"
-                      (click)="openEventDialog(getEndSectionInsertOrder(sectionIndex))">
-                      Adicionar Evento no Final
-                    </button>
-                    <div></div>
-                  </div>
-
-
-                </div>
-
-                <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-                    <div></div>
-                    <button
-                      type="button"
-                      class="text-xs text-zinc-400 hover:text-white cursor-pointer"
-                      (click)="openGreatMarkDialog(getBoundaryMarkOrder(sectionIndex))">
-                      Inserir grande marco aqui
-                    </button>
-                    <div></div>
-                  </div>
-              }
-              @empty{
-                <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-                  <div></div>
-                  <button
-                    type="button"
-                    class="text-xs text-zinc-400 hover:text-white cursor-pointer"
-                    (click)="openGreatMarkDialog(0)">
-                    Criar Primeiro Grande Marco
-                  </button>
-                  <div></div>
-                </div>
-              }
+      </header>
+      <details class="timeline-summary">
+        <summary>Resumo da timeline</summary>
+        <app-editor [entityId]="timeline.id" docTitle="Descrição" entityTable="Timeline" [entityName]="timeline.name" [document]="timeline.description || ''" (saveDocument)="timelineDescriptionChange($event)"></app-editor>
+      </details>
+      <section #viewport class="timeline-viewport scrollbar-dark">
+        <div #canvas class="timeline-canvas" [style.width.px]="canvasWidth" [style.height.px]="canvasHeight">
+          <div class="timeline-ruler">
+            <div class="timeline-ruler-title">Anos</div>
+            @for (year of yearTicks; track year) {
+              <div class="year-tick" [style.left.px]="dateToX(year)">
+                <span>{{ formatYear(year) }}</span>
+              </div>
+            }
+          </div>
+          @for (age of ages; track age.id) {
+            <div
+              class="age-context"
+              [style.left.px]="dateToX(age.startDate)"
+              [style.width.px]="ageContextWidth(age.startDate, age.endDate)"
+              [style.background-color]="rgba(colorOf(age), .16)">
             </div>
+            <article
+              class="age-bar"
+              [style.left.px]="dateToX(age.startDate)"
+              [style.top.px]="ageTop(age)"
+              [style.width.px]="ageRangeWidth(age.startDate, age.endDate)"
+              [style.--age-color]="colorOf(age)"
+              [title]="formatText(age.description, age.startDate, age.endDate)"
+              (pointerdown)="startDrag($event, 'age-move', age)">
+              <button class="range-handle start" aria-label="Alterar início da era" (pointerdown)="startDrag($event, 'age-start', age)"></button>
+              <div class="age-content">
+                <span class="age-label">
+                  @if (iconOf(age)) { <i [class]="itemIconClass(age)"></i> }
+                  {{ formatText(age.name, age.startDate, age.endDate) }}
+                </span>
+              </div>
+              <button class="range-handle end" aria-label="Alterar fim da era" (pointerdown)="startDrag($event, 'age-end', age)"></button>
+            </article>
+          }
+          <div class="timeline-axis" [style.top.px]="axisTop"></div>
+          <div class="marks-layer">
+            @for (mark of greatMarks; track mark.id) {
+              <article class="great-mark" role="button" tabindex="0"
+                [style.left.px]="dateToX(mark.date)"
+                [style.top.px]="markTop"
+                [style.--mark-color]="colorOf(mark)"
+                (pointerdown)="startDrag($event, 'mark-move', mark)">
+                <span class="great-mark-dot"><i [class]="greatMarkIconClass(mark)"></i></span>
+                <span class="great-mark-name">{{ formatText(mark.name, mark.date, mark.date) }}</span>
+                <span class="great-mark-date">{{ formatYear(mark.date) }}</span>
+              </article>
+            }
           </div>
+          <div class="events-label" [style.top.px]="eventTopBase - 28">Eventos — arraste para posicionar; mova verticalmente para organizar em faixas</div>
+          @for (event of events; track event.id) {
+            <article
+              class="event-bar"
+              [style.left.px]="dateToX(event.startDate)"
+              [style.top.px]="eventTop(event)"
+              [style.width.px]="rangeWidth(event.startDate, event.endDate)"
+              [style.--event-color]="colorOf(event)"
+              [class]="getTextClass(colorOf(event))"
+              (pointerdown)="startDrag($event, 'event-move', event)">
+              <button class="range-handle start" aria-label="Alterar início do evento" (pointerdown)="startDrag($event, 'event-start', event)"></button>
+              <div class="event-content">
+                <div class="event-heading">{{ formatText(event.name, event.startDate, event.endDate) }}</div>
+                <div class="event-meta">{{ formatText(event.date || '{AutoGenDate}', event.startDate, event.endDate) }}</div>
+                @if (event.description) { <div class="event-description">{{ formatText(event.description, event.startDate, event.endDate) }}</div> }
+              </div>
+              <button class="range-handle end" aria-label="Alterar fim do evento" (pointerdown)="startDrag($event, 'event-end', event)"></button>
+            </article>
+          }
+          @if (ages.length === 0 && greatMarks.length === 0 && events.length === 0) {
+            <div class="timeline-empty">
+              <i class="fa-solid fa-timeline text-3xl"></i>
+              <span>Comece criando uma era, um marco ou um evento.</span>
+            </div>
+          }
         </div>
-      </div>
+      </section>
     </div>
   `,
   styleUrl: './timeline-edit.component.css',
-  changeDetection: ChangeDetectionStrategy.Default,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TimelineEditComponent {
+export class TimelineEditComponent implements OnDestroy {
+  readonly AGE_RULER_TOP = 52;
+  readonly AGE_RULER_HEIGHT = 38;
+  readonly EVENT_ROW_HEIGHT = 82;
+  axisTop = 236;
+  markTop = 204;
+  eventTopBase = 300;
+  private readonly dialog = inject(Dialog);
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
-  private readonly dialog = inject(Dialog);
   private readonly timelineService = inject(TimelineService);
+  private readonly ageService = inject(AgeService);
   private readonly greatMarkService = inject(GreatMarkService);
   private readonly eventService = inject(EventService);
-
-  private readonly MARK_SPACING = 100000;
-  private readonly EVENT_SPACING = 100;
-
+  private readonly entityChangeService = inject(EntityChangeService);
+  private readonly zone = inject(NgZone);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 500);
-
+  private readonly destroyRef = inject(DestroyRef);
+  @ViewChild('canvas') private canvas?: ElementRef<HTMLElement>;
   dialogRef = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
-
+  timelineIdInput = input<string | null>(null);
+  readonly timelineId = computed(() => this.timelineIdInput() || this.data?.id || this.activatedRoute.snapshot.paramMap.get('timelineId') || '');
+  readonly isRouteComponent = computed(() => this.router.routerState.root.firstChild?.component === TimelineEditComponent || this.activatedRoute.component === TimelineEditComponent);
+  readonly getTextClass = getTextClass;
   timeline = new Timeline();
+  ages: Age[] = [];
   greatMarks: GreatMark[] = [];
   events: TimelineEvent[] = [];
-  sections: TimelineSectionViewModel[] = [
-    // {
-    //   id: 'section-initial',
-    //   kind: 'initial',
-    //   mark: null,
-    //   events: [],
-    //   color: null,
-    //   dropListId: 'timeline-section-initial',
-    // }
-  ];
-  connectedDropLists: string[] = ['timeline-section-initial'];
-  eventSides: Record<string, EventSide> = {};
-  public readonly getPersonalizationValue = getPersonalizationValue;
-  public readonly getTextClass = getTextClass;
-  private zone = inject(NgZone);
-
-  private entityChangeService = inject(EntityChangeService);
-
-  readonly timelineId = computed(() => {
-    const inputId = this.timelineIdInput();
-    if (inputId) {
-      return inputId;
-    }
-
-    if (this.data?.id) {
-      return this.data.id as string;
-    }
-
-    return this.activatedRoute.snapshot.paramMap.get('timelineId') ?? '';
-  });
-
-  protected readonly isRouteComponent = computed(() => {
-    return this.router.routerState.root.firstChild?.component === TimelineEditComponent ||
-      this.activatedRoute.component === TimelineEditComponent;
-  });
-
-  timelineIdInput = input<string | null>(null);
-
-  constructor(private cdr : ChangeDetectorRef) {
+  ageLanes: Record<string, number> = {};
+  minDate = 0;
+  maxDate = 100;
+  pixelsPerYear = 8;
+  canvasWidth = 1400;
+  canvasHeight = 520;
+  yearTicks: number[] = [0];
+  private drag: TimelineDrag | null = null;
+  private readonly pointerMove = (event: PointerEvent) => this.moveDrag(event);
+  private readonly pointerUp = (event: PointerEvent) => this.endDrag(event);
+  constructor() {
     effect(() => {
-      const id = this.timelineId();
-      if (!id) {
-        return;
-      }
-
-      if (this.timeline.id === id) {
-        return;
-      }
-
-      this.loadTimeline();
+      if (this.timelineId() && this.timeline.id !== this.timelineId()) this.loadTimeline();
     });
+
+    this.entityChangeService.changes$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(change => {
+        if (!this.isTimelineItemChange(change.table, change.id)) return;
+        this.zone.run(() => this.loadTimeline());
+      });
   }
-
-  loadTimeline() {
-
+  ngOnDestroy(): void {
+    window.removeEventListener('pointermove', this.pointerMove);
+    window.removeEventListener('pointerup', this.pointerUp);
+  }
+  loadTimeline(): void {
     const id = this.timelineId();
-    if (!id) {
-      return;
-    }
-
+    if (!id) return;
     this.timeline = this.timelineService.getTimelineById(id);
-    this.greatMarks = this.greatMarkService.getGreatMarksByTimelineId(id).sort((a, b) => a.sortOrder - b.sortOrder);
-    this.events = this.eventService.getEventsByTimelineId(id).sort((a, b) => a.sortOrder - b.sortOrder);
-    this.buildSections();
+    this.ages = this.ageService.getAgesByTimelineId(id);
+    this.greatMarks = this.greatMarkService.getGreatMarksByTimelineId(id);
+    this.events = this.eventService.getEventsByTimelineId(id);
+    this.refreshLayout();
   }
-
-  timelineDescriptionChange($event: any, field: keyof Timeline){
-    (this.timeline[field] as any) = JSON.stringify($event);
-
+  timelineDescriptionChange(value: unknown): void {
+    this.timeline.description = JSON.stringify(value);
     this.saveTimeline();
   }
-
-  saveTimeline() {
-
-    if (!this.timeline.id || !this.timeline.name.trim()) {
-      return;
-    }
-
+  saveTimeline(): void {
+    if (!this.timeline.id || !this.timeline.name.trim()) return;
     this.saveTask.schedule(() => {
       this.timelineService.saveTimeline(this.timeline, this.timeline.ParentWorld?.id || null);
       this.entityChangeService.notifySave('Timeline', this.timeline.id);
     });
-
   }
+  defaultDate(): number {
+    return this.ages.length || this.greatMarks.length || this.events.length ? this.maxDate : 0;
+  }
+  dateToX(date: number): number {
+    return Math.round((Math.round(Number(date) || 0) - this.minDate) * this.pixelsPerYear + 54);
+  }
+  rangeWidth(start: number, end: number): number {
+    return Math.max(46, (Math.max(start, end) - start) * this.pixelsPerYear + 46);
+  }
+  ageTop(age: Age): number {
+    return this.AGE_RULER_TOP + (this.ageLanes[age.id] || 0) * this.AGE_RULER_HEIGHT;
+  }
+  ageRangeWidth(start: number, end: number): number {
+    return Math.max(16, (Math.max(start, end) - start) * this.pixelsPerYear);
+  }
+  ageContextWidth(start: number, end: number): number {
+    return this.ageRangeWidth(start, end);
+  }
+  eventTop(event: TimelineEvent): number {
+    return this.eventTopBase + Math.max(0, event.lane || 0) * this.EVENT_ROW_HEIGHT;
+  }
+  colorOf(item: { Personalization?: unknown }): string {
+    return getPersonalizationValue(item, 'color') || '#52525B';
+  }
+  iconOf(item: { Personalization?: unknown }): string | null {
+    return getPersonalizationValue(item, 'icon');
+  }
+  itemIconClass(item: { Personalization?: unknown }): string {
+    return `fa-solid ${this.iconOf(item) || 'fa-question'}`;
+  }
+  greatMarkIconClass(mark: GreatMark): string {
+    return `${this.itemIconClass(mark)} great-mark-icon`;
+  }
+  formatYear(value: number): string {
+    return String(Math.round(value));
+  }
+  formatText(value: string | null | undefined, startDate: number, endDate: number): string {
+    const start = this.formatYear(startDate);
+    const end = this.formatYear(endDate);
+    const center = this.formatYear(Math.round((Number(startDate) + Number(endDate)) / 2));
+    return (value || '')
+      .replaceAll('{AutoGenStartDate}', start)
+      .replaceAll('{AutoGenEndDate}', end)
+      .replaceAll('{AutoGenDate}', center);
+  }
+  startDrag(event: PointerEvent, kind: DragKind, item: TimelineItem): void {
+    if (event.button !== 0) return;
 
-  buildSections() {
-    const marks = [...this.greatMarks].sort((a, b) => a.sortOrder - b.sortOrder);
-    const sortedEvents = [...this.events].sort((a, b) => a.sortOrder - b.sortOrder);
+    event.preventDefault();
+    event.stopPropagation();
 
-    const initialSection: TimelineSectionViewModel = {
-      id: 'section-initial',
-      kind: 'initial',
-      mark: null,
-      events: [],
-      color: null,
-      dropListId: 'timeline-section-initial',
+    const isMark = kind === 'mark-move';
+    const isEvent = kind === 'event-move' || kind === 'event-start' || kind === 'event-end';
+    const range = item as Age | TimelineEvent;
+    const eventStartTop = isEvent ? this.eventTop(item as TimelineEvent) : 0;
+    const canvasTop = this.canvas?.nativeElement.getBoundingClientRect().top ?? 0;
+
+    const pointerTarget = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+    pointerTarget?.setPointerCapture?.(event.pointerId);
+
+    this.drag = {
+      kind,
+      item,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      startDate: 'startDate' in range ? range.startDate : 0,
+      endDate: 'endDate' in range ? range.endDate : 0,
+      date: isMark ? (item as GreatMark).date : undefined,
+      lane: isEvent ? (item as TimelineEvent).lane : undefined,
+      eventStartTop,
+      pointerOffsetY: isEvent ? event.clientY - canvasTop - eventStartTop : 0,
+      pixelsPerYear: this.pixelsPerYear,
+      pointerId: event.pointerId,
+      pointerTarget,
+      moved: false,
     };
 
-    const builtSections: TimelineSectionViewModel[] = [];
-    const trailingBaseOrder = (marks.length + 1) * this.MARK_SPACING;
-
-    for (const [markIndex, mark] of marks.entries()) {
-      const nextMark = marks[markIndex + 1];
-      const upperBound = nextMark?.sortOrder ?? trailingBaseOrder;
-      const freeSectionBase = nextMark ? this.getFreeSectionBaseOrder(mark.sortOrder, nextMark.sortOrder) : upperBound;
-      const markedEvents = sortedEvents.filter(event =>
-        event.sortOrder > mark.sortOrder &&
-        event.sortOrder < freeSectionBase
-      );
-      const freeEvents = nextMark
-        ? sortedEvents.filter(event =>
-            event.sortOrder >= freeSectionBase &&
-            event.sortOrder < upperBound
-          )
-        : [];
-
-      builtSections.push({
-        id: `section-${mark.id}`,
-        kind: 'marked',
-        mark,
-        events: markedEvents,
-        color: getPersonalizationValue(mark, 'color'),
-        dropListId: `timeline-section-${mark.id}`,
-      });
-
-      // if (freeEvents.length > 0) {
-      //   builtSections.push({
-      //     id: `section-free-${mark.id}-${nextMark.id}`,
-      //     kind: 'free',
-      //     mark: null,
-      //     events: freeEvents,
-      //     color: null,
-      //     dropListId: `timeline-section-free-${mark.id}-${nextMark.id}`,
-      //   });
-      // }
-    }
-
-    const firstMark = marks[0];
-    initialSection.events = firstMark
-      ? sortedEvents.filter(event => event.sortOrder < firstMark.sortOrder)
-      : sortedEvents;
-
-    // if (marks.length > 0) {
-    //   builtSections.push({
-    //     id: 'section-trailing',
-    //     kind: 'trailing',
-    //     mark: null,
-    //     events: sortedEvents.filter(event => event.sortOrder >= trailingBaseOrder),
-    //     color: null,
-    //     dropListId: 'timeline-section-trailing',
-    //   });
-    // }
-
-    this.sections = builtSections;
-    this.connectedDropLists = builtSections.map(section => section.dropListId);
-    this.assignEventSides();
+    window.addEventListener('pointermove', this.pointerMove);
+    window.addEventListener('pointerup', this.pointerUp);
   }
 
-  buildSectionStyle(section: TimelineSectionViewModel) {
-    if (!section.mark) {
-      return {};
-    }
+  private moveDrag = (event: PointerEvent): void => {
+    const drag = this.drag;
+    if (!drag || event.pointerId !== drag.pointerId) return;
 
-    const color = getPersonalizationValue(section.mark, 'color') || '#3F3F46';
-    const image = getImageByUsageKey(section.mark.Images, 'default');
+    const deltaX = event.clientX - drag.clientX;
+    const deltaY = event.clientY - drag.clientY;
+    if (Math.abs(deltaX) > 6 || Math.abs(deltaY) > 6) drag.moved = true;
 
-    if (image?.filePath) {
-      return {
-        '--timeline-section-background-image': `
-          linear-gradient(
-            rgba(24,24,27,.90),
-            rgba(24,24,27,.82)
-          ),
-          url(${buildImageUrl(image.filePath)})
-        `,
-        'border-color': this.hexToRgba(color, .25),
-      };
-    }
-
-    return {
-      'background': `
-        linear-gradient(
-          180deg,
-          ${this.hexToRgba(color, .12)} 0%,
-          ${this.hexToRgba(color, .05)} 60%,
-          transparent 100%
-        )
-      `,
-      'border-color': this.hexToRgba(color, .20),
-    };
-  }
-
-  buildGreatMarkHeaderStyle(mark: GreatMark) {
-    const color = getPersonalizationValue(mark, 'color') || '#3F3F46';
-    const image = getImageByUsageKey(mark.Images, 'default');
-
-    if (image?.filePath) {
-      return {
-        'background-image': `
-          linear-gradient(
-            rgba(24,24,27,.35),
-            rgba(24,24,27,.75)
-          ),
-          url(${buildImageUrl(image.filePath)})
-        `,
-        'background-size': 'cover',
-        'background-position': 'center',
-        'border-color': color,
-        'box-shadow': `0 0px 80px ${this.hexToRgba(color,.75)}`,
-        color: '#FFF'
-      };
-    }
-
-    return {
-      'background': this.hexToRgba(color,.92),
-      'backdrop-filter': 'blur(12px)',
-      'border-color': color,
-      'box-shadow': `0 12px 40px ${this.hexToRgba(color,.35)}`,
-      color: this.getTextColorValue(color)
-    };
-  }
-
-  assignEventSides() {
-    const sides: Record<string, EventSide> = {};
-    let absoluteIndex = 0;
-
-    for (const section of this.sections) {
-      for (const event of section.events) {
-        sides[event.id] = absoluteIndex % 2 === 0 ? 'left' : 'right';
-        absoluteIndex++;
-      }
-    }
-
-    this.eventSides = sides;
-  }
-
-  onDrop(event: CdkDragDrop<TimelineEvent[]>) {
-    if (event.previousContainer === event.container) {
-      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    const dateDelta = Math.round(deltaX / drag.pixelsPerYear);
+    if (drag.kind === 'mark-move') {
+      const mark = drag.item as GreatMark;
+      mark.date = Math.round((drag.date ?? mark.date) + dateDelta);
     } else {
-      transferArrayItem(
-        event.previousContainer.data,
-        event.container.data,
-        event.previousIndex,
-        event.currentIndex,
-      );
+      const item = drag.item as Age | TimelineEvent;
+      if (drag.kind === 'age-start' || drag.kind === 'event-start') {
+        item.startDate = Math.min(Math.round(drag.startDate + dateDelta), drag.endDate - 1);
+      } else if (drag.kind === 'age-end' || drag.kind === 'event-end') {
+        item.endDate = Math.max(Math.round(drag.endDate + dateDelta), drag.startDate + 1);
+      } else {
+        const duration = drag.endDate - drag.startDate;
+        item.startDate = Math.round(drag.startDate + dateDelta);
+        item.endDate = item.startDate + duration;
+      }
+
+      if (drag.kind === 'event-move') {
+        const timelineEvent = item as TimelineEvent;
+        const canvasTop = this.canvas?.nativeElement.getBoundingClientRect().top;
+        const targetTop = canvasTop === undefined
+          ? drag.eventStartTop + deltaY
+          : event.clientY - canvasTop - drag.pointerOffsetY;
+        timelineEvent.lane = Math.max(0, Math.floor((targetTop - this.eventTopBase + this.EVENT_ROW_HEIGHT / 2) / this.EVENT_ROW_HEIGHT));
+        this.events = [...this.events];
+        this.canvasHeight = Math.max(this.canvasHeight, this.eventTopBase + (timelineEvent.lane + 1) * this.EVENT_ROW_HEIGHT + 72);
+      }
     }
 
-    this.normalizeTimelineOrdering();
-  }
 
-  openGreatMarkDialog(defaultSortOrder: number, markId?: string) {
-    const dialogRef = this.dialog.open(GreatMarkEditComponent, {
-      panelClass: 'screen-dialog',
-      data: {
-        id: markId,
-        timelineId: this.timeline.id,
-        defaultSortOrder,
-      },
+    this.cdr.markForCheck();
+  };
+
+  private endDrag = async (event?: PointerEvent): Promise<void> => {
+    const drag = this.drag;
+    if (!drag || (event && event.pointerId !== drag.pointerId)) return;
+
+    this.drag = null;
+    window.removeEventListener('pointermove', this.pointerMove);
+    window.removeEventListener('pointerup', this.pointerUp);
+    if (drag.pointerTarget?.hasPointerCapture(drag.pointerId)) {
+      drag.pointerTarget.releasePointerCapture(drag.pointerId);
+    }
+
+    if (!drag.moved) {
+      if (drag.kind === 'mark-move') {
+        this.openGreatMarkDialog((drag.item as GreatMark).date, (drag.item as GreatMark).id);
+      } else if (drag.kind === 'event-move' || drag.kind === 'event-start' || drag.kind === 'event-end') {
+        this.openEventDialog((drag.item as TimelineEvent).startDate, (drag.item as TimelineEvent).id);
+      } else {
+        this.openAgeDialog((drag.item as Age).startDate, (drag.item as Age).id);
+      }
+      return;
+    }
+
+    if (drag.kind === 'mark-move') {
+      const mark = drag.item as GreatMark;
+      await this.greatMarkService.saveDate(mark.id, mark.date);
+      this.entityChangeService.notifySave('GreatMark', mark.id);
+    } else if (drag.kind === 'event-move' || drag.kind === 'event-start' || drag.kind === 'event-end') {
+      const timelineEvent = drag.item as TimelineEvent;
+      await this.persistEventPlacement(timelineEvent);
+    } else {
+      const age = drag.item as Age;
+      await this.ageService.saveRange(age.id, age.startDate, age.endDate);
+      this.entityChangeService.notifySave('Age', age.id);
+    }
+
+    this.refreshLayout();
+    this.cdr.markForCheck();
+  };
+
+  private async persistEventPlacement(event: TimelineEvent): Promise<void> {
+    await this.eventService.saveEventPlacement(event.id, event.startDate, event.endDate, event.lane);
+  }
+  openAgeDialog(defaultStartDate: number, ageId?: string): void {
+    this.openDialog(AgeEditComponent, { id: ageId, timelineId: this.timeline.id, defaultStartDate });
+  }
+  openGreatMarkDialog(defaultDate: number, markId?: string): void {
+    this.openDialog(GreatMarkEditComponent, { id: markId, timelineId: this.timeline.id, defaultSortOrder: defaultDate });
+  }
+  openEventDialog(defaultDate: number, eventId?: string): void {
+    this.openDialog(TimelineEventEditComponent, { id: eventId, timelineId: this.timeline.id, defaultSortOrder: defaultDate, worldId: this.timeline.ParentWorld?.id || null }, '90vw', '980px');
+  }
+  private openDialog(component: unknown, data: object, width = '36rem', maxWidth = '92vw'): void {
+    const ref = this.dialog.open(component as any, { panelClass: ['screen-dialog', 'overflow-visible'], width, maxWidth, data });
+    ref.closed.subscribe((result: any) => {
+      if (result?.saved || result?.deleted) this.zone.run(() => this.loadTimeline());
     });
-
-    dialogRef.closed.subscribe((result: any) => {
-
-      this.zone.run(() => {
-        this.loadTimeline();
-
-        this.cdr.detectChanges();
-    });
-      //this.normalizeTimelineOrdering();
-    });
   }
-
-  openEventDialog(defaultSortOrder: number, eventId?: string) {
-    const dialogRef = this.dialog.open(TimelineEventEditComponent, {
-      panelClass: ['screen-dialog', 'overflow-visible'],
-      width: '90vw',
-      maxWidth: '980px',
-      data: {
-        id: eventId,
-        timelineId: this.timeline.id,
-        defaultSortOrder,
-        worldId: this.timeline.ParentWorld?.id || null,
-      },
-    });
-
-    dialogRef.closed.subscribe((result: any) => {
-      if (result?.saved || result?.deleted) {
-        this.zone.run(() => {
-          this.loadTimeline();
-
-          if (result?.reorderRequired || result?.deleted) {
-            this.persistLoadedEventOrdering();
-          }
-
-          this.cdr.detectChanges();
-        })
-      }
-    });
+  private isTimelineItemChange(table: string, id: string): boolean {
+    if (table === 'Timeline') return id === this.timelineId();
+    if (table === 'Age') return this.ages.some(item => item.id === id);
+    if (table === 'GreatMark') return this.greatMarks.some(item => item.id === id);
+    return false;
   }
-
-  openEventDocuments(event: TimelineEvent, domEvent: Event) {
-    domEvent.stopPropagation();
-
-    const dialogRef = this.dialog.open(TimelineEventDocumentsDialogComponent, {
-      panelClass: ['screen-dialog', 'overflow-visible'],
-      width: '90vw',
-      maxWidth: '960px',
-      data: {
-        eventId: event.id,
-        eventName: event.name,
-      },
-    });
-
-    dialogRef.closed.subscribe((result: any) => {
-      if (result?.updated) {
-        this.loadTimeline();
-      }
-    });
+  private refreshLayout(): void {
+    const primaryDates = [
+      ...this.ages.flatMap(age => [age.startDate, age.endDate]),
+      ...this.events.flatMap(event => [event.startDate, event.endDate]),
+    ].map(value => Math.round(Number(value) || 0));
+    const dates = primaryDates.length
+      ? primaryDates
+      : this.greatMarks.map(mark => Math.round(Number(mark.date) || 0));
+    this.minDate = dates.length ? Math.min(...dates) : 0;
+    const lastDate = dates.length ? Math.max(...dates) : 100;
+    const span = Math.max(1, lastDate - this.minDate);
+    this.maxDate = lastDate + Math.max(10, Math.ceil(span * .06));
+    this.pixelsPerYear = span > 5000 ? 1 : span > 1000 ? 2 : span > 250 ? 4 : 8;
+    this.canvasWidth = Math.max(1400, (this.maxDate - this.minDate) * this.pixelsPerYear + 140);
+    this.assignAgeLanes();
+    const maxEventLane = Math.max(0, ...this.events.map(event => Number(event.lane) || 0));
+    const maxAgeLane = Math.max(0, ...Object.values(this.ageLanes));
+    const ageHeaderBottom = this.AGE_RULER_TOP + (maxAgeLane + 1) * this.AGE_RULER_HEIGHT;
+    this.axisTop = Math.max(184, ageHeaderBottom + 76);
+    this.markTop = this.axisTop - 32;
+    this.eventTopBase = this.axisTop + 64;
+    this.canvasHeight = Math.max(520, this.eventTopBase + (maxEventLane + 1) * this.EVENT_ROW_HEIGHT + 72);
+    this.yearTicks = this.buildYearTicks();
   }
-
-  persistLoadedEventOrdering() {
-    this.events = [...this.events].sort((a, b) => a.chronologyOrder - b.chronologyOrder);
-    this.buildSections();
-    this.normalizeTimelineOrdering();
+  private assignAgeLanes(): void {
+    const laneEnds: number[] = [];
+    const lanes: Record<string, number> = {};
+    for (const age of [...this.ages].sort((a, b) => a.startDate - b.startDate || a.endDate - b.endDate)) {
+      let lane = laneEnds.findIndex(end => end < age.startDate);
+      if (lane < 0) lane = laneEnds.length;
+      laneEnds[lane] = age.endDate;
+      lanes[age.id] = lane;
+    }
+    this.ageLanes = lanes;
   }
-
-  normalizeTimelineOrdering() {
-    const markUpdates: Array<Pick<GreatMark, 'id' | 'sortOrder'>> = [];
-    const eventUpdates: Array<Pick<TimelineEvent, 'id' | 'sortOrder' | 'chronologyOrder'>> = [];
-    let normalizedMarkIndex = 0;
-
-    this.sections[0]?.events.forEach((timelineEvent, index) => {
-      const order = (index + 1) * this.EVENT_SPACING;
-      timelineEvent.sortOrder = order;
-      timelineEvent.chronologyOrder = order;
-      eventUpdates.push({
-        id: timelineEvent.id,
-        sortOrder: order,
-        chronologyOrder: order,
-      });
-    });
-
-    for (let sectionIndex = 1; sectionIndex < this.sections.length; sectionIndex++) {
-      const section = this.sections[sectionIndex];
-
-      if (section.mark) {
-        normalizedMarkIndex++;
-        const markOrder = normalizedMarkIndex * this.MARK_SPACING;
-        section.mark.sortOrder = markOrder;
-        markUpdates.push({
-          id: section.mark.id,
-          sortOrder: markOrder,
-        });
-        section.events.forEach((timelineEvent, eventIndex) => {
-          const order = markOrder + ((eventIndex + 1) * this.EVENT_SPACING);
-          timelineEvent.sortOrder = order;
-          timelineEvent.chronologyOrder = order;
-          eventUpdates.push({
-            id: timelineEvent.id,
-            sortOrder: order,
-            chronologyOrder: order,
-          });
-        });
-        continue;
-      }
-
-      if (section.kind === 'free') {
-        const previousMarkedSection = this.findPreviousMarkedSection(sectionIndex);
-        const nextMarkedSection = this.findNextMarkedSection(sectionIndex);
-
-        if (!previousMarkedSection?.mark || !nextMarkedSection?.mark) {
-          continue;
-        }
-
-        const previousMarkOrder = previousMarkedSection.mark.sortOrder;
-        const nextMarkOrder = (normalizedMarkIndex + 1) * this.MARK_SPACING;
-        const freeSectionBase = this.getFreeSectionBaseOrder(previousMarkOrder, nextMarkOrder);
-
-        section.events.forEach((timelineEvent, eventIndex) => {
-          const order = freeSectionBase + ((eventIndex + 1) * this.EVENT_SPACING);
-          timelineEvent.sortOrder = order;
-          timelineEvent.chronologyOrder = order;
-          eventUpdates.push({
-            id: timelineEvent.id,
-            sortOrder: order,
-            chronologyOrder: order,
-          });
-        });
-        continue;
-      }
-
-      if (section.kind === 'trailing') {
-        const trailingBase = (this.greatMarks.length + 1) * this.MARK_SPACING;
-        section.events.forEach((timelineEvent, eventIndex) => {
-          const order = trailingBase + ((eventIndex + 1) * this.EVENT_SPACING);
-          timelineEvent.sortOrder = order;
-          timelineEvent.chronologyOrder = order;
-          eventUpdates.push({
-            id: timelineEvent.id,
-            sortOrder: order,
-            chronologyOrder: order,
-          });
-        });
-      }
+  private buildYearTicks(): number[] {
+    const target = 96 / this.pixelsPerYear;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(Math.max(1, target))));
+    const step = [1, 2, 5, 10].map(value => value * magnitude).find(value => value >= target) || magnitude * 10;
+    const ticks = [this.minDate];
+    for (let year = Math.ceil(this.minDate / step) * step; year <= this.maxDate; year += step) {
+      if (year !== this.minDate) ticks.push(Math.round(year));
     }
-
-    if (markUpdates.length > 0) {
-      this.greatMarkService.saveGreatMarkOrdering(markUpdates);
-    }
-
-    if (eventUpdates.length > 0) {
-      this.eventService.saveEventOrdering(eventUpdates);
-    }
-
-    this.loadTimeline();
+    return ticks;
   }
-
-  getInitialInsertOrder() {
-    const firstEvent = this.sections[0]?.events[0];
-    return firstEvent ? Math.max(1, firstEvent.sortOrder - 1) : this.EVENT_SPACING;
+  rgba(hex: string, alpha: number): string {
+    const normalized = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#52525B';
+    return `rgba(${Number.parseInt(normalized.slice(1, 3), 16)}, ${Number.parseInt(normalized.slice(3, 5), 16)}, ${Number.parseInt(normalized.slice(5, 7), 16)}, ${alpha})`;
   }
-
-  getStartOfMarkInsertOrder(sectionIndex: number) {
-    const section = this.sections[sectionIndex];
-    const mark = section?.mark;
-
-    if (!mark) {
-        return this.EVENT_SPACING;
-    }
-
-    const firstEvent = section.events[0];
-
-    if (!firstEvent) {
-        return mark.sortOrder + 1;
-    }
-
-    return Math.max(mark.sortOrder + 1, firstEvent.sortOrder - 1);
-}
-
-  getAfterMarkInsertOrder(sectionIndex: number) {
-    const section = this.sections[sectionIndex];
-    const mark = section?.mark;
-    if (!mark) {
-      return this.getInitialInsertOrder();
-    }
-
-    const lastMarkedEvent = section.events.at(-1);
-    if (lastMarkedEvent) {
-      return lastMarkedEvent.sortOrder + 1;
-    }
-
-    const nextSection = this.sections[sectionIndex + 1];
-    if (nextSection?.kind === 'free') {
-      const nextMarkedSection = this.findNextMarkedSection(sectionIndex + 1);
-      const nextMarkOrder = nextMarkedSection?.mark?.sortOrder;
-
-      if (nextMarkOrder) {
-        return Math.max(mark.sortOrder + 1, this.getFreeSectionBaseOrder(mark.sortOrder, nextMarkOrder) - 1);
-      }
-    }
-
-    if (nextSection?.mark) {
-      return Math.max(mark.sortOrder + 1, this.getFreeSectionBaseOrder(mark.sortOrder, nextSection.mark.sortOrder) - 1);
-    }
-
-    return mark.sortOrder + 1;
+  private isGreatMark(item: TimelineItem): item is GreatMark {
+    return 'date' in item && !('startDate' in item);
   }
-
-  getEndSectionInsertOrder(sectionIndex: number) {
-    const section = this.sections[sectionIndex];
-
-    if (!section?.mark) {
-      return this.EVENT_SPACING;
-    }
-
-    const lastEvent = section.events.at(-1);
-
-    if (lastEvent) {
-      return lastEvent.sortOrder + 1;
-    }
-
-    // seção vazia
-    return section.mark.sortOrder + 1;
+  private isEvent(item: TimelineItem): item is TimelineEvent {
+    return 'lane' in item;
   }
-
-  getBetweenSectionsInsertOrder(sectionIndex: number) {
-    const section = this.sections[sectionIndex];
-    const nextSection = this.sections[sectionIndex + 1];
-    const lastEvent = section?.events.at(-1);
-    const anchor = lastEvent?.sortOrder ?? section?.mark?.sortOrder ?? 0;
-
-    if (section?.kind === 'trailing') {
-      return this.getTrailingSectionInsertOrder();
-    }
-
-    if (nextSection?.kind === 'trailing') {
-      return this.getTrailingSectionInsertOrder();
-    }
-
-    if (section?.mark && nextSection?.kind === 'free') {
-      const nextMarkedSection = this.findNextMarkedSection(sectionIndex + 1);
-      const nextMarkOrder = nextMarkedSection?.mark?.sortOrder;
-
-      if (!nextMarkOrder) {
-        return this.getTrailingSectionInsertOrder();
-      }
-
-      const freeSectionBase = this.getFreeSectionBaseOrder(section.mark.sortOrder, nextMarkOrder) + this.EVENT_SPACING;
-      const firstFreeEvent = nextSection.events[0];
-      return firstFreeEvent ? Math.max(freeSectionBase, firstFreeEvent.sortOrder - 1) : freeSectionBase;
-    }
-
-    if (section?.kind === 'free') {
-      return lastEvent ? lastEvent.sortOrder + 1 : anchor + this.EVENT_SPACING;
-    }
-
-    if (section?.mark && nextSection?.mark) {
-      return this.getFreeSectionBaseOrder(section.mark.sortOrder, nextSection.mark.sortOrder) + this.EVENT_SPACING;
-    }
-
-    if (nextSection?.mark) {
-      return Math.max(anchor + 1, nextSection.mark.sortOrder - 1);
-    }
-
-    return anchor + this.EVENT_SPACING;
-  }
-
-  getBetweenSectionsLabel(sectionIndex: number) {
-    return 'Adicionar evento ao final desta seção';
-
-    // if (this.sections[sectionIndex]?.kind === 'free' && this.sections[sectionIndex + 1]?.mark) {
-    //   return 'Adicionar evento entre seções';
-    // }
-
-    // if (this.sections[sectionIndex]?.mark && this.sections[sectionIndex + 1]?.kind === 'free') {
-    //   return 'Adicionar evento entre seções';
-    // }
-
-    // if (this.sections[sectionIndex + 1]?.kind === 'trailing') {
-    //   return 'Adicionar evento após o último grande marco';
-    // }
-
-    // return this.sections[sectionIndex + 1]?.mark ? 'Adicionar evento entre seções' : 'Adicionar evento no final da timeline';
-  }
-
-  getTrailingSectionInsertOrder() {
-    const trailingSection = this.sections.find(section => section.kind === 'trailing');
-    const lastTrailingEvent = trailingSection?.events.at(-1);
-    const trailingBase = (this.greatMarks.length + 1) * this.MARK_SPACING;
-    return lastTrailingEvent ? lastTrailingEvent.sortOrder + this.EVENT_SPACING : trailingBase + this.EVENT_SPACING;
-  }
-
-  getDefaultTailMarkOrder() {
-    const lastMark = [...this.greatMarks].sort((a, b) => a.sortOrder - b.sortOrder).at(-1);
-    const lastEvent = [...this.events].sort((a, b) => a.sortOrder - b.sortOrder).at(-1);
-    const lower = Math.max(lastMark?.sortOrder || 0, lastEvent?.sortOrder || 0);
-    return lower + this.MARK_SPACING;
-  }
-
-  getBoundaryMarkOrder(sectionIndex: number) {
-    const section = this.sections[sectionIndex];
-    const nextSection = this.sections[sectionIndex + 1];
-
-    if (section?.kind === 'free') {
-      const lastFreeEvent = section.events.at(-1);
-      if (nextSection?.mark) {
-        return lastFreeEvent ? Math.min(lastFreeEvent.sortOrder + 1, nextSection.mark.sortOrder - 1) : nextSection.mark.sortOrder - 1;
-      }
-
-      return lastFreeEvent ? lastFreeEvent.sortOrder + 1 : this.getDefaultTailMarkOrder();
-    }
-
-    if (nextSection?.kind === 'free') {
-      const firstFreeEvent = nextSection.events[0];
-      if (firstFreeEvent) {
-        return Math.max((section?.mark?.sortOrder ?? 0) + 1, firstFreeEvent.sortOrder - 1);
-      }
-    }
-
-    if (nextSection?.mark) {
-      return nextSection.mark.sortOrder - 1;
-    }
-
-    if (nextSection?.kind === 'trailing') {
-      return (this.greatMarks.length + 2) * this.MARK_SPACING;
-    }
-
-    const anchor = section?.events.at(-1)?.sortOrder ?? section?.mark?.sortOrder ?? 0;
-    return anchor + this.MARK_SPACING;
-  }
-
-  private getFreeSectionBaseOrder(previousMarkOrder: number, nextMarkOrder: number) {
-    return previousMarkOrder + Math.floor((nextMarkOrder - previousMarkOrder) / 2);
-  }
-
-  private findPreviousMarkedSection(sectionIndex: number) {
-    for (let index = sectionIndex - 1; index >= 0; index--) {
-      if (this.sections[index]?.mark) {
-        return this.sections[index];
-      }
-    }
-
-    return null;
-  }
-
-  private findNextMarkedSection(sectionIndex: number) {
-    for (let index = sectionIndex + 1; index < this.sections.length; index++) {
-      if (this.sections[index]?.mark) {
-        return this.sections[index];
-      }
-    }
-
-    return null;
-  }
-
-  buildGreatMarkStyle(mark: GreatMark) {
-    const color = getPersonalizationValue(mark, 'color') || '#3F3F46';
-    const image = getImageByUsageKey(mark.Images, 'default');
-
-    if (image?.filePath) {
-      return {
-        'background-image': `linear-gradient(to bottom, rgba(24,24,27,0.35), rgba(24,24,27,0.88)), url(${buildImageUrl(image.filePath)})`,
-        'background-size': 'cover',
-        'background-position': 'center',
-        'border-color': color,
-        'color': '#FFFFFF',
-      };
-    }
-
-    return {
-      'background-image': `linear-gradient(to bottom, ${this.hexToRgba(color, 0.18)}, rgba(24,24,27,0.94))`,
-      'background-color': '#18181B',
-      'border-color': color,
-      'color': this.getTextColorValue(color),
-    };
-  }
-
-  buildEventCardStyle(event: TimelineEvent) {
-    const image = getImageByUsageKey(event.Images, 'default');
-    const color = getPersonalizationValue(event, 'color') || '#27272A';
-
-    if (image?.filePath) {
-      return {
-        'background-image': `linear-gradient(rgba(0,0,0,0.58), rgba(0,0,0,0.7)), url(${buildImageUrl(image.filePath)})`,
-        'background-size': 'cover',
-        'background-position': 'center',
-      };
-    }
-
-    return {
-      'background-color': color,
-    };
-  }
-
-  getEventDocumentsLabel(event: TimelineEvent) {
-    const count = event.Documents?.length || 0;
-    return count > 0 ? `Documentos (${count})` : 'Documentos';
-  }
-
-  hasBackgroundImage(event: TimelineEvent) {
-    return !!getImageByUsageKey(event.Images, 'default');
-  }
-
-  getTextColorValue(color: string | null) {
-    return getTextClass(color || undefined) === 'text-zinc-900' ? '#18181B' : '#FFFFFF';
-  }
-
-  private hexToRgba(hexColor: string, alpha: number) {
-    let value = hexColor.trim();
-    if (!value.startsWith('#')) {
-      value = `#${value}`;
-    }
-
-    if (/^#([0-9a-fA-F]{3})$/.test(value)) {
-      value = `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`;
-    }
-
-    if (!/^#([0-9a-fA-F]{6})$/.test(value)) {
-      return `rgba(63, 63, 70, ${alpha})`;
-    }
-
-    const r = parseInt(value.slice(1, 3), 16);
-    const g = parseInt(value.slice(3, 5), 16);
-    const b = parseInt(value.slice(5, 7), 16);
-
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  private isAge(item: TimelineItem): item is Age {
+    return 'startDate' in item && !this.isEvent(item);
   }
 }

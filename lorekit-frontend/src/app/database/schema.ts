@@ -205,7 +205,18 @@ export const schema: TableDef[] = [
       { name: "name",        def: `"name" TEXT NOT NULL` },
       { name: "concept",     def: `"concept" TEXT` },
       { name: "description", def: `"description" TEXT NOT NULL` },
+      { name: "date",        def: `"date" REAL NOT NULL DEFAULT 0` },
       { name: "sortOrder",   def: `"sortOrder" REAL NOT NULL DEFAULT 0` },
+    ]
+  },
+  {
+    name: "Age",
+    columns: [
+      { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
+      { name: "name",        def: `"name" TEXT NOT NULL` },
+      { name: "description", def: `"description" TEXT NOT NULL` },
+      { name: "startDate",   def: `"startDate" REAL NOT NULL DEFAULT 0` },
+      { name: "endDate",     def: `"endDate" REAL NOT NULL DEFAULT 0` },
     ]
   },
   {
@@ -223,6 +234,9 @@ export const schema: TableDef[] = [
       { name: "concept",         def: `"concept" TEXT` },
       { name: "date",            def: `"date" TEXT` },
       { name: "description",     def: `"description" TEXT NOT NULL` },
+      { name: "startDate",       def: `"startDate" REAL NOT NULL DEFAULT 0` },
+      { name: "endDate",         def: `"endDate" REAL NOT NULL DEFAULT 0` },
+      { name: "lane",            def: `"lane" INTEGER NOT NULL DEFAULT 0` },
       { name: "sortOrder",       def: `"sortOrder" REAL NOT NULL DEFAULT 0` },
       { name: "chronologyOrder", def: `"chronologyOrder" REAL NOT NULL DEFAULT 0` },
     ]

@@ -120,6 +120,35 @@ describe('local database migrations', () => {
       `SELECT "operation" FROM "_SyncDirty" WHERE "entityType" = 'World' AND "entityId" = 'world-clock'`,
     )).toBe('delete');
   });
+  it('repairs the Event lane column for databases already marked as version 4', () => {
+    const db = new SQL.Database();
+    ensureSchema(db);
+    runLocalMigrations(db);
+
+    db.exec(`
+      DROP TABLE "Event";
+      CREATE TABLE "Event" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "name" TEXT NOT NULL,
+        "concept" TEXT,
+        "date" TEXT,
+        "description" TEXT NOT NULL,
+        "startDate" REAL NOT NULL DEFAULT 0,
+        "endDate" REAL NOT NULL DEFAULT 0,
+        "sortOrder" REAL NOT NULL DEFAULT 0,
+        "chronologyOrder" REAL NOT NULL DEFAULT 0
+      );
+      UPDATE "_SchemaMetadata" SET "value" = '4' WHERE "key" = 'schemaVersion';
+    `);
+
+    runLocalMigrations(db);
+
+    expect(columnNames(db, 'Event')).toContain('lane');
+    expect(Number(scalar(
+      db,
+      `SELECT "value" FROM "_SchemaMetadata" WHERE "key" = 'schemaVersion'`,
+    ))).toBe(LOCAL_SCHEMA_VERSION);
+  });
 });
 
 function columnNames(db: Database, tableName: string): string[] {
