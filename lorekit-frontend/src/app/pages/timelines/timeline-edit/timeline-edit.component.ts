@@ -50,7 +50,7 @@ interface TimelineDrag {
           @if (isRouteComponent()) {
             <app-icon-button buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/timeline"></app-icon-button>
           }
-          <div class="min-w-0 flex-1"><input class="w-full min-w-0 bg-transparent text-2xl font-bold outline-none" [(ngModel)]="timeline.name" (blur)="saveTimeline()" aria-label="Nome da timeline"><label class="timeline-unit-field">Unidade de tempo<input [(ngModel)]="timeline.timeUnitName" (blur)="saveTimeline()" aria-label="Nome da unidade de tempo"></label></div>
+          <div class="min-w-0 flex-1"><input class="w-full min-w-0 bg-transparent text-2xl font-bold outline-none" [(ngModel)]="timeline.name" (blur)="saveTimeline()" aria-label="Nome da timeline"><label class="timeline-unit-field">Unidade de tempo<input [(ngModel)]="timeline.timeUnitName" (blur)="saveTimeline()" aria-label="Nome da unidade de tempo"></label><p class="timeline-help">Arraste para posicionar e mova eventos verticalmente para organizar em faixas. Ctrl: 10, Shift: 100, ambos: 1000.</p></div>
         </div>
         <div class="flex shrink-0 items-center gap-2">
           <app-icon-button title="Nova era" icon="fa-solid fa-layer-group" buttonType="white" size="xl" (click)="openAgeDialog(defaultDate())"></app-icon-button>
@@ -123,7 +123,6 @@ interface TimelineDrag {
               </article>
             }
           </div>
-          <div class="events-label" [style.top.px]="eventTopBase - 28">Eventos — arraste para posicionar; mova verticalmente para organizar em faixas. Ctrl: 10, Shift: 100, ambos: 1000.</div>
           @for (event of events; track event.id) {
             <article
               class="event-bar"
@@ -165,7 +164,7 @@ export class TimelineEditComponent implements OnDestroy {
   readonly AGE_RULER_HEIGHT = 38;
   readonly EVENT_ROW_HEIGHT = 82;
   axisTop = 236;
-  markTop = 204;
+  markTop = 219;
   eventTopBase = 300;
   private readonly dialog = inject(Dialog);
   private readonly router = inject(Router);
@@ -192,8 +191,9 @@ export class TimelineEditComponent implements OnDestroy {
   greatMarks: GreatMark[] = [];
   events: TimelineEvent[] = [];
   ageLanes: Record<string, number> = {};
-  minDate = 0;
-  maxDate = 100;
+  minDate = -500;
+  maxDate = 500;
+  private lastContentDate = 0;
   pixelsPerYear = 8;
   private zoomFactor = 1;
   canvasWidth = 1400;
@@ -261,7 +261,7 @@ export class TimelineEditComponent implements OnDestroy {
     });
   }
   defaultDate(): number {
-    return this.ages.length || this.greatMarks.length || this.events.length ? this.maxDate : 0;
+    return this.ages.length || this.greatMarks.length || this.events.length ? this.lastContentDate : 0;
   }
   dateToX(date: number): number {
     return Math.round((Math.round(Number(date) || 0) - this.minDate) * this.pixelsPerYear + 54);
@@ -471,11 +471,12 @@ export class TimelineEditComponent implements OnDestroy {
     const dates = primaryDates.length
       ? primaryDates
       : this.greatMarks.map(mark => Math.round(Number(mark.date) || 0));
-    this.minDate = dates.length ? Math.min(...dates) : 0;
-    const lastDate = dates.length ? Math.max(...dates) : 100;
-    const span = Math.max(1, lastDate - this.minDate);
-    this.maxDate = lastDate + Math.max(10, Math.ceil(span * .06));
-    const basePixelsPerYear = span > 5000 ? 1 : span > 1000 ? 2 : span > 250 ? 4 : 8;
+    const firstContentDate = dates.length ? Math.min(...dates) : 0;
+    this.lastContentDate = dates.length ? Math.max(...dates) : 0;
+    const contentSpan = Math.max(1, this.lastContentDate - firstContentDate);
+    this.minDate = firstContentDate - 500;
+    this.maxDate = this.lastContentDate + 500;
+    const basePixelsPerYear = contentSpan > 5000 ? 1 : contentSpan > 1000 ? 2 : contentSpan > 250 ? 4 : 8;
     this.pixelsPerYear = Math.max(.25, basePixelsPerYear * this.zoomFactor);
     this.canvasWidth = Math.max(1400, (this.maxDate - this.minDate) * this.pixelsPerYear + 140);
     this.assignAgeLanes();
@@ -483,7 +484,7 @@ export class TimelineEditComponent implements OnDestroy {
     const maxAgeLane = Math.max(0, ...Object.values(this.ageLanes));
     const ageHeaderBottom = this.AGE_RULER_TOP + (maxAgeLane + 1) * this.AGE_RULER_HEIGHT;
     this.axisTop = Math.max(184, ageHeaderBottom + 76);
-    this.markTop = this.axisTop - 32;
+    this.markTop = this.axisTop - 17;
     this.eventTopBase = this.axisTop + 64;
     this.canvasHeight = Math.max(520, this.eventTopBase + (maxEventLane + 1) * this.EVENT_ROW_HEIGHT + 72);
     this.yearTicks = this.buildYearTicks();

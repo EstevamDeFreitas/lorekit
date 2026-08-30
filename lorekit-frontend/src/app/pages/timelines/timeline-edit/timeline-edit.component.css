@@ -3,7 +3,8 @@
 .timeline-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .5rem 0; }
 .timeline-unit-field { display: inline-flex; align-items: center; gap: .45rem; margin-top: .28rem; color: rgb(161 161 170); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 .timeline-unit-field input { width: 9rem; border: 1px solid rgb(63 63 70); border-radius: .4rem; background: rgb(24 24 27); padding: .2rem .45rem; color: white; font-size: .75rem; font-weight: 500; letter-spacing: normal; text-transform: none; outline: none; }
-.timeline-unit-field input:focus { border-color: rgb(161 161 170); }.timeline-summary { flex: 0 0 auto; border: 1px solid rgb(39 39 42); border-radius: .75rem; background: rgb(24 24 27 / .55); padding: .5rem .75rem; color: rgb(161 161 170); }
+.timeline-unit-field input:focus { border-color: rgb(161 161 170); }.timeline-help { max-width: 44rem; margin: .35rem 0 0; color: rgb(161 161 170); font-size: .7rem; line-height: 1.35; }
+.timeline-summary { flex: 0 0 auto; border: 1px solid rgb(39 39 42); border-radius: .75rem; background: rgb(24 24 27 / .55); padding: .5rem .75rem; color: rgb(161 161 170); }
 .timeline-summary[open] { color: white; }
 .timeline-summary summary { cursor: pointer; font-size: .8rem; }
 .timeline-viewport { min-height: 0; flex: 1 1 auto; overflow: auto; overscroll-behavior: contain; border: 1px solid rgb(39 39 42); border-radius: .9rem; background: radial-gradient(circle at top left, rgb(63 63 70 / .28), transparent 36%), rgb(9 9 11 / .72); }
@@ -29,7 +30,6 @@
 .great-mark-dot { display: grid; z-index: 2; width: 34px; height: 34px; place-items: center; border: 2px solid var(--mark-color); border-radius: 999px; background: transparent; color: var(--mark-color); box-shadow: 0 0 20px var(--mark-color); background-position: center; background-repeat: no-repeat; background-size: cover; }
 .great-mark-name { overflow: hidden; max-width: 180px; margin-top: .35rem; color: rgb(244 244 245); font-size: .75rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .great-mark-date { color: rgb(161 161 170); font-size: .68rem; }
-.events-label { position: absolute; left: 54px; color: rgb(161 161 170); font-size: .72rem; }
 .event-bar { touch-action: none; position: absolute; z-index: 8; display: flex; min-height: 64px; cursor: grab; overflow: visible; border: 1px solid color-mix(in srgb, var(--event-color), white 30%); border-radius: .65rem; background: linear-gradient(105deg, var(--event-color), color-mix(in srgb, var(--event-color), black 35%)); box-shadow: 0 8px 20px rgb(0 0 0 / .2); background-position: center; background-repeat: no-repeat; background-size: cover; user-select: none; }
 .event-content { min-width: 0; flex: 1; padding: .45rem .75rem; }
 .event-heading { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
