@@ -49,7 +49,7 @@ export class GreatMarkService {
     return this.getGreatMarkById(mark.id);
   }
 
-  async saveDate(markId: string, date: number): Promise<void> {
+  async saveDate(markId: string, date: number, lane?: number): Promise<void> {
     const mark = this.getGreatMarkById(markId);
     const rawValue = Number(date);
     const value = Number.isFinite(rawValue) ? Math.round(rawValue) : Math.round(Number(mark?.date ?? mark?.sortOrder ?? 0));
@@ -60,6 +60,7 @@ export class GreatMarkService {
       startDate,
       endDate: startDate + duration,
       sortOrder: value,
+      lane: Number.isFinite(Number(lane)) ? Math.max(0, Math.round(Number(lane))) : Math.max(0, Number(mark?.lane) || 0),
     });
     await this.dbProvider.flushPendingWrites();
   }

@@ -14,7 +14,8 @@
 .timeline-ruler-title { position: sticky; left: 0; z-index: 2; width: 52px; height: 100%; display: flex; align-items: center; justify-content: center; border-right: 1px solid rgb(63 63 70); background: rgb(24 24 27); color: rgb(161 161 170); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
 .year-tick { position: absolute; top: 0; height: 100%; border-left: 1px solid rgb(113 113 122 / .42); color: rgb(161 161 170); font-size: .7rem; white-space: nowrap; }
 .year-tick span { display: inline-block; padding: .35rem .45rem; transform: translateX(-50%); }
-.timeline-axis { position: absolute; right: 24px; left: 54px; z-index: 1; height: 2px; background: linear-gradient(90deg, transparent, rgb(161 161 170), transparent); }
+.marks-section { position: absolute; z-index: 1; right: 24px; left: 54px; overflow: hidden; border-radius: .6rem; background: linear-gradient(90deg, rgb(14 165 233 / .12), rgb(14 165 233 / .035) 52%, transparent); pointer-events: none; }
+.marks-section-label { position: sticky; top: 7px; left: 10px; display: inline-flex; border: 1px solid rgb(14 165 233 / .32); border-radius: 999px; background: rgb(8 47 73 / .72); padding: .2rem .5rem; color: rgb(125 211 252); font-size: .62rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .age-bar { touch-action: none; position: absolute; z-index: 20; display: flex; height: 32px; cursor: grab; overflow: visible; border: 1px solid var(--age-color); border-radius: .25rem; background: var(--age-color); box-shadow: 0 3px 12px rgb(0 0 0 / .22); user-select: none; }
 .age-bar:active, .event-bar:active, .great-mark:active { cursor: grabbing; }
 .age-bar::after { display: none; }
@@ -31,7 +32,15 @@
 .great-mark-name { overflow: hidden; max-width: 180px; margin-top: .35rem; color: rgb(244 244 245); font-size: .75rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .great-mark-date { color: rgb(161 161 170); font-size: .68rem; }
 .event-bar { touch-action: none; position: absolute; z-index: 8; display: flex; min-height: 64px; cursor: grab; overflow: visible; border: 1px solid color-mix(in srgb, var(--event-color), white 30%); border-radius: .65rem; background: linear-gradient(105deg, var(--event-color), color-mix(in srgb, var(--event-color), black 35%)); box-shadow: 0 8px 20px rgb(0 0 0 / .2); background-position: center; background-repeat: no-repeat; background-size: cover; user-select: none; }
-.event-content { min-width: 0; flex: 1; padding: .45rem .75rem; }
+.compact-event { width: 42px !important; min-height: 42px; height: 42px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.compact-event::before { position: absolute; inset: 5px; z-index: 0; border: 1px solid color-mix(in srgb, var(--event-color), white 35%); border-radius: .25rem; background: linear-gradient(135deg, var(--event-color), color-mix(in srgb, var(--event-color), black 35%)); box-shadow: 0 6px 14px rgb(0 0 0 / .25); content: ''; transform: rotate(45deg); }
+.compact-event .event-content { z-index: 1; display: grid; place-items: center; padding: 0; }
+.compact-event .range-handle { display: block; top: 50%; width: 12px; height: 12px; border: 1px solid rgb(255 255 255 / .72); border-radius: 999px; background: var(--event-color); box-shadow: 0 2px 8px rgb(0 0 0 / .4); transform: translateY(-50%); }
+.compact-event .range-handle.start { left: -8px; }
+.compact-event .range-handle.end { right: -8px; }
+.compact-event-title { position: absolute; z-index: 2; top: calc(100% + 6px); left: 50%; overflow: hidden; max-width: 170px; transform: translateX(-50%); color: rgb(244 244 245); font-size: .7rem; font-weight: 700; pointer-events: none; text-overflow: ellipsis; white-space: nowrap; }
+.compact-event .timeline-tooltip { top: calc(100% + 32px); }
+.compact-event-icon { font-size: .85rem; }.event-content { min-width: 0; flex: 1; padding: .45rem .75rem; }
 .event-heading { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .event-heading { font-size: .82rem; font-weight: 800; }
 .event-meta { margin-top: .12rem; font-size: .68rem; opacity: .78; }
@@ -40,7 +49,7 @@
 
 .great-mark-icon { color: var(--mark-color) !important; font-size: .95rem; line-height: 1; }
 
-.timeline-tooltip { position: absolute; z-index: 60; top: calc(100% + 10px); left: 0; width: min(360px, calc(100vw - 48px)); padding: .75rem .85rem; border: 1px solid rgb(82 82 91); border-radius: .7rem; background: rgb(9 9 11 / .96); box-shadow: 0 14px 34px rgb(0 0 0 / .42); color: rgb(244 244 245); opacity: 0; pointer-events: none; transform: translateY(-4px); transition: opacity .14s ease, transform .14s ease, visibility .14s; visibility: hidden; white-space: normal; }
+.timeline-tooltip { position: absolute; z-index: 60; top: calc(100% + 10px); left: 0; width: min(360px, calc(100vw - 48px)); padding: .75rem .85rem; border: 1px solid rgb(82 82 91); border-radius: .7rem; background: rgb(9 9 11 / .96); box-shadow: 0 14px 34px rgb(0 0 0 / .42); color: rgb(244 244 245); opacity: 0; pointer-events: none; transform: translateY(-4px); transition: opacity .14s ease, transform .14s ease, visibility .14s; visibility: hidden; white-space: normal; background-position: center; background-repeat: no-repeat; background-size: cover; }
 .timeline-tooltip strong, .timeline-tooltip span { display: block; }
 .timeline-tooltip strong { font-size: .82rem; }
 .timeline-tooltip span { margin-top: .15rem; color: rgb(161 161 170); font-size: .7rem; }

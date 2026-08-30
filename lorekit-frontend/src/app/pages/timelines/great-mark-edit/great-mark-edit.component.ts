@@ -43,7 +43,7 @@ interface GreatMarkDialogData {
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <app-input class="w-full min-w-0" label="Início (ano)" type="number" size="xs" [(value)]="mark.startDate"></app-input>
         <app-input class="w-full min-w-0" label="Fim (ano)" type="number" size="xs" [(value)]="mark.endDate"></app-input>
-        <app-input class="w-full min-w-0" label="Faixa" type="number" size="xs" [(value)]="mark.lane"></app-input>
+        <app-input class="w-full min-w-0" label="Faixa do marco" type="number" size="xs" [(value)]="mark.lane"></app-input>
         <app-input class="w-full min-w-0" label="Data exibida" size="xs" [(value)]="mark.displayDate"></app-input>
         <app-combo-box label="Tipo do evento" class="w-full" [items]="eventTypes" compareProp="id" displayProp="name" [(comboValue)]="selectedEventTypeId"></app-combo-box>
         <app-combo-box label="Local principal" class="w-full" [items]="locations" compareProp="id" displayProp="name" [(comboValue)]="selectedLocationId"></app-combo-box>

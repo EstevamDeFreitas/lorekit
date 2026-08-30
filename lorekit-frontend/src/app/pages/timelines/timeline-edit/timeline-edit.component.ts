@@ -96,7 +96,7 @@ interface TimelineDrag {
                   {{ formatText(age.name, age.startDate, age.endDate) }}
                 </span>
               </div>
-              <div class="timeline-tooltip" role="tooltip">
+              <div class="timeline-tooltip" role="tooltip" [style.background-color]="rgba(colorOf(age), .92)" [style.border-color]="colorOf(age)" [style.background-image]="tooltipBackgroundImage(age)">
                 <strong>{{ formatText(age.name, age.startDate, age.endDate) }}</strong>
                 <span>{{ formatYear(age.startDate) }} — {{ formatYear(age.endDate) }}</span>
                 @if (age.description) { <p>{{ formatText(age.description, age.startDate, age.endDate) }}</p> }
@@ -104,18 +104,20 @@ interface TimelineDrag {
               <button class="range-handle end" aria-label="Alterar fim da era" (pointerdown)="startDrag($event, 'age-end', age)"></button>
             </article>
           }
-          <div class="timeline-axis" [style.top.px]="axisTop"></div>
+          <div class="marks-section" [style.top.px]="markSectionTop()" [style.height.px]="markSectionHeight()">
+            <span class="marks-section-label">Grandes marcos</span>
+          </div>
           <div class="marks-layer">
             @for (mark of greatMarks; track mark.id) {
               <article class="great-mark" role="button" tabindex="0"
                 [style.left.px]="dateToX(mark.date)"
-                [style.top.px]="markTop"
+                [style.top.px]="markTop(mark)"
                 [style.--mark-color]="colorOf(mark)"
                 (pointerdown)="startDrag($event, 'mark-move', mark)">
                 <span class="great-mark-dot" [style.background-image]="markBackgroundImage(mark)"><i [class]="greatMarkIconClass(mark)"></i></span>
                 <span class="great-mark-name">{{ formatText(mark.name, mark.startDate, mark.endDate) }}</span>
                 <span class="great-mark-date">{{ formatText(mark.displayDate || '{AutoGenDate}', mark.startDate, mark.endDate) }}</span>
-                <div class="timeline-tooltip" role="tooltip">
+                <div class="timeline-tooltip" role="tooltip" [style.background-color]="rgba(colorOf(mark), .92)" [style.border-color]="colorOf(mark)" [style.background-image]="tooltipBackgroundImage(mark)">
                   <strong>{{ formatText(mark.name, mark.startDate, mark.endDate) }}</strong>
                   <span>{{ formatText(mark.displayDate || '{AutoGenDate}', mark.startDate, mark.endDate) }}</span>
                   @if (mark.description) { <p>{{ formatText(mark.description, mark.startDate, mark.endDate) }}</p> }
@@ -126,19 +128,27 @@ interface TimelineDrag {
           @for (event of events; track event.id) {
             <article
               class="event-bar"
-              [style.left.px]="dateToX(event.startDate)"
+              [style.left.px]="eventLeft(event)"
               [style.top.px]="eventTop(event)"
-              [style.width.px]="rangeWidth(event.startDate, event.endDate)"
+              [style.width.px]="eventWidth(event)"
               [style.--event-color]="colorOf(event)"
               [class]="getTextClass(colorOf(event))"
-              [style.background-image]="eventBackgroundImage(event)"
+              [class.compact-event]="isCompactEvent(event)"
+              [style.background-image]="isCompactEvent(event) ? null : eventBackgroundImage(event)"
               (pointerdown)="startDrag($event, 'event-move', event)">
               <button class="range-handle start" aria-label="Alterar início do evento" (pointerdown)="startDrag($event, 'event-start', event)"></button>
               <div class="event-content">
-                <div class="event-heading">{{ formatText(event.name, event.startDate, event.endDate) }}</div>
-                <div class="event-meta">{{ formatText(event.date || '{AutoGenDate}', event.startDate, event.endDate) }}</div>
+                @if (isCompactEvent(event)) {
+                  <i class="compact-event-icon" [class]="itemIconClass(event)"></i>
+                } @else {
+                  <div class="event-heading">{{ formatText(event.name, event.startDate, event.endDate) }}</div>
+                  <div class="event-meta">{{ formatText(event.date || '{AutoGenDate}', event.startDate, event.endDate) }}</div>
+                }
               </div>
-              <div class="timeline-tooltip" role="tooltip">
+              @if (isCompactEvent(event)) {
+                <span class="compact-event-title">{{ formatText(event.name, event.startDate, event.endDate) }}</span>
+              }
+              <div class="timeline-tooltip" role="tooltip" [style.background-color]="rgba(colorOf(event), .92)" [style.border-color]="colorOf(event)" [style.background-image]="tooltipBackgroundImage(event)">
                 <strong>{{ formatText(event.name, event.startDate, event.endDate) }}</strong>
                 <span>{{ formatText(event.date || '{AutoGenDate}', event.startDate, event.endDate) }}</span>
                 @if (event.description) { <p>{{ formatText(event.description, event.startDate, event.endDate) }}</p> }
@@ -163,8 +173,9 @@ export class TimelineEditComponent implements OnDestroy {
   readonly AGE_RULER_TOP = 52;
   readonly AGE_RULER_HEIGHT = 38;
   readonly EVENT_ROW_HEIGHT = 82;
+  readonly MARK_ROW_HEIGHT = 56;
   axisTop = 236;
-  markTop = 219;
+  markTopBase = 219;
   eventTopBase = 300;
   private readonly dialog = inject(Dialog);
   private readonly router = inject(Router);
@@ -278,8 +289,26 @@ export class TimelineEditComponent implements OnDestroy {
   ageContextWidth(start: number, end: number): number {
     return this.ageRangeWidth(start, end);
   }
+  markTop(mark: GreatMark): number {
+    return this.markTopBase + Math.max(0, mark.lane || 0) * this.MARK_ROW_HEIGHT;
+  }
+  markSectionTop(): number {
+    return this.markTopBase - 12;
+  }
+  markSectionHeight(): number {
+    return Math.max(0, this.eventTopBase - this.markSectionTop() - 8);
+  }
   eventTop(event: TimelineEvent): number {
     return this.eventTopBase + Math.max(0, event.lane || 0) * this.EVENT_ROW_HEIGHT;
+  }
+  isCompactEvent(event: TimelineEvent): boolean {
+    return Math.max(0, event.endDate - event.startDate) * this.pixelsPerYear <= 24;
+  }
+  eventWidth(event: TimelineEvent): number {
+    return this.isCompactEvent(event) ? 42 : this.rangeWidth(event.startDate, event.endDate);
+  }
+  eventLeft(event: TimelineEvent): number {
+    return this.isCompactEvent(event) ? this.dateToX(event.startDate) - 21 : this.dateToX(event.startDate);
   }
   colorOf(item: { Personalization?: unknown }): string {
     return getPersonalizationValue(item, 'color') || '#52525B';
@@ -309,7 +338,13 @@ export class TimelineEditComponent implements OnDestroy {
     const image = getImageByUsageKey(item.Images, 'default');
     const url = buildImageRecordUrl(image);
     return url ? `${overlay}, url("${url.replaceAll('"', '\\"')}")` : null;
-  }  formatYear(value: number): string {
+  }  tooltipBackgroundImage(item: { Personalization?: unknown; Images?: Image[] }): string | null {
+    return this.itemBackgroundImage(
+      item,
+      `linear-gradient(135deg, ${this.rgba(this.colorOf(item), .9)}, rgb(9 9 11 / .86))`,
+    );
+  }
+  formatYear(value: number): string {
     return String(Math.round(value));
   }
   formatText(value: string | null | undefined, startDate: number, endDate: number): string {
@@ -329,8 +364,9 @@ export class TimelineEditComponent implements OnDestroy {
 
     const isMark = kind === 'mark-move';
     const isEvent = kind === 'event-move' || kind === 'event-start' || kind === 'event-end';
+    const hasLane = isMark || isEvent;
     const range = item as Age | TimelineEvent;
-    const eventStartTop = isEvent ? this.eventTop(item as TimelineEvent) : 0;
+    const eventStartTop = isMark ? this.markTop(item as GreatMark) : isEvent ? this.eventTop(item as TimelineEvent) : 0;
     const canvasTop = this.canvas?.nativeElement.getBoundingClientRect().top ?? 0;
 
     const pointerTarget = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
@@ -344,9 +380,9 @@ export class TimelineEditComponent implements OnDestroy {
       startDate: 'startDate' in range ? range.startDate : 0,
       endDate: 'endDate' in range ? range.endDate : 0,
       date: isMark ? (item as GreatMark).date : undefined,
-      lane: isEvent ? (item as TimelineEvent).lane : undefined,
+      lane: hasLane ? (item as GreatMark | TimelineEvent).lane : undefined,
       eventStartTop,
-      pointerOffsetY: isEvent ? event.clientY - canvasTop - eventStartTop : 0,
+      pointerOffsetY: hasLane ? event.clientY - canvasTop - eventStartTop : 0,
       pixelsPerYear: this.pixelsPerYear,
       pointerId: event.pointerId,
       pointerTarget,
@@ -369,6 +405,12 @@ export class TimelineEditComponent implements OnDestroy {
     if (drag.kind === 'mark-move') {
       const mark = drag.item as GreatMark;
       mark.date = this.snapDate((drag.date ?? mark.date) + dateDelta, event);
+      const canvasTop = this.canvas?.nativeElement.getBoundingClientRect().top;
+      const targetTop = canvasTop === undefined
+        ? drag.eventStartTop + deltaY
+        : event.clientY - canvasTop - drag.pointerOffsetY;
+      mark.lane = Math.max(0, Math.floor((targetTop - this.markTopBase + this.MARK_ROW_HEIGHT / 2) / this.MARK_ROW_HEIGHT));
+      this.greatMarks = [...this.greatMarks];
     } else {
       const item = drag.item as Age | TimelineEvent;
       if (drag.kind === 'age-start' || drag.kind === 'event-start') {
@@ -421,7 +463,7 @@ export class TimelineEditComponent implements OnDestroy {
 
     if (drag.kind === 'mark-move') {
       const mark = drag.item as GreatMark;
-      await this.greatMarkService.saveDate(mark.id, mark.date);
+      await this.greatMarkService.saveDate(mark.id, mark.date, mark.lane);
       this.entityChangeService.notifySave('GreatMark', mark.id);
     } else if (drag.kind === 'event-move' || drag.kind === 'event-start' || drag.kind === 'event-end') {
       const timelineEvent = drag.item as TimelineEvent;
@@ -484,8 +526,9 @@ export class TimelineEditComponent implements OnDestroy {
     const maxAgeLane = Math.max(0, ...Object.values(this.ageLanes));
     const ageHeaderBottom = this.AGE_RULER_TOP + (maxAgeLane + 1) * this.AGE_RULER_HEIGHT;
     this.axisTop = Math.max(184, ageHeaderBottom + 76);
-    this.markTop = this.axisTop - 17;
-    this.eventTopBase = this.axisTop + 64;
+    this.markTopBase = this.axisTop - 17;
+    const maxMarkLane = Math.max(0, ...this.greatMarks.map(mark => Number(mark.lane) || 0));
+    this.eventTopBase = this.axisTop + 72 + maxMarkLane * this.MARK_ROW_HEIGHT;
     this.canvasHeight = Math.max(520, this.eventTopBase + (maxEventLane + 1) * this.EVENT_ROW_HEIGHT + 72);
     this.yearTicks = this.buildYearTicks();
   }
