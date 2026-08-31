@@ -20,6 +20,19 @@ export type MoodboardShapeType = 'rectangle' | 'circle' | 'line' | 'arrow';
 export type MoodboardItemKind = 'shape' | 'text' | 'image' | 'entity' | 'drawing';
 export type MoodboardTextAlign = 'left' | 'center' | 'right';
 export type MoodboardVerticalAlign = 'top' | 'middle' | 'bottom';
+export type MoodboardTextSize = 'small' | 'medium' | 'large' | 'xlarge';
+export type MoodboardAnchorSide = 'top' | 'right' | 'bottom' | 'left';
+
+export interface MoodboardPoint {
+  x: number;
+  y: number;
+}
+
+export interface MoodboardLineAnchor {
+  itemId: string;
+  side: MoodboardAnchorSide;
+  offset: number;
+}
 
 export interface MoodboardItemConfig {
   kind: MoodboardItemKind;
@@ -30,6 +43,7 @@ export interface MoodboardItemConfig {
   text?: string;
   textAlign?: MoodboardTextAlign;
   verticalAlign?: MoodboardVerticalAlign;
+  textSize?: MoodboardTextSize;
   fill?: string;
   stroke?: string;
   strokeWidth?: number;
@@ -37,6 +51,9 @@ export interface MoodboardItemConfig {
   y1?: number;
   x2?: number;
   y2?: number;
+  waypoints?: MoodboardPoint[];
+  startAnchor?: MoodboardLineAnchor;
+  endAnchor?: MoodboardLineAnchor;
   imageId?: string;
   imagePath?: string;
   entityTable?: string;

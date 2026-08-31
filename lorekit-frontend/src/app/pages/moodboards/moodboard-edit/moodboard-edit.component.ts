@@ -19,9 +19,13 @@ import { ComboBoxComponent } from '../../../components/combo-box/combo-box.compo
 import {
   Moodboard,
   MoodboardItem,
+  MoodboardAnchorSide,
   MoodboardItemConfig,
+  MoodboardLineAnchor,
+  MoodboardPoint,
   MoodboardShapeType,
   MoodboardTextAlign,
+  MoodboardTextSize,
   MoodboardVerticalAlign,
 } from '../../../models/moodboard.model';
 import { buildImageUrl } from '../../../models/image.model';
@@ -41,7 +45,7 @@ import {
 } from '../../../utils/pending-save-event';
 
 type MoodboardTool = 'select' | 'text' | 'draw' | MoodboardShapeType;
-type DragMode = 'none' | 'pan' | 'item' | 'resize' | 'rotate' | 'pendingCreate' | 'create' | 'endpoint' | 'draw' | 'marquee' | 'groupResize' | 'groupRotate';
+type DragMode = 'none' | 'pan' | 'item' | 'resize' | 'rotate' | 'pendingCreate' | 'create' | 'endpoint' | 'waypoint' | 'draw' | 'marquee' | 'groupResize' | 'groupRotate';
 type ResizeHandle = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
 type LineEndpoint = 'start' | 'end';
 
@@ -109,6 +113,7 @@ type DragState = {
   startRotation: number;
   resizeHandle: ResizeHandle | '';
   endpoint: LineEndpoint | '';
+  waypointIndex: number;
   createTool: MoodboardTool | '';
   centerX: number;
   centerY: number;
@@ -122,6 +127,8 @@ const DEFAULT_SHAPE_STROKE = '#3f3f46';
 const MIN_ITEM_SIZE = 24;
 const DEFAULT_TEXT_WIDTH = 220;
 const DEFAULT_TEXT_HEIGHT = 92;
+const DEFAULT_TEXT_SIZE: MoodboardTextSize = 'medium';
+const LINE_SNAP_DISTANCE = 26;
 const DEFAULT_SHAPE_WIDTH = 180;
 const DEFAULT_SHAPE_HEIGHT = 120;
 const DEFAULT_LINE_WIDTH = 220;
@@ -175,6 +182,22 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   readonly drawingPreview = signal<DrawingPreview | null>(null);
   readonly selectionMarquee = signal<CanvasRect | null>(null);
 
+  readonly fillPalette = [
+    '#020617', '#030712', '#09090b', '#0a0a0a', '#0c0a09', '#450a0a', '#431407', '#451a03',
+    '#422006', '#1a2e05', '#052e16', '#022c22', '#042f2e', '#083344', '#082f49', '#172554',
+    '#1e1b4b', '#2e1065', '#3b0764', '#4a044e', '#500724', '#4c0519',
+  ];
+  readonly accentPalette = [
+    '#71717a', '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981',
+    '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#e879f9',
+    '#ec4899', '#f43f5e',
+  ];
+  readonly textSizeOptions: ReadonlyArray<{ value: MoodboardTextSize; label: string }> = [
+    { value: 'small', label: '0.5×' },
+    { value: 'medium', label: '1×' },
+    { value: 'large', label: '2×' },
+    { value: 'xlarge', label: '4×' },
+  ];
   readonly tableOptions = [
     { value: '', label: 'Todos' },
     { value: 'World', label: 'Mundos' },
@@ -250,6 +273,9 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   private removePendingSaveListener?: () => void;
   private removeDiscardPendingSaveListener?: () => void;
   private removeKeyUp?: () => void;
+  private removeCopy?: () => void;
+  private removePaste?: () => void;
+  private pasteOffset = 0;
   private moodboardNameDirty = false;
   private discardPendingSaveOnDestroy = false;
 
@@ -283,6 +309,8 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.removeDiscardPendingSaveListener = this.renderer.listen('window', DISCARD_PENDING_SAVES_EVENT, () => this.discardPendingSaves());
     this.removeKeyDown = this.renderer.listen('window', 'keydown', (event: KeyboardEvent) => this.onWindowKeyDown(event));
     this.removeKeyUp = this.renderer.listen('window', 'keyup', (event: KeyboardEvent) => this.onWindowKeyUp(event));
+    this.removeCopy = this.renderer.listen('window', 'copy', (event: ClipboardEvent) => this.onWindowCopy(event));
+    this.removePaste = this.renderer.listen('window', 'paste', (event: ClipboardEvent) => this.onWindowPaste(event));
   }
 
   ngOnDestroy(): void {
@@ -295,6 +323,8 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.removeTouchEnd?.();
     this.removeKeyDown?.();
     this.removeKeyUp?.();
+    this.removeCopy?.();
+    this.removePaste?.();
   }
 
   setTool(tool: MoodboardTool): void {
@@ -334,6 +364,10 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
 
   setVerticalAlign(align: MoodboardVerticalAlign): void {
     this.updateSelectedItemConfigs(config => ({ ...config, verticalAlign: align }));
+  }
+
+  setTextSize(textSize: MoodboardTextSize): void {
+    this.updateSelectedItemConfigs(config => ({ ...config, textSize }));
   }
 
   private updateSelectedItemConfigs(updater: (config: MoodboardItemConfig) => MoodboardItemConfig): void {
@@ -721,6 +755,47 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     };
   }
 
+  startLineWaypointDrag(event: MouseEvent, view: MoodboardCanvasItem, waypointIndex: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.selectItem(view);
+    this.dragState = {
+      ...this.emptyDragState(),
+      mode: 'waypoint',
+      itemId: view.item.id,
+      waypointIndex,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+    };
+  }
+
+  startLineSegmentBend(event: MouseEvent, view: MoodboardCanvasItem, segmentIndex: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const points = this.absoluteLinePoints(view);
+    const start = points[segmentIndex];
+    const end = points[segmentIndex + 1];
+    if (!start || !end) {
+      return;
+    }
+
+    const pointer = this.clientToCanvasPoint(event.clientX, event.clientY);
+    const waypoint = this.projectPointOnSegment(pointer, start, end);
+    const nextWaypoints = points.slice(1, -1);
+    nextWaypoints.splice(segmentIndex, 0, waypoint);
+    this.updateItem(view.item.id, current => this.buildLineItemFromAbsolutePoints(current, points[0].x, points[0].y, points.at(-1)!.x, points.at(-1)!.y, nextWaypoints), true);
+    this.dragState = {
+      ...this.emptyDragState(),
+      mode: 'waypoint',
+      itemId: view.item.id,
+      waypointIndex: segmentIndex,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+    };
+  }
+
   editItem(event: MouseEvent, view: MoodboardCanvasItem): void {
     event.preventDefault();
     event.stopPropagation();
@@ -906,6 +981,40 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     return view.config.y2 ?? this.itemHeight(view) / 2;
   }
 
+  lineWaypoints(view: MoodboardCanvasItem): MoodboardPoint[] {
+    return view.config.waypoints || [];
+  }
+
+  linePointsAttribute(view: MoodboardCanvasItem): string {
+    return [
+      { x: this.lineX1(view), y: this.lineY1(view) },
+      ...this.lineWaypoints(view),
+      { x: this.lineX2(view), y: this.lineY2(view) },
+    ].map(point => `${point.x},${point.y}`).join(' ');
+  }
+
+  lineSegments(view: MoodboardCanvasItem): Array<{ index: number; start: MoodboardPoint; end: MoodboardPoint; midpoint: MoodboardPoint }> {
+    const points = [
+      { x: this.lineX1(view), y: this.lineY1(view) },
+      ...this.lineWaypoints(view),
+      { x: this.lineX2(view), y: this.lineY2(view) },
+    ];
+    return points.slice(0, -1).map((start, index) => {
+      const end = points[index + 1];
+      return {
+        index,
+        start,
+        end,
+        midpoint: { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 },
+      };
+    });
+  }
+
+  showAnchorPoints(view: MoodboardCanvasItem): boolean {
+    const isConnector = view.config.kind === 'shape' && (view.config.shapeType === 'line' || view.config.shapeType === 'arrow');
+    return !isConnector && (this.isItemSelected(view.item.id) || this.dragState.mode === 'endpoint');
+  }
+
   triggerImageUpload(): void {
     this.imageInput?.nativeElement.click();
   }
@@ -915,35 +1024,67 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     const file = input.files?.[0];
     input.value = '';
 
-    if (!file) {
-      return;
+    if (file) {
+      await this.createImageItemFromFile(file, this.defaultCreatePoint());
+    }
+  }
+
+  private async createImageItemFromFile(file: File, point: CanvasPoint): Promise<MoodboardCanvasItem | null> {
+    const imageFile = this.normalizeImageFile(file);
+    if (!imageFile) {
+      return null;
     }
 
-    const point = this.defaultCreatePoint();
     const view = this.createItem({
       kind: 'image',
       width: 260,
       height: 220,
       rotation: 0,
-      text: file.name.replace(/\.[^.]+$/, ''),
+      text: imageFile.name.replace(/\.[^.]+$/, ''),
       textAlign: 'center',
       verticalAlign: 'middle',
+      textSize: DEFAULT_TEXT_SIZE,
       fill: DEFAULT_SHAPE_FILL,
       stroke: DEFAULT_SHAPE_STROKE,
       strokeWidth: 1,
     }, point.x, point.y);
 
     if (!view) {
-      return;
+      return null;
     }
 
-    const image = await this.imageService.uploadImage(file, 'MoodboardItem', view.item.id, 'moodboard');
-    this.updateItemConfig(view.item.id, config => ({
-      ...config,
-      imageId: image.id,
-      imagePath: this.imageService.referenceFor(image),
-    }));
-    this.saveItemNow(view.item.id);
+    try {
+      const image = await this.imageService.uploadImage(imageFile, 'MoodboardItem', view.item.id, 'moodboard');
+      this.updateItemConfig(view.item.id, config => ({
+        ...config,
+        imageId: image.id,
+        imagePath: this.imageService.referenceFor(image),
+      }));
+      this.saveItemNow(view.item.id);
+      return view;
+    } catch {
+      this.moodboardService.deleteMoodboardItem(view.item.id);
+      this.items.update(items => items.filter(item => item.item.id !== view.item.id));
+      this.clearSelection();
+      this.cdr.markForCheck();
+      return null;
+    }
+  }
+
+  private normalizeImageFile(file: File): File | null {
+    if (file.type.startsWith('image/')) {
+      return file;
+    }
+
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    const mimeType = extension === 'png' ? 'image/png'
+      : extension === 'jpg' || extension === 'jpeg' ? 'image/jpeg'
+      : extension === 'webp' ? 'image/webp'
+      : extension === 'gif' ? 'image/gif'
+      : extension === 'avif' ? 'image/avif'
+      : '';
+
+    return mimeType ? new File([file], file.name, { type: mimeType }) : null;
   }
 
   refreshEntities(): void {
@@ -962,23 +1103,30 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     event.dataTransfer?.setData('text/plain', entity.label);
   }
 
-  onEntityDrop(event: DragEvent): void {
+  async onCanvasDrop(event: DragEvent): Promise<void> {
     event.preventDefault();
     event.stopPropagation();
 
+    const point = this.clientToCanvasPoint(event.clientX, event.clientY);
     const raw = event.dataTransfer?.getData('application/lorekit-entity');
-    if (!raw) {
+    if (raw) {
+      try {
+        this.createEntityItem(JSON.parse(raw) as MoodboardEntitySearchResult, point.x, point.y);
+        return;
+      } catch {
+        return;
+      }
+    }
+
+    const files = Array.from(event.dataTransfer?.files || []).filter(file => !!this.normalizeImageFile(file));
+    if (!files.length) {
       return;
     }
 
-    try {
-      const entity = JSON.parse(raw) as MoodboardEntitySearchResult;
-      const point = this.clientToCanvasPoint(event.clientX, event.clientY);
-      this.createEntityItem(entity, point.x, point.y);
-    }
-    catch {
-      return;
-    }
+    await Promise.all(files.map((file, index) => this.createImageItemFromFile(file, {
+      x: point.x + index * 28,
+      y: point.y + index * 28,
+    })));
   }
 
   private createEntityItem(entity: MoodboardEntitySearchResult, x: number, y: number): void {
@@ -991,6 +1139,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       text: entity.label,
       textAlign: 'center',
       verticalAlign: 'middle',
+      textSize: DEFAULT_TEXT_SIZE,
       fill: DEFAULT_SHAPE_FILL,
       stroke: DEFAULT_SHAPE_STROKE,
       strokeWidth: 1,
@@ -1046,7 +1195,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   }
 
   textItemColor(view: MoodboardCanvasItem): string {
-    return view.config.fill === 'transparent' ? '#ffffff' : (view.config.fill || '#ffffff');
+    return view.config.stroke || '#ffffff';
   }
 
   entityCardBorder(view: MoodboardCanvasItem): string {
@@ -1083,6 +1232,30 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     return 'center';
   }
 
+  textFontSize(view: MoodboardCanvasItem): string {
+    const multiplier: Record<MoodboardTextSize, number> = {
+      small: 0.5,
+      medium: 1,
+      large: 2,
+      xlarge: 4,
+    };
+    const base = Math.max(11, Math.min(52, this.itemHeight(view) * 0.18));
+    return `${Math.round(base * multiplier[view.config.textSize || DEFAULT_TEXT_SIZE])}px`;
+  }
+
+  textLineHeight(view: MoodboardCanvasItem): string {
+    const size = Number.parseFloat(this.textFontSize(view));
+    return `${Math.round(size * 1.3)}px`;
+  }
+
+  imageTitleHeight(view: MoodboardCanvasItem): number {
+    const multiplier: Record<MoodboardTextSize, number> = { small: 0.5, medium: 1, large: 2, xlarge: 4 };
+    return Math.round(Math.max(24, Math.min(96, this.itemHeight(view) * .1 * multiplier[view.config.textSize || DEFAULT_TEXT_SIZE])));
+  }
+
+  imageTitleFontSize(view: MoodboardCanvasItem): string {
+    return `${Math.round(Math.max(10, Math.min(48, this.imageTitleHeight(view) * .55)))}px`;
+  }
   readableTextColor(background?: string): string {
     const hex = (background || '').trim();
     if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
@@ -1249,15 +1422,16 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
 
     return view;
   }
-  private createTextItem(x: number, y: number, edit = false): MoodboardCanvasItem | null {
+  private createTextItem(x: number, y: number, edit = false, text = 'Texto'): MoodboardCanvasItem | null {
     const view = this.createItem({
       kind: 'text',
       width: DEFAULT_TEXT_WIDTH,
       height: DEFAULT_TEXT_HEIGHT,
       rotation: 0,
-      text: 'Texto',
+      text,
       textAlign: 'center',
       verticalAlign: 'middle',
+      textSize: DEFAULT_TEXT_SIZE,
       fill: DEFAULT_SHAPE_FILL,
       stroke: DEFAULT_SHAPE_STROKE,
       strokeWidth: 0,
@@ -1374,6 +1548,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       ...config,
       textAlign: config.textAlign || 'center',
       verticalAlign: config.verticalAlign || 'middle',
+      textSize: config.textSize || DEFAULT_TEXT_SIZE,
       fill: config.fill ?? DEFAULT_SHAPE_FILL,
       stroke: config.stroke || DEFAULT_SHAPE_STROKE,
     };
@@ -1417,6 +1592,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     }));
 
     this.draggedItemIds.forEach(id => this.scheduleSave(id));
+    this.refreshAttachedLines(new Set(this.draggedItemIds));
     this.cdr.markForCheck();
   }
 
@@ -1681,7 +1857,12 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     }
 
     if (state.mode === 'endpoint' && state.endpoint) {
-      this.updateLineEndpoint(state.itemId, state.endpoint, point);
+      this.updateLineEndpoint(state.itemId, state.endpoint, point, event.ctrlKey);
+      return;
+    }
+
+    if (state.mode === 'waypoint' && state.waypointIndex >= 0) {
+      this.updateLineWaypoint(state.itemId, state.waypointIndex, point, event.ctrlKey);
       return;
     }
 
@@ -1735,6 +1916,109 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.dragState = this.emptyDragState();
   }
 
+  private onWindowCopy(event: ClipboardEvent): void {
+    if (this.isTypingTarget(event.target) || !this.selectedItemIds().length || !event.clipboardData) {
+      return;
+    }
+
+    const selectedIds = new Set(this.selectedItemIds());
+    const payload = this.items()
+      .filter(view => selectedIds.has(view.item.id))
+      .map(view => ({
+        id: view.item.id,
+        x: view.item.posX ?? 0,
+        y: view.item.posY ?? 0,
+        config: JSON.parse(JSON.stringify(view.config)) as MoodboardItemConfig,
+      }));
+
+    event.clipboardData.setData('application/lorekit-moodboard-items', JSON.stringify(payload));
+    event.clipboardData.setData('text/plain', `${payload.length} elemento(s) do moodboard`);
+    event.preventDefault();
+  }
+
+  private onWindowPaste(event: ClipboardEvent): void {
+    if (this.isTypingTarget(event.target) || !event.clipboardData) {
+      return;
+    }
+
+    const data = event.clipboardData;
+    const customItems = data.getData('application/lorekit-moodboard-items');
+    const imageFiles = [
+      ...Array.from(data.files),
+      ...Array.from(data.items)
+        .filter(item => item.type.startsWith('image/'))
+        .map(item => item.getAsFile())
+        .filter((file): file is File => !!file),
+    ].filter((file, index, all) => all.findIndex(candidate =>
+      candidate.name === file.name && candidate.size === file.size && candidate.type === file.type
+    ) === index);
+    const text = data.getData('text/plain').trim();
+
+    if (!customItems && !imageFiles.length && !text) {
+      return;
+    }
+
+    event.preventDefault();
+    void this.pasteClipboardContent(customItems, imageFiles, text);
+  }
+
+  private async pasteClipboardContent(serializedItems: string, imageFiles: File[], text: string): Promise<void> {
+    const point = this.defaultCreatePoint();
+
+    if (serializedItems) {
+      try {
+        const source = JSON.parse(serializedItems) as Array<{ id: string; x: number; y: number; config: MoodboardItemConfig }>;
+        if (Array.isArray(source) && source.length) {
+          const minX = Math.min(...source.map(item => item.x));
+          const minY = Math.min(...source.map(item => item.y));
+          this.pasteOffset = (this.pasteOffset + 28) % 196;
+          const created = source.map(item => ({
+            source: item,
+            view: this.createItem(JSON.parse(JSON.stringify(item.config)) as MoodboardItemConfig,
+              point.x + item.x - minX + this.pasteOffset,
+              point.y + item.y - minY + this.pasteOffset,
+              false),
+          })).filter((entry): entry is { source: { id: string; x: number; y: number; config: MoodboardItemConfig }; view: MoodboardCanvasItem } => !!entry.view);
+          const idMap = new Map(created.map(entry => [entry.source.id, entry.view.item.id]));
+
+          for (const entry of created) {
+            const startAnchor = entry.view.config.startAnchor;
+            const endAnchor = entry.view.config.endAnchor;
+            if ((startAnchor && idMap.has(startAnchor.itemId)) || (endAnchor && idMap.has(endAnchor.itemId))) {
+              this.updateItemConfig(entry.view.item.id, config => ({
+                ...config,
+                startAnchor: config.startAnchor && idMap.has(config.startAnchor.itemId)
+                  ? { ...config.startAnchor, itemId: idMap.get(config.startAnchor.itemId)! }
+                  : config.startAnchor,
+                endAnchor: config.endAnchor && idMap.has(config.endAnchor.itemId)
+                  ? { ...config.endAnchor, itemId: idMap.get(config.endAnchor.itemId)! }
+                  : config.endAnchor,
+              }));
+            }
+          }
+
+          const ids = created.map(entry => entry.view.item.id);
+          this.setSelectedItems(ids, ids[0]);
+          return;
+        }
+      } catch {
+        return;
+      }
+    }
+
+    if (imageFiles.length) {
+      const created = await Promise.all(imageFiles.map((file, index) => this.createImageItemFromFile(file, {
+        x: point.x + index * 28,
+        y: point.y + index * 28,
+      })));
+      const ids = created.filter((view): view is MoodboardCanvasItem => !!view).map(view => view.item.id);
+      if (ids.length) this.setSelectedItems(ids, ids[0]);
+      return;
+    }
+
+    const view = this.createTextItem(point.x, point.y, true, text);
+    if (view) this.selectItem(view);
+  }
   private onWindowKeyDown(event: KeyboardEvent): void {
     if (event.code === 'Space' && !this.isTypingTarget(event.target)) {
       this.isSpacePressed.set(true);
@@ -1882,6 +2166,7 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       startRotation: 0,
       resizeHandle: '',
       endpoint: '',
+      waypointIndex: -1,
       createTool: '',
       centerX: 0,
       centerY: 0,
@@ -1920,23 +2205,175 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     }, true);
   }
 
-  private updateLineEndpoint(id: string, endpoint: LineEndpoint, point: { x: number; y: number }): void {
+  private updateLineEndpoint(id: string, endpoint: LineEndpoint, point: CanvasPoint, orthogonal: boolean): void {
     this.updateItem(id, view => {
-      const absoluteStart = {
-        x: (view.item.posX ?? 0) + this.lineX1(view),
-        y: (view.item.posY ?? 0) + this.lineY1(view),
-      };
-      const absoluteEnd = {
-        x: (view.item.posX ?? 0) + this.lineX2(view),
-        y: (view.item.posY ?? 0) + this.lineY2(view),
-      };
+      const points = this.absoluteLinePoints(view);
+      const fixedPoint = endpoint === 'start' ? points.at(-1)! : points[0];
+      const snapped = this.findLineSnap(point, id);
+      const nextPoint = snapped?.point || point;
+      const waypoints = orthogonal
+        ? this.buildOrthogonalWaypoints(endpoint === 'start' ? nextPoint : fixedPoint, endpoint === 'start' ? fixedPoint : nextPoint)
+        : points.slice(1, -1);
+      const updated = endpoint === 'start'
+        ? this.buildLineItemFromAbsolutePoints(view, nextPoint.x, nextPoint.y, fixedPoint.x, fixedPoint.y, waypoints)
+        : this.buildLineItemFromAbsolutePoints(view, fixedPoint.x, fixedPoint.y, nextPoint.x, nextPoint.y, waypoints);
 
-      if (endpoint === 'start') {
-        return this.buildLineItemFromAbsolutePoints(view, point.x, point.y, absoluteEnd.x, absoluteEnd.y);
+      return {
+        ...updated,
+        config: {
+          ...updated.config,
+          startAnchor: endpoint === 'start' ? snapped?.anchor : updated.config.startAnchor,
+          endAnchor: endpoint === 'end' ? snapped?.anchor : updated.config.endAnchor,
+        },
+      };
+    }, true);
+  }
+
+  private updateLineWaypoint(id: string, waypointIndex: number, point: CanvasPoint, orthogonal: boolean): void {
+    this.updateItem(id, view => {
+      const points = this.absoluteLinePoints(view);
+      const waypoints = points.slice(1, -1);
+      if (!waypoints[waypointIndex]) {
+        return view;
       }
 
-      return this.buildLineItemFromAbsolutePoints(view, absoluteStart.x, absoluteStart.y, point.x, point.y);
+      let nextPoint = point;
+      if (orthogonal) {
+        const previous = waypointIndex === 0 ? points[0] : waypoints[waypointIndex - 1];
+        const following = waypointIndex === waypoints.length - 1 ? points.at(-1)! : waypoints[waypointIndex + 1];
+        nextPoint = Math.abs(point.x - previous.x) + Math.abs(point.y - following.y) <= Math.abs(point.y - previous.y) + Math.abs(point.x - following.x)
+          ? { x: point.x, y: previous.y }
+          : { x: previous.x, y: point.y };
+      }
+
+      waypoints[waypointIndex] = nextPoint;
+      return this.buildLineItemFromAbsolutePoints(view, points[0].x, points[0].y, points.at(-1)!.x, points.at(-1)!.y, waypoints);
     }, true);
+  }
+
+  private absoluteLinePoints(view: MoodboardCanvasItem): CanvasPoint[] {
+    const x = view.item.posX ?? 0;
+    const y = view.item.posY ?? 0;
+    return [
+      { x: x + this.lineX1(view), y: y + this.lineY1(view) },
+      ...(view.config.waypoints || []).map(point => ({ x: x + point.x, y: y + point.y })),
+      { x: x + this.lineX2(view), y: y + this.lineY2(view) },
+    ];
+  }
+
+  private buildOrthogonalWaypoints(start: CanvasPoint, end: CanvasPoint): CanvasPoint[] {
+    if (start.x === end.x || start.y === end.y) {
+      return [];
+    }
+
+    return [{ x: end.x, y: start.y }];
+  }
+
+  private findLineSnap(point: CanvasPoint, lineId: string): { point: CanvasPoint; anchor: MoodboardLineAnchor } | null {
+    let closest: { point: CanvasPoint; anchor: MoodboardLineAnchor; distance: number } | null = null;
+
+    for (const view of this.items()) {
+      if (view.item.id === lineId || (view.config.kind === 'shape' && (view.config.shapeType === 'line' || view.config.shapeType === 'arrow'))) {
+        continue;
+      }
+
+      const center = { x: (view.item.posX ?? 0) + this.itemWidth(view) / 2, y: (view.item.posY ?? 0) + this.itemHeight(view) / 2 };
+      const unrotated = this.rotatePoint(point, center, -(view.config.rotation ?? 0));
+      const left = view.item.posX ?? 0;
+      const top = view.item.posY ?? 0;
+      const width = this.itemWidth(view);
+      const height = this.itemHeight(view);
+      const candidates: Array<{ side: MoodboardAnchorSide; offset: number; point: CanvasPoint }> = [
+        { side: 'top', offset: this.clamp((unrotated.x - left) / width, 0, 1), point: { x: this.clamp(unrotated.x, left, left + width), y: top } },
+        { side: 'right', offset: this.clamp((unrotated.y - top) / height, 0, 1), point: { x: left + width, y: this.clamp(unrotated.y, top, top + height) } },
+        { side: 'bottom', offset: this.clamp((unrotated.x - left) / width, 0, 1), point: { x: this.clamp(unrotated.x, left, left + width), y: top + height } },
+        { side: 'left', offset: this.clamp((unrotated.y - top) / height, 0, 1), point: { x: left, y: this.clamp(unrotated.y, top, top + height) } },
+      ];
+
+      for (const candidate of candidates) {
+        const rotatedPoint = this.rotatePoint(candidate.point, center, view.config.rotation ?? 0);
+        const distance = Math.hypot(point.x - rotatedPoint.x, point.y - rotatedPoint.y);
+        if (distance <= LINE_SNAP_DISTANCE / this.zoom() && (!closest || distance < closest.distance)) {
+          closest = {
+            point: rotatedPoint,
+            anchor: { itemId: view.item.id, side: candidate.side, offset: candidate.offset },
+            distance,
+          };
+        }
+      }
+    }
+
+    return closest ? { point: closest.point, anchor: closest.anchor } : null;
+  }
+
+  private resolveLineAnchor(anchor: MoodboardLineAnchor | undefined): CanvasPoint | null {
+    if (!anchor) {
+      return null;
+    }
+
+    const view = this.items().find(item => item.item.id === anchor.itemId);
+    if (!view) {
+      return null;
+    }
+
+    const left = view.item.posX ?? 0;
+    const top = view.item.posY ?? 0;
+    const width = this.itemWidth(view);
+    const height = this.itemHeight(view);
+    const offset = this.clamp(anchor.offset, 0, 1);
+    const point = anchor.side === 'top' ? { x: left + width * offset, y: top }
+      : anchor.side === 'right' ? { x: left + width, y: top + height * offset }
+      : anchor.side === 'bottom' ? { x: left + width * offset, y: top + height }
+      : { x: left, y: top + height * offset };
+    return this.rotatePoint(point, { x: left + width / 2, y: top + height / 2 }, view.config.rotation ?? 0);
+  }
+
+  private refreshAttachedLines(changedIds: Set<string>): void {
+    if (!changedIds.size) {
+      return;
+    }
+
+    for (const line of this.items()) {
+      if (line.config.kind !== 'shape' || (line.config.shapeType !== 'line' && line.config.shapeType !== 'arrow')) {
+        continue;
+      }
+
+      const startAnchor = line.config.startAnchor;
+      const endAnchor = line.config.endAnchor;
+      if (!changedIds.has(startAnchor?.itemId || '') && !changedIds.has(endAnchor?.itemId || '')) {
+        continue;
+      }
+
+      const points = this.absoluteLinePoints(line);
+      const start = this.resolveLineAnchor(startAnchor) || points[0];
+      const end = this.resolveLineAnchor(endAnchor) || points.at(-1)!;
+      this.updateItem(line.item.id, view => this.buildLineItemFromAbsolutePoints(view, start.x, start.y, end.x, end.y, points.slice(1, -1)), true);
+    }
+  }
+
+  private projectPointOnSegment(point: CanvasPoint, start: CanvasPoint, end: CanvasPoint): CanvasPoint {
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const lengthSquared = dx * dx + dy * dy;
+    if (!lengthSquared) {
+      return { ...start };
+    }
+
+    const ratio = this.clamp(((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared, 0, 1);
+    return { x: start.x + dx * ratio, y: start.y + dy * ratio };
+  }
+
+  private rotatePoint(point: CanvasPoint, center: CanvasPoint, degrees: number): CanvasPoint {
+    const radians = degrees * Math.PI / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const x = point.x - center.x;
+    const y = point.y - center.y;
+    return { x: center.x + x * cos - y * sin, y: center.y + x * sin + y * cos };
+  }
+
+  private clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
   }
 
   private buildLineItemFromAbsolutePoints(
@@ -1944,12 +2381,14 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     startX: number,
     startY: number,
     endX: number,
-    endY: number
+    endY: number,
+    waypoints: CanvasPoint[] = [],
   ): MoodboardCanvasItem {
-    const left = Math.min(startX, endX);
-    const top = Math.min(startY, endY);
-    const width = Math.max(MIN_ITEM_SIZE, Math.abs(endX - startX));
-    const height = Math.max(MIN_ITEM_SIZE, Math.abs(endY - startY));
+    const points = [{ x: startX, y: startY }, ...waypoints, { x: endX, y: endY }];
+    const left = Math.min(...points.map(point => point.x));
+    const top = Math.min(...points.map(point => point.y));
+    const right = Math.max(...points.map(point => point.x));
+    const bottom = Math.max(...points.map(point => point.y));
 
     return {
       ...view,
@@ -1960,16 +2399,16 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       },
       config: {
         ...view.config,
-        width: Math.round(width),
-        height: Math.round(height),
+        width: Math.max(MIN_ITEM_SIZE, Math.round(right - left)),
+        height: Math.max(MIN_ITEM_SIZE, Math.round(bottom - top)),
         x1: Math.round(startX - left),
         y1: Math.round(startY - top),
         x2: Math.round(endX - left),
         y2: Math.round(endY - top),
+        waypoints: waypoints.map(point => ({ x: Math.round(point.x - left), y: Math.round(point.y - top) })),
       },
     };
   }
-
   private buildDrawingFromPoints(points: CanvasPoint[]): DrawingGeometry | null {
     if (points.length < 2) {
       return null;

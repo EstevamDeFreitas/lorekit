@@ -29,7 +29,7 @@
 .great-mark { touch-action: none; position: absolute; z-index: 12; display: flex; flex-direction: column; align-items: center; width: max-content; max-width: 180px; transform: translateX(-50%); border: 0; background: transparent; color: white; cursor: grab; pointer-events: auto; user-select: none; }
 .great-mark::after { display: none; }
 .great-mark-dot { display: grid; z-index: 2; width: 34px; height: 34px; place-items: center; border: 2px solid var(--mark-color); border-radius: 999px; background: transparent; color: var(--mark-color); box-shadow: 0 0 20px var(--mark-color); background-position: center; background-repeat: no-repeat; background-size: cover; }
-.great-mark-name { overflow: hidden; max-width: 180px; margin-top: .35rem; color: rgb(244 244 245); font-size: .75rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.great-mark-name { display: -webkit-box; overflow: hidden; max-width: 180px; margin-top: .35rem; color: rgb(244 244 245); font-size: .75rem; font-weight: 700; line-height: 1.2; text-align: center; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .great-mark-date { color: rgb(161 161 170); font-size: .68rem; }
 .event-bar { touch-action: none; position: absolute; z-index: 8; display: flex; min-height: 64px; cursor: grab; overflow: visible; border: 1px solid color-mix(in srgb, var(--event-color), white 30%); border-radius: .65rem; background: linear-gradient(105deg, var(--event-color), color-mix(in srgb, var(--event-color), black 35%)); box-shadow: 0 8px 20px rgb(0 0 0 / .2); background-position: center; background-repeat: no-repeat; background-size: cover; user-select: none; }
 .compact-event { width: 42px !important; min-height: 42px; height: 42px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
@@ -38,8 +38,8 @@
 .compact-event .range-handle { display: block; top: 50%; width: 12px; height: 12px; border: 1px solid rgb(255 255 255 / .72); border-radius: 999px; background: var(--event-color); box-shadow: 0 2px 8px rgb(0 0 0 / .4); transform: translateY(-50%); }
 .compact-event .range-handle.start { left: -8px; }
 .compact-event .range-handle.end { right: -8px; }
-.compact-event-title { position: absolute; z-index: 2; top: calc(100% + 6px); left: 50%; overflow: hidden; max-width: 170px; transform: translateX(-50%); color: rgb(244 244 245); font-size: .7rem; font-weight: 700; pointer-events: none; text-overflow: ellipsis; white-space: nowrap; }
-.compact-event .timeline-tooltip { top: calc(100% + 32px); }
+.compact-event-title { position: absolute; z-index: 2; top: calc(100% + 6px); left: 50%; display: -webkit-box; overflow: hidden; width: 170px; max-width: 170px; transform: translateX(-50%); color: rgb(244 244 245); font-size: .7rem; font-weight: 700; line-height: 1.2; pointer-events: none; text-align: center; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.compact-event .timeline-tooltip { top: calc(100% + 50px); }
 .compact-event-icon { font-size: .85rem; }.event-content { min-width: 0; flex: 1; padding: .45rem .75rem; }
 .event-heading { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .event-heading { font-size: .82rem; font-weight: 800; }

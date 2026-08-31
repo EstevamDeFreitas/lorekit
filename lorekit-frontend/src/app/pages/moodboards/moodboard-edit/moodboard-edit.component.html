@@ -60,7 +60,56 @@
     </div>
   </div>
 
-  <div class="min-h-0 flex-1 grid grid-cols-1 grid-rows-[minmax(22rem,1fr)_auto] overflow-y-auto md:grid-cols-[minmax(0,1fr)_19rem] md:grid-rows-1 md:overflow-hidden">
+  <div class="moodboard-workspace">
+    <aside class="moodboard-style-panel scrollbar-dark">
+      <div class="moodboard-style-panel-content">
+        <div>
+          <h3>Personalização</h3>
+          @if (selectedItem(); as selected) {
+            <p>{{ selected.config.kind === 'shape' ? 'Forma selecionada' : 'Elemento selecionado' }}</p>
+          } @else {
+            <p>Selecione um elemento ou defina o próximo estilo.</p>
+          }
+        </div>
+
+        <section class="style-panel-section">
+          <div class="style-panel-heading"><span>Fundo</span><label class="color-control" title="Cor personalizada"><input type="color" [ngModel]="fillColor()" (ngModelChange)="setFillColor($event)" /></label></div>
+          <div class="color-swatch-grid">
+            @for (color of fillPalette; track color) {
+              <button type="button" class="color-swatch" [class.color-swatch-selected]="fillColor() === color" [style.background-color]="color" [attr.aria-label]="'Usar ' + color + ' no fundo'" (click)="setFillColor(color)"></button>
+            }
+          </div>
+          <button type="button" class="style-panel-clear" [class.tool-button-active]="isTransparentFill(selectedItem())" (click)="clearFillColor()"><i class="fa-solid fa-ban"></i> Sem fundo</button>
+        </section>
+
+        <section class="style-panel-section">
+          <div class="style-panel-heading"><span>Contorno e texto</span><label class="color-control color-control-stroke" title="Cor personalizada"><input type="color" [ngModel]="strokeColor()" (ngModelChange)="setStrokeColor($event)" /></label></div>
+          <div class="color-swatch-grid">
+            @for (color of accentPalette; track color) {
+              <button type="button" class="color-swatch" [class.color-swatch-selected]="strokeColor() === color" [style.background-color]="color" [attr.aria-label]="'Usar ' + color + ' no contorno'" (click)="setStrokeColor(color)"></button>
+            }
+          </div>
+        </section>
+
+        <section class="style-panel-section">
+          <span class="style-panel-heading">Texto</span>
+          <div class="text-size-options">
+            @for (size of textSizeOptions; track size.value) {
+              <button type="button" class="text-size-button" [class.text-size-button-active]="selectedItem()?.config?.textSize === size.value" (click)="setTextSize(size.value)">{{ size.label }}</button>
+            }
+          </div>
+          <div class="style-align-grid">
+            <button type="button" class="tool-button" [class.tool-button-active]="selectedItem()?.config?.textAlign === 'left'" title="Alinhar à esquerda" (click)="setTextAlign('left')"><i class="fa-solid fa-align-left"></i></button>
+            <button type="button" class="tool-button" [class.tool-button-active]="selectedItem()?.config?.textAlign === 'center'" title="Centralizar" (click)="setTextAlign('center')"><i class="fa-solid fa-align-center"></i></button>
+            <button type="button" class="tool-button" [class.tool-button-active]="selectedItem()?.config?.textAlign === 'right'" title="Alinhar à direita" (click)="setTextAlign('right')"><i class="fa-solid fa-align-right"></i></button>
+            <button type="button" class="tool-button" [class.tool-button-active]="selectedItem()?.config?.verticalAlign === 'top'" title="Alinhar acima" (click)="setVerticalAlign('top')"><i class="fa-solid fa-arrow-up"></i></button>
+            <button type="button" class="tool-button" [class.tool-button-active]="selectedItem()?.config?.verticalAlign === 'middle'" title="Centralizar verticalmente" (click)="setVerticalAlign('middle')"><i class="fa-solid fa-grip-lines"></i></button>
+            <button type="button" class="tool-button" [class.tool-button-active]="selectedItem()?.config?.verticalAlign === 'bottom'" title="Alinhar abaixo" (click)="setVerticalAlign('bottom')"><i class="fa-solid fa-arrow-down"></i></button>
+          </div>
+        </section>
+      </div>
+    </aside>
+
     <div #stage class="moodboard-stage">
       @if (activeTool() === 'draw') {
         <div class="moodboard-item-toolbar moodboard-draw-toolbar" (mousedown)="$event.stopPropagation()">
@@ -136,7 +185,7 @@
         (dblclick)="onCanvasDoubleClick($event)"
         (wheel)="onCanvasWheel($event)"
         (dragover)="$event.preventDefault()"
-        (drop)="onEntityDrop($event)">
+        (drop)="onCanvasDrop($event)">
         <div class="moodboard-grid"></div>
 
         @if (drawingPreview(); as preview) {
@@ -182,6 +231,12 @@
               (mousedown)="onItemMouseDown($event, view)"
               (touchstart)="onItemTouchStart($event, view)"
               (dblclick)="editItem($event, view)">
+              @if (showAnchorPoints(view)) {
+                <span class="moodboard-anchor-point moodboard-anchor-top"></span>
+                <span class="moodboard-anchor-point moodboard-anchor-right"></span>
+                <span class="moodboard-anchor-point moodboard-anchor-bottom"></span>
+                <span class="moodboard-anchor-point moodboard-anchor-left"></span>
+              }
               <svg class="moodboard-shape-svg" [attr.width]="itemWidth(view)" [attr.height]="itemHeight(view)">
                 <defs>
                   <marker [id]="'moodboard-arrow-' + view.item.id" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto" markerUnits="strokeWidth">
@@ -201,24 +256,22 @@
                       [attr.stroke-width]="view.config.strokeWidth || 2" />
                   }
                   @case ('line') {
-                    <line
-                      [attr.x1]="lineX1(view)"
-                      [attr.y1]="lineY1(view)"
-                      [attr.x2]="lineX2(view)"
-                      [attr.y2]="lineY2(view)"
-                      [attr.stroke]="view.config.stroke || '#e4e4e7'"
-                      [attr.stroke-width]="view.config.strokeWidth || 2"
-                      stroke-linecap="round" />
-                  }
-                  @case ('arrow') {
-                    <line
-                      [attr.x1]="lineX1(view)"
-                      [attr.y1]="lineY1(view)"
-                      [attr.x2]="lineX2(view)"
-                      [attr.y2]="lineY2(view)"
+                    <polyline
+                      [attr.points]="linePointsAttribute(view)"
+                      fill="none"
                       [attr.stroke]="view.config.stroke || '#e4e4e7'"
                       [attr.stroke-width]="view.config.strokeWidth || 2"
                       stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  }
+                  @case ('arrow') {
+                    <polyline
+                      [attr.points]="linePointsAttribute(view)"
+                      fill="none"
+                      [attr.stroke]="view.config.stroke || '#e4e4e7'"
+                      [attr.stroke-width]="view.config.strokeWidth || 2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
                       [attr.marker-end]="'url(#moodboard-arrow-' + view.item.id + ')'" />
                   }
                   @default {
@@ -241,7 +294,9 @@
                   [style.color]="readableTextColor(view.config.fill)"
                   [style.text-align]="textAlign(view)"
                   [style.align-items]="alignItems(view)"
-                  [style.justify-content]="justifyContent(view)">
+                  [style.justify-content]="justifyContent(view)"
+                  [style.font-size]="textFontSize(view)"
+                  [style.line-height]="textLineHeight(view)">
                   {{ view.config.text }}
                 </div>
               }
@@ -259,6 +314,12 @@
               (mousedown)="onItemMouseDown($event, view)"
               (touchstart)="onItemTouchStart($event, view)"
               (dblclick)="editItem($event, view)">
+              @if (showAnchorPoints(view)) {
+                <span class="moodboard-anchor-point moodboard-anchor-top"></span>
+                <span class="moodboard-anchor-point moodboard-anchor-right"></span>
+                <span class="moodboard-anchor-point moodboard-anchor-bottom"></span>
+                <span class="moodboard-anchor-point moodboard-anchor-left"></span>
+              }
               @switch (view.config.kind) {
                 @case ('text') {
                   @if (editingItemId() === view.item.id) {
@@ -270,6 +331,8 @@
                       [style.text-align]="textAlign(view)"
                       [style.align-items]="alignItems(view)"
                       [style.justify-content]="justifyContent(view)"
+                      [style.font-size]="textFontSize(view)"
+                      [style.line-height]="textLineHeight(view)"
                       (blur)="saveEditableText($event, view)"
                       (mousedown)="$event.stopPropagation()">{{ view.config.text }}</div>
                   } @else {
@@ -295,7 +358,7 @@
                   </svg>
                 }
                 @case ('image') {
-                  <div class="moodboard-image-frame" [style.border-color]="view.config.stroke || '#3f3f46'">
+                  <div class="moodboard-image-frame" [style.border-color]="view.config.stroke || '#3f3f46'" [style.height]="'calc(100% - ' + imageTitleHeight(view) + 'px)'">
                     @if (view.config.imagePath) {
                       <img [src]="buildImageUrl(view.config.imagePath)" [alt]="view.config.text || 'Imagem do moodboard'" />
                     }
@@ -304,12 +367,15 @@
                     <input
                       class="moodboard-image-title"
                       [style.border-color]="view.config.stroke || '#3f3f46'"
+                      [style.height.px]="imageTitleHeight(view)"
+                      [style.color]="view.config.stroke || '#ffffff'"
+                      [style.font-size]="imageTitleFontSize(view)"
                       [ngModel]="view.config.text || ''"
                       (ngModelChange)="updateItemText(view, $event)"
                       (blur)="stopEditing()"
                       (mousedown)="$event.stopPropagation()" />
                   } @else {
-                    <div class="moodboard-image-title" [style.border-color]="view.config.stroke || '#3f3f46'">{{ view.config.text }}</div>
+                    <div class="moodboard-image-title" [style.border-color]="view.config.stroke || '#3f3f46'" [style.height.px]="imageTitleHeight(view)" [style.color]="view.config.stroke || '#ffffff'" [style.font-size]="imageTitleFontSize(view)">{{ view.config.text }}</div>
                   }
                 }
                 @case ('entity') {
@@ -391,6 +457,8 @@
               [style.text-align]="textAlign(view)"
               [style.align-items]="alignItems(view)"
               [style.justify-content]="justifyContent(view)"
+              [style.font-size]="textFontSize(view)"
+              [style.line-height]="textLineHeight(view)"
               (blur)="saveEditableText($event, view)"
               (mousedown)="$event.stopPropagation()">{{ view.config.text }}</div>
           }
@@ -443,6 +511,24 @@
                 [style.left.px]="lineX2(selected) - 6"
                 [style.top.px]="lineY2(selected) - 6"
                 (mousedown)="startLineEndpointDrag($event, selected, 'end')"></button>
+              @for (point of lineWaypoints(selected); track $index) {
+                <button
+                  type="button"
+                  class="moodboard-line-point moodboard-line-waypoint"
+                  [attr.title]="'Dobra ' + ($index + 1)"
+                  [style.left.px]="point.x - 6"
+                  [style.top.px]="point.y - 6"
+                  (mousedown)="startLineWaypointDrag($event, selected, $index)"></button>
+              }
+              <svg class="moodboard-line-segment-targets" [attr.width]="itemWidth(selected)" [attr.height]="itemHeight(selected)">
+                @for (segment of lineSegments(selected); track segment.index) {
+                  <g class="moodboard-line-segment-target" (mousedown)="startLineSegmentBend($event, selected, segment.index)">
+                    <line class="moodboard-line-segment-hit" [attr.x1]="segment.start.x" [attr.y1]="segment.start.y" [attr.x2]="segment.end.x" [attr.y2]="segment.end.y"></line>
+                    <circle class="moodboard-line-segment-affordance" [attr.cx]="segment.midpoint.x" [attr.cy]="segment.midpoint.y" r="10"></circle>
+                    <text class="moodboard-line-segment-plus" [attr.x]="segment.midpoint.x" [attr.y]="segment.midpoint.y" text-anchor="middle" dominant-baseline="central">+</text>
+                  </g>
+                }
+              </svg>
             } @else {
               <button type="button" class="moodboard-resize-handle moodboard-resize-nw" title="Redimensionar" (mousedown)="startResize($event, selected, 'nw')"></button>
               <button type="button" class="moodboard-resize-handle moodboard-resize-n" title="Redimensionar" (mousedown)="startResize($event, selected, 'n')"></button>

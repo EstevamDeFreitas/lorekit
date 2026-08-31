@@ -127,6 +127,7 @@ staging=''
 sudo chown -R "$(id -u):$(id -g)" "$BACKEND_DIR"
 
 echo 'Instalando o comando lorekit-admin...'
+sed -i 's/\r$//' "${BACKEND_DIR}/deploy/lorekit-admin.sh"
 sudo install -o root -g deploy -m 0750 \
   "${BACKEND_DIR}/deploy/lorekit-admin.sh" \
   /usr/local/bin/lorekit-admin
