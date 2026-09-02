@@ -24,6 +24,26 @@ export interface UiConfigPayload {
   items: UiFieldLayoutItem[];
 }
 
+export const UI_FIELD_LAYOUT_EXPORT_FORMAT = 'lorekit-ui-field-layout';
+export const UI_FIELD_LAYOUT_EXPORT_VERSION = 1;
+
+export interface PortableDynamicFieldDefinition {
+  key: string;
+  name: string;
+  fieldType: string;
+  options?: string;
+  isEditorField: boolean;
+  targetEntityTable?: string;
+}
+
+export interface UiFieldLayoutExportDocument {
+  format: typeof UI_FIELD_LAYOUT_EXPORT_FORMAT;
+  version: typeof UI_FIELD_LAYOUT_EXPORT_VERSION;
+  entityTable: string;
+  layout: UiConfigPayload;
+  dynamicFields: PortableDynamicFieldDefinition[];
+}
+
 export class UiFieldConfig {
   id: string;
   uiConfig: string;

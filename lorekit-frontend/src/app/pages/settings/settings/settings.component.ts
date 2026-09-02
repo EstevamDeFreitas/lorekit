@@ -25,6 +25,7 @@ import { ElectronService } from '../../../services/electron.service';
 import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-config-editor/ui-field-config-editor.component';
 import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
 import { UiFieldTemplate } from '../../../models/ui-field-config.model';
+import { UiFieldLayoutImportDestination, UiFieldLayoutImportPlan, UiFieldLayoutPortabilityService } from '../../../services/ui-field-layout-portability.service';
 import { EventType as TimelineEventType } from '../../../models/event-type.model';
 import { EventTypeService } from '../../../services/event-type.service';
 
@@ -347,8 +348,90 @@ import { EventTypeService } from '../../../services/event-type.service';
                       icon="fa-solid fa-table-cells-large"
                       (click)="openGlobalFieldConfigDialog()">
                     </app-button>
+                    <app-button
+                      label="Importar Layout"
+                      buttonType="secondary"
+                      size="sm"
+                      icon="fa-solid fa-file-import"
+                      (click)="openLayoutImport()">
+                    </app-button>
                   </div>
 
+                  @if (showLayoutImportForm) {
+                    <div class="mb-4 rounded-lg border border-zinc-700 bg-zinc-900 p-4">
+                      <div class="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <h4 class="text-sm font-medium text-zinc-100">Importar layout</h4>
+                          <p class="mt-1 text-xs text-zinc-400">Selecione um arquivo JSON ou cole o conteudo para validar antes de salvar.</p>
+                        </div>
+                        <app-button label="Fechar" buttonType="secondary" size="xs" (click)="closeLayoutImport()"></app-button>
+                      </div>
+
+                      <div class="flex flex-wrap gap-2">
+                        <app-button label="Selecionar arquivo JSON" buttonType="secondary" size="xs" icon="fa-solid fa-file-arrow-up" (click)="selectLayoutImportFile()"></app-button>
+                        <app-button label="Validar importacao" buttonType="primary" size="xs" icon="fa-solid fa-magnifying-glass" (click)="analyzeLayoutImport()"></app-button>
+                      </div>
+
+                      <label class="mt-3 block text-xs text-zinc-200" for="layout-import-json">JSON do layout</label>
+                      <textarea
+                        id="layout-import-json"
+                        class="mt-1 min-h-36 w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 font-mono text-xs text-zinc-100 outline-none focus:border-zinc-400"
+                        placeholder="Cole aqui o JSON exportado pelo Lorekit"
+                        [(ngModel)]="layoutImportSerialized">
+                      </textarea>
+
+                      @if (layoutImportError) {
+                        <p class="mt-3 rounded-md border border-red-900 bg-red-950/40 p-2 text-xs text-red-200">{{ layoutImportError }}</p>
+                      }
+
+                      @if (layoutImportPlan) {
+                        <div class="mt-3 rounded-md border border-zinc-700 bg-zinc-950 p-3 text-sm">
+                          <p><span class="text-zinc-400">Entidade detectada:</span> {{ layoutImportPlan.document.entityTable }}</p>
+                          <p class="mt-1"><span class="text-zinc-400">Campos dinamicos:</span> {{ layoutImportPlan.fieldsToCreate.length }} a criar, {{ layoutImportPlan.reusedFields.length }} a reutilizar.</p>
+                          @if (layoutImportPlan.fieldsToCreate.length > 0) {
+                            <p class="mt-2 text-xs text-zinc-300">Campos a criar:</p>
+                            <ul class="list-inside list-disc text-xs text-zinc-300">
+                              @for (field of layoutImportPlan.fieldsToCreate; track field.name) {
+                                <li>{{ field.name }}</li>
+                              }
+                            </ul>
+                          }
+                          @if (layoutImportPlan.reusedFields.length > 0) {
+                            <p class="mt-2 text-xs text-zinc-300">Campos a reutilizar:</p>
+                            <ul class="list-inside list-disc text-xs text-zinc-300">
+                              @for (field of layoutImportPlan.reusedFields; track field.id) {
+                                <li>{{ field.name }}</li>
+                              }
+                            </ul>
+                          }
+                        </div>
+
+                        @if (layoutImportPlan.hasExistingGlobalConfig) {
+                          <div class="mt-3 rounded-md border border-amber-800/70 bg-amber-950/20 p-3">
+                            <p class="text-sm text-amber-100">Ja existe um layout global para esta entidade. Escolha o destino da importacao.</p>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                              <app-button label="Substituir" buttonType="primary" size="xs" (click)="selectLayoutImportDestination('replace-global')"></app-button>
+                              <app-button label="Criar novo template" buttonType="secondary" size="xs" (click)="selectLayoutImportDestination('create-template')"></app-button>
+                              <app-button label="Cancelar" buttonType="secondary" size="xs" (click)="closeLayoutImport()"></app-button>
+                            </div>
+                          </div>
+                        }
+
+                        @if (layoutImportDestination === 'create-template') {
+                          <div class="mt-3 max-w-96">
+                            <app-input label="Nome do novo template" [(value)]="layoutImportTemplateName"></app-input>
+                          </div>
+                        }
+
+                        @if (layoutImportDestination) {
+                          <div class="mt-3 flex gap-2">
+                            <app-button label="Aplicar importacao" buttonType="primary" size="xs" icon="fa-solid fa-file-import" (click)="applyLayoutImport()"></app-button>
+                            <app-button label="Cancelar" buttonType="secondary" size="xs" (click)="closeLayoutImport()"></app-button>
+                          </div>
+                        }
+                      }
+                    </div>
+                  }
                   <div>
                     <div class="flex flex-row justify-between items-center mb-3">
                       <h4 class="text-sm text-zinc-200 font-medium">Templates de Layout</h4>
@@ -426,6 +509,7 @@ export class SettingsComponent implements OnInit{
   eventTypeService = inject(EventTypeService);
   dynamicFieldService = inject(DynamicFieldService);
   uiFieldConfigService = inject(UiFieldConfigService);
+  uiFieldLayoutPortabilityService = inject(UiFieldLayoutPortabilityService);
   private dialog = inject(Dialog);
 
   currentTab: string = '';
@@ -497,6 +581,12 @@ export class SettingsComponent implements OnInit{
   fieldConfigTemplates: UiFieldTemplate[] = [];
   showNewTemplateForm = false;
   newTemplateNameInline = '';
+  showLayoutImportForm = false;
+  layoutImportSerialized = '';
+  layoutImportPlan: UiFieldLayoutImportPlan | null = null;
+  layoutImportError = '';
+  layoutImportDestination: UiFieldLayoutImportDestination | null = null;
+  layoutImportTemplateName = 'Layout importado';
 
   currentTable: string = '';
 
@@ -833,6 +923,85 @@ export class SettingsComponent implements OnInit{
     ref.closed.subscribe(() => this.loadFieldConfigTemplates());
   }
 
+  openLayoutImport(): void {
+    this.showLayoutImportForm = true;
+    this.layoutImportSerialized = '';
+    this.layoutImportPlan = null;
+    this.layoutImportError = '';
+    this.layoutImportDestination = null;
+    this.layoutImportTemplateName = 'Layout importado';
+  }
+
+  closeLayoutImport(): void {
+    this.showLayoutImportForm = false;
+    this.layoutImportPlan = null;
+    this.layoutImportError = '';
+    this.layoutImportDestination = null;
+  }
+
+  async selectLayoutImportFile(): Promise<void> {
+    const serialized = await this.readLayoutImportFile();
+    if (!serialized) {
+      return;
+    }
+    this.layoutImportSerialized = serialized;
+    this.analyzeLayoutImport();
+  }
+
+  analyzeLayoutImport(): void {
+    this.layoutImportPlan = null;
+    this.layoutImportError = '';
+    this.layoutImportDestination = null;
+
+    try {
+      const plan = this.uiFieldLayoutPortabilityService.prepareLayoutImport(this.layoutImportSerialized);
+      this.layoutImportPlan = plan;
+      this.layoutImportDestination = plan.hasExistingGlobalConfig ? null : 'replace-global';
+    } catch (error) {
+      this.layoutImportError = error instanceof Error ? error.message : 'Nao foi possivel validar o layout informado.';
+    }
+  }
+
+  selectLayoutImportDestination(destination: UiFieldLayoutImportDestination): void {
+    this.layoutImportDestination = destination;
+    this.layoutImportError = '';
+  }
+
+  applyLayoutImport(): void {
+    const plan = this.layoutImportPlan;
+    const destination = this.layoutImportDestination;
+    if (!plan || !destination) {
+      this.layoutImportError = 'Valide o arquivo e escolha o destino antes de aplicar a importacao.';
+      return;
+    }
+
+    try {
+      const imported = this.uiFieldLayoutPortabilityService.applyLayoutImport(
+        plan,
+        destination,
+        destination === 'create-template' ? this.layoutImportTemplateName : undefined,
+      );
+      this.selectedFieldConfigTable = plan.document.entityTable;
+      this.loadFieldConfigTemplates();
+      this.closeLayoutImport();
+
+      if (destination === 'create-template') {
+        this.openEditTemplateDialog(imported as UiFieldTemplate);
+      }
+    } catch (error) {
+      this.layoutImportError = error instanceof Error ? error.message : 'Nao foi possivel aplicar a importacao.';
+    }
+  }
+
+  private readLayoutImportFile(): Promise<string | null> {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json,application/json';
+      input.onchange = async () => resolve(input.files?.[0] ? await input.files[0].text() : null);
+      input.click();
+    });
+  }
   deleteTemplate(template: UiFieldTemplate): void {
     this.confirm.ask(`Tem certeza que deseja deletar o template "${template.name}"?`).then((confirmed) => {
       if (confirmed) {

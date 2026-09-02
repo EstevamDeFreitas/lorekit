@@ -4,6 +4,7 @@ import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
 import { UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem, UiFieldTemplate } from '../../../models/ui-field-config.model';
 import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
+import { UiFieldLayoutPortabilityService } from '../../../services/ui-field-layout-portability.service';
 import { DynamicField } from '../../../models/dynamicfields.model';
 import { DbProvider } from '../../../app.config';
 import { schema } from '../../../database/schema';
@@ -116,6 +117,7 @@ interface SelectOptionItem {
               <app-icon-button title="Padrão do Sistema" icon="fa-solid fa-computer" buttonType="white" size="base" (click)="confirmResetToDefault()"></app-icon-button>
               <app-icon-button title="Criar Template" icon="fa-solid fa-bookmark" buttonType="white" size="base" (click)="toggleCreateTemplateForm()"></app-icon-button>
             }
+            <app-icon-button title="Exportar Layout" icon="fa-solid fa-download" buttonType="white" size="base" (click)="exportLayout()"></app-icon-button>
             <app-icon-button title="Salvar Layout" icon="fa-solid fa-floppy-disk" buttonType="primary" size="base" (click)="save()"></app-icon-button>
           </div>
 
@@ -263,6 +265,7 @@ export class UiFieldConfigEditorComponent {
   private router = inject(Router);
   private dbProvider = inject(DbProvider);
   private uiFieldConfigService = inject(UiFieldConfigService);
+  private uiFieldLayoutPortabilityService = inject(UiFieldLayoutPortabilityService);
   private confirmService = inject(ConfirmService);
 
   entityTable = '';
@@ -792,6 +795,21 @@ export class UiFieldConfigEditorComponent {
     this.showNotice(`Template "${name}" criado.`);
   }
 
+  exportLayout(): void {
+    try {
+      const exportedLayout = this.uiFieldLayoutPortabilityService.exportLayout(this.entityTable, this.buildCleanedLayout());
+      const blob = new Blob([JSON.stringify(exportedLayout, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `lorekit-layout-${this.entityTable.toLocaleLowerCase()}.json`;
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(url));
+      this.showNotice('Layout exportado.');
+    } catch (error) {
+      this.showNotice(error instanceof Error ? error.message : 'Nao foi possivel exportar o layout.');
+    }
+  }
   private showNotice(message: string): void {
     this.noticeMessage = message;
 
