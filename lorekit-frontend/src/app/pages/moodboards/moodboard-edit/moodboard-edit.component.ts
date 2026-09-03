@@ -31,6 +31,7 @@ import {
 import { buildImageUrl } from '../../../models/image.model';
 import { Document } from '../../../models/document.model';
 import { EditorComponent } from '../../../components/editor/editor.component';
+import { LorekitDocumentCodec } from '../../../components/editor/lorekit-document.codec';
 import { DocumentService } from '../../../services/document.service';
 import { ImageService } from '../../../services/image.service';
 import {
@@ -2646,89 +2647,10 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
       return [];
     }
 
-    try {
-      const parsed = JSON.parse(document.content);
-      const blocks = Array.isArray(parsed?.blocks) ? parsed.blocks : [];
-      return blocks.slice(0, 30).map((block: Record<string, unknown>) => this.toPreviewBlock(block));
-    }
-    catch {
-      return [{ type: 'paragraph', text: document.content }];
-    }
+    return LorekitDocumentCodec.toPreviewBlocks(
+      LorekitDocumentCodec.deserialize(document.content),
+    );
   }
-
-  private toPreviewBlock(block: Record<string, unknown>): DocumentPreviewBlock {
-    const data = (block['data'] || {}) as Record<string, unknown>;
-    const type = String(block['type'] || 'paragraph');
-
-    if (type === 'list') {
-      return { type, text: this.listItemsToText(data['items']).join('\n') };
-    }
-
-    if (type === 'table') {
-      const rows = Array.isArray(data['content']) ? data['content'] as unknown[][] : [];
-      return {
-        type,
-        text: '',
-        rows: rows.map(row => row.map(cell => this.htmlToText(String(cell)))),
-      };
-    }
-
-    if (type === 'quote') {
-      return {
-        type,
-        text: [
-          this.htmlToText(String(data['text'] || '')),
-          this.htmlToText(String(data['caption'] || '')),
-        ].filter(Boolean).join('\n'),
-      };
-    }
-
-    if (type === 'image') {
-      return {
-        type,
-        text: this.htmlToText(String(data['caption'] || data['url'] || data['file'] || '')),
-      };
-    }
-
-    return {
-      type,
-      level: Number(data['level'] || 2),
-      text: this.htmlToText(String(data['text'] || data['caption'] || '')),
-    };
-  }
-
-  private listItemsToText(items: unknown, depth = 0): string[] {
-    if (!Array.isArray(items)) {
-      return [];
-    }
-
-    const lines: string[] = [];
-    for (const item of items) {
-      if (typeof item === 'string') {
-        lines.push(`${'  '.repeat(depth)}- ${this.htmlToText(item)}`);
-        continue;
-      }
-
-      if (item && typeof item === 'object') {
-        const record = item as Record<string, unknown>;
-        const content = this.htmlToText(String(record['content'] || record['text'] || ''));
-        if (content) {
-          lines.push(`${'  '.repeat(depth)}- ${content}`);
-        }
-        lines.push(...this.listItemsToText(record['items'], depth + 1));
-      }
-    }
-
-    return lines;
-  }
-
-  private htmlToText(html: string): string {
-    const element = document.createElement('div');
-    element.innerHTML = html || '';
-    element.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
-    return (element.textContent || '').replace(/\u00A0/g, ' ').trim();
-  }
-
   private hexToRgba(hex: string, opacity: number): string {
     const value = hex.trim();
     if (!/^#[0-9a-fA-F]{6}$/.test(value)) {

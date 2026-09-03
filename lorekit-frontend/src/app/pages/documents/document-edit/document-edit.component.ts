@@ -6,6 +6,7 @@ import { IconButtonComponent } from "../../../components/icon-button/icon-button
 import { PersonalizationButtonComponent } from "../../../components/personalization-button/personalization-button.component";
 import { DocumentService } from '../../../services/document.service';
 import { Document } from '../../../models/document.model';
+import { LorekitDocument } from '../../../models/lorekit-document.model';
 import { EditorComponent } from "../../../components/editor/editor.component";
 import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { SafeDeleteButtonComponent } from "../../../components/safe-delete-button/safe-delete-button.component";
@@ -138,7 +139,7 @@ export class DocumentEditComponent {
     this.isLoading = false;
   }
 
-  saveDocument(content?: string) {
+  saveDocument(content?: LorekitDocument) {
     if (this.isLoading) {
       return;
     }
