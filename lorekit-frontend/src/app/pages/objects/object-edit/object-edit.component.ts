@@ -87,12 +87,12 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
               @switch (currentTab) {
                 <!-- @case ('properties') {
                   <div class="w-full">
-                    <app-editor [entityId]="object.id" docTitle="Propriedades" entityTable="Object" [entityName]="object.name" [document]="object.properties || ''" (saveDocument)="onEditorSave($event, 'properties')" class="w-full"></app-editor>
+                    <app-editor [entityId]="object.id" docTitle="Propriedades" entityTable="Object" [entityName]="object.name" [document]="object.properties || ''" (saveDocument)="onEditorSave($event, 'properties')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 } -->
                 @case ('history') {
                   <div class="w-full">
-                    <app-editor [entityId]="object.id + '_history'" docTitle="História" entityTable="Object" [entityName]="object.name" [document]="object.history || ''" (saveDocument)="onEditorSave($event, 'history')" class="w-full"></app-editor>
+                    <app-editor [entityId]="object.id + '_history'" docTitle="História" entityTable="Object" [entityName]="object.name" [document]="object.history || ''" (saveDocument)="onEditorSave($event, 'history')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 }
                 @case ('configured') {

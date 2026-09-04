@@ -90,7 +90,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
                 }
                 @case ('details') {
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-editor [entityId]="specie.id" docTitle="Descrição" entityTable="Species" [entityName]="specie.name" [document]="specie.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full"></app-editor>
+                    <app-editor [entityId]="specie.id" docTitle="Descrição" entityTable="Species" [entityName]="specie.name" [document]="specie.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 }
                 @case ('subspecies') {

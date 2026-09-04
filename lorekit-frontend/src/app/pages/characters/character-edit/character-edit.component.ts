@@ -91,7 +91,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
                 }
                 @case ('backstory') {
                   <div class="w-full ">
-                    <app-editor [entityId]="character.id" docTitle="Backstory" entityTable="Character" [entityName]="character.name" [document]="character.background || ''" (saveDocument)="onEditorSave($event, 'background')" class="w-full"></app-editor>
+                    <app-editor [entityId]="character.id" docTitle="Backstory" entityTable="Character" [entityName]="character.name" [document]="character.background || ''" (saveDocument)="onEditorSave($event, 'background')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 }
               }

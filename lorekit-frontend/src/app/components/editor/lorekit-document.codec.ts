@@ -7,6 +7,7 @@ import {
   LorekitInline,
   LorekitListItem,
   LorekitText,
+  LorekitTextAlign,
 } from '../../models/lorekit-document.model';
 
 export type DocumentPreviewBlock = { type: string; text: string; level?: number; rows?: string[][] };
@@ -104,9 +105,12 @@ export class LorekitDocumentCodec {
       const tag = node.tagName.toLowerCase();
       if (tag === 'strong' || tag === 'b') next.bold = true;
       if (tag === 'em' || tag === 'i') next.italic = true;
+      if (tag === 'u') next.underline = true;
+      if (tag === 's' || tag === 'strike' || tag === 'del') next.strike = true;
       if (tag === 'font') next.color = node.getAttribute('color') || node.style.color || undefined;
       if (tag === 'mark') next.highlight = node.style.backgroundColor || node.style.background || 'marker';
       if (tag === 'a') {
+      if (node.style.fontSize) next.fontSize = node.style.fontSize;
         const href = node.getAttribute('href') || '';
         const match = href.match(/^lorekit:\/\/entity\/([^/]+)\/([^/?#]+)/i);
         if (match) { output.push({ kind: 'mention', entityTable: decodeURIComponent(match[1]), entityId: decodeURIComponent(match[2]), label: (node.textContent || '').replace(/^@/, '') }); return; }
@@ -124,8 +128,11 @@ export class LorekitDocumentCodec {
       let html = this.escapeHtml(part.text).replace(/\n/g, '<br>');
       if (part.bold) html = `<strong>${html}</strong>`;
       if (part.italic) html = `<em>${html}</em>`;
+      if (part.underline) html = `<u>${html}</u>`;
+      if (part.strike) html = `<s>${html}</s>`;
       if (part.color) html = `<font color="${this.escapeAttr(part.color)}">${html}</font>`;
       if (part.highlight) html = `<mark style="background:${this.escapeAttr(part.highlight)}">${html}</mark>`;
+      if (part.fontSize) html = `<span style="font-size:${this.escapeAttr(part.fontSize)}">${html}</span>`;
       if (part.link) html = `<a href="${this.escapeAttr(part.link)}">${html}</a>`;
       return html;
     }).join('');
@@ -141,10 +148,10 @@ export class LorekitDocumentCodec {
     if (!this.isRecord(value)) return [];
     const type = this.string(value['type']) || 'paragraph';
     const data = this.isRecord(value['data']) ? value['data'] : {};
-    if (type === 'header') return [{ type: 'heading', level: this.headingLevel(data['level']), content: this.htmlToInline(this.string(data['text'])) }];
-    if (type === 'paragraph') return [{ type: 'paragraph', content: this.htmlToInline(this.string(data['text'])) }];
+    if (type === 'header') return [{ type: 'heading', level: this.headingLevel(data['level']), content: this.htmlToInline(this.string(data['text'])), alignment: this.textAlign(data['alignment']), indent: this.textIndent(data['indent']) }];
+    if (type === 'paragraph') return [{ type: 'paragraph', content: this.htmlToInline(this.string(data['text'])), alignment: this.textAlign(data['alignment']), indent: this.textIndent(data['indent']) }];
     if (type === 'list') return [{ type: 'list', style: this.listStyle(data['style']), start: this.positiveNumber(this.record(data['meta'])['start']), items: this.fromEditorList(data['items']) }];
-    if (type === 'quote') return [{ type: 'quote', content: this.htmlToInline(this.string(data['text'])), caption: this.htmlToInline(this.string(data['caption'])) }];
+    if (type === 'quote') return [{ type: 'quote', content: this.htmlToInline(this.string(data['text'])), caption: this.htmlToInline(this.string(data['caption'])), alignment: this.textAlign(data['alignment']) }];
     if (type === 'table') return [{ type: 'table', rows: this.tableRows(data['content']) }];
     if (type === 'image') return [{ type: 'image', url: this.string(data['url']) || this.string(this.record(data['file'])['url']), caption: this.htmlToInline(this.string(data['caption'])), layout: { withBorder: data['withBorder'] === true, withBackground: data['withBackground'] === true, stretched: data['stretched'] === true, width: this.string(data['width']) || 'auto' } }];
     return [{ type: 'unsupported', source: 'editorjs', originalType: type, data }];
@@ -181,5 +188,7 @@ export class LorekitDocumentCodec {
   private static string(value: unknown): string { return typeof value === 'string' ? value : typeof value === 'number' || typeof value === 'boolean' ? String(value) : ''; }
   private static escapeHtml(value: string): string { return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] || char); }
   private static escapeAttr(value: string): string { return this.escapeHtml(value); }
+  private static textAlign(value: unknown): LorekitTextAlign { return value === 'center' || value === 'right' || value === 'justify' ? value : 'left'; }
+  private static textIndent(value: unknown): number { const indent = Number(value); return Number.isInteger(indent) && indent > 0 ? Math.min(indent, 8) : 0; }
   private static escapePipes(value: string): string { return value.replace(/\|/g, '\\|'); }
 }

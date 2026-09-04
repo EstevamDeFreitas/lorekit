@@ -133,6 +133,15 @@ import { EventTypeService } from '../../../services/event-type.service';
                 </div>
               </div>
             </div>
+              <div class="mt-6">
+                <p class="mb-2">Editor de texto rico:</p>
+                <div class="border border-zinc-700 rounded-md p-2 flex flex-row gap-6">
+                  <div class="flex flex-row items-center gap-2"><input type="radio" id="editorJsEngine" name="textEditorEngine" value="editorjs" [(ngModel)]="textEditorEngine" (ngModelChange)="globalParameterService.setParameter('textEditorEngine', textEditorEngine)"><label for="editorJsEngine">Editor.js</label></div>
+                  <div class="flex flex-row items-center gap-2"><input type="radio" id="tiptapEngine" name="textEditorEngine" value="tiptap" [(ngModel)]="textEditorEngine" (ngModelChange)="globalParameterService.setParameter('textEditorEngine', textEditorEngine)"><label for="tiptapEngine">Tiptap</label></div>
+                </div>
+                <p class="text-xs text-zinc-400 mt-2">A alteração é aplicada ao reabrir campos de texto que já estejam abertos.</p>
+              </div>
+
           }
           @case ("organization_types") {
             <div>
@@ -555,6 +564,7 @@ export class SettingsComponent implements OnInit{
 
   exportTextFormat : 'md' | 'txt' = 'txt';
 
+  textEditorEngine: 'editorjs' | 'tiptap' = 'editorjs';
 
   ignoredTables = ['Personalization',
                     'Image',
@@ -629,8 +639,13 @@ export class SettingsComponent implements OnInit{
         this.exportTextFormat = format;
       } else {
         this.exportTextFormat = 'txt';
-      }
     }
+      const editorEngine = this.globalParameterService.getParameter('textEditorEngine');
+      this.textEditorEngine = editorEngine === 'tiptap' || editorEngine === 'editorjs'
+        ? editorEngine
+        : 'editorjs';
+    }
+
 
     if (tab === 'global_field_config') {
       this.loadFieldConfigTemplates();

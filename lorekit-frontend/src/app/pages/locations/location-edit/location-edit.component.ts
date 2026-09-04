@@ -81,7 +81,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
               @switch (currentTab) {
                 @case ('details') {
                   <div class="w-full ">
-                    <app-editor [entityId]="location.id" docTitle="Descrição" entityTable="Location" [entityName]="location.name" [document]="location.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full"></app-editor>
+                    <app-editor [entityId]="location.id" docTitle="Descrição" entityTable="Location" [entityName]="location.name" [document]="location.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 }
                 <!-- @case ('localities') {

@@ -32,6 +32,7 @@ import { buildImageUrl } from '../../../models/image.model';
 import { Document } from '../../../models/document.model';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { LorekitDocumentCodec } from '../../../components/editor/lorekit-document.codec';
+import { MOODBOARD_ACCENT_PALETTE, MOODBOARD_FILL_PALETTE } from '../../../theme/moodboard-color-palette';
 import { DocumentService } from '../../../services/document.service';
 import { ImageService } from '../../../services/image.service';
 import {
@@ -183,16 +184,8 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   readonly drawingPreview = signal<DrawingPreview | null>(null);
   readonly selectionMarquee = signal<CanvasRect | null>(null);
 
-  readonly fillPalette = [
-    '#020617', '#030712', '#09090b', '#0a0a0a', '#0c0a09', '#450a0a', '#431407', '#451a03',
-    '#422006', '#1a2e05', '#052e16', '#022c22', '#042f2e', '#083344', '#082f49', '#172554',
-    '#1e1b4b', '#2e1065', '#3b0764', '#4a044e', '#500724', '#4c0519',
-  ];
-  readonly accentPalette = [
-    '#71717a', '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981',
-    '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#e879f9',
-    '#ec4899', '#f43f5e',
-  ];
+  readonly fillPalette = MOODBOARD_FILL_PALETTE;
+  readonly accentPalette = MOODBOARD_ACCENT_PALETTE;
   readonly textSizeOptions: ReadonlyArray<{ value: MoodboardTextSize; label: string }> = [
     { value: 'small', label: '0.5×' },
     { value: 'medium', label: '1×' },

@@ -4,9 +4,12 @@ export const LOREKIT_DOCUMENT_VERSION = 1 as const;
 export type LorekitTextMark = {
   bold?: true;
   italic?: true;
+  underline?: true;
+  strike?: true;
   color?: string;
   highlight?: string;
   link?: string;
+  fontSize?: string;
 };
 
 export type LorekitText = LorekitTextMark & { kind: 'text'; text: string };
@@ -15,11 +18,13 @@ export type LorekitInline = LorekitText | LorekitMention;
 export type LorekitListItem = { content: LorekitInline[]; checked?: boolean; items: LorekitListItem[] };
 export type LorekitImageLayout = { withBorder: boolean; withBackground: boolean; stretched: boolean; width: string };
 
+export type LorekitTextAlign = 'left' | 'center' | 'right' | 'justify';
+
 export type LorekitBlock =
-  | { type: 'heading'; level: 1 | 2 | 3 | 4 | 5 | 6; content: LorekitInline[] }
-  | { type: 'paragraph'; content: LorekitInline[] }
+  | { type: 'heading'; level: 1 | 2 | 3 | 4 | 5 | 6; content: LorekitInline[]; alignment?: LorekitTextAlign; indent?: number }
+  | { type: 'paragraph'; content: LorekitInline[]; alignment?: LorekitTextAlign; indent?: number }
   | { type: 'list'; style: 'ordered' | 'unordered' | 'checklist'; start: number; items: LorekitListItem[] }
-  | { type: 'quote'; content: LorekitInline[]; caption: LorekitInline[] }
+  | { type: 'quote'; content: LorekitInline[]; caption: LorekitInline[]; alignment?: LorekitTextAlign }
   | { type: 'table'; rows: LorekitInline[][][] }
   | { type: 'image'; url: string; caption: LorekitInline[]; layout: LorekitImageLayout }
   | { type: 'unsupported'; source: string; originalType: string; data: Record<string, unknown> };

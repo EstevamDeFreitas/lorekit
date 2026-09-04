@@ -58,7 +58,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
     <div class="flex flex-col @2xl:flex-row gap-4 mt-10">
       <div class="flex flex-col flex-1">
         @if (!isLoading) {
-          <app-editor [entityId]="document.id" entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full"></app-editor>
+          <app-editor [entityId]="document.id" entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
         }
       </div>
     </div>

@@ -84,7 +84,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
                 }
                 @case ('description') {
                   <div class="w-full ">
-                    <app-editor [entityId]="culture.id" docTitle="Descrição" entityTable="Culture" [entityName]="culture.name" [document]="culture.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full"></app-editor>
+                    <app-editor [entityId]="culture.id" docTitle="Descrição" entityTable="Culture" [entityName]="culture.name" [document]="culture.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 }
               }
