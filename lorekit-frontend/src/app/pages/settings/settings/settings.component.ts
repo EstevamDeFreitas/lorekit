@@ -895,7 +895,7 @@ export class SettingsComponent implements OnInit{
     this.loadFieldConfigTemplates();
 
     const ref = this.dialog.open(UiFieldConfigEditorComponent, {
-      panelClass: 'screen-dialog',
+      panelClass: ['screen-dialog', 'overflow-y-auto', 'scrollbar-dark'],
       width: '95vw',
       maxWidth: '1400px',
       height: '90vh',
@@ -911,7 +911,7 @@ export class SettingsComponent implements OnInit{
   openCreateTemplateDialog(): void {
     if (!this.selectedFieldConfigTable) { return; }
     const ref = this.dialog.open(UiFieldConfigEditorComponent, {
-      panelClass: 'screen-dialog',
+      panelClass: ['screen-dialog', 'overflow-y-auto', 'scrollbar-dark'],
       width: '95vw',
       maxWidth: '1400px',
       height: '90vh',
@@ -925,7 +925,7 @@ export class SettingsComponent implements OnInit{
 
   openEditTemplateDialog(template: UiFieldTemplate): void {
     const ref = this.dialog.open(UiFieldConfigEditorComponent, {
-      panelClass: 'screen-dialog',
+      panelClass: ['screen-dialog', 'overflow-y-auto', 'scrollbar-dark'],
       width: '95vw',
       maxWidth: '1400px',
       height: '90vh',
