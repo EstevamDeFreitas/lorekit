@@ -1,0 +1,79 @@
+<div class="config-grid-scroll scrollbar-dark w-full p-1" appMobilePinchZoom>
+  <div class="config-grid" [style.grid-template-columns]="gridColumns()" [style.grid-auto-rows]="gridRows()" [style.min-height]="gridMinHeight()">
+    @for (item of visibleItems(); track item.id) {
+      <div class="config-grid-item"
+        [class.configured-field--colored]="item.kind === 'field' && !!item.color"
+        [style.--field-accent]="item.color || null"
+        [style.border-color]="item.kind === 'field' && item.color ? item.color : null"
+        [style.grid-column]="gridColumn(item)" [style.grid-row]="gridRow(item)">
+        @if (item.kind === 'separator') {
+          <div class="separator" [class.separator--vertical]="item.orientation === 'vertical'"
+            [style.color]="item.color || null" [style.--separator-color]="item.color || null">
+            <span class="separator-line"></span>
+            @if (item.label) { <span class="separator-label">{{ item.label }}</span> }
+            <span class="separator-line"></span>
+          </div>
+        } @else {
+          @let metadata = getTokenMetadata(item.token);
+          @if (metadata?.source === 'schema') {
+            @switch (metadata?.control) {
+              @case ('textarea') {
+                <app-text-area [label]="metadata!.label" [labelColor]="item.color || null" [value]="schemaValue(metadata!.key)"
+                  (valueChange)="setSchemaValue(metadata!.key, $event)"></app-text-area>
+              }
+              @case ('editor') {
+                <div class="editor-wrapper">
+                  <label class="mb-1 text-xs" [style.color]="item.color || null">{{ metadata!.label }}</label>
+                  <app-editor [entityId]="entity().id" [docTitle]="metadata!.label"
+                    [entityTable]="entityTable()" [entityName]="entity().name"
+                    [document]="schemaValue(metadata!.key)"
+                    (saveDocument)="setSchemaEditorValue(metadata!.key, $event)"
+                    class="rounded-lg bg-zinc-940 ring-1 ring-zinc-900 h-full overflow-y-auto scrollbar-dark">
+                  </app-editor>
+                </div>
+              }
+              @default {
+                <app-input [label]="metadata!.label" [labelColor]="item.color || null" [value]="schemaValue(metadata!.key)"
+                  (valueChange)="setSchemaValue(metadata!.key, $event)"></app-input>
+              }
+            }
+          } @else {
+            @let dynamicTemplate = dynamicTemplateByItem(item);
+            @if (dynamicTemplate) {
+              @switch (metadata?.control) {
+                @case ('image') {
+                  <app-dynamic-image-field class="block h-full min-h-0" [label]="dynamicTemplate.name"
+                    [labelColor]="item.color || null" [value]="getDynamicFieldValue(dynamicTemplate.id).value" [aspectRatio]="dynamicTemplate.options"
+                    (valueChange)="onDynamicImageValueChange(dynamicTemplate.id, $event)"></app-dynamic-image-field>
+                }
+                @case ('entity') {
+                  <app-combo-box [label]="dynamicTemplate.name" [labelColor]="item.color || null" [items]="entityOptionsByFieldId[dynamicTemplate.id] || []"
+                    compareProp="value" displayProp="label" [clearable]="true" [comboValue]="getDynamicFieldValue(dynamicTemplate.id).value"
+                    (comboValueChange)="onDynamicValueChange(dynamicTemplate.id, $event)"></app-combo-box>
+                }
+                @case ('editor') {
+                  <div class="editor-wrapper">
+                    <label class="mb-1 text-xs" [style.color]="item.color || null">{{ dynamicTemplate.name }}</label>
+                    <app-editor [entityId]="getDynamicFieldValue(dynamicTemplate.id).id" [docTitle]="dynamicTemplate.name"
+                      [entityTable]="entityTable()" [entityName]="entity().name" [document]="getDynamicFieldValue(dynamicTemplate.id).value || ''"
+                      (saveDocument)="onDynamicEditorSave($event, dynamicTemplate.id)"
+                      class="rounded-lg bg-zinc-940 ring-1 ring-zinc-900 h-full overflow-y-auto scrollbar-dark"></app-editor>
+                  </div>
+                }
+                @case ('options') {
+                  <app-combo-box [label]="dynamicTemplate.name" [labelColor]="item.color || null" [items]="dynamicOptions(dynamicTemplate)" [clearable]="true"
+                    [comboValue]="getDynamicFieldValue(dynamicTemplate.id).value"
+                    (comboValueChange)="onDynamicValueChange(dynamicTemplate.id, $event)"></app-combo-box>
+                }
+                @default {
+                  <app-input [label]="dynamicTemplate.name" [labelColor]="item.color || null" size="xs" [value]="getDynamicFieldValue(dynamicTemplate.id).value"
+                    (valueChange)="onDynamicValueChange(dynamicTemplate.id, $event)"></app-input>
+                }
+              }
+            }
+          }
+        }
+      </div>
+    }
+  </div>
+</div>

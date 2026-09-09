@@ -17,11 +17,11 @@ import { NgClass } from '@angular/common';
   selector: 'app-combo-box',
   template: `
     <div class="flex flex-col relative" #container>
-      <label class="mb-1 text-xs">{{ label() }}</label>
+      <label class="mb-1 text-xs" [style.color]="labelColor() || null">{{ label() }}</label>
 
       <!-- Trigger input -->
       <div
-        class="rounded-lg px-3 py-2 text-sm bg-zinc-925 ring-1 ring-zinc-800 focus:outline-none transition focus:ring-zinc-100 focus:ring-1 focus-within:bg-zinc-925 cursor-pointer flex items-center gap-2"
+        class="rounded-lg px-3 py-2 text-sm bg-zinc-940 ring-1 ring-zinc-900 focus:outline-none transition focus:ring-zinc-100 focus:ring-1 focus-within:bg-zinc-940 cursor-pointer flex items-center gap-2"
         (click)="openDropdown()"
       >
         <input
@@ -88,6 +88,7 @@ import { NgClass } from '@angular/common';
 })
 export class ComboBoxComponent {
   label = input.required<string>();
+  labelColor = input<string | null>(null);
   items = input.required<any[]>();
   compareProp = input<string>('');
   displayProp = input<string>('');

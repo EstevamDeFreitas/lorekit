@@ -2,7 +2,7 @@ import { NgStyle } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
-import { UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem, UiFieldTemplate } from '../../../models/ui-field-config.model';
+import { createFieldLayoutItem, UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem, UiFieldLayoutTab, UiFieldTemplate, validateUiConfigPayload } from '../../../models/ui-field-config.model';
 import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
 import { UiFieldLayoutPortabilityService } from '../../../services/ui-field-layout-portability.service';
 import { DynamicField } from '../../../models/dynamicfields.model';
@@ -13,6 +13,7 @@ import { IconButtonComponent } from '../../../components/icon-button/icon-button
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { InputComponent } from '../../../components/input/input.component';
+import { HexColorPickerComponent } from '../../../components/hex-color-picker/hex-color-picker.component';
 
 interface ParentScopeOption {
   parentEntityTable: string;
@@ -32,7 +33,7 @@ interface SelectOptionItem {
 
 @Component({
   selector: 'app-ui-field-config-editor',
-  imports: [NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent, InputComponent],
+  imports: [NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent, InputComponent, HexColorPickerComponent],
   template: `
     <div class=" flex flex-col gap-4 h-full">
       <div class="flex flex-row items-center justify-between gap-3 border-b border-zinc-800 pb-4">
@@ -58,7 +59,8 @@ interface SelectOptionItem {
           [items]="scopeModeItems"
           compareProp="value"
           displayProp="label"
-          [(comboValue)]="scopeMode">
+          [comboValue]="scopeMode"
+          (comboValueChange)="onScopeModeChange($event)">
         </app-combo-box>
 
         @if (scopeMode === 'template') {
@@ -135,6 +137,23 @@ interface SelectOptionItem {
         </div>
       </div>
 
+      <div class="flex flex-wrap items-end gap-2 rounded-lg border border-zinc-800 bg-zinc-925 p-3">
+        @for (tab of layout.tabs; track tab.id) {
+          <button type="button" class="rounded px-3 py-2 text-sm"
+            [class.bg-zinc-700]="tab.id === activeTabId" (click)="selectLayoutTab(tab.id)">{{ tab.name }}</button>
+        }
+        <app-icon-button title="Nova aba" icon="fa-solid fa-plus" size="xs" buttonType="primary" (click)="addLayoutTab()"></app-icon-button>
+        <app-icon-button title="Mover aba para esquerda" icon="fa-solid fa-arrow-left" size="xs" buttonType="secondary" (click)="moveLayoutTab(-1)"></app-icon-button>
+        <app-icon-button title="Mover aba para direita" icon="fa-solid fa-arrow-right" size="xs" buttonType="secondary" (click)="moveLayoutTab(1)"></app-icon-button>
+        <app-icon-button title="Excluir aba" icon="fa-solid fa-trash" size="xs" buttonType="danger" (click)="removeLayoutTab()"></app-icon-button>
+        <app-input class="min-w-56" label="Nome da aba" [(value)]="activeTab.name"></app-input>
+        <div class="ms-auto flex items-center gap-2 text-xs text-zinc-400">
+          <span>Arraste os elementos para o grid</span>
+          <div class="catalog-item catalog-item--separator" draggable="true" (dragstart)="onSeparatorDragStart($event, 'horizontal')" (dragend)="clearDragState()">Separador horizontal</div>
+          <div class="catalog-item catalog-item--separator" draggable="true" (dragstart)="onSeparatorDragStart($event, 'vertical')" (dragend)="clearDragState()">Separador vertical</div>
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4">
         <div>
           <div class="text-sm mb-2 text-zinc-300">Grid de visualizacao</div>
@@ -143,32 +162,52 @@ interface SelectOptionItem {
             #gridSurface
             [ngStyle]="getGridStyle()"
             (dragover)="allowDrop($event)"
-            (drop)="onGridDrop($event)">
+            (drop)="onGridDrop($event)"
+            (click)="closeContextMenu()">
 
-            @for (item of layout.items; track item.token) {
+            @for (item of activeTab.items; track item.id) {
               <div
                 class="layout-item"
+                [class.layout-item--separator]="item.kind === 'separator'"
                 [ngStyle]="getItemStyle(item)"
                 (mousedown)="startMove($event, item)">
-                <div class="layout-item-header">
-                  <span>{{ getTokenLabel(item.token) }}</span>
-                  <app-icon-button
-                    class="layout-remove"
-                    icon="fa-solid fa-xmark"
-                    size="xss"
-                    buttonType="danger"
-                    title="Remover campo"
-                    (mousedown)="$event.stopPropagation()"
-                    (click)="removeItem(item.token); $event.stopPropagation()">
-                  </app-icon-button>
+                <div class="layout-item-header" (click)="openItemMenu($event, item)">
+                  <span>{{ getItemLabel(item) }}</span>
+                  <span class="text-[10px] text-zinc-400">Editar</span>
                 </div>
-                <div class="layout-item-body">
-                  <div class="text-[11px] text-zinc-400">{{ item.width }}x{{ item.height }}</div>
-                </div>
+                @if (item.kind === 'separator') {
+                  <div class="layout-separator-preview" [class.layout-separator-preview--vertical]="item.orientation === 'vertical'" [style.color]="item.color || null">
+                    <span></span>@if (item.label) { <b>{{ item.label }}</b> }<span></span>
+                  </div>
+                } @else {
+                  <div class="layout-item-body"><span>{{ item.width }} x {{ item.height }}</span></div>
+                }
 
-                <div class="resize-handle-right" (mousedown)="startResize($event, item, 'right')"></div>
-                <div class="resize-handle-bottom" (mousedown)="startResize($event, item, 'bottom')"></div>
-                <div class="resize-handle-corner" (mousedown)="startResize($event, item, 'corner')"></div>
+                @if (item.kind === 'separator') {
+                  <div class="separator-resize-handle"
+                    [class.separator-resize-handle--vertical]="item.orientation === 'vertical'"
+                    (mousedown)="startResize($event, item, item.orientation === 'horizontal' ? 'right' : 'bottom')"></div>
+                } @else {
+                  <div class="resize-handle-right" (mousedown)="startResize($event, item, 'right')"></div>
+                  <div class="resize-handle-bottom" (mousedown)="startResize($event, item, 'bottom')"></div>
+                  <div class="resize-handle-corner" (mousedown)="startResize($event, item, 'corner')"></div>
+                }
+              </div>
+            }
+            @if (contextMenuItem; as item) {
+              <div class="layout-context-menu" [style.left.px]="contextMenu!.x" [style.top.px]="contextMenu!.y"
+                (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+                <div class="flex items-center justify-between gap-4"><strong>{{ getItemLabel(item) }}</strong><button type="button" (click)="closeContextMenu()">×</button></div>
+                <span class="text-xs text-zinc-400">{{ item.width }} x {{ item.height }}</span>
+                @if (item.kind === 'separator') {
+                  <app-input label="Título opcional" size="xs" [(value)]="item.label"></app-input>
+                  <div class="flex gap-2">
+                    <app-button label="Horizontal" buttonType="secondary" size="xs" (click)="item.orientation = 'horizontal'"></app-button>
+                    <app-button label="Vertical" buttonType="secondary" size="xs" (click)="item.orientation = 'vertical'"></app-button>
+                  </div>
+                }
+                <app-hex-color-picker label="Destaque" [(value)]="item.color"></app-hex-color-picker>
+                <app-button label="Remover" buttonType="danger" size="xs" (click)="removeItem(item.id)"></app-button>
               </div>
             }
           </div>
@@ -274,6 +313,11 @@ export class UiFieldConfigEditorComponent {
 
   catalog: UiFieldCatalogItem[] = [];
   layout: UiConfigPayload = getSystemDefaultConfig('');
+  activeTabId = 'tab:properties';
+
+  get activeTab(): UiFieldLayoutTab {
+    return this.layout.tabs.find(tab => tab.id === this.activeTabId) ?? this.layout.tabs[0];
+  }
 
   scopeMode: 'entity' | 'parent' | 'global' | 'template' = 'global';
   parentScopeOptions: ParentScopeOption[] = [];
@@ -355,9 +399,16 @@ export class UiFieldConfigEditorComponent {
   }
 
   private draggingToken = '';
+  private draggingSeparatorOrientation: 'horizontal' | 'vertical' | null = null;
+  contextMenu: { itemId: string; x: number; y: number } | null = null;
+
+  get contextMenuItem(): UiFieldLayoutItem | null {
+    if (!this.contextMenu) return null;
+    return this.activeTab.items.find(item => item.id === this.contextMenu?.itemId) ?? null;
+  }
 
   private activeMove?: {
-    token: string;
+    id: string;
     startX: number;
     startY: number;
     startCol: number;
@@ -365,7 +416,7 @@ export class UiFieldConfigEditorComponent {
   };
 
   private activeResize?: {
-    token: string;
+    id: string;
     direction: 'right' | 'bottom' | 'corner';
     startX: number;
     startY: number;
@@ -441,6 +492,7 @@ export class UiFieldConfigEditorComponent {
       this.scopeMode = this.parentScopeOptions.length > 0 ? 'parent' : 'global';
     }
 
+    this.ensureActiveTab();
     document.addEventListener('mousemove', this.onDocumentMouseMove);
     document.addEventListener('mouseup', this.onDocumentMouseUp);
   }
@@ -452,6 +504,48 @@ export class UiFieldConfigEditorComponent {
   closeDialog(): void {
     this.dialogRef?.close();
   }
+  async onScopeModeChange(nextScope: string): Promise<void> {
+    if (!this.isScopeMode(nextScope) || nextScope === this.scopeMode) return;
+
+    const isLeavingExclusiveEntityScope = this.scopeMode === 'entity' &&
+      nextScope !== 'entity' &&
+      !!this.entityId &&
+      this.uiFieldConfigService.hasEntityConfig(this.entityTable, this.entityId);
+
+    if (isLeavingExclusiveEntityScope) {
+      const confirmed = await this.confirmService.ask(
+        'Ao trocar o escopo, o layout exclusivo desta entidade sera removido e a tela sera recarregada com o layout do novo escopo. Alteracoes nao salvas nesta tela serao perdidas. Deseja continuar?'
+      );
+      if (!confirmed) return;
+
+      this.uiFieldConfigService.deleteConfig({
+        entityTable: this.entityTable,
+        entityId: this.entityId,
+        scopeMode: 'entity',
+      });
+      this.scopeMode = nextScope;
+      this.reloadAfterScopeChange();
+      return;
+    }
+
+    this.scopeMode = nextScope;
+    this.layout = this.uiFieldConfigService.getResolvedConfig(this.entityTable, this.entityId);
+    this.ensureActiveTab();
+  }
+
+  private isScopeMode(value: string): value is 'entity' | 'parent' | 'global' | 'template' {
+    return value === 'entity' || value === 'parent' || value === 'global' || value === 'template';
+  }
+
+  private reloadAfterScopeChange(): void {
+    if (this.isDialogMode) {
+      this.dialogRef?.close({ reload: true });
+      return;
+    }
+
+    window.location.reload();
+  }
+
 
   ngOnDestroy(): void {
     document.removeEventListener('mousemove', this.onDocumentMouseMove);
@@ -467,6 +561,56 @@ export class UiFieldConfigEditorComponent {
     event.preventDefault();
   }
 
+  selectLayoutTab(tabId: string): void {
+    if (this.layout.tabs.some(tab => tab.id === tabId)) this.activeTabId = tabId;
+  }
+
+  addLayoutTab(): void {
+    let index = this.layout.tabs.length + 1;
+    let name = `Nova aba ${index}`;
+    const names = new Set(this.layout.tabs.map(tab => tab.name.toLocaleLowerCase()));
+    while (names.has(name.toLocaleLowerCase())) name = `Nova aba ${++index}`;
+    const tab = { id: `tab:${crypto.randomUUID()}`, name, items: [] };
+    this.layout.tabs = [...this.layout.tabs, tab];
+    this.activeTabId = tab.id;
+  }
+
+  moveLayoutTab(offset: number): void {
+    const index = this.layout.tabs.findIndex(tab => tab.id === this.activeTabId);
+    const target = index + offset;
+    if (index < 0 || target < 0 || target >= this.layout.tabs.length) return;
+    const tabs = [...this.layout.tabs];
+    [tabs[index], tabs[target]] = [tabs[target], tabs[index]];
+    this.layout.tabs = tabs;
+  }
+
+  async removeLayoutTab(): Promise<void> {
+    if (this.layout.tabs.length === 1) {
+      this.showNotice('O layout precisa conter ao menos uma aba.');
+      return;
+    }
+    if (!await this.confirmService.ask('remover esta aba e todos os itens posicionados nela?')) return;
+    const index = this.layout.tabs.findIndex(tab => tab.id === this.activeTabId);
+    this.layout.tabs = this.layout.tabs.filter(tab => tab.id !== this.activeTabId);
+    this.activeTabId = this.layout.tabs[Math.min(Math.max(index, 0), this.layout.tabs.length - 1)].id;
+  }
+
+  private addSeparatorAt(orientation: 'horizontal' | 'vertical', col: number, row: number): void {
+    this.activeTab.items = [...this.activeTab.items, {
+      id: `separator:${crypto.randomUUID()}`,
+      kind: 'separator',
+      orientation,
+      col,
+      row,
+      width: orientation === 'horizontal' ? this.layout.columns - col + 1 : 1,
+      height: orientation === 'horizontal' ? 1 : 4,
+    }];
+  }
+
+  private ensureActiveTab(): void {
+    if (!this.layout.tabs.some(tab => tab.id === this.activeTabId)) this.activeTabId = this.layout.tabs[0]?.id ?? '';
+  }
+
   onParentTableChange(tableName: string): void {
     this.selectedParentTable = tableName;
     this.loadParentEntities(tableName);
@@ -474,36 +618,65 @@ export class UiFieldConfigEditorComponent {
 
   onCatalogDragStart(event: DragEvent, token: string): void {
     this.draggingToken = token;
+    this.draggingSeparatorOrientation = null;
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy';
     event.dataTransfer?.setData('text/plain', token);
+  }
+
+  onSeparatorDragStart(event: DragEvent, orientation: 'horizontal' | 'vertical'): void {
+    this.draggingToken = '';
+    this.draggingSeparatorOrientation = orientation;
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer?.setData('application/x-lorekit-separator', orientation);
+    event.dataTransfer?.setData('text/plain', `separator:${orientation}`);
+  }
+
+  clearDragState(): void {
+    this.draggingToken = '';
+    this.draggingSeparatorOrientation = null;
   }
 
   onGridDrop(event: DragEvent): void {
     event.preventDefault();
 
-    const token = event.dataTransfer?.getData('text/plain') || this.draggingToken;
-    if (!token || this.isTokenPlaced(token)) {
+    const target = event.currentTarget as HTMLElement;
+    const { col, row } = this.getDropPosition(event, target);
+    const rawValue = event.dataTransfer?.getData('text/plain') || '';
+    const separator = event.dataTransfer?.getData('application/x-lorekit-separator') ||
+      (rawValue === 'separator:horizontal' ? 'horizontal' : rawValue === 'separator:vertical' ? 'vertical' : null) ||
+      this.draggingSeparatorOrientation;
+    if (separator === 'horizontal' || separator === 'vertical') {
+      this.addSeparatorAt(separator, col, row);
+      this.draggingSeparatorOrientation = null;
       return;
     }
 
-    const target = event.currentTarget as HTMLElement;
+    const token = rawValue || this.draggingToken;
+    if (!token || this.isTokenPlaced(token)) {
+      return;
+    }
+    const width = this.getDefaultWidth(token);
+    this.activeTab.items = [...this.activeTab.items, createFieldLayoutItem(token, clamp(col, 1, this.layout.columns - width + 1), row, width, this.getDefaultHeight(token))];
+    this.draggingToken = '';
+  }
+
+  private getDropPosition(event: DragEvent, target: HTMLElement): { col: number; row: number } {
     const rect = target.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
     const colWidth = rect.width / this.layout.columns;
-    const col = clamp(Math.floor(x / colWidth) + 1, 1, this.layout.columns);
-    const row = Math.max(1, Math.floor(y / this.layout.rowHeight) + 1);
+    return {
+      col: clamp(Math.floor((event.clientX - rect.left) / colWidth) + 1, 1, this.layout.columns),
+      row: Math.max(1, Math.floor((event.clientY - rect.top) / this.layout.rowHeight) + 1),
+    };
+  }
 
-    this.layout.items = [
-      ...this.layout.items,
-      {
-        token,
-        col,
-        row,
-        width: this.getDefaultWidth(token),
-        height: this.getDefaultHeight(token),
-      },
-    ];
+  openItemMenu(event: MouseEvent, item: UiFieldLayoutItem): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.contextMenu = { itemId: item.id, x: event.clientX, y: event.clientY };
+  }
+
+  closeContextMenu(): void {
+    this.contextMenu = null;
   }
 
   startMove(event: MouseEvent, item: UiFieldLayoutItem): void {
@@ -511,13 +684,14 @@ export class UiFieldConfigEditorComponent {
     if (target.closest('.resize-handle-right') ||
       target.closest('.resize-handle-bottom') ||
       target.closest('.resize-handle-corner') ||
-      target.closest('.layout-remove')) {
+      target.closest('.layout-remove') ||
+      target.closest('.layout-item-header')) {
       return;
     }
 
     event.preventDefault();
     this.activeMove = {
-      token: item.token,
+      id: item.id,
       startX: event.clientX,
       startY: event.clientY,
       startCol: item.col,
@@ -530,7 +704,7 @@ export class UiFieldConfigEditorComponent {
     event.stopPropagation();
 
     this.activeResize = {
-      token: item.token,
+      id: item.id,
       direction,
       startX: event.clientX,
       startY: event.clientY,
@@ -541,7 +715,7 @@ export class UiFieldConfigEditorComponent {
 
   private onDocumentMouseMove = (event: MouseEvent): void => {
     if (this.activeMove) {
-      const current = this.layout.items.find((item) => item.token === this.activeMove?.token);
+      const current = this.activeTab.items.find((item) => item.id === this.activeMove?.id);
       if (!current) {
         return;
       }
@@ -565,7 +739,7 @@ export class UiFieldConfigEditorComponent {
     }
 
     if (this.activeResize) {
-      const current = this.layout.items.find((item) => item.token === this.activeResize?.token);
+      const current = this.activeTab.items.find((item) => item.id === this.activeResize?.id);
       if (!current) {
         return;
       }
@@ -597,20 +771,27 @@ export class UiFieldConfigEditorComponent {
     this.activeResize = undefined;
   };
 
-  removeItem(token: string): void {
-    this.layout.items = this.layout.items.filter((item) => item.token !== token);
+  removeItem(id: string): void {
+    this.activeTab.items = this.activeTab.items.filter((item) => item.id !== id);
+    if (this.contextMenu?.itemId === id) this.closeContextMenu();
   }
 
   isTokenPlaced(token: string): boolean {
-    return this.layout.items.some((item) => item.token === token);
+    return this.layout.tabs.some(tab => tab.items.some(item => item.kind === 'field' && item.token === token));
   }
 
   getTokenLabel(token: string): string {
     return this.catalog.find((field) => field.token === token)?.label ?? token;
   }
 
+  getItemLabel(item: UiFieldLayoutItem): string {
+    return item.kind === 'field'
+      ? this.getTokenLabel(item.token)
+      : item.label || (item.orientation === 'horizontal' ? 'Separador horizontal' : 'Separador vertical');
+  }
+
   getGridStyle(): Record<string, string> {
-    const maxRow = this.layout.items.reduce((acc, item) => Math.max(acc, item.row + item.height), 10);
+    const maxRow = this.activeTab.items.reduce((acc, item) => Math.max(acc, item.row + item.height), 10);
     const minHeight = Math.max(480, maxRow * this.layout.rowHeight);
     return {
       minHeight: `${minHeight}px`,
@@ -619,11 +800,27 @@ export class UiFieldConfigEditorComponent {
   }
 
   getItemStyle(item: UiFieldLayoutItem): Record<string, string> {
+    if (item.kind === 'separator') {
+      if (item.orientation === 'horizontal') {
+        return {
+          left: `calc(${((item.col - 1) / this.layout.columns) * 100}% + 6px)`,
+          top: `${(item.row - 1) * this.layout.rowHeight}px`,
+          width: `calc(${(item.width / this.layout.columns) * 100}% - 12px)`,
+          height: '1px',
+        };
+      }
+      return {
+        left: `calc(${((item.col - 1) / this.layout.columns) * 100}%)`,
+        top: `${(item.row - 1) * this.layout.rowHeight + 6}px`,
+        width: '1px',
+        height: `${item.height * this.layout.rowHeight - 12}px`,
+      };
+    }
     return {
-      left: `calc(${((item.col - 1) / this.layout.columns) * 100}% + 4px)`,
-      top: `${(item.row - 1) * this.layout.rowHeight + 4}px`,
-      width: `calc(${(item.width / this.layout.columns) * 100}% - 8px)`,
-      height: `${item.height * this.layout.rowHeight - 8}px`,
+      left: `calc(${((item.col - 1) / this.layout.columns) * 100}% + 8px)`,
+      top: `${(item.row - 1) * this.layout.rowHeight + 8}px`,
+      width: `calc(${(item.width / this.layout.columns) * 100}% - 16px)`,
+      height: `${item.height * this.layout.rowHeight - 16}px`,
     };
   }
 
@@ -656,6 +853,7 @@ export class UiFieldConfigEditorComponent {
     }
 
     this.layout = this.uiFieldConfigService.getResolvedConfig(this.entityTable, this.entityId);
+    this.ensureActiveTab();
   }
 
   async confirmResetToDefault(): Promise<void> {
@@ -669,7 +867,8 @@ export class UiFieldConfigEditorComponent {
   }
 
   save(): void {
-    const cleanedLayout = this.buildCleanedLayout();
+    const cleanedLayout = this.tryBuildCleanedLayout();
+    if (!cleanedLayout) return;
 
     if (this.scopeMode === 'template') {
       if (!this.activeTemplateId) {
@@ -738,18 +937,27 @@ export class UiFieldConfigEditorComponent {
   }
 
   private buildCleanedLayout(): UiConfigPayload {
-    return {
-      version: 1,
+    return validateUiConfigPayload({
+      version: 2,
       columns: this.layout.columns,
       rowHeight: this.layout.rowHeight,
-      items: this.layout.items.map((item) => ({
-        token: item.token,
-        col: item.col,
-        row: item.row,
-        width: item.width,
-        height: item.height,
+      tabs: this.layout.tabs.map(tab => ({
+        id: tab.id,
+        name: tab.name.trim(),
+        items: tab.items.map(item => item.kind === 'field'
+          ? { ...item, color: item.color || undefined }
+          : { ...item, label: item.label?.trim() || undefined, color: item.color || undefined }),
       })),
-    };
+    });
+  }
+
+  private tryBuildCleanedLayout(): UiConfigPayload | null {
+    try {
+      return this.buildCleanedLayout();
+    } catch (error) {
+      this.showNotice(error instanceof Error ? error.message : 'O layout e invalido.');
+      return null;
+    }
   }
 
   refreshTemplates(): void {
@@ -763,6 +971,7 @@ export class UiFieldConfigEditorComponent {
       .find((t) => t.id === templateId);
     if (tpl) {
       this.layout = this.uiFieldConfigService.parseTemplateConfig(tpl);
+      this.ensureActiveTab();
       this.selectedTemplateId = tpl.id;
       this.activeTemplateId = tpl.id;
       this.activeTemplateName = tpl.name;
@@ -783,7 +992,8 @@ export class UiFieldConfigEditorComponent {
       this.showNotice('Informe um nome para o template.');
       return;
     }
-    const cleanedLayout = this.buildCleanedLayout();
+    const cleanedLayout = this.tryBuildCleanedLayout();
+    if (!cleanedLayout) return;
     const created = this.uiFieldConfigService.saveTemplate(name, this.entityTable, cleanedLayout);
     this.newTemplateName = '';
     this.showCreateTemplateForm = false;

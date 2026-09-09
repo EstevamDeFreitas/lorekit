@@ -20,14 +20,16 @@ import { SpecieListComponent } from "../specie-list/specie-list.component";
 import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
-import { SpecieConfiguredFieldsComponent } from '../specie-configured-fields/specie-configured-fields.component';
+import { EntityConfiguredFieldsComponent } from '../../../components/entity-configured-fields/entity-configured-fields.component';
+import { UiConfigPayload } from '../../../models/ui-field-config.model';
+import { getSystemDefaultConfig, UiFieldConfigService } from '../../../services/ui-field-config.service';
 import { EntityChangeService } from '../../../services/entity-change.service';
-import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
+import { activeLayoutTabId, CurrentEntityPageStateService, layoutTabStateId, resolveEntityTab } from '../../../services/current-entity-page-state.service';
 import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-specie-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, SpecieListComponent, NavButtonComponent, UiFieldConfigButtonComponent, SpecieConfiguredFieldsComponent, AssetUrlPipe],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, SpecieListComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
   template: `
     <div class="flex flex-col relative @container">
       @if(getImageByUsageKey(specie.Images, 'default') != null){
@@ -76,16 +78,19 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       <div class="flex flex-col @2xl:flex-row gap-4 mt-10">
         <div class="flex-1 flex flex-col">
           <div class="flex flex-row flex-wrap gap-4 ms-1">
-            <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button>
+            @for (tab of fieldLayout.tabs; track tab.id) {
+              <app-nav-button [label]="tab.name" size="sm" [active]="currentTab === layoutTabStateId(tab.id)" (click)="selectTab(layoutTabStateId(tab.id))"></app-nav-button>
+            }
             <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
             <app-nav-button [label]="'Variações'" size="sm" [active]="currentTab === 'subspecies'" (click)="selectTab('subspecies')"></app-nav-button>
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
             @if (!isLoading) {
               @switch (currentTab) {
-                @case ('properties') {
+                @default {
                   <div class="w-full flex-1  p-1">
-                    <app-specie-configured-fields [specie]="specie" (requestSave)="saveSpecie()"></app-specie-configured-fields>
+                    <app-entity-configured-fields entityTable="Species" [entity]="specie" [layout]="fieldLayout"
+                      [activeTabId]="activeLayoutTabId()" (requestSave)="saveSpecie()"></app-entity-configured-fields>
                   </div>
                 }
                 @case ('details') {
@@ -118,11 +123,15 @@ export class SpecieEditComponent implements OnInit {
   private specieService = inject(SpecieService);
   private entityChangeService = inject(EntityChangeService);
   private currentEntityPageStateService = inject(CurrentEntityPageStateService);
+  private uiFieldConfigService = inject(UiFieldConfigService);
   private locationService = inject(LocationService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
 
-  currentTab: string = 'properties';
+  currentTab = layoutTabStateId('tab:properties');
+  fieldLayout: UiConfigPayload = getSystemDefaultConfig('Species');
+  readonly layoutTabStateId = layoutTabStateId;
+  activeLayoutTabId(): string { return activeLayoutTabId(this.currentTab, this.fieldLayout); }
 
   isInDialog = computed(() => !!this.dialogref);
 
@@ -174,6 +183,8 @@ export class SpecieEditComponent implements OnInit {
 
   getSpecie(){
     this.specie = this.specieService.getSpecie(this.specieId());
+    this.fieldLayout = this.uiFieldConfigService.getResolvedConfig('Species', this.specie.id);
+    this.currentTab = resolveEntityTab(this.currentTab, this.fieldLayout, ['details', 'subspecies']);
 
     this.selectedParentLocationId = this.specie.ParentLocation ? this.specie.ParentLocation.id : '';
     this.selectedWorldId = this.specie.ParentWorld ? this.specie.ParentWorld.id : '';

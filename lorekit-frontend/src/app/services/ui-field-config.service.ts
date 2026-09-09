@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { DbProvider } from '../app.config';
 import { CrudHelper } from '../database/database.helper';
-import { UiConfigPayload, UiFieldCatalogItem, UiFieldConfig, UiFieldTemplate } from '../models/ui-field-config.model';
+import { createFieldLayoutItem, normalizeUiConfigPayload, UiConfigPayload, UiFieldCatalogItem, UiFieldConfig, UiFieldControl, UiFieldTemplate } from '../models/ui-field-config.model';
 import { DynamicField } from '../models/dynamicfields.model';
 import { DynamicFieldService } from './dynamic-field.service';
 
@@ -35,6 +35,7 @@ export class UiFieldConfigService {
         source: 'dynamic' as const,
         isEditorField: !!field.isEditorField,
         fieldType: field.fieldType || 'text',
+        control: dynamicControl(field),
       }));
 
     return [...fixedFields, ...dynamicFields];
@@ -94,6 +95,10 @@ export class UiFieldConfigService {
     }
 
     return getSystemDefaultConfig(entityTable);
+  }
+
+  hasEntityConfig(entityTable: string, entityId: string): boolean {
+    return this.getRowsForEntityTable(entityTable).some((row) => row.entityId === entityId);
   }
 
   saveConfig(options: {
@@ -217,19 +222,9 @@ export class UiFieldConfigService {
     });
   }
 
-  private parseConfigOrDefault(entityTable: string, uiConfig: string): UiConfigPayload {
+  private parseConfigOrDefault(entityTable: string, uiConfig: string, legacyTabName = 'Propriedades'): UiConfigPayload {
     try {
-      const parsed = JSON.parse(uiConfig) as UiConfigPayload;
-      if (!parsed || !Array.isArray(parsed.items)) {
-        return getSystemDefaultConfig(entityTable);
-      }
-
-      return {
-        version: parsed.version ?? 1,
-        columns: parsed.columns ?? 12,
-        rowHeight: parsed.rowHeight ?? 56,
-        items: parsed.items,
-      };
+      return normalizeUiConfigPayload(JSON.parse(uiConfig), legacyTabName);
     } catch {
       return getSystemDefaultConfig(entityTable);
     }
@@ -296,52 +291,52 @@ export class UiFieldConfigService {
   }
 
   parseTemplateConfig(template: UiFieldTemplate): UiConfigPayload {
-    return this.parseConfigOrDefault(template.entityTable, template.uiConfig);
+    return this.parseConfigOrDefault(template.entityTable, template.uiConfig, template.name);
   }
 }
 
 export function getSystemCatalog(entityTable: string): UiFieldCatalogItem[] {
   if (entityTable === 'Culture') {
     return [
-      { token: 'schema:values', key: 'values', label: 'Valores', source: 'schema', isEditorField: false },
-      { token: 'schema:technologyLevel', key: 'technologyLevel', label: 'Nivel Tecnologico', source: 'schema', isEditorField: false },
-      { token: 'schema:language', key: 'language', label: 'Linguagem', source: 'schema', isEditorField: false },
-      { token: 'schema:traditions', key: 'traditions', label: 'Tradicoes', source: 'schema', isEditorField: true },
-      { token: 'schema:socialStructure', key: 'socialStructure', label: 'Estrutura Social', source: 'schema', isEditorField: true },
-      { token: 'schema:beliefSystems', key: 'beliefSystems', label: 'Crencas', source: 'schema', isEditorField: true },
-      { token: 'schema:culinaryPractices', key: 'culinaryPractices', label: 'Praticas Culinarias', source: 'schema', isEditorField: true },
-      { token: 'schema:concept', key: 'concept', label: 'Conceito', source: 'schema', isEditorField: false },
+      systemField('values', 'Valores', 'input'),
+      systemField('technologyLevel', 'Nivel Tecnologico', 'input'),
+      systemField('language', 'Linguagem', 'input'),
+      systemField('traditions', 'Tradicoes', 'editor'),
+      systemField('socialStructure', 'Estrutura Social', 'editor'),
+      systemField('beliefSystems', 'Crencas', 'editor'),
+      systemField('culinaryPractices', 'Praticas Culinarias', 'editor'),
+      systemField('concept', 'Conceito', 'textarea'),
     ];
   }
 
   if (entityTable === 'Character') {
     return [
-      { token: 'schema:age', key: 'age', label: 'Idade', source: 'schema', isEditorField: false },
-      { token: 'schema:height', key: 'height', label: 'Altura', source: 'schema', isEditorField: false },
-      { token: 'schema:weight', key: 'weight', label: 'Peso', source: 'schema', isEditorField: false },
-      { token: 'schema:occupation', key: 'occupation', label: 'Ocupacao', source: 'schema', isEditorField: false },
-      { token: 'schema:alignment', key: 'alignment', label: 'Alinhamento', source: 'schema', isEditorField: false },
-      { token: 'schema:personality', key: 'personality', label: 'Personalidade', source: 'schema', isEditorField: true },
-      { token: 'schema:appearance', key: 'appearance', label: 'Aparencia', source: 'schema', isEditorField: true },
-      { token: 'schema:objectives', key: 'objectives', label: 'Objetivos', source: 'schema', isEditorField: true },
+      systemField('age', 'Idade', 'input'),
+      systemField('height', 'Altura', 'input'),
+      systemField('weight', 'Peso', 'input'),
+      systemField('occupation', 'Ocupacao', 'input'),
+      systemField('alignment', 'Alinhamento', 'input'),
+      systemField('personality', 'Personalidade', 'editor'),
+      systemField('appearance', 'Aparencia', 'editor'),
+      systemField('objectives', 'Objetivos', 'editor'),
     ];
   }
 
   if (entityTable === 'Species') {
     return [
-      { token: 'schema:classification', key: 'classification', label: 'Classificacao', source: 'schema', isEditorField: false },
-      { token: 'schema:diet', key: 'diet', label: 'Dieta', source: 'schema', isEditorField: false },
-      { token: 'schema:averageLifespan', key: 'averageLifespan', label: 'Expectativa de Vida (anos)', source: 'schema', isEditorField: false },
-      { token: 'schema:averageHeight', key: 'averageHeight', label: 'Altura media (metros)', source: 'schema', isEditorField: false },
-      { token: 'schema:averageWeight', key: 'averageWeight', label: 'Peso medio (kg)', source: 'schema', isEditorField: false },
-      { token: 'schema:physicalCharacteristics', key: 'physicalCharacteristics', label: 'Caracteristicas fisicas', source: 'schema', isEditorField: true },
-      { token: 'schema:behavioralCharacteristics', key: 'behavioralCharacteristics', label: 'Caracteristicas comportamentais', source: 'schema', isEditorField: true },
+      systemField('classification', 'Classificacao', 'input'),
+      systemField('diet', 'Dieta', 'input'),
+      systemField('averageLifespan', 'Expectativa de Vida (anos)', 'input'),
+      systemField('averageHeight', 'Altura media (metros)', 'input'),
+      systemField('averageWeight', 'Peso medio (kg)', 'input'),
+      systemField('physicalCharacteristics', 'Caracteristicas fisicas', 'editor'),
+      systemField('behavioralCharacteristics', 'Caracteristicas comportamentais', 'editor'),
     ];
   }
 
   if (entityTable === 'World') {
     return [
-      { token: 'schema:concept', key: 'concept', label: 'Conceito', source: 'schema', isEditorField: false },
+      systemField('concept', 'Conceito', 'textarea'),
     ];
   }
 
@@ -349,73 +344,24 @@ export function getSystemCatalog(entityTable: string): UiFieldCatalogItem[] {
 }
 
 export function getSystemDefaultConfig(entityTable: string): UiConfigPayload {
+  let items: Array<[string, number, number, number, number]> = [];
   if (entityTable === 'Culture') {
-    return {
-      version: 1,
-      columns: 12,
-      rowHeight: 56,
-      items: [
-        { token: 'schema:values', col: 1, row: 1, width: 4, height: 1 },
-        { token: 'schema:technologyLevel', col: 5, row: 1, width: 4, height: 1 },
-        { token: 'schema:language', col: 9, row: 1, width: 4, height: 1 },
-        { token: 'schema:traditions', col: 1, row: 2, width: 6, height: 6 },
-        { token: 'schema:socialStructure', col: 7, row: 2, width: 6, height: 6 },
-        { token: 'schema:beliefSystems', col: 1, row: 8, width: 6, height: 6 },
-        { token: 'schema:culinaryPractices', col: 7, row: 8, width: 6, height: 6 },
-      ],
-    };
+    items = [['schema:values', 1, 1, 4, 1], ['schema:technologyLevel', 5, 1, 4, 1], ['schema:language', 9, 1, 4, 1], ['schema:traditions', 1, 2, 6, 6], ['schema:socialStructure', 7, 2, 6, 6], ['schema:beliefSystems', 1, 8, 6, 6], ['schema:culinaryPractices', 7, 8, 6, 6]];
+  } else if (entityTable === 'Character') {
+    items = [['schema:age', 1, 1, 2, 1], ['schema:height', 3, 1, 2, 1], ['schema:weight', 5, 1, 2, 1], ['schema:occupation', 7, 1, 3, 1], ['schema:alignment', 10, 1, 3, 1], ['schema:personality', 1, 2, 6, 6], ['schema:appearance', 7, 2, 6, 6], ['schema:objectives', 1, 8, 12, 6]];
+  } else if (entityTable === 'Species') {
+    items = [['schema:classification', 1, 1, 3, 1], ['schema:diet', 4, 1, 3, 1], ['schema:averageLifespan', 7, 1, 3, 1], ['schema:averageHeight', 10, 1, 3, 1], ['schema:averageWeight', 1, 2, 3, 1], ['schema:physicalCharacteristics', 1, 3, 6, 6], ['schema:behavioralCharacteristics', 7, 3, 6, 6]];
+  } else if (entityTable === 'World') {
+    items = [['schema:concept', 1, 1, 12, 2]];
   }
+  return { version: 2, columns: 12, rowHeight: 56, tabs: [{ id: 'tab:properties', name: 'Propriedades', items: items.map(([token, col, row, width, height]) => createFieldLayoutItem(token, col, row, width, height)) }] };
+}
 
-  if (entityTable === 'Character') {
-    return {
-      version: 1,
-      columns: 12,
-      rowHeight: 56,
-      items: [
-        { token: 'schema:age', col: 1, row: 1, width: 2, height: 1 },
-        { token: 'schema:height', col: 3, row: 1, width: 2, height: 1 },
-        { token: 'schema:weight', col: 5, row: 1, width: 2, height: 1 },
-        { token: 'schema:occupation', col: 7, row: 1, width: 3, height: 1 },
-        { token: 'schema:alignment', col: 10, row: 1, width: 3, height: 1 },
-        { token: 'schema:personality', col: 1, row: 2, width: 6, height: 6 },
-        { token: 'schema:appearance', col: 7, row: 2, width: 6, height: 6 },
-        { token: 'schema:objectives', col: 1, row: 8, width: 12, height: 6 },
-      ],
-    };
-  }
+function systemField(key: string, label: string, control: UiFieldControl): UiFieldCatalogItem {
+  return { token: `schema:${key}`, key, label, source: 'schema', isEditorField: control === 'editor', fieldType: control, control };
+}
 
-  if (entityTable === 'Species') {
-    return {
-      version: 1,
-      columns: 12,
-      rowHeight: 56,
-      items: [
-        { token: 'schema:classification', col: 1, row: 1, width: 3, height: 1 },
-        { token: 'schema:diet', col: 4, row: 1, width: 3, height: 1 },
-        { token: 'schema:averageLifespan', col: 7, row: 1, width: 3, height: 1 },
-        { token: 'schema:averageHeight', col: 10, row: 1, width: 3, height: 1 },
-        { token: 'schema:averageWeight', col: 1, row: 2, width: 3, height: 1 },
-        { token: 'schema:physicalCharacteristics', col: 1, row: 3, width: 6, height: 6 },
-        { token: 'schema:behavioralCharacteristics', col: 7, row: 3, width: 6, height: 6 },
-      ],
-    };
-  }
-
-  if (entityTable === 'World') {
-    return {
-      version: 1,
-      columns: 12,
-      rowHeight: 56,
-      items: [
-        { token: 'schema:concept', col: 1, row: 1, width: 12, height: 2 },
-      ],
-    };
-  }
-
-  return {
-    version: 1,
-    columns: 12,
-    rowHeight: 56,
-    items: [],
-  };
+function dynamicControl(field: DynamicField): UiFieldControl {
+  if (field.fieldType === 'image' || field.fieldType === 'entity' || field.fieldType === 'options') return field.fieldType;
+  return field.isEditorField || field.fieldType === 'editor' ? 'editor' : 'input';
 }

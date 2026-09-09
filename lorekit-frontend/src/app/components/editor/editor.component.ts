@@ -27,7 +27,7 @@ import { EditorJsAdapter, EditorJsOutputData } from './editor-js.adapter';
 import { LorekitDocumentCodec } from './lorekit-document.codec';
 import { TiptapAdapter } from './tiptap.adapter';
 import { createTiptapExtensions } from './tiptap.extensions';
-import { MOODBOARD_ACCENT_PALETTE, MOODBOARD_FILL_PALETTE } from '../../theme/moodboard-color-palette';
+import { HexColorPickerComponent } from '../hex-color-picker/hex-color-picker.component';
 
 type TextStyleSnapshot = {
   bold: boolean;
@@ -41,7 +41,7 @@ type TextStyleSnapshot = {
 
 @Component({
   selector: 'app-editor',
-  imports: [IconButtonComponent],
+  imports: [IconButtonComponent, HexColorPickerComponent],
   template: `
     <div class="relative">
       <app-icon-button class="absolute right-0" (click)="exportContent()" buttonType="white" size="xs" icon="fa-solid fa-download" title="Exportar"></app-icon-button>
@@ -69,14 +69,15 @@ type TextStyleSnapshot = {
              </button>
              @if (colorPickerOpen()) {
                <div class="tiptap-color-picker" (click)="$event.stopPropagation()">
-                 <div class="tiptap-color-picker-section"><span>Tons</span><div class="tiptap-color-grid">@for (color of moodboardFillPalette; track color) { <button type="button" class="tiptap-color-swatch" [style.background-color]="color" [class.tiptap-color-swatch--selected]="color === textColor()" [attr.aria-label]="'Cor ' + color" (click)="setColor(color)"></button> }</div></div>
-                 <div class="tiptap-color-picker-section"><span>Cores</span><div class="tiptap-color-grid"><button type="button" class="tiptap-color-swatch" style="background-color: #ffffff" [class.tiptap-color-swatch--selected]="textColor() === '#ffffff'" aria-label="Texto branco" (click)="setColor('#ffffff')"></button>@for (color of moodboardAccentPalette; track color) { <button type="button" class="tiptap-color-swatch" [style.background-color]="color" [class.tiptap-color-swatch--selected]="color === textColor()" [attr.aria-label]="'Cor ' + color" (click)="setColor(color)"></button> }</div></div>
-                 <label class="tiptap-custom-color"><span>Cor personalizada</span><input #customTextColor type="color" [value]="textColor()" (change)="setColor(customTextColor.value)"></label>
-                  <button type="button" class="tiptap-color-clear" (click)="clearTextColor()">Limpar cor do texto</button>
-                </div>
+                 <app-hex-color-picker label="Cor do texto" [value]="textColor()" (valueChange)="setOptionalTextColor($event)"></app-hex-color-picker>
+               </div>
              }
              <button type="button" class="tiptap-toolbar-button tiptap-toolbar-color-button" [class.tiptap-toolbar-button--active]="backgroundPickerOpen()" (click)="toggleBackgroundPicker($event)" title="Cor de fundo"><i class="fa-solid fa-fill-drip"></i><span [style.background-color]="backgroundColor()"></span></button>
-             @if (backgroundPickerOpen()) { <div class="tiptap-color-picker" (click)="$event.stopPropagation()"><div class="tiptap-color-picker-section"><span>Tons</span><div class="tiptap-color-grid">@for (color of moodboardFillPalette; track color) { <button type="button" class="tiptap-color-swatch" [style.background-color]="color" [class.tiptap-color-swatch--selected]="color === backgroundColor()" [attr.aria-label]="'Cor de fundo ' + color" (click)="setBackgroundColor(color)"></button> }</div></div><div class="tiptap-color-picker-section"><span>Cores</span><div class="tiptap-color-grid">@for (color of moodboardAccentPalette; track color) { <button type="button" class="tiptap-color-swatch" [style.background-color]="color" [class.tiptap-color-swatch--selected]="color === backgroundColor()" [attr.aria-label]="'Cor de fundo ' + color" (click)="setBackgroundColor(color)"></button> }</div></div><label class="tiptap-custom-color"><span>Cor personalizada</span><input #customBackgroundColor type="color" [value]="backgroundColor()" (change)="setBackgroundColor(customBackgroundColor.value)"></label><button type="button" class="tiptap-color-clear" (click)="clearBackgroundColor()">Limpar cor de fundo</button></div> }
+             @if (backgroundPickerOpen()) {
+               <div class="tiptap-color-picker" (click)="$event.stopPropagation()">
+                 <app-hex-color-picker label="Cor de fundo" [value]="backgroundColor()" (valueChange)="setOptionalBackgroundColor($event)"></app-hex-color-picker>
+               </div>
+             }
              <button type="button" class="tiptap-toolbar-button" (click)="clearBackgroundColor()" title="Limpar cor de fundo"><i class="fa-solid fa-eraser"></i></button>
              <button type="button" class="tiptap-toolbar-button" [class.tiptap-toolbar-button--active]="isActive('link')" (click)="setLink()" title="Link"><i class="fa-solid fa-link"></i></button>
            </div>
@@ -114,10 +115,7 @@ type TextStyleSnapshot = {
                 <button type="button" class="tiptap-selection-color" [class.tiptap-toolbar-button--active]="selectionTextColorPickerOpen()" (mousedown)="preserveSelection($event)" (click)="toggleSelectionTextColorPicker($event)" title="Cor do texto"><i class="fa-solid fa-font"></i></button>
                 @if (selectionTextColorPickerOpen()) {
                   <div class="tiptap-color-picker tiptap-selection-color-picker" (click)="$event.stopPropagation()">
-                    <div class="tiptap-color-picker-section"><span>Tons</span><div class="tiptap-color-grid">@for (color of moodboardFillPalette; track color) { <button type="button" class="tiptap-color-swatch" [style.background-color]="color" [class.tiptap-color-swatch--selected]="color === textColor()" [attr.aria-label]="'Cor ' + color" (mousedown)="preserveSelection($event)" (click)="setColor(color)"></button> }</div></div>
-                    <div class="tiptap-color-picker-section"><span>Cores</span><div class="tiptap-color-grid"><button type="button" class="tiptap-color-swatch" style="background-color: #ffffff" [class.tiptap-color-swatch--selected]="textColor() === '#ffffff'" aria-label="Texto branco" (mousedown)="preserveSelection($event)" (click)="setColor('#ffffff')"></button>@for (color of moodboardAccentPalette; track color) { <button type="button" class="tiptap-color-swatch" [style.background-color]="color" [class.tiptap-color-swatch--selected]="color === textColor()" [attr.aria-label]="'Cor ' + color" (mousedown)="preserveSelection($event)" (click)="setColor(color)"></button> }</div></div>
-                    <label class="tiptap-custom-color"><span>Cor personalizada</span><input #contextTextColor type="color" [value]="textColor()" (change)="setColor(contextTextColor.value)"></label>
-                    <button type="button" class="tiptap-color-clear" (mousedown)="preserveSelection($event)" (click)="clearTextColor()">Limpar cor do texto</button>
+                    <app-hex-color-picker label="Cor do texto" [value]="textColor()" (valueChange)="setOptionalTextColor($event)"></app-hex-color-picker>
                   </div>
                 }
               </div>
@@ -125,10 +123,7 @@ type TextStyleSnapshot = {
                 <button type="button" class="tiptap-selection-color" [class.tiptap-toolbar-button--active]="selectionBackgroundPickerOpen()" (mousedown)="preserveSelection($event)" (click)="toggleSelectionBackgroundPicker($event)" title="Cor do fundo"><i class="fa-solid fa-fill-drip"></i></button>
                 @if (selectionBackgroundPickerOpen()) {
                   <div class="tiptap-color-picker tiptap-selection-color-picker" (click)="$event.stopPropagation()">
-                    <div class="tiptap-color-picker-section"><span>Tons</span><div class="tiptap-color-grid">@for (color of moodboardFillPalette; track color) { <button type="button" class="tiptap-color-swatch" [style.background-color]="color" [class.tiptap-color-swatch--selected]="color === backgroundColor()" [attr.aria-label]="'Cor de fundo ' + color" (mousedown)="preserveSelection($event)" (click)="setBackgroundColor(color)"></button> }</div></div>
-                    <div class="tiptap-color-picker-section"><span>Cores</span><div class="tiptap-color-grid">@for (color of moodboardAccentPalette; track color) { <button type="button" class="tiptap-color-swatch" [style.background-color]="color" [class.tiptap-color-swatch--selected]="color === backgroundColor()" [attr.aria-label]="'Cor de fundo ' + color" (mousedown)="preserveSelection($event)" (click)="setBackgroundColor(color)"></button> }</div></div>
-                    <label class="tiptap-custom-color"><span>Cor personalizada</span><input #contextBackgroundColor type="color" [value]="backgroundColor()" (change)="setBackgroundColor(contextBackgroundColor.value)"></label>
-                    <button type="button" class="tiptap-color-clear" (mousedown)="preserveSelection($event)" (click)="clearBackgroundColor()">Limpar cor de fundo</button>
+                    <app-hex-color-picker label="Cor de fundo" [value]="backgroundColor()" (valueChange)="setOptionalBackgroundColor($event)"></app-hex-color-picker>
                   </div>
                 }
               </div>
@@ -204,8 +199,6 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   readonly fontSize = signal(16);
   readonly toolbarExpanded = signal(false);
   readonly styleToPaste = signal<TextStyleSnapshot | null>(null);
-  readonly moodboardFillPalette = MOODBOARD_FILL_PALETTE;
-  readonly moodboardAccentPalette = MOODBOARD_ACCENT_PALETTE;
   readonly colorPickerOpen = signal(false);
   readonly textColor = signal('#fde047');
   readonly selectionTooltip = signal<{ left: number; top: number } | null>(null);
@@ -585,6 +578,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     this.colorPickerOpen.set(false);
     this.selectionTextColorPickerOpen.set(false);
   }
+  setOptionalTextColor(color?: string): void {
+    color ? this.setColor(color) : this.clearTextColor();
+  }
   clearTextColor(): void {
     this.run(editor => { editor.chain().focus().unsetColor().run(); });
     this.textColor.set('#ffffff');
@@ -600,6 +596,9 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     this.run(editor => { editor.chain().focus().setBackgroundColor(color).run(); });
     this.backgroundPickerOpen.set(false);
     this.selectionBackgroundPickerOpen.set(false);
+  }
+  setOptionalBackgroundColor(color?: string): void {
+    color ? this.setBackgroundColor(color) : this.clearBackgroundColor();
   }
   clearBackgroundColor(): void {
     this.run(editor => { editor.chain().focus().unsetBackgroundColor().run(); });

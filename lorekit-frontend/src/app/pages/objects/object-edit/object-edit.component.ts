@@ -19,17 +19,18 @@ import { EntityLateralMenuButtonComponent } from '../../../components/entity-lat
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { PersonalizationButtonComponent } from '../../../components/personalization-button/personalization-button.component';
 import { SafeDeleteButtonComponent } from '../../../components/safe-delete-button/safe-delete-button.component';
-import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
-import { ObjectConfiguredFieldsComponent } from '../object-configured-fields/object-configured-fields.component';
+import { EntityConfiguredFieldsComponent } from '../../../components/entity-configured-fields/entity-configured-fields.component';
 import { EntityChangeService } from '../../../services/entity-change.service';
-import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
+import { CurrentEntityPageStateService, activeLayoutTabId, layoutTabStateId, resolveEntityTab } from '../../../services/current-entity-page-state.service';
 import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
+import { UiConfigPayload } from '../../../models/ui-field-config.model';
+import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
 
 @Component({
   selector: 'app-object-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, ObjectConfiguredFieldsComponent, AssetUrlPipe],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
   template: `
     <div class="flex flex-col relative @container">
       @if(getImageByUsageKey(object.Images, 'default') != null){
@@ -78,8 +79,8 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
           <div class="flex flex-row flex-wrap gap-4 ms-1">
             <!-- <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button> -->
             <app-nav-button [label]="'História'" size="sm" [active]="currentTab === 'history'" (click)="selectTab('history')"></app-nav-button>
-            @if(hasDynamicFields) {
-              <app-nav-button [label]="'Campos Configurados'" size="sm" [active]="currentTab === 'configured'" (click)="selectTab('configured')"></app-nav-button>
+            @for (tab of fieldLayout.tabs; track tab.id) {
+              <app-nav-button [label]="tab.name" size="sm" [active]="currentTab === layoutTabStateId(tab.id)" (click)="selectTab(layoutTabStateId(tab.id))"></app-nav-button>
             }
           </div>
           <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
@@ -95,8 +96,14 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
                     <app-editor [entityId]="object.id + '_history'" docTitle="História" entityTable="Object" [entityName]="object.name" [document]="object.history || ''" (saveDocument)="onEditorSave($event, 'history')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 }
-                @case ('configured') {
-                  <app-object-configured-fields [object]="object"></app-object-configured-fields>
+                @default {
+                  <app-entity-configured-fields
+                    entityTable="Object"
+                    [entity]="object"
+                    [layout]="fieldLayout"
+                    [activeTabId]="activeLayoutTabId()"
+                    (requestSave)="saveObject()">
+                  </app-entity-configured-fields>
                 }
               }
             }
@@ -118,16 +125,17 @@ export class ObjectEditComponent implements OnInit {
   private objectService = inject(ObjectService);
   private entityChangeService = inject(EntityChangeService);
   private currentEntityPageStateService = inject(CurrentEntityPageStateService);
+  private uiFieldConfigService = inject(UiFieldConfigService);
   private objectTypeService = inject(ObjectTypeService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
 
   currentTab: string = 'history';
+  fieldLayout: UiConfigPayload = getSystemDefaultConfig('Object');
+  readonly layoutTabStateId = layoutTabStateId;
+  activeLayoutTabId = () => activeLayoutTabId(this.currentTab, this.fieldLayout);
 
   isInDialog = computed(() => !!this.dialogref);
-
-  private dynamicFieldService = inject(DynamicFieldService);
-  hasDynamicFields: boolean = this.dynamicFieldService.getDynamicFields('Object').length > 0;
 
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === ObjectEditComponent ||
@@ -181,6 +189,8 @@ export class ObjectEditComponent implements OnInit {
 
   getObject() {
     this.object = this.objectService.getObject(this.objectId());
+    this.fieldLayout = this.uiFieldConfigService.getResolvedConfig('Object', this.objectId());
+    this.currentTab = resolveEntityTab(this.currentTab, this.fieldLayout, ['history']);
 
     this.selectedLocationId = this.object.ParentLocation ? this.object.ParentLocation.id : null;
     this.selectedWorldId = this.object.ParentWorld ? this.object.ParentWorld.id : null;

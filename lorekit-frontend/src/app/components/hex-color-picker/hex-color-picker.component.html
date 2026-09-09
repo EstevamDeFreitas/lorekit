@@ -1,0 +1,19 @@
+<div class="color-picker" (click)="$event.stopPropagation()">
+  <span class="color-picker-title">{{ label() }}</span>
+  <div class="color-grid">
+    @for (color of fillPalette; track color) {
+      <button type="button" class="color-swatch" [class.selected]="value() === color"
+        [style.background-color]="color" [attr.aria-label]="'Usar ' + color" (click)="select(color)"></button>
+    }
+  </div>
+  <div class="color-grid">
+    @for (color of accentPalette; track color) {
+      <button type="button" class="color-swatch" [class.selected]="value() === color"
+        [style.background-color]="color" [attr.aria-label]="'Usar ' + color" (click)="select(color)"></button>
+    }
+  </div>
+  <div class="color-actions">
+    <label>Personalizada <input type="color" [value]="value() || '#71717a'" (change)="customColor($event)"></label>
+    <button type="button" (click)="clear()">Limpar</button>
+  </div>
+</div>

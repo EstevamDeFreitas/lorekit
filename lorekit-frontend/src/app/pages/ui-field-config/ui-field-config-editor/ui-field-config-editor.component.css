@@ -36,6 +36,25 @@
   padding: 0.25rem 0.5rem;
 }
 
+.layout-item--separator { border: 0; border-radius: 0; background: transparent; overflow: visible; cursor: move; }
+.layout-item--separator::before { content: ''; position: absolute; inset: -12px 0; border-radius: 0.35rem; background: transparent; transition: background-color 120ms ease; }
+.layout-item--separator:hover::before { background: rgb(250 204 21 / 12%); }
+.layout-item--separator .layout-separator-preview { position: relative; z-index: 1; pointer-events: none; }
+.layout-item--separator.layout-item--separator:has(.layout-separator-preview--vertical)::before { inset: 0 -12px; }
+.layout-item--separator .resize-handle-right,
+.layout-item--separator .resize-handle-bottom,
+.layout-item--separator .resize-handle-corner { display: none; }
+.separator-resize-handle { position: absolute; z-index: 3; right: -6px; top: -6px; width: 12px; height: 12px; border: 2px solid var(--color-zinc-950); border-radius: 0.2rem; background: var(--color-yellow-400); box-shadow: 0 0 0 1px rgb(250 204 21 / 45%); cursor: ew-resize; }
+.separator-resize-handle--vertical { top: auto; bottom: -6px; cursor: ns-resize; }
+.layout-item--separator .layout-item-header { position: absolute; inset: auto 0 0; transform: translateY(-50%); justify-content: center; background: var(--color-zinc-950); color: var(--color-zinc-200); padding: 0.1rem 0.45rem; cursor: pointer; }
+.layout-separator-preview { display: flex; align-items: center; gap: 0.5rem; width: 100%; height: 1px; background: currentColor; color: var(--color-zinc-400); }
+.layout-separator-preview span { flex: 1; }
+.layout-separator-preview b { position: relative; z-index: 1; background: var(--color-zinc-950); padding-inline: 0.35rem; font-size: 0.7rem; white-space: nowrap; }
+.layout-separator-preview--vertical { width: 1px; height: 100%; flex-direction: column; }
+.layout-separator-preview--vertical b { transform: rotate(90deg); }
+.layout-separator-preview--vertical span { min-height: 0; }
+.layout-context-menu { position: fixed; z-index: 60; display: flex; flex-direction: column; gap: 0.6rem; width: min(18rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow-y: auto; padding: 0.85rem; border: 1px solid var(--color-zinc-700); border-radius: 0.75rem; background: var(--color-zinc-925); box-shadow: 0 1rem 2rem rgb(0 0 0 / 45%); }
+
 .layout-remove {
   border: none;
   background: transparent;
@@ -57,6 +76,7 @@
   background: var(--color-zinc-900);
   border: none !important;
 }
+.catalog-item--separator { padding: 0.35rem 0.55rem; font-size: 0.75rem; }
 
 .resize-handle-right,
 .resize-handle-bottom,

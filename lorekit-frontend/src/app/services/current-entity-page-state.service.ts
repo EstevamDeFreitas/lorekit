@@ -1,4 +1,20 @@
 import { Injectable } from '@angular/core';
+import { UiConfigPayload } from '../models/ui-field-config.model';
+
+export function layoutTabStateId(tabId: string): string {
+  return `layout:${tabId}`;
+}
+
+export function resolveEntityTab(currentTab: string, layout: UiConfigPayload, fixedTabs: string[]): string {
+  if (fixedTabs.includes(currentTab)) return currentTab;
+  const layoutIds = new Set(layout.tabs.map(tab => layoutTabStateId(tab.id)));
+  return layoutIds.has(currentTab) ? currentTab : layoutTabStateId(layout.tabs[0].id);
+}
+
+export function activeLayoutTabId(currentTab: string, layout: UiConfigPayload): string {
+  const match = layout.tabs.find(tab => layoutTabStateId(tab.id) === currentTab);
+  return match?.id ?? layout.tabs[0].id;
+}
 
 @Injectable({ providedIn: 'root' })
 export class CurrentEntityPageStateService {

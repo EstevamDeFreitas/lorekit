@@ -34,6 +34,7 @@ import {
 })
 export class DynamicImageFieldComponent {
   readonly label = input.required<string>();
+  readonly labelColor = input<string | null>(null);
   readonly value = input<string>('');
   readonly aspectRatio = input<string | number | undefined>();
   readonly valueChange = output<string>();

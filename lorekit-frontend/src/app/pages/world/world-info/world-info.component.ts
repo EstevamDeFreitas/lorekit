@@ -24,13 +24,15 @@ import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
-import { WorldConfiguredFieldsComponent } from '../world-configured-fields/world-configured-fields.component';
-import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
+import { EntityConfiguredFieldsComponent } from '../../../components/entity-configured-fields/entity-configured-fields.component';
+import { CurrentEntityPageStateService, activeLayoutTabId, layoutTabStateId, resolveEntityTab } from '../../../services/current-entity-page-state.service';
 import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
+import { UiConfigPayload } from '../../../models/ui-field-config.model';
+import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
 
 @Component({
   selector: 'app-world-info',
-  imports: [NgStyle, NgComponentOutlet, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, WorldConfiguredFieldsComponent, AssetUrlPipe],
+  imports: [NgStyle, NgComponentOutlet, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
   template: `
     <div class="flex flex-col @container">
       @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
@@ -71,7 +73,9 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
         <div class="flex-1 flex flex-col">
           <div class="flex flex-row flex-wrap gap-4 ms-1">
             <app-nav-button [label]="'Detalhes do mundo'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
-            <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button>
+            @for (tab of fieldLayout.tabs; track tab.id) {
+              <app-nav-button [label]="tab.name" size="sm" [active]="currentTab === layoutTabStateId(tab.id)" (click)="selectTab(layoutTabStateId(tab.id))"></app-nav-button>
+            }
             <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button>
             <!-- <app-nav-button [label]="'Personagens'" size="sm" [active]="currentTab === 'characters'" (click)="selectTab('characters')"></app-nav-button>
             <app-nav-button [label]="'Objetos'" size="sm" [active]="currentTab === 'objects'" (click)="selectTab('objects')"></app-nav-button> -->
@@ -100,8 +104,14 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
                 @case ('objects') {
                   <p>Objetos</p>
                 }
-                @case ('properties'){
-                  <app-world-configured-fields [world]="currentWorld" (requestSave)="saveWorldName()"></app-world-configured-fields>
+                @default {
+                  <app-entity-configured-fields
+                    entityTable="World"
+                    [entity]="currentWorld"
+                    [layout]="fieldLayout"
+                    [activeTabId]="activeLayoutTabId()"
+                    (requestSave)="saveWorldName()">
+                  </app-entity-configured-fields>
                 }
               }
             }
@@ -119,6 +129,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 export class WorldInfoComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly currentEntityPageStateService = inject(CurrentEntityPageStateService);
+  private readonly uiFieldConfigService = inject(UiFieldConfigService);
   dialogref = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   data = inject<any>(DIALOG_DATA, { optional: true });
   worldIdInput = input<string>('');
@@ -130,6 +141,9 @@ export class WorldInfoComponent implements OnInit {
   public getImageByUsageKey = getImageByUsageKey;
 
   currentTab : string = 'details';
+  fieldLayout: UiConfigPayload = getSystemDefaultConfig('World');
+  readonly layoutTabStateId = layoutTabStateId;
+  activeLayoutTabId = () => activeLayoutTabId(this.currentTab, this.fieldLayout);
   locationListComponent: any = null;
 
   isLoading: boolean = false;
@@ -212,6 +226,8 @@ export class WorldInfoComponent implements OnInit {
     this.currentWorldId = id;
     this.currentWorld = this.worldService.getWorldById(id);
     this.buildFields();
+    this.fieldLayout = this.uiFieldConfigService.getResolvedConfig('World', id);
+    this.currentTab = resolveEntityTab(this.currentTab, this.fieldLayout, ['details', 'localities']);
 
     this.isLoading = false;
   }

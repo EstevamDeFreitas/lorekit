@@ -16,17 +16,18 @@ import { environment } from '../../../../enviroments/environment';
 import { WorldService } from '../../../services/world.service';
 import { getPersonalizationValue } from '../../../models/personalization.model';
 import { getImageByUsageKey } from '../../../models/image.model';
-import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { NavButtonComponent } from "../../../components/nav-button/nav-button.component";
 import { UiFieldConfigButtonComponent } from '../../../components/ui-field-config-button/ui-field-config-button.component';
-import { LocationConfiguredFieldsComponent } from '../location-configured-fields/location-configured-fields.component';
+import { EntityConfiguredFieldsComponent } from '../../../components/entity-configured-fields/entity-configured-fields.component';
 import { EntityChangeService } from '../../../services/entity-change.service';
-import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
+import { CurrentEntityPageStateService, activeLayoutTabId, layoutTabStateId, resolveEntityTab } from '../../../services/current-entity-page-state.service';
 import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
+import { UiConfigPayload } from '../../../models/ui-field-config.model';
+import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NgStyle, NavButtonComponent, UiFieldConfigButtonComponent, LocationConfiguredFieldsComponent, AssetUrlPipe],
+  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NgStyle, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
   template: `
     <div class="flex flex-col @container">
       @if(getImageByUsageKey(location.Images, 'default') != null){
@@ -71,8 +72,8 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
         <div class="flex-1 flex flex-col ">
           <div class="flex flex-row flex-wrap gap-4 ms-1">
             <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
-            @if(hasDynamicFields) {
-              <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button>
+            @for (tab of fieldLayout.tabs; track tab.id) {
+              <app-nav-button [label]="tab.name" size="sm" [active]="currentTab === layoutTabStateId(tab.id)" (click)="selectTab(layoutTabStateId(tab.id))"></app-nav-button>
             }
             <!-- <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button> -->
           </div>
@@ -94,8 +95,14 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
                     }
                   </div>
                 } -->
-                @case ('properties'){
-                  <app-location-configured-fields [location]="location"></app-location-configured-fields>
+                @default {
+                  <app-entity-configured-fields
+                    entityTable="Location"
+                    [entity]="location"
+                    [layout]="fieldLayout"
+                    [activeTabId]="activeLayoutTabId()"
+                    (requestSave)="saveLocation()">
+                  </app-entity-configured-fields>
                 }
               }
             }
@@ -117,6 +124,7 @@ export class LocationEditComponent implements OnInit {
   private locationService = inject(LocationService);
   private entityChangeService = inject(EntityChangeService);
   private currentEntityPageStateService = inject(CurrentEntityPageStateService);
+  private uiFieldConfigService = inject(UiFieldConfigService);
   private worldService = inject(WorldService);
   private locationCategoryService = inject(LocationCategoriesService);
   public getPersonalizationValue = getPersonalizationValue;
@@ -125,11 +133,10 @@ export class LocationEditComponent implements OnInit {
   isInDialog = computed(() => !!this.dialogref);
 
   currentTab : string = 'details';
+  fieldLayout: UiConfigPayload = getSystemDefaultConfig('Location');
+  readonly layoutTabStateId = layoutTabStateId;
+  activeLayoutTabId = () => activeLayoutTabId(this.currentTab, this.fieldLayout);
   locationListComponent: any = null;
-
-  private dynamicFieldService = inject(DynamicFieldService);
-    hasDynamicFields: boolean = this.dynamicFieldService.getDynamicFields('Location').length > 0;
-
 
   protected readonly isRouteComponent = computed(() => {
     return this.router.routerState.root.firstChild?.component === LocationEditComponent ||
@@ -185,6 +192,8 @@ export class LocationEditComponent implements OnInit {
 
   getLocation(){
     this.location = this.locationService.getLocationById(this.locationId());
+    this.fieldLayout = this.uiFieldConfigService.getResolvedConfig('Location', this.locationId());
+    this.currentTab = resolveEntityTab(this.currentTab, this.fieldLayout, ['details']);
     this.selectedCategoryId = this.location.LocationCategory ? this.location.LocationCategory.id : '';
     this.selectedParentLocationId = this.location.ParentLocation ? this.location.ParentLocation.id : undefined;
     this.selectedWorldId = this.location.ParentWorld ? this.location.ParentWorld.id : undefined;

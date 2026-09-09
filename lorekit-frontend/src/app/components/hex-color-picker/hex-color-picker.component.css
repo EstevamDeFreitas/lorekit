@@ -1,0 +1,9 @@
+.color-picker { display: flex; flex-direction: column; gap: .5rem; padding: .625rem; border: 1px solid #3f3f46; border-radius: .5rem; background: #18181b; }
+.color-picker-title { font-size: .75rem; color: #d4d4d8; }
+.color-grid { display: grid; grid-template-columns: repeat(11, 1rem); gap: .25rem; }
+.color-swatch { width: 1rem; height: 1rem; border: 1px solid transparent; border-radius: 9999px; cursor: pointer; }
+.color-swatch.selected { border-color: white; box-shadow: 0 0 0 1px #18181b; }
+.color-actions { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .7rem; color: #a1a1aa; }
+.color-actions label { display: flex; align-items: center; gap: .375rem; }
+.color-actions input { width: 1.5rem; height: 1.25rem; padding: 0; border: 0; background: transparent; }
+.color-actions button { color: #fca5a5; }

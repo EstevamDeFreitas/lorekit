@@ -67,9 +67,16 @@ export class UiFieldConfigButtonComponent {
             allowParentSelection: false,
           },
         });
-        ref.closed.subscribe(() => {});
+        ref.closed.subscribe((result) => {
+          if (isReloadRequest(result)) window.location.reload();
+        });
     // this.router.navigate(['/app/ui-field-config/edit'], {
     //   queryParams: this.queryParams(),
     // });
   }
+}
+
+function isReloadRequest(value: unknown): value is { reload: true } {
+  return typeof value === 'object' && value !== null &&
+    'reload' in value && value.reload === true;
 }
