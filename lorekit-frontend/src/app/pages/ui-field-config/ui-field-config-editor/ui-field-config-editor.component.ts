@@ -1,5 +1,5 @@
 import { NgStyle } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, ElementRef, inject, ViewChild } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
 import { createFieldLayoutItem, UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem, UiFieldLayoutTab, UiFieldTemplate, validateUiConfigPayload } from '../../../models/ui-field-config.model';
@@ -170,16 +170,17 @@ interface SelectOptionItem {
                 class="layout-item"
                 [class.layout-item--separator]="item.kind === 'separator'"
                 [ngStyle]="getItemStyle(item)"
-                (mousedown)="startMove($event, item)">
-                <div class="layout-item-header" (click)="openItemMenu($event, item)">
-                  <span>{{ getItemLabel(item) }}</span>
-                  <span class="text-[10px] text-zinc-400">Editar</span>
-                </div>
+                (mousedown)="startMove($event, item)"
+                (click)="openItemMenu($event, item)">
                 @if (item.kind === 'separator') {
                   <div class="layout-separator-preview" [class.layout-separator-preview--vertical]="item.orientation === 'vertical'" [style.color]="item.color || null">
                     <span></span>@if (item.label) { <b>{{ item.label }}</b> }<span></span>
                   </div>
                 } @else {
+                  <div class="layout-item-header">
+                    <span>{{ getItemLabel(item) }}</span>
+                    <span class="text-[10px] text-zinc-400">Editar</span>
+                  </div>
                   <div class="layout-item-body"><span>{{ item.width }} x {{ item.height }}</span></div>
                 }
 
@@ -195,7 +196,7 @@ interface SelectOptionItem {
               </div>
             }
             @if (contextMenuItem; as item) {
-              <div class="layout-context-menu" [style.left.px]="contextMenu!.x" [style.top.px]="contextMenu!.y"
+              <div #contextMenuElement class="layout-context-menu" [style.left.px]="contextMenu!.x" [style.top.px]="contextMenu!.y"
                 (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
                 <div class="flex items-center justify-between gap-4"><strong>{{ getItemLabel(item) }}</strong><button type="button" (click)="closeContextMenu()">×</button></div>
                 <span class="text-xs text-zinc-400">{{ item.width }} x {{ item.height }}</span>
@@ -401,6 +402,9 @@ export class UiFieldConfigEditorComponent {
   private draggingToken = '';
   private draggingSeparatorOrientation: 'horizontal' | 'vertical' | null = null;
   contextMenu: { itemId: string; x: number; y: number } | null = null;
+  @ViewChild('contextMenuElement') private contextMenuElement?: ElementRef<HTMLElement>;
+  private contextMenuPositionFrame: number | null = null;
+  private suppressNextItemMenuId: string | null = null;
 
   get contextMenuItem(): UiFieldLayoutItem | null {
     if (!this.contextMenu) return null;
@@ -413,6 +417,7 @@ export class UiFieldConfigEditorComponent {
     startY: number;
     startCol: number;
     startRow: number;
+    moved: boolean;
   };
 
   private activeResize?: {
@@ -495,6 +500,7 @@ export class UiFieldConfigEditorComponent {
     this.ensureActiveTab();
     document.addEventListener('mousemove', this.onDocumentMouseMove);
     document.addEventListener('mouseup', this.onDocumentMouseUp);
+    window.addEventListener('resize', this.onWindowResize);
   }
 
   get isDialogMode(): boolean {
@@ -550,6 +556,11 @@ export class UiFieldConfigEditorComponent {
   ngOnDestroy(): void {
     document.removeEventListener('mousemove', this.onDocumentMouseMove);
     document.removeEventListener('mouseup', this.onDocumentMouseUp);
+    window.removeEventListener('resize', this.onWindowResize);
+    if (this.contextMenuPositionFrame !== null) {
+      cancelAnimationFrame(this.contextMenuPositionFrame);
+      this.contextMenuPositionFrame = null;
+    }
 
     if (this.noticeTimer) {
       clearTimeout(this.noticeTimer);
@@ -670,25 +681,71 @@ export class UiFieldConfigEditorComponent {
   }
 
   openItemMenu(event: MouseEvent, item: UiFieldLayoutItem): void {
+    if (this.isResizeHandleTarget(event.target)) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.suppressNextItemMenuId = null;
+      return;
+    }
+    if (this.suppressNextItemMenuId === item.id) {
+      this.suppressNextItemMenuId = null;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    this.suppressNextItemMenuId = null;
     event.preventDefault();
     event.stopPropagation();
     this.contextMenu = { itemId: item.id, x: event.clientX, y: event.clientY };
+    this.scheduleContextMenuPosition();
   }
-
   closeContextMenu(): void {
     this.contextMenu = null;
   }
+  private isResizeHandleTarget(target: EventTarget | null): boolean {
+    return target instanceof HTMLElement && !!target.closest('.resize-handle-right, .resize-handle-bottom, .resize-handle-corner, .separator-resize-handle');
+  }
+  private scheduleContextMenuPosition(): void {
+    if (this.contextMenuPositionFrame !== null) {
+      cancelAnimationFrame(this.contextMenuPositionFrame);
+    }
+    this.contextMenuPositionFrame = requestAnimationFrame(() => {
+      this.contextMenuPositionFrame = null;
+      this.constrainContextMenuToViewport();
+    });
+  }
+  private constrainContextMenuToViewport(): void {
+    const contextMenu = this.contextMenu;
+    const menuElement = this.contextMenuElement?.nativeElement;
+    if (!contextMenu || !menuElement) {
+      return;
+    }
+    const viewportPadding = 12;
+    const menuRect = menuElement.getBoundingClientRect();
+    const maxX = Math.max(viewportPadding, window.innerWidth - menuRect.width - viewportPadding);
+    const maxY = Math.max(viewportPadding, window.innerHeight - menuRect.height - viewportPadding);
+    const x = clamp(contextMenu.x, viewportPadding, maxX);
+    const y = clamp(contextMenu.y, viewportPadding, maxY);
+    if (x === contextMenu.x && y === contextMenu.y) {
+      return;
+    }
+    this.contextMenu = { ...contextMenu, x, y };
+  }
+  private onWindowResize = (): void => {
+    if (this.contextMenu) {
+      this.scheduleContextMenuPosition();
+    }
+  };
 
   startMove(event: MouseEvent, item: UiFieldLayoutItem): void {
     const target = event.target as HTMLElement;
     if (target.closest('.resize-handle-right') ||
       target.closest('.resize-handle-bottom') ||
       target.closest('.resize-handle-corner') ||
-      target.closest('.layout-remove') ||
-      target.closest('.layout-item-header')) {
+      target.closest('.layout-remove')) {
       return;
     }
-
+    this.suppressNextItemMenuId = null;
     event.preventDefault();
     this.activeMove = {
       id: item.id,
@@ -696,6 +753,7 @@ export class UiFieldConfigEditorComponent {
       startY: event.clientY,
       startCol: item.col,
       startRow: item.row,
+      moved: false,
     };
   }
 
@@ -729,6 +787,10 @@ export class UiFieldConfigEditorComponent {
       const colWidth = rect.width / this.layout.columns;
       const deltaX = event.clientX - this.activeMove.startX;
       const deltaY = event.clientY - this.activeMove.startY;
+      if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+        this.activeMove.moved = true;
+        this.closeContextMenu();
+      }
 
       const deltaCols = Math.round(deltaX / colWidth);
       const deltaRows = Math.round(deltaY / this.layout.rowHeight);
@@ -767,6 +829,9 @@ export class UiFieldConfigEditorComponent {
   };
 
   private onDocumentMouseUp = (): void => {
+    if (this.activeMove?.moved) {
+      this.suppressNextItemMenuId = this.activeMove.id;
+    }
     this.activeMove = undefined;
     this.activeResize = undefined;
   };
@@ -800,27 +865,29 @@ export class UiFieldConfigEditorComponent {
   }
 
   getItemStyle(item: UiFieldLayoutItem): Record<string, string> {
+    const fieldInset = 12;
+    const separatorInset = 10;
     if (item.kind === 'separator') {
       if (item.orientation === 'horizontal') {
         return {
-          left: `calc(${((item.col - 1) / this.layout.columns) * 100}% + 6px)`,
+          left: `calc(${((item.col - 1) / this.layout.columns) * 100}% + ${separatorInset}px)`,
           top: `${(item.row - 1) * this.layout.rowHeight}px`,
-          width: `calc(${(item.width / this.layout.columns) * 100}% - 12px)`,
+          width: `max(1px, calc(${(item.width / this.layout.columns) * 100}% - ${separatorInset * 2}px))`,
           height: '1px',
         };
       }
       return {
         left: `calc(${((item.col - 1) / this.layout.columns) * 100}%)`,
-        top: `${(item.row - 1) * this.layout.rowHeight + 6}px`,
+        top: `${(item.row - 1) * this.layout.rowHeight + separatorInset}px`,
         width: '1px',
-        height: `${item.height * this.layout.rowHeight - 12}px`,
+        height: `max(1px, calc(${item.height * this.layout.rowHeight}px - ${separatorInset * 2}px))`,
       };
     }
     return {
-      left: `calc(${((item.col - 1) / this.layout.columns) * 100}% + 8px)`,
-      top: `${(item.row - 1) * this.layout.rowHeight + 8}px`,
-      width: `calc(${(item.width / this.layout.columns) * 100}% - 16px)`,
-      height: `${item.height * this.layout.rowHeight - 16}px`,
+      left: `calc(${((item.col - 1) / this.layout.columns) * 100}% + ${fieldInset}px)`,
+      top: `${(item.row - 1) * this.layout.rowHeight + fieldInset}px`,
+      width: `max(1px, calc(${(item.width / this.layout.columns) * 100}% - ${fieldInset * 2}px))`,
+      height: `max(1px, calc(${item.height * this.layout.rowHeight}px - ${fieldInset * 2}px))`,
     };
   }
 

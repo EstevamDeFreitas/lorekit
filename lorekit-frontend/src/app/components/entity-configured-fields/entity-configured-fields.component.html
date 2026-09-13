@@ -3,6 +3,8 @@
     @for (item of visibleItems(); track item.id) {
       <div class="config-grid-item"
         [class.configured-field--colored]="item.kind === 'field' && !!item.color"
+        [class.config-grid-item--separator-horizontal]="item.kind === 'separator' && item.orientation === 'horizontal' && item.row > 1"
+        [class.config-grid-item--separator-vertical]="item.kind === 'separator' && item.orientation === 'vertical' && item.col > 1"
         [style.--field-accent]="item.color || null"
         [style.border-color]="item.kind === 'field' && item.color ? item.color : null"
         [style.grid-column]="gridColumn(item)" [style.grid-row]="gridRow(item)">
