@@ -1,3 +1,5 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
+import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { NgComponentOutlet, NgStyle } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit } from '@angular/core';
@@ -27,9 +29,9 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
 
 @Component({
   selector: 'app-location-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NgStyle, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NgStyle, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
   template: `
-    <div class="flex flex-col @container">
+    <div [historyEntity]="{ table: 'Location', id: location.id || '' }" [historyModel]="location" class="flex flex-col @container">
       @if(getImageByUsageKey(location.Images, 'default') != null){
         @let img = getImageByUsageKey(location.Images, 'default');
         <div class="relative w-full h-[30vh]  overflow-hidden">
@@ -45,7 +47,7 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/location"></app-icon-button>
         }
-        <input type="text" (blur)="saveLocation()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="location.name" />
+        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveLocation()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="location.name" />
         <div class="flex flex-row flex-wrap gap-2 ms-auto">
           <!-- <app-entity-transfer-button [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'"></app-entity-transfer-button> -->
           <app-ui-field-config-button
@@ -82,7 +84,7 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
               @switch (currentTab) {
                 @case ('details') {
                   <div class="w-full ">
-                    <app-editor [entityId]="location.id" docTitle="Descrição" entityTable="Location" [entityName]="location.name" [document]="location.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
+                    <app-editor [historyField]="{ column: 'description', label: 'Descrição' }" [entityId]="location.id" docTitle="Descrição" entityTable="Location" [entityName]="location.name" [document]="location.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 }
                 <!-- @case ('localities') {

@@ -1,3 +1,4 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ButtonComponent } from '../../../components/button/button.component';
@@ -15,9 +16,9 @@ interface AgeDialogData {
 }
 @Component({
   selector: 'app-age-edit',
-  imports: [ButtonComponent, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
+  imports: [EntityHistoryContextDirective, ButtonComponent, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
   template: `
-    <div class="w-full max-w-[36rem] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-4">
+    <div [historyEntity]="{ table: 'Age', id: age.id || '' }" [historyModel]="age" class="w-full max-w-[36rem] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-4">
       <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 class="text-lg font-bold">{{ age.id ? 'Editar Era' : 'Nova Era' }}</h2>
@@ -30,12 +31,12 @@ interface AgeDialogData {
           <app-icon-button icon="fa-solid fa-xmark" buttonType="secondary" size="lg" (click)="dialogRef.close()"></app-icon-button>
         </div>
       </div>
-      <app-input label="Nome" [(value)]="age.name"></app-input>
+      <app-input [historyField]="{ column: 'name', label: 'Nome' }" label="Nome" [(value)]="age.name"></app-input>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <app-input label="Início (ano)" type="number" [(value)]="age.startDate"></app-input>
         <app-input label="Fim (ano)" type="number" [(value)]="age.endDate"></app-input>
       </div>
-      <app-text-area label="Descrição" [(value)]="age.description" height="h-28"></app-text-area>
+      <app-text-area [historyField]="{ column: 'description', label: 'Descrição' }" label="Descrição" [(value)]="age.description" height="h-28"></app-text-area>
       <p class="text-xs text-zinc-500">Use &#123;AutoGenDate&#125;, &#123;AutoGenStartDate&#125; e &#123;AutoGenEndDate&#125; no nome ou na descrição.</p>
       <div class="flex flex-wrap justify-between gap-3 pt-2">
         <div>

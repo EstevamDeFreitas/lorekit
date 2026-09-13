@@ -1,3 +1,6 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
+import { HistoryFieldDirective } from '../../../directives/history-field.directive';
+import { HistoryAddress } from '../../../models/entity-history.model';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -142,12 +145,21 @@ const DRAWING_POINT_DISTANCE = 1.5;
 
 @Component({
   selector: 'app-moodboard-edit',
-  imports: [FormsModule, ComboBoxComponent, EditorComponent],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, FormsModule, ComboBoxComponent, EditorComponent],
   templateUrl: './moodboard-edit.component.html',
   styleUrl: './moodboard-edit.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MoodboardEditComponent implements OnInit, OnDestroy {
+  restoreMoodboardHistory({ address, value }: { address: HistoryAddress; value: string }): void {
+    const target = address.field.target;
+    if (target?.table !== 'MoodboardItem') { this.moodboard.update(board => ({ ...board })); return; }
+    this.items.update(items => items.map(view => {
+      if (view.item.id !== target.id) return view;
+      const config = { ...view.config, text: value };
+      return { ...view, config, item: { ...view.item, configJson: JSON.stringify(config) } };
+    }));
+  }
   @ViewChild('stage') private stage?: ElementRef<HTMLDivElement>;
   @ViewChild('imageInput') private imageInput?: ElementRef<HTMLInputElement>;
 

@@ -1,3 +1,4 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { CommonModule, NgClass } from '@angular/common';
 import { inject, DestroyRef, Component, effect, input, OnDestroy, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -29,9 +30,9 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
 
 @Component({
   selector: 'irpw-vocations',
-  imports: [CommonModule, NgClass, FormsModule, ButtonComponent, InputComponent, TextAreaComponent, SafeDeleteButtonComponent, PersonalizationButtonComponent, IconButtonComponent, FormOverlayDirective],
+  imports: [EntityHistoryContextDirective, CommonModule, NgClass, FormsModule, ButtonComponent, InputComponent, TextAreaComponent, SafeDeleteButtonComponent, PersonalizationButtonComponent, IconButtonComponent, FormOverlayDirective],
   template: `
-    <div class="flex flex-col relative">
+    <div [historyEntity]="{ table: 'IRPWVocation', id: selectedVocationId }" [historyModel]="currentVocation" (historyRestored)="restoreVocationHistory()" class="flex flex-col relative">
       <div class="flex flex-row gap-4 relative">
         @if (!vocationIdInput()) {
           <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showSidebar ? 'w-80' : 'w-0'">
@@ -109,7 +110,7 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
               <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3 col-span-2">
                 <div class="grid grid-cols-2 gap-3">
                   <div class="col-span-2">
-                    <app-input
+                    <app-input [historyField]="{ column: 'name', label: 'Nome' }"
                       label="Nome"
                       placeholder="Ex.: Guardião da Aurora"
                       [(value)]="currentVocation.name"
@@ -118,7 +119,7 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
                   </div>
 
                   <div class="col-span-2">
-                    <app-text-area
+                    <app-text-area [historyField]="{ column: 'description', label: 'Descrição' }"
                       label="Descrição"
                       placeholder="Resumo da proposta da vocação."
                       height="h-28"
@@ -127,7 +128,7 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
                     </app-text-area>
                   </div>
 
-                  <app-input
+                  <app-input [historyField]="{ column: 'passive', label: 'Habilidade passiva' }" [historyRead]="readPassiveHistory"
                     label="Vida base"
                     type="number"
                     [(value)]="baseHealthValue"
@@ -152,7 +153,7 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
                     [(value)]="passiveData.name"
                     (valueChange)="onPassiveChange()">
                   </app-input>
-                  <app-text-area
+                  <app-text-area [historyField]="{ column: 'passive', label: 'Habilidade passiva' }" [historyRead]="readPassiveHistory"
                     label="Descrição"
                     placeholder="Descreva o efeito passivo."
                     height="h-36"
@@ -183,7 +184,7 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
                       </div>
 
                       <div class="grid grid-cols-2 gap-3">
-                        <app-input
+                        <app-input [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory"
                           label="Nome"
                           placeholder="Opcional"
                           [(value)]="hability.name"
@@ -193,7 +194,7 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
                         <div></div>
 
                         <div class="col-span-2">
-                          <app-text-area
+                          <app-text-area [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory"
                             label="Descrição"
                             placeholder="Efeito do poder."
                             height="h-28"
@@ -260,6 +261,9 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
   styleUrl: './irpw-vocations.component.css',
 })
 export class IrpwVocationsComponent implements OnInit, OnDestroy {
+  readonly readPassiveHistory = (): string => this.currentVocation?.passive || '';
+  readonly readHabilitiesHistory = (): string => this.currentVocation?.habilities || '';
+  restoreVocationHistory(): void { this.parseSelectedVocation(); }
   private readonly destroyRef = inject(DestroyRef);
   private vocationService = inject(IrpwVocationService);
   private entityChangeService = inject(EntityChangeService);

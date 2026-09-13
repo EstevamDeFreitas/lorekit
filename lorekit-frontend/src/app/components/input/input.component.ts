@@ -1,16 +1,20 @@
 import { Component, input, model, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { HistoryFieldDirective } from '../../directives/history-field.directive';
+import { HistoryField } from '../../models/entity-history.model';
 
 @Component({
   selector: 'app-input',
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule, HistoryFieldDirective],
   template: `
     <div class="flex flex-col ">
       @if (label() != '') {
         <label class="mb-1 text-xs text-white" [style.color]="labelColor() || null" [ngClass]="{'!text-red-500':errorMessage() != ''}">{{ label() }}</label>
       }
       <input
+        [historyField]="historyField()"
+        [historyRead]="historyRead()"
         [type]="type()"
         [(ngModel)]="value"
         (blur)="markAsTouched()"
@@ -29,6 +33,8 @@ import { CommonModule } from '@angular/common';
   styleUrl: './input.component.css'
 })
 export class InputComponent {
+  historyField = input<string | HistoryField | null>(null);
+  historyRead = input<(() => string) | null>(null);
   label = input<string>('');
   labelColor = input<string | null>(null);
   placeholder = input<string>('');

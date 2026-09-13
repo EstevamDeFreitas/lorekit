@@ -1,3 +1,5 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
+import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { DestroyRef, Component, computed, inject, input, OnInit } from '@angular/core';
 import { FlushableDebounce } from '../../../utils/flushable-debounce';
@@ -29,9 +31,9 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-specie-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, SpecieListComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, SpecieListComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
   template: `
-    <div class="flex flex-col relative @container">
+    <div [historyEntity]="{ table: 'Species', id: specie.id || '' }" [historyModel]="specie" class="flex flex-col relative @container">
       @if(getImageByUsageKey(specie.Images, 'default') != null){
         @let img = getImageByUsageKey(specie.Images, 'default');
         <div class="relative w-full h-[30vh]  overflow-hidden">
@@ -51,7 +53,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/specie"></app-icon-button>
         }
-        <input type="text" (blur)="saveSpecie()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="specie.name" />
+        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveSpecie()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="specie.name" />
         <div class="flex flex-row flex-wrap gap-2 ms-auto">
           <!-- <app-entity-transfer-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-entity-transfer-button> -->
           <app-ui-field-config-button
@@ -95,7 +97,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
                 }
                 @case ('details') {
                   <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-editor [entityId]="specie.id" docTitle="Descrição" entityTable="Species" [entityName]="specie.name" [document]="specie.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
+                    <app-editor [historyField]="{ column: 'description', label: 'Descrição' }" [entityId]="specie.id" docTitle="Descrição" entityTable="Species" [entityName]="specie.name" [document]="specie.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 }
                 @case ('subspecies') {

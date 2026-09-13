@@ -28,6 +28,9 @@ import { LorekitDocumentCodec } from './lorekit-document.codec';
 import { TiptapAdapter } from './tiptap.adapter';
 import { createTiptapExtensions } from './tiptap.extensions';
 import { HexColorPickerComponent } from '../hex-color-picker/hex-color-picker.component';
+import { EntityHistoryContextDirective } from '../../directives/entity-history-context.directive';
+import { EntityHistoryService } from '../../services/entity-history.service';
+import { HistoryAddress, HistoryEditKind, HistoryField } from '../../models/entity-history.model';
 
 type TextStyleSnapshot = {
   bold: boolean;
@@ -150,12 +153,38 @@ type TextStyleSnapshot = {
   encapsulation: ViewEncapsulation.Emulated
 })
 export class EditorComponent implements AfterViewInit, OnDestroy{
+  readonly historyField = input<string | HistoryField | null>(null);
+  private readonly historyContext = inject(EntityHistoryContextDirective, { optional: true });
+  private readonly history = inject(EntityHistoryService);
+  private historyAddress: HistoryAddress | null = null;
+  private historyPrevious = '';
+  private historyCapture: Promise<void> = Promise.resolve();
+  private unregisterHistory?: () => void;
+  private restoringHistory = false;
+  private historyKind: HistoryEditKind = 'typing';
+  private historyComposing = false;
+  private readonly historyBeforeInput = (event: Event): void => {
+    const type = (event as InputEvent).inputType || '';
+    this.historyKind = type === 'insertFromPaste' ? 'paste' : type.startsWith('format') ? 'format' : 'typing';
+  };
+  private readonly historyPointer = (event: Event): void => {
+    if ((event.target as HTMLElement).closest('button')) { this.history.boundary(); this.historyKind = 'format'; }
+  };
+  private readonly historyCompositionStart = (): void => { this.historyComposing = true; this.history.boundary(); };
+  private readonly historyCompositionEnd = (): void => { this.historyComposing = false; this.historyKind = 'composition'; this.captureHistory(); };
+  private readonly historyInput = (): void => { if (!this.tiptap) this.captureHistory(); };
+  private readonly historyClick = (event: Event): void => {
+    if (!this.tiptap && (event.target as HTMLElement).closest('button')) queueMicrotask(() => {
+      if (!this.destroyed) this.captureHistory();
+    });
+  };
   editor!: EditorJS;
   private lastSaveTime = 0;
   tiptap: Editor | null = null;
   private changeRevision = 0;
   private savedRevision = 0;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private activeSave: Promise<void> | null = null;
   private readonly saveDelayMs = 600;
   private discardPendingSaveOnDestroy = false;
   private mentionPlugin: TailwindMentionPlugin | null = null;
@@ -214,6 +243,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   }
 
   ngAfterViewInit() {
+    this.initializeHistory();
     window.addEventListener(FLUSH_PENDING_SAVES_EVENT, this.onFlushPendingSaves);
     window.addEventListener(DISCARD_PENDING_SAVES_EVENT, this.onDiscardPendingSaves);
     if (this.isTiptap) {
@@ -342,8 +372,65 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   }
 
   private handleChange(): void {
+    if (this.restoringHistory || this.destroyed || this.discardPendingSaveOnDestroy) return;
     this.changeRevision++;
+    this.captureHistory();
     this.scheduleSave();
+  }
+
+  private initializeHistory(): void {
+    const entity = this.historyContext?.historyEntity();
+    const field = this.historyField();
+    if (!entity?.id || !field) return;
+    this.historyAddress = { entity, field: { ...(typeof field === 'string' ? { column: field, label: this.docTitle() || field } : field), rich: true } };
+    this.historyPrevious = LorekitDocumentCodec.serialize(LorekitDocumentCodec.deserialize(this.document()));
+    this.history.observe(this.historyAddress, this.historyPrevious);
+    const holder = document.getElementById(this.isTiptap ? this.tiptapId : this.editorId);
+    const root = holder?.closest('app-editor');
+    root?.setAttribute('data-history-field', 'true');
+    root?.addEventListener('beforeinput', this.historyBeforeInput, true);
+    root?.addEventListener('input', this.historyInput);
+    root?.addEventListener('click', this.historyClick);
+    root?.addEventListener('mousedown', this.historyPointer, true);
+    root?.addEventListener('compositionstart', this.historyCompositionStart, true);
+    root?.addEventListener('compositionend', this.historyCompositionEnd, true);
+    const unregister = this.history.register({
+      address: this.historyAddress,
+      flush: () => this.historyCapture,
+      apply: async value => {
+        this.restoringHistory = true;
+        this.cancelScheduledSave();
+        await this.historyCapture;
+        await this.activeSave;
+        try {
+          if (this.tiptap) this.tiptap.commands.setContent(this.tiptapAdapter.toEditor(LorekitDocumentCodec.deserialize(value)), { emitUpdate: false });
+          else { await this.editor.isReady; await this.editor.render(this.parseDocument(value) as never); }
+          this.historyPrevious = value;
+          this.changeRevision++;
+          this.saveDocument.emit(LorekitDocumentCodec.deserialize(value));
+          this.savedRevision = this.changeRevision;
+        } finally { this.restoringHistory = false; }
+      },
+    });
+    this.unregisterHistory = () => {
+      unregister();
+      root?.removeEventListener('beforeinput', this.historyBeforeInput, true);
+      root?.removeEventListener('input', this.historyInput);
+      root?.removeEventListener('click', this.historyClick);
+      root?.removeEventListener('mousedown', this.historyPointer, true);
+      root?.removeEventListener('compositionstart', this.historyCompositionStart, true);
+      root?.removeEventListener('compositionend', this.historyCompositionEnd, true);
+    };
+  }
+
+  private captureHistory(): void {
+    if (!this.historyAddress || this.restoringHistory || this.history.applying() || this.historyComposing) return;
+    const content = this.tiptap
+      ? Promise.resolve(LorekitDocumentCodec.serialize(this.tiptapAdapter.fromEditor(this.tiptap.getJSON())))
+      : this.editor.isReady.then(() => this.editor.save()).then(data => LorekitDocumentCodec.serialize(this.editorAdapter.fromEditor(data as unknown as EditorJsOutputData)));
+    this.historyCapture = this.history.capture(this.historyAddress, this.historyPrevious, content, this.historyKind);
+    void content.then(value => { this.historyPrevious = value; }, () => undefined);
+    this.historyKind = 'typing';
   }
 
   private scheduleSave(): void {
@@ -351,7 +438,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
       if (this.hasPendingChanges()) {
-        void this.saveContent();
+        void this.saveContent().catch(error => console.error('Falha ao salvar editor.', error));
       }
     }, this.saveDelayMs);
   }
@@ -376,7 +463,15 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     }
   }
 
-  private async saveContent() {
+  private saveContent(): Promise<void> {
+    const operation = (this.activeSave ?? Promise.resolve()).then(() => this.saveContentNow());
+    this.activeSave = operation;
+    void operation.finally(() => { if (this.activeSave === operation) this.activeSave = null; }).catch(() => undefined);
+    return operation;
+  }
+
+  private async saveContentNow(): Promise<void> {
+    if (this.discardPendingSaveOnDestroy || (this.destroyed && this.historyAddress)) return;
     this.cancelScheduledSave();
     const revision = this.changeRevision;
     if (this.isTiptap && this.tiptap) {
@@ -385,19 +480,22 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
         this.lastSaveTime = Date.now();
         this.saveDocument.emit(this.tiptapAdapter.fromEditor(this.tiptap.getJSON()));
         this.savedRevision = Math.max(this.savedRevision, revision);
-      } catch {
+      } catch (error) {
         this.lastSaveTime = 0;
+        throw error;
       }
       return;
     }
 
     try {
       const savedData = await this.editor.save();
+      if (this.discardPendingSaveOnDestroy || (this.destroyed && this.historyAddress)) return;
       this.lastSaveTime = Date.now();
       this.saveDocument.emit(this.editorAdapter.fromEditor(savedData as unknown as EditorJsOutputData));
       this.savedRevision = Math.max(this.savedRevision, revision);
     } catch (error) {
       this.lastSaveTime = 0;
+      throw error;
     }
   }
 
@@ -405,32 +503,32 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
     return this.changeRevision > this.savedRevision;
   }
 
-  async ngOnDestroy() {
+  ngOnDestroy(): void {
+    if (!this.discardPendingSaveOnDestroy && (this.tiptap || this.editor)) this.captureHistory();
     this.destroyed = true;
+    this.cancelScheduledSave();
+    this.unregisterHistory?.();
+    const operation = this.destroyEditor();
+    this.history.trackLifecycle(operation);
+  }
+
+  private async destroyEditor(): Promise<void> {
     window.removeEventListener(FLUSH_PENDING_SAVES_EVENT, this.onFlushPendingSaves);
     window.removeEventListener(DISCARD_PENDING_SAVES_EVENT, this.onDiscardPendingSaves);
     this.cancelScheduledSave();
 
     this.toolbarResizeObserver?.disconnect();
     cancelAnimationFrame(this.toolbarLayoutFrame);
-    if (this.tiptap) {
-      if (!this.discardPendingSaveOnDestroy && this.hasPendingChanges()) {
-        await this.saveContent();
-      }
-      this.tiptap.destroy();
-      return;
-    }
-    if (this.mentionPlugin) {
-
-      this.mentionPlugin.destroy();
+    try {
+      await this.historyCapture;
+      await this.activeSave;
+      if (!this.discardPendingSaveOnDestroy && this.historyAddress) await this.history.persistDraft(this.historyAddress);
+      else if (!this.discardPendingSaveOnDestroy && this.hasPendingChanges()) await this.saveContentNow();
+    } finally {
+      this.mentionPlugin?.destroy();
       this.mentionPlugin = null;
-    }
-
-    if (this.editor) {
-      if (!this.discardPendingSaveOnDestroy && this.hasPendingChanges()) {
-        await this.saveContent();
-      }
-      this.editor.destroy();
+      if (this.tiptap) this.tiptap.destroy();
+      if (this.editor) { await this.editor.isReady; this.editor.destroy(); }
     }
   }
 

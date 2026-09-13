@@ -1,3 +1,5 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
+import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { DestroyRef, Component, computed, inject, input, OnInit } from '@angular/core';
 import { FlushableDebounce } from '../../../utils/flushable-debounce';
@@ -32,9 +34,9 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
 
 @Component({
   selector: 'app-organization-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
   template: `
-    <div class="flex flex-col relative @container">
+    <div [historyEntity]="{ table: 'Organization', id: organization.id || '' }" [historyModel]="organization" class="flex flex-col relative @container">
       @if(getImageByUsageKey(organization.Images, 'default') != null){
         @let img = getImageByUsageKey(organization.Images, 'default');
         <div class="relative w-full h-[30vh]  overflow-hidden">
@@ -54,7 +56,7 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/organization"></app-icon-button>
         }
-        <input type="text" (blur)="saveOrganization()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="organization.name" />
+        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveOrganization()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="organization.name" />
         <div class="flex flex-row flex-wrap gap-2 ms-auto">
           <!-- <app-entity-transfer-button [entityId]="organization.id" [entityTable]="'Organization'" [size]="'xl'"></app-entity-transfer-button> -->
           <app-ui-field-config-button
@@ -90,7 +92,7 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
               @switch (currentTab) {
                 @case ('description') {
                   <div class="w-full ">
-                    <app-editor [entityId]="organization.id" docTitle="Descrição" entityTable="Organization" [entityName]="organization.name" [document]="organization.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
+                    <app-editor [historyField]="{ column: 'description', label: 'Descrição' }" [entityId]="organization.id" docTitle="Descrição" entityTable="Organization" [entityName]="organization.name" [document]="organization.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 }
                 @default {

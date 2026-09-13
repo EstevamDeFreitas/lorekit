@@ -1,4 +1,5 @@
 import { TabManagerService } from './tab-manager.service';
+import { TestBed } from '@angular/core/testing';
 
 describe('TabManagerService persistence', () => {
   function createService() {
@@ -11,7 +12,7 @@ describe('TabManagerService persistence', () => {
     };
 
     return {
-      service: new TabManagerService(globalParameter as any, registry as any),
+      service: TestBed.runInInjectionContext(() => new TabManagerService(globalParameter as any, registry as any)),
       globalParameter,
       registry,
     };

@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject, input, output } from '@angular/core';
+import { EntityHistoryService } from '../../services/entity-history.service';
 import { FormsModule } from '@angular/forms';
 import { ComboBoxComponent } from '../combo-box/combo-box.component';
 import { DynamicImageFieldComponent } from '../dynamic-image-field/dynamic-image-field.component';
@@ -30,6 +31,14 @@ export interface NativeFieldChange {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EntityConfiguredFieldsComponent {
+  constructor() {
+    const cdr = inject(ChangeDetectorRef);
+    inject(DestroyRef).onDestroy(inject(EntityHistoryService).onRestore(({ entity, field }, value) => {
+      if (entity.table !== this.entityTable() || entity.id !== this.entity().id || !field.dynamicId) return;
+      this.getDynamicFieldValue(field.dynamicId).value = value;
+      cdr.markForCheck();
+    }));
+  }
   readonly entityTable = input.required<string>();
   readonly entity = input.required<ConfigurableEntity>();
   readonly layout = input.required<UiConfigPayload>();

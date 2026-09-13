@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
+import { EntityHistoryService } from './entity-history.service';
 import { BehaviorSubject } from 'rxjs';
 import {
   buildRelationsViewEntityId,
@@ -44,6 +45,7 @@ function emptyLayout(): WorkspaceLayout {
 
 @Injectable({ providedIn: 'root' })
 export class TabManagerService {
+  private readonly history = inject(EntityHistoryService);
   private readonly _layout$ = new BehaviorSubject<WorkspaceLayout>(emptyLayout());
   readonly layout$ = this._layout$.asObservable();
 
@@ -52,6 +54,16 @@ export class TabManagerService {
     private registry: ComponentRegistryService
   ) {
     this.restoreLayout();
+    let historyTabKey = '';
+    this.layout$.subscribe(layout => {
+      const pane = layout.panes.find(item => item.id === layout.focusedPaneId);
+      const tab = pane?.tabs.find(item => item.id === pane.activeTabId);
+      const key = `${pane?.id}:${tab?.id}`;
+      if (key === historyTabKey) return;
+      historyTabKey = key;
+      const aliases: Record<string, string> = { Specie: 'Species', CharacterSheet: 'IRPWCharacterSheet', Vocations: 'IRPWVocation' };
+      this.history.activate(tab && tab.entityType !== 'view' ? { table: aliases[tab.entityType] ?? tab.entityType, id: tab.entityId } : null);
+    });
   }
 
   get snapshot(): WorkspaceLayout {

@@ -18,13 +18,13 @@
           @if (metadata?.source === 'schema') {
             @switch (metadata?.control) {
               @case ('textarea') {
-                <app-text-area [label]="metadata!.label" [labelColor]="item.color || null" [value]="schemaValue(metadata!.key)"
+                <app-text-area [historyField]="{ column: metadata!.key, label: metadata!.label }" [label]="metadata!.label" [labelColor]="item.color || null" [value]="schemaValue(metadata!.key)"
                   (valueChange)="setSchemaValue(metadata!.key, $event)"></app-text-area>
               }
               @case ('editor') {
                 <div class="editor-wrapper">
                   <label class="mb-1 text-xs" [style.color]="item.color || null">{{ metadata!.label }}</label>
-                  <app-editor [entityId]="entity().id" [docTitle]="metadata!.label"
+                  <app-editor [historyField]="{ column: metadata!.key, label: metadata!.label }" [entityId]="entity().id" [docTitle]="metadata!.label"
                     [entityTable]="entityTable()" [entityName]="entity().name"
                     [document]="schemaValue(metadata!.key)"
                     (saveDocument)="setSchemaEditorValue(metadata!.key, $event)"
@@ -33,7 +33,7 @@
                 </div>
               }
               @default {
-                <app-input [label]="metadata!.label" [labelColor]="item.color || null" [value]="schemaValue(metadata!.key)"
+                <app-input [historyField]="{ column: metadata!.key, label: metadata!.label }" [label]="metadata!.label" [labelColor]="item.color || null" [value]="schemaValue(metadata!.key)"
                   (valueChange)="setSchemaValue(metadata!.key, $event)"></app-input>
               }
             }
@@ -54,7 +54,7 @@
                 @case ('editor') {
                   <div class="editor-wrapper">
                     <label class="mb-1 text-xs" [style.color]="item.color || null">{{ dynamicTemplate.name }}</label>
-                    <app-editor [entityId]="getDynamicFieldValue(dynamicTemplate.id).id" [docTitle]="dynamicTemplate.name"
+                    <app-editor [historyField]="{ column: 'value', dynamicId: dynamicTemplate.id, label: dynamicTemplate.name }" [entityId]="getDynamicFieldValue(dynamicTemplate.id).id" [docTitle]="dynamicTemplate.name"
                       [entityTable]="entityTable()" [entityName]="entity().name" [document]="getDynamicFieldValue(dynamicTemplate.id).value || ''"
                       (saveDocument)="onDynamicEditorSave($event, dynamicTemplate.id)"
                       class="rounded-lg bg-zinc-940 ring-1 ring-zinc-900 h-full overflow-y-auto scrollbar-dark"></app-editor>
@@ -66,7 +66,7 @@
                     (comboValueChange)="onDynamicValueChange(dynamicTemplate.id, $event)"></app-combo-box>
                 }
                 @default {
-                  <app-input [label]="dynamicTemplate.name" [labelColor]="item.color || null" size="xs" [value]="getDynamicFieldValue(dynamicTemplate.id).value"
+                  <app-input [historyField]="{ column: 'value', dynamicId: dynamicTemplate.id, label: dynamicTemplate.name }" [label]="dynamicTemplate.name" [labelColor]="item.color || null" size="xs" [value]="getDynamicFieldValue(dynamicTemplate.id).value"
                     (valueChange)="onDynamicValueChange(dynamicTemplate.id, $event)"></app-input>
                 }
               }

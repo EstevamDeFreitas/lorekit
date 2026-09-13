@@ -1,3 +1,5 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
+import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { DestroyRef, Component, computed, inject, input, OnInit } from '@angular/core';
 import { FlushableDebounce } from '../../../utils/flushable-debounce';
@@ -31,9 +33,9 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-character-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
   template: `
-    <div class="flex flex-col relative @container">
+    <div [historyEntity]="{ table: 'Character', id: character.id || '' }" [historyModel]="character" class="flex flex-col relative @container">
       @if(getImageByUsageKey(character.Images, 'default') != null){
         @let img = getImageByUsageKey(character.Images, 'default');
         <div class="relative w-full h-[30vh] overflow-hidden">
@@ -54,7 +56,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/character"></app-icon-button>
         }
-        <input type="text" (blur)="saveCharacter()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="character.name" />
+        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveCharacter()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="character.name" />
         <div class="flex flex-row flex-wrap gap-2 ms-auto">
           <!-- <app-entity-transfer-button [entityId]="character.id" [entityTable]="'Character'" [size]="'xl'"></app-entity-transfer-button> -->
           <app-ui-field-config-button
@@ -96,7 +98,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
                 }
                 @case ('backstory') {
                   <div class="w-full ">
-                    <app-editor [entityId]="character.id" docTitle="Backstory" entityTable="Character" [entityName]="character.name" [document]="character.background || ''" (saveDocument)="onEditorSave($event, 'background')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
+                    <app-editor [historyField]="{ column: 'background', label: 'História' }" [entityId]="character.id" docTitle="Backstory" entityTable="Character" [entityName]="character.name" [document]="character.background || ''" (saveDocument)="onEditorSave($event, 'background')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 }
               }

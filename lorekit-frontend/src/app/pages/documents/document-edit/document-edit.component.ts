@@ -1,3 +1,5 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
+import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { inject, DestroyRef, ChangeDetectionStrategy, Component, computed, effect, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -22,9 +24,9 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 @Component({
   selector: 'app-document-edit',
   standalone: true,
-  imports: [IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, SafeDeleteButtonComponent, EntityLateralMenuButtonComponent, AssetUrlPipe],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, SafeDeleteButtonComponent, EntityLateralMenuButtonComponent, AssetUrlPipe],
   template: `
-  <div class="flex flex-col relative @container">
+  <div [historyEntity]="{ table: 'Document', id: document.id || '' }" [historyModel]="document" class="flex flex-col relative @container">
     @if(getImageByUsageKey(document.Images, 'default') != null){
       @let img = getImageByUsageKey(document.Images, 'default');
       <div class="relative w-full h-[30vh] overflow-hidden">
@@ -40,7 +42,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
       @if (isRouteComponent()){
         <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" [route]="getReturnUrl()"></app-icon-button>
       }
-      <input type="text" (blur)="saveDocument()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="document.title" />
+      <input [historyField]="{ column: 'title', label: 'Título' }" type="text" (blur)="saveDocument()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="document.title" />
       <div class="flex flex-row flex-wrap gap-2 ms-auto">
         <!-- <app-entity-transfer-button [entityId]="documentId()" [entityTable]="'Document'" [size]="'xl'"></app-entity-transfer-button> -->
         @if (!isLoading && showLateralMenu()) {
@@ -58,7 +60,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
     <div class="flex flex-col @2xl:flex-row gap-4 mt-10">
       <div class="flex flex-col flex-1">
         @if (!isLoading) {
-          <app-editor [entityId]="document.id" entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
+          <app-editor [historyField]="{ column: 'content', label: 'Conteúdo' }" [entityId]="document.id" entityTable="Document" [entityName]="document.title" [document]="document.content || ''" (saveDocument)="saveDocument($event)" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
         }
       </div>
     </div>

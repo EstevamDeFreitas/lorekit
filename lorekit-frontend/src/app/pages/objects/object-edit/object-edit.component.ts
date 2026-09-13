@@ -1,3 +1,5 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
+import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { DestroyRef, Component, computed, inject, input, OnInit } from '@angular/core';
 import { FlushableDebounce } from '../../../utils/flushable-debounce';
@@ -30,9 +32,9 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
 
 @Component({
   selector: 'app-object-edit',
-  imports: [IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
   template: `
-    <div class="flex flex-col relative @container">
+    <div [historyEntity]="{ table: 'Object', id: object.id || '' }" [historyModel]="object" class="flex flex-col relative @container">
       @if(getImageByUsageKey(object.Images, 'default') != null){
         @let img = getImageByUsageKey(object.Images, 'default');
         <div class="relative w-full h-[30vh] overflow-hidden">
@@ -52,7 +54,7 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/object"></app-icon-button>
         }
-        <input type="text" (blur)="saveObject()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="object.name" />
+        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveObject()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="object.name" />
         <div class="flex flex-row flex-wrap gap-2 ms-auto">
           <app-ui-field-config-button
             [entityTable]="'Object'"
@@ -88,12 +90,12 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
               @switch (currentTab) {
                 <!-- @case ('properties') {
                   <div class="w-full">
-                    <app-editor [entityId]="object.id" docTitle="Propriedades" entityTable="Object" [entityName]="object.name" [document]="object.properties || ''" (saveDocument)="onEditorSave($event, 'properties')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
+                    <app-editor [historyField]="{ column: 'properties', label: 'Propriedades' }" [entityId]="object.id" docTitle="Propriedades" entityTable="Object" [entityName]="object.name" [document]="object.properties || ''" (saveDocument)="onEditorSave($event, 'properties')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 } -->
                 @case ('history') {
                   <div class="w-full">
-                    <app-editor [entityId]="object.id + '_history'" docTitle="História" entityTable="Object" [entityName]="object.name" [document]="object.history || ''" (saveDocument)="onEditorSave($event, 'history')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
+                    <app-editor [historyField]="{ column: 'history', label: 'História' }" [entityId]="object.id + '_history'" docTitle="História" entityTable="Object" [entityName]="object.name" [document]="object.history || ''" (saveDocument)="onEditorSave($event, 'history')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
                   </div>
                 }
                 @default {

@@ -1,3 +1,5 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
+import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
@@ -32,11 +34,11 @@ interface TimelineEventDialogData {
 @Component({
   selector: 'app-timeline-event-edit',
   standalone: true,
-  imports: [ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent, SafeDeleteButtonComponent],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent, SafeDeleteButtonComponent],
   template: `
-    <div class="w-full max-w-[980px] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-5">
+    <div [historyEntity]="{ table: 'Event', id: event.id || '' }" [historyModel]="event" class="w-full max-w-[980px] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-5">
       <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <input
+        <input [historyField]="{ column: 'name', label: 'Nome' }"
             type="text"
             class="min-w-0 flex-1 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-none"
             [(ngModel)]="event.name"
@@ -53,12 +55,12 @@ interface TimelineEventDialogData {
 
 
       <div class=" gap-3">
-        <!-- <app-text-area label="Conceito" height="h-42" [(value)]="event.concept"></app-text-area> -->
+        <!-- <app-text-area [historyField]="{ column: 'concept', label: 'concept' }" label="Conceito" height="h-42" [(value)]="event.concept"></app-text-area> -->
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <app-input class="w-full min-w-0" label="Início (ano)" type="number" size="xs" [(value)]="event.startDate"></app-input>
           <app-input class="w-full min-w-0" label="Fim (ano)" type="number" size="xs" [(value)]="event.endDate"></app-input>
           <app-input class="w-full min-w-0" label="Faixa" type="number" size="xs" [(value)]="event.lane"></app-input>
-          <app-input class="w-full min-w-0" label="Data exibida" size="xs" [(value)]="event.date"></app-input>
+          <app-input [historyField]="{ column: 'date', label: 'Data exibida' }" class="w-full min-w-0" label="Data exibida" size="xs" [(value)]="event.date"></app-input>
           <app-combo-box
             label="Tipo do evento"
             class="w-full"
@@ -79,7 +81,7 @@ interface TimelineEventDialogData {
         <!-- <app-input label="Ordem cronológica" type="number" [(value)]="event.chronologyOrder"></app-input> -->
       </div>
 
-      <app-text-area label="Descrição" [(value)]="event.description" height="h-32"></app-text-area>
+      <app-text-area [historyField]="{ column: 'description', label: 'Descrição' }" label="Descrição" [(value)]="event.description" height="h-32"></app-text-area>
 
       <div class="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3 flex flex-col gap-3">
         <div>

@@ -8,13 +8,14 @@ import { ComponentRefreshService } from './services/component-refresh.service';
 import { flushPendingComponentSaves } from './utils/pending-save-event';
 import { AuthService } from './services/auth.service';
 import { WorkspaceRuntimeService } from './services/workspace-runtime.service';
+import { EntityHistoryButtonsComponent } from './components/entity-history-buttons/entity-history-buttons.component';
 
 declare const window: any;
 
 @Component({
   standalone: true,
   selector: 'app-root',
-  imports: [RouterOutlet, SearchComponent, BackupButtonComponent, CloudButtonComponent],
+  imports: [RouterOutlet, SearchComponent, BackupButtonComponent, CloudButtonComponent, EntityHistoryButtonsComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
   host: {

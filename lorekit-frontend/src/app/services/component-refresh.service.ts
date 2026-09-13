@@ -12,6 +12,7 @@ export class ComponentRefreshService {
   }
 
   refreshFromRemote(): void {
+    window.dispatchEvent(new Event('lorekit:history-external-change'));
     window.dispatchEvent(new Event(DISCARD_PENDING_SAVES_EVENT));
     this.refresh();
   }

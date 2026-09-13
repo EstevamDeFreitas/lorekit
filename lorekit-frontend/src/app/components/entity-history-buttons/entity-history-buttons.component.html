@@ -1,0 +1,14 @@
+<div class="history-actions" role="group" aria-label="Histórico da entidade">
+  <button type="button" [disabled]="!history.canUndo()" [title]="undoLabel()" [attr.aria-label]="undoLabel()" (click)="history.undo()">
+    <i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i>
+  </button>
+  <button type="button" [disabled]="!history.canRedo()" [title]="redoLabel()" [attr.aria-label]="redoLabel()" (click)="history.redo()">
+    <i class="fa-solid fa-arrow-rotate-right" aria-hidden="true"></i>
+  </button>
+</div>
+@if (history.message()) {
+  <div class="history-message" role="status">
+    <span>{{ history.message() }}</span>
+    <button type="button" aria-label="Fechar aviso de histórico" (click)="history.message.set('')">×</button>
+  </div>
+}

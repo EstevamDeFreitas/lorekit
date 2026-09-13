@@ -1,3 +1,6 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
+import { HistoryFieldDirective } from '../../../directives/history-field.directive';
+import { EntityHistoryService } from '../../../services/entity-history.service';
 import { CommonModule, NgClass } from '@angular/common';
 import { Dialog } from '@angular/cdk/dialog';
 import { inject, DestroyRef, Component, effect, input, OnInit } from '@angular/core';
@@ -97,9 +100,9 @@ interface InheritedCharacterHability extends IrpwVocationHability {
 
 @Component({
   selector: 'irpw-character-sheet',
-  imports: [CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe],
   template: `
-    <div class="flex flex-col relative">
+    <div [historyEntity]="{ table: 'IRPWCharacterSheet', id: selectedCharacterId }" [historyModel]="currentSheet" (historyRestored)="restoreSheetHistory()" class="flex flex-col relative">
       <div class="flex flex-row gap-4 relative">
 
         @if (!characterIdInput()) {
@@ -514,7 +517,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                       <h1 class="text-center mb-3">Subespecializações</h1>
                       <div class="flex flex-col gap-2">
                         @for (subspecialization of subspecializationsData; track $index; let subspecializationIndex = $index) {
-                          <input
+                          <input [historyField]="{ column: 'subspecialization', label: 'Subespecializações' }" [historyRead]="readSubspecializationHistory"
                             type="text"
                             class="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
                             [ngModel]="subspecialization"
@@ -601,7 +604,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                                           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                               Nome
-                                              <input
+                                              <input [historyField]="{ column: 'marks', path: [markIndex, 'name'], trim: true, label: 'Marco: nome' }"
                                                 type="text"
                                                 class="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
                                                 [(ngModel)]="mark.name"
@@ -611,7 +614,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
 
                                             <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                               Tipo de marco narrativo
-                                              <input
+                                              <input [historyField]="{ column: 'marks', path: [markIndex, 'narrativeType'], trim: true, label: 'Marco: tipo narrativo' }"
                                                 type="text"
                                                 class="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
                                                 [(ngModel)]="mark.narrativeType"
@@ -621,7 +624,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
 
                                             <label class="md:col-span-2 flex flex-col gap-1 text-xs text-zinc-400">
                                               Descrição
-                                              <textarea
+                                              <textarea [historyField]="{ column: 'marks', path: [markIndex, 'description'], trim: false, label: 'Marco: descrição' }"
                                                 class="min-h-28 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
                                                 [(ngModel)]="mark.description"
                                                 (ngModelChange)="onMarksChange()"
@@ -657,7 +660,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                                                   <div class="grid grid-cols-1 gap-3">
                                                     <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                                       Nome
-                                                      <input
+                                                      <input [historyField]="{ column: 'marks', path: [markIndex, 'habilities', habilityIndex, 'name'], trim: true, label: 'Habilidade do marco' }"
                                                         type="text"
                                                         class="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
                                                         [(ngModel)]="hability.name"
@@ -667,7 +670,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
 
                                                     <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                                       Descrição
-                                                      <textarea
+                                                      <textarea [historyField]="{ column: 'marks', path: [markIndex, 'habilities', habilityIndex, 'description'], trim: false, label: 'Habilidade do marco' }"
                                                         class="min-h-24 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
                                                         [(ngModel)]="hability.description"
                                                         (ngModelChange)="onMarksChange()"
@@ -712,7 +715,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                                                   <div class="grid grid-cols-1 gap-3">
                                                     <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                                       Nome
-                                                      <input
+                                                      <input [historyField]="{ column: 'marks', path: [markIndex, 'weaknesses', weaknessIndex, 'name'], trim: true, label: 'Fraqueza: nome' }"
                                                         type="text"
                                                         class="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
                                                         [(ngModel)]="weakness.name"
@@ -722,7 +725,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
 
                                                     <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                                       Descrição
-                                                      <textarea
+                                                      <textarea [historyField]="{ column: 'marks', path: [markIndex, 'weaknesses', weaknessIndex, 'description'], trim: false, label: 'Fraqueza: descrição' }"
                                                         class="min-h-24 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
                                                         [(ngModel)]="weakness.description"
                                                         (ngModelChange)="onMarksChange()"
@@ -821,7 +824,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                                       <div class="grid grid-cols-1 gap-3">
                                         <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                           Nome
-                                          <input
+                                          <input [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory"
                                             type="text"
                                             class="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
                                             [(ngModel)]="hability.name"
@@ -831,7 +834,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
 
                                         <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                           Descrição
-                                          <textarea
+                                          <textarea [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory"
                                             class="min-h-24 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
                                             [(ngModel)]="hability.description"
                                             (ngModelChange)="onHabilitiesChange()"
@@ -1085,6 +1088,10 @@ interface InheritedCharacterHability extends IrpwVocationHability {
   styleUrl: './irpw-character-sheet.component.css',
 })
 export class IrpwCharacterSheetComponent implements OnInit {
+  private readonly entityHistory = inject(EntityHistoryService);
+  readonly readSubspecializationHistory = (): string => this.currentSheet?.subspecialization || '';
+  readonly readHabilitiesHistory = (): string => this.currentSheet?.habilities || '';
+  restoreSheetHistory(): void { this.parseSubspecializations(); this.parseHabilities(); this.parseMarks(); }
   private readonly destroyRef = inject(DestroyRef);
   private dialog = inject(Dialog);
   private characterService = inject(CharacterService);
@@ -2040,12 +2047,14 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   addMark() {
+    this.entityHistory.invalidate({ table: 'IRPWCharacterSheet', id: this.selectedCharacterId });
     this.marksData = [...this.marksData, this.createEmptyMark()];
     this.expandedMarkIndexes.add(this.marksData.length - 1);
     this.onMarksChange();
   }
 
   removeMark(index: number) {
+    this.entityHistory.invalidate({ table: 'IRPWCharacterSheet', id: this.selectedCharacterId });
     this.marksData = this.marksData.filter((_, currentIndex) => currentIndex !== index);
     this.expandedMarkIndexes = new Set(
       [...this.expandedMarkIndexes]
@@ -2069,6 +2078,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   addMarkHability(markIndex: number) {
+    this.entityHistory.invalidate({ table: 'IRPWCharacterSheet', id: this.selectedCharacterId });
     const mark = this.marksData[markIndex];
     if (!mark) return;
 
@@ -2077,6 +2087,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   addMarkWeakness(markIndex: number) {
+    this.entityHistory.invalidate({ table: 'IRPWCharacterSheet', id: this.selectedCharacterId });
     const mark = this.marksData[markIndex];
     if (!mark) return;
 
@@ -2085,6 +2096,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   removeMarkHability(markIndex: number, habilityIndex: number) {
+    this.entityHistory.invalidate({ table: 'IRPWCharacterSheet', id: this.selectedCharacterId });
     const mark = this.marksData[markIndex];
     if (!mark) return;
 
@@ -2093,6 +2105,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   removeMarkWeakness(markIndex: number, weaknessIndex: number) {
+    this.entityHistory.invalidate({ table: 'IRPWCharacterSheet', id: this.selectedCharacterId });
     const mark = this.marksData[markIndex];
     if (!mark) return;
 

@@ -1,3 +1,5 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
+import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { Dialog, DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, NgZone, OnDestroy, ViewChild, computed, effect, inject, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -42,15 +44,15 @@ interface TimelineDrag {
 }
 @Component({
   selector: 'app-timeline-edit',
-  imports: [EditorComponent, FormsModule, IconButtonComponent, PersonalizationButtonComponent, SafeDeleteButtonComponent],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, EditorComponent, FormsModule, IconButtonComponent, PersonalizationButtonComponent, SafeDeleteButtonComponent],
   template: `
-    <div class="timeline-page">
+    <div [historyEntity]="{ table: 'Timeline', id: timeline.id || '' }" [historyModel]="timeline" class="timeline-page">
       <header class="timeline-toolbar">
         <div class="flex min-w-0 items-center gap-3">
           @if (isRouteComponent()) {
             <app-icon-button buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/timeline"></app-icon-button>
           }
-          <div class="min-w-0 flex-1"><input class="w-full min-w-0 bg-transparent text-2xl font-bold outline-none" [(ngModel)]="timeline.name" (blur)="saveTimeline()" aria-label="Nome da timeline"><label class="timeline-unit-field">Unidade de tempo<input [(ngModel)]="timeline.timeUnitName" (blur)="saveTimeline()" aria-label="Nome da unidade de tempo"></label><p class="timeline-help">Arraste para posicionar e mova eventos verticalmente para organizar em faixas. Ctrl: 10, Shift: 100, ambos: 1000.</p></div>
+          <div class="min-w-0 flex-1"><input [historyField]="{ column: 'name', label: 'Nome' }" class="w-full min-w-0 bg-transparent text-2xl font-bold outline-none" [(ngModel)]="timeline.name" (blur)="saveTimeline()" aria-label="Nome da timeline"><label class="timeline-unit-field">Unidade de tempo<input [historyField]="{ column: 'timeUnitName', label: 'Unidade de tempo' }" [(ngModel)]="timeline.timeUnitName" (blur)="saveTimeline()" aria-label="Nome da unidade de tempo"></label><p class="timeline-help">Arraste para posicionar e mova eventos verticalmente para organizar em faixas. Ctrl: 10, Shift: 100, ambos: 1000.</p></div>
         </div>
         <div class="flex shrink-0 items-center gap-2">
           <app-icon-button title="Nova era" icon="fa-solid fa-layer-group" buttonType="white" size="xl" (click)="openAgeDialog(defaultDate())"></app-icon-button>
@@ -62,7 +64,7 @@ interface TimelineDrag {
       </header>
       <details class="timeline-summary">
         <summary>Resumo da timeline</summary>
-        <app-editor [entityId]="timeline.id" docTitle="Descrição" entityTable="Timeline" [entityName]="timeline.name" [document]="timeline.description || ''" (saveDocument)="timelineDescriptionChange($event)"></app-editor>
+        <app-editor [historyField]="{ column: 'description', label: 'Descrição' }" [entityId]="timeline.id" docTitle="Descrição" entityTable="Timeline" [entityName]="timeline.name" [document]="timeline.description || ''" (saveDocument)="timelineDescriptionChange($event)"></app-editor>
       </details>
       <section #viewport class="timeline-viewport scrollbar-dark" (wheel)="onTimelineWheel($event)">
         <div #canvas class="timeline-canvas" [style.width.px]="canvasWidth" [style.height.px]="canvasHeight">

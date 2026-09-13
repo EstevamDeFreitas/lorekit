@@ -1,3 +1,5 @@
+import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
+import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
@@ -27,11 +29,11 @@ interface GreatMarkDialogData {
 
 @Component({
   selector: 'app-great-mark-edit',
-  imports: [ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
   template: `
-    <div class="w-full max-w-[980px] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-5">
+    <div [historyEntity]="{ table: 'GreatMark', id: mark.id || '' }" [historyModel]="mark" class="w-full max-w-[980px] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-5">
       <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <input type="text" class="min-w-0 flex-1 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-none" [(ngModel)]="mark.name" />
+        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" class="min-w-0 flex-1 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-none" [(ngModel)]="mark.name" />
         <div class="flex shrink-0 flex-wrap justify-end gap-2">
           @if (mark.id) {
             <app-personalization-button [entityId]="mark.id" [entityTable]="'GreatMark'" [size]="'xl'"></app-personalization-button>
@@ -44,13 +46,13 @@ interface GreatMarkDialogData {
         <app-input class="w-full min-w-0" label="Início (ano)" type="number" size="xs" [(value)]="mark.startDate"></app-input>
         <app-input class="w-full min-w-0" label="Fim (ano)" type="number" size="xs" [(value)]="mark.endDate"></app-input>
         <app-input class="w-full min-w-0" label="Faixa do marco" type="number" size="xs" [(value)]="mark.lane"></app-input>
-        <app-input class="w-full min-w-0" label="Data exibida" size="xs" [(value)]="mark.displayDate"></app-input>
+        <app-input [historyField]="{ column: 'displayDate', label: 'Data exibida' }" class="w-full min-w-0" label="Data exibida" size="xs" [(value)]="mark.displayDate"></app-input>
         <app-combo-box label="Tipo do evento" class="w-full" [items]="eventTypes" compareProp="id" displayProp="name" [(comboValue)]="selectedEventTypeId"></app-combo-box>
         <app-combo-box label="Local principal" class="w-full" [items]="locations" compareProp="id" displayProp="name" [(comboValue)]="selectedLocationId"></app-combo-box>
       </div>
 
       <p class="-mt-2 text-xs text-zinc-500">O ponto do marco fica automaticamente no centro do intervalo. A personalização define o ícone.</p>
-      <app-text-area label="Descrição" [(value)]="mark.description" height="h-32"></app-text-area>
+      <app-text-area [historyField]="{ column: 'description', label: 'Descrição' }" label="Descrição" [(value)]="mark.description" height="h-32"></app-text-area>
 
       <div class="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3 flex flex-col gap-3">
         <div>

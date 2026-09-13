@@ -1,0 +1,8 @@
+:host { display: block; flex-shrink: 0; -webkit-app-region: no-drag; }
+.history-actions { display: flex; gap: .25rem; }
+.history-actions button { width: 1.75rem; height: 1.75rem; border: 1px solid var(--color-zinc-700); border-radius: .375rem; background: var(--color-zinc-925); color: white; cursor: pointer; }
+.history-actions button:disabled { opacity: .35; cursor: default; }
+.history-actions button:not(:disabled):hover { border-color: white; }
+button:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+.history-message { position: fixed; top: 2.5rem; left: 50%; transform: translateX(-50%); width: min(28rem, calc(100vw - 2rem)); background: var(--color-zinc-900); color: white; border: 1px solid var(--color-zinc-700); border-radius: .5rem; padding: .75rem; display: flex; gap: .75rem; z-index: 20001; }
+.history-message button { align-self: start; cursor: pointer; padding: 0 .25rem; }

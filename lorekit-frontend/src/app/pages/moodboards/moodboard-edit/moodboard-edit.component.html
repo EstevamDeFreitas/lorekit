@@ -1,10 +1,10 @@
-<div class="h-full min-h-0 flex flex-col bg-zinc-950 text-white">
+<div [historyEntity]="{ table: 'Moodboard', id: moodboard().id }" [historyModel]="moodboard()" (historyRestored)="restoreMoodboardHistory($event)" class="h-full min-h-0 flex flex-col bg-zinc-950 text-white">
   <div class="shrink-0 border-b border-zinc-800 bg-zinc-950/95 px-3 py-2">
     <div class="flex flex-row flex-wrap items-center gap-2">
       <input
         type="text"
         class="min-w-0 md:min-w-48 flex-1 bg-transparent text-lg font-semibold outline-none border-0 focus:ring-0"
-        [ngModel]="moodboard().name"
+        [historyField]="{ column: 'name', label: 'Nome' }" [ngModel]="moodboard().name"
         (ngModelChange)="updateMoodboardName($event)"
         (blur)="saveMoodboardName()" />
 
@@ -325,7 +325,7 @@
                   @if (editingItemId() === view.item.id) {
                     <div
                       class="moodboard-text moodboard-editable-text"
-                      contenteditable="true"
+                      [historyField]="{ column: 'configJson', path: ['text'], target: { table: 'MoodboardItem', id: view.item.id }, label: 'Texto do quadro' }" contenteditable="true"
                       spellcheck="false"
                       [style.color]="textItemColor(view)"
                       [style.text-align]="textAlign(view)"
@@ -370,7 +370,7 @@
                       [style.height.px]="imageTitleHeight(view)"
                       [style.color]="view.config.stroke || '#ffffff'"
                       [style.font-size]="imageTitleFontSize(view)"
-                      [ngModel]="view.config.text || ''"
+                      [historyField]="{ column: 'configJson', path: ['text'], target: { table: 'MoodboardItem', id: view.item.id }, label: 'Legenda' }" [ngModel]="view.config.text || ''"
                       (ngModelChange)="updateItemText(view, $event)"
                       (blur)="stopEditing()"
                       (mousedown)="$event.stopPropagation()" />
@@ -384,9 +384,9 @@
                       <div class="moodboard-document-inner">
                       <div class="moodboard-document-title" (mousedown)="editDocumentItem($event, view)">{{ view.entity?.label || view.config.text }}</div>
                       @if (editingItemId() === view.item.id && view.document) {
-                        <div class="moodboard-document-editor scrollbar-dark" (mousedown)="$event.stopPropagation()">
+                        <div [historyEntity]="{ table: 'Document', id: view.document.id }" [historyModel]="view.document" class="moodboard-document-editor scrollbar-dark" (mousedown)="$event.stopPropagation()">
                           <app-editor
-                            entityTable="Document"
+                            historyField="content" entityTable="Document"
                             [entityId]="view.document.id"
                             [entityName]="view.document.title"
                             [docTitle]="view.document.title"
@@ -445,7 +445,7 @@
           @if (view.config.kind === 'shape' && editingItemId() === view.item.id) {
             <div
               class="moodboard-shape-textarea moodboard-editable-text"
-              contenteditable="true"
+              [historyField]="{ column: 'configJson', path: ['text'], target: { table: 'MoodboardItem', id: view.item.id }, label: 'Texto do quadro' }" contenteditable="true"
               spellcheck="false"
               [style.left.px]="view.item.posX || 0"
               [style.top.px]="view.item.posY || 0"

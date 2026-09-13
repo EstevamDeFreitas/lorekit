@@ -95,6 +95,7 @@ export class DbProvider {
   }
 
   close(): void {
+    window.dispatchEvent(new Event('lorekit:history-reset'));
     this.persistence = null;
     this.writer = null;
     this.db?.close();
