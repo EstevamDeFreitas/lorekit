@@ -2,6 +2,73 @@
   display: block;
 }
 
+/* Animate presentation only: pan coordinates and node positions stay immediate. */
+svg > g {
+  animation: node-arrival 360ms ease-out backwards;
+}
+
+svg > g:nth-of-type(3n + 1) { animation-delay: 40ms; }
+svg > g:nth-of-type(3n + 2) { animation-delay: 80ms; }
+
+svg > g circle {
+  transition: stroke 180ms ease, stroke-width 180ms ease, fill 180ms ease;
+}
+
+svg > g:hover circle,
+svg > g:focus-visible circle {
+  stroke-width: 5px;
+}
+
+svg > path[role="button"] {
+  animation: relation-arrival 420ms ease-out;
+  transition: stroke 180ms ease, opacity 180ms ease;
+}
+
+.relation-edge-label {
+  animation: node-arrival 240ms ease-out;
+}
+
+aside {
+  animation: panel-arrival 260ms ease-out;
+}
+
+button {
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+button:active {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 20%);
+}
+
+@keyframes node-arrival {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes relation-arrival {
+  from { stroke-opacity: 0; }
+  to { stroke-opacity: 1; }
+}
+
+@keyframes panel-arrival {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 svg text {
   user-select: none;
+}
+
+.relation-edge-label {
+  paint-order: stroke;
+  stroke: #18181b;
+  stroke-width: 6px;
+  stroke-linejoin: round;
 }

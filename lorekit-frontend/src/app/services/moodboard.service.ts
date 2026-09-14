@@ -4,6 +4,7 @@ import { DbProvider } from '../app.config';
 import { Moodboard, MoodboardItem } from '../models/moodboard.model';
 import { Image } from '../models/image.model';
 import { Personalization } from '../models/personalization.model';
+import { EntityWorldScopeService } from './entity-world-scope.service';
 
 export type MoodboardEntitySearchResult = {
   table: string;
@@ -30,7 +31,10 @@ export class MoodboardService {
     { table: 'Object', label: 'Objeto', column: 'name' },
   ];
 
-  constructor(private dbProvider: DbProvider) {
+  constructor(
+    private dbProvider: DbProvider,
+    private entityWorldScopeService: EntityWorldScopeService,
+  ) {
     this.crud = this.dbProvider.getCrudHelper();
   }
 
@@ -155,7 +159,7 @@ export class MoodboardService {
           continue;
         }
 
-        if (worldId && !this.entityBelongsToWorld(def.table, id, worldId, new Set<string>())) {
+        if (worldId && !this.entityWorldScopeService.belongsToWorld(def.table, id, worldId)) {
           continue;
         }
 
@@ -210,37 +214,6 @@ export class MoodboardService {
     };
   }
 
-  private entityBelongsToWorld(table: string, id: string, worldId: string, visited: Set<string>): boolean {
-    if (table === 'World') {
-      return id === worldId;
-    }
-
-    const key = `${table}:${id}`;
-    if (visited.has(key)) {
-      return false;
-    }
-    visited.add(key);
-
-    const directRelationship = this.crud.findFirst('Relationship', {
-      parentTable: 'World',
-      parentId: worldId,
-      entityTable: table,
-      entityId: id,
-    });
-
-    if (directRelationship) {
-      return true;
-    }
-
-    const parentRelationships = this.crud.findAll('Relationship', {
-      entityTable: table,
-      entityId: id,
-    }) as Array<{ parentTable: string; parentId: string }>;
-
-    return parentRelationships.some(relationship =>
-      this.entityBelongsToWorld(relationship.parentTable, relationship.parentId, worldId, visited)
-    );
-  }
 
   private getPreferredImagePath(images: Image[] | undefined | null): string | null {
     if (!images?.length) {

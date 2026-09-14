@@ -13,8 +13,9 @@ export type GraphNode = EntitySummary & {
   isRoot: boolean;
   x: number;
   y: number;
-  cardWidthScale: number;
-  cardHeightScale: number;
+  radius: number;
+  degree: number;
+  isIsolated: boolean;
 };
 
 export type GraphEdge = {
@@ -28,6 +29,8 @@ export type GraphEdge = {
 export type GraphView = {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  width?: number;
+  height?: number;
 };
 
 export type Point = {

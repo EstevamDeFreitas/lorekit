@@ -5,6 +5,7 @@ import { Link } from '../models/link.model';
 import { Image } from '../models/image.model';
 import { buildGraphView, makeNodeKey } from '../libs/relationship-graph/relationship-graph.utils';
 import { EntitySummary, GraphView } from '../libs/relationship-graph/relationship-graph.types';
+import { EntityWorldScopeService } from './entity-world-scope.service';
 
 export type SelectableTable = {
   value: string;
@@ -15,6 +16,44 @@ type GraphOptions = {
   depth?: number;
   includeAllLevels?: boolean;
 };
+
+const SUMMARY_INCLUDES = [
+  { table: 'Image', firstOnly: false },
+  { table: 'Personalization', firstOnly: true },
+];
+
+function getConnectedComponent(rootKey: string, scopedLinks: Link[]): { keys: Set<string>; links: Link[] } {
+  const keys = new Set<string>([rootKey]);
+  const adjacency = new Map<string, Set<string>>();
+
+  for (const link of scopedLinks) {
+    const fromKey = makeNodeKey(link.fromTable, link.fromId);
+    const toKey = makeNodeKey(link.toTable, link.toId);
+    if (!adjacency.has(fromKey)) adjacency.set(fromKey, new Set<string>());
+    if (!adjacency.has(toKey)) adjacency.set(toKey, new Set<string>());
+    adjacency.get(fromKey)!.add(toKey);
+    adjacency.get(toKey)!.add(fromKey);
+  }
+
+  const queue = [rootKey];
+  for (let index = 0; index < queue.length; index++) {
+    const neighbours = adjacency.get(queue[index]) || [];
+    for (const neighbour of neighbours) {
+      if (keys.has(neighbour)) continue;
+      keys.add(neighbour);
+      queue.push(neighbour);
+    }
+  }
+
+  return {
+    keys,
+    links: scopedLinks.filter((link) => {
+      const fromKey = makeNodeKey(link.fromTable, link.fromId);
+      const toKey = makeNodeKey(link.toTable, link.toId);
+      return keys.has(fromKey) && keys.has(toKey);
+    }),
+  };
+}
 
 @Injectable({
   providedIn: 'root'
@@ -35,7 +74,10 @@ export class LinkService {
 
   private readonly selectableTables = ['World', 'Character', 'Location', 'Organization', 'Species', 'Culture', 'Document', 'Object'];
 
-  constructor(private dbProvider: DbProvider) {
+  constructor(
+    private dbProvider: DbProvider,
+    private entityWorldScopeService: EntityWorldScopeService,
+  ) {
     this.crud = this.dbProvider.getCrudHelper();
   }
 
@@ -46,20 +88,34 @@ export class LinkService {
     }));
   }
 
-  getEntitiesByTable(table: string): EntitySummary[] {
+  getEntitiesByTable(table: string, worldId: string | null = null): EntitySummary[] {
     if (!table) return [];
 
-    const rows = this.crud.findAll(table) || [];
+    const scopeKeys = worldId
+      ? this.entityWorldScopeService.getEntityKeysForWorld(worldId)
+      : null;
 
-    return rows
-      .map((row: any) => this.toEntitySummary(table, row))
+    return this.getEntitiesByTableWithScope(table, scopeKeys);
+  }
+
+  getEntitiesForScope(worldId: string | null = null): EntitySummary[] {
+    const scopeKeys = worldId
+      ? this.entityWorldScopeService.getEntityKeysForWorld(worldId)
+      : null;
+
+    return this.selectableTables
+      .flatMap((table) => this.getEntitiesByTableWithScope(table, scopeKeys))
       .sort((a: EntitySummary, b: EntitySummary) => a.label.localeCompare(b.label));
+  }
+
+  getWorldIdForEntity(table: string, id: string): string | null {
+    return this.entityWorldScopeService.getWorldId(table, id);
   }
 
   getEntitySummary(table: string, id: string): EntitySummary | null {
     if (!table || !id) return null;
 
-    const row = this.crud.findById(table, id, [{ table: 'Image', firstOnly: false }, { table: 'Personalization', firstOnly: true }]);
+    const row = this.crud.findById(table, id, SUMMARY_INCLUDES);
     if (!row) return null;
 
     return this.toEntitySummary(table, row);
@@ -77,31 +133,57 @@ export class LinkService {
     return Array.from(byId.values());
   }
 
-  getGraphForRoot(table: string, id: string, options: GraphOptions = {}): GraphView | null {
-    const root = this.getEntitySummary(table, id);
-    if (!root) return null;
+  getGraphForScope(
+    rootReference: { table: string; id: string } | null,
+    selectedWorldId: string | null = null,
+  ): GraphView | null {
+    const root = rootReference
+      ? this.getEntitySummary(rootReference.table, rootReference.id)
+      : null;
 
-    const depth = Math.max(1, options.depth ?? 2);
-    const links = this.getLinksRecursive(table, id, depth, !!options.includeAllLevels);
-    const entityMap = new Map<string, EntitySummary>();
-    entityMap.set(`${root.table}:${root.id}`, root);
-
-    for (const link of links) {
-      const fromSummary = this.getEntitySummary(link.fromTable, link.fromId);
-      if (fromSummary) {
-        entityMap.set(`${fromSummary.table}:${fromSummary.id}`, fromSummary);
-      }
-
-      const toSummary = this.getEntitySummary(link.toTable, link.toId);
-      if (toSummary) {
-        entityMap.set(`${toSummary.table}:${toSummary.id}`, toSummary);
-      }
+    if (rootReference && !root) {
+      return null;
     }
 
-    const graph = buildGraphView(root, Array.from(entityMap.values()), links);
-    this.applySavedPositions(graph, links, root);
+    const rootWorldId = rootReference
+      ? this.getWorldIdForEntity(rootReference.table, rootReference.id)
+      : null;
+    const effectiveWorldId = rootReference ? rootWorldId : selectedWorldId || null;
+    const entities = this.getEntitiesForScope(effectiveWorldId);
 
-    return graph;
+    if (root && !entities.some((entity) => makeNodeKey(entity.table, entity.id) === makeNodeKey(root.table, root.id))) {
+      entities.push(root);
+    }
+
+    const visibleKeys = new Set(
+      entities.map((entity) => makeNodeKey(entity.table, entity.id))
+    );
+    const scopedLinks = (this.crud.findAll('Link') || [])
+      .filter((link: Link) => {
+        const fromKey = makeNodeKey(link.fromTable, link.fromId);
+        const toKey = makeNodeKey(link.toTable, link.toId);
+        return visibleKeys.has(fromKey) && visibleKeys.has(toKey);
+      }) as Link[];
+
+    const rootKey = root ? makeNodeKey(root.table, root.id) : null;
+    const connectedComponent = rootKey
+      ? getConnectedComponent(rootKey, scopedLinks)
+      : null;
+    const links = connectedComponent?.links || scopedLinks;
+    const graphEntityKeys = connectedComponent?.keys || null;
+
+    const graphEntities = graphEntityKeys
+      ? entities.filter((entity) =>
+          graphEntityKeys.has(makeNodeKey(entity.table, entity.id))
+        )
+      : entities;
+
+    return buildGraphView(root, graphEntities, links,
+      !rootReference && selectedWorldId ? makeNodeKey('World', selectedWorldId) : undefined);
+  }
+
+  getGraphForRoot(table: string, id: string, _options: GraphOptions = {}): GraphView | null {
+    return this.getGraphForScope({ table, id }, null);
   }
 
   saveNodePosition(root: { table: string; id: string }, node: { table: string; id: string; x: number; y: number }, links: Link[]): void {
@@ -223,93 +305,15 @@ export class LinkService {
     return this.crud.findById('Link', id) as Link | null;
   }
 
-  private getLinksRecursive(table: string, id: string, depth: number, includeAllLevels: boolean): Link[] {
-    const startKey = makeNodeKey(table, id);
-    const visitedNodes = new Set<string>([startKey]);
-    const visitedLinks = new Map<string, Link>();
 
-    let frontier = [{ table, id }];
-    let level = 0;
-    const maxDepth = includeAllLevels ? Number.MAX_SAFE_INTEGER : depth;
 
-    while (frontier.length > 0 && level < maxDepth) {
-      const nextFrontier: Array<{ table: string; id: string }> = [];
+  private getEntitiesByTableWithScope(table: string, scopeKeys: Set<string> | null): EntitySummary[] {
+    const rows = this.crud.findAll(table, {}, SUMMARY_INCLUDES) || [];
 
-      for (const current of frontier) {
-        const outgoing = this.crud.findAll('Link', { fromTable: current.table, fromId: current.id }) || [];
-        const incoming = this.crud.findAll('Link', { toTable: current.table, toId: current.id }) || [];
-        const allLinks = [...outgoing, ...incoming] as Link[];
-
-        for (const link of allLinks) {
-          if (!visitedLinks.has(link.id)) {
-            visitedLinks.set(link.id, link);
-          }
-
-          const fromKey = makeNodeKey(link.fromTable, link.fromId);
-          const toKey = makeNodeKey(link.toTable, link.toId);
-
-          if (!visitedNodes.has(fromKey)) {
-            visitedNodes.add(fromKey);
-            nextFrontier.push({ table: link.fromTable, id: link.fromId });
-          }
-
-          if (!visitedNodes.has(toKey)) {
-            visitedNodes.add(toKey);
-            nextFrontier.push({ table: link.toTable, id: link.toId });
-          }
-        }
-      }
-
-      frontier = nextFrontier;
-      level += 1;
-    }
-
-    return Array.from(visitedLinks.values());
-  }
-
-  private applySavedPositions(graph: GraphView, links: Link[], root: EntitySummary): void {
-    const rootNode = graph.nodes.find((n) => n.isRoot);
-    if (!rootNode) return;
-
-    const nodeMap = new Map(graph.nodes.map((node) => [node.key, node]));
-
-    for (const link of links) {
-      const config = this.parseConfig(link.configJson);
-      const positions = config.positions || {};
-      const nodeCardSizes = config.nodeCardSizes || {};
-      const nodeCardScales = config.nodeCardScales || {};
-
-      for (const [nodeKey, rawOffset] of Object.entries(positions)) {
-        const node = nodeMap.get(nodeKey);
-        if (!node || node.isRoot) continue;
-
-        const offset = rawOffset as { x?: number; y?: number };
-
-        if (typeof offset?.x === 'number' && typeof offset?.y === 'number') {
-          node.x = rootNode.x + offset.x;
-          node.y = rootNode.y + offset.y;
-        }
-      }
-
-      for (const [nodeKey, rawSize] of Object.entries(nodeCardSizes)) {
-        const node = nodeMap.get(nodeKey);
-        if (!node || !rawSize || typeof rawSize !== 'object') continue;
-
-        const size = rawSize as { widthScale?: number; heightScale?: number };
-        const widthScale = this.normalizeCardDimensionScale(size.widthScale ?? 1);
-        const heightScale = this.normalizeCardDimensionScale(size.heightScale ?? 1);
-        node.cardWidthScale = widthScale;
-        node.cardHeightScale = heightScale;
-      }
-
-      for (const [nodeKey, rawScale] of Object.entries(nodeCardScales)) {
-        const node = nodeMap.get(nodeKey);
-        if (!node || typeof rawScale !== 'number' || !Number.isFinite(rawScale)) continue;
-        const scale = this.normalizeCardDimensionScale(rawScale);
-        node.cardWidthScale = scale;
-        node.cardHeightScale = scale;
-      }
-    }
+    return rows
+      .map((row: any) => this.toEntitySummary(table, row))
+      .filter((entity: EntitySummary) => !scopeKeys || scopeKeys.has(makeNodeKey(entity.table, entity.id)))
+      .sort((a: EntitySummary, b: EntitySummary) => a.label.localeCompare(b.label));
   }
 
   private normalizeCardDimensionScale(scale: number): number {
@@ -360,6 +364,6 @@ export class LinkService {
       return fullbody.filePath;
     }
 
-    return null;
+    return images.find((img) => !!img.filePath)?.filePath || null;
   }
 }

@@ -1,25 +1,21 @@
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, OnInit, ViewChild, computed, effect, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, OnInit, ViewChild, computed, effect, input } from '@angular/core';
+import { SlicePipe, NgClass } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { NgClass, SlicePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { ButtonComponent } from '../../../components/button/button.component';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { InputComponent } from '../../../components/input/input.component';
 import { LinkService, SelectableTable } from '../../../services/link.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
+import { WorldStateService } from '../../../services/world-state.service';
 import { GraphEdge, GraphNode, GraphView } from '../../../libs/relationship-graph/relationship-graph.types';
+import type { TabEntityType } from '../../../models/workspace.model';
 import { GRAPH_CANVAS_HEIGHT, GRAPH_CANVAS_WIDTH, makeNodeKey } from '../../../libs/relationship-graph/relationship-graph.utils';
 import { buildImageUrl } from '../../../models/image.model';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
-import { getPersonalizationValue, hexToRgba } from '../../../models/personalization.model';
-
-const NODE_MIN_SCALE = 0.6;
-const NODE_MAX_SCALE = 2.2;
-const NODE_RESIZE_HANDLE_SIZE = 10;
-
 @Component({
   selector: 'app-relation-graph',
-  imports: [FormsModule, NgClass, SlicePipe, ButtonComponent, ComboBoxComponent, InputComponent, IconButtonComponent],
+  imports: [FormsModule, NgClass, SlicePipe, ComboBoxComponent, InputComponent, IconButtonComponent],
   host: {
     '(window:touchmove)': 'onGraphTouchMove($event)',
     '(window:touchend)': 'onGraphTouchEnd()',
@@ -28,275 +24,98 @@ const NODE_RESIZE_HANDLE_SIZE = 10;
   template: `
     <div class="flex flex-col pt-2 gap-4 @container">
       <div class="flex flex-wrap items-end gap-3">
-        <app-combo-box
-          class="w-56"
-          label="Tipo da Entidade"
-          size="xs"
-          [items]="tableOptions"
-          compareProp="value"
-          displayProp="label"
-          [(comboValue)]="selectedTable"
-          (comboValueChange)="onTableChange()"
-        />
-
-        <app-combo-box
-          class="w-full md:w-80"
-          label="Entidade Principal"
-          [items]="entityOptions"
-          compareProp="id"
-          displayProp="label"
-          [(comboValue)]="selectedEntityId"
-          (comboValueChange)="onRootEntitySelected()"
-        />
-
-        <!-- <app-button label="Atualizar" icon="fa-refresh" size="sm" buttonType="secondary" (click)="refreshGraph()" /> -->
-
-        <!-- <div class="flex flex-col">
-          <label class="text-xs mb-1">Níveis</label>
-          <select
-            class="rounded-lg px-3 py-2 bg-zinc-925 border-zinc-800 border transition focus:outline-none focus:border-zinc-100"
-            [(ngModel)]="relationshipDepth"
-            (ngModelChange)="onDepthChange()"
-            [disabled]="loadAllLevels"
-          >
-            <option [ngValue]="1">1</option>
-            <option [ngValue]="2">2</option>
-            <option [ngValue]="3">3</option>
-            <option [ngValue]="4">4</option>
-            <option [ngValue]="5">5</option>
-          </select>
-        </div>
-
-        <label class="flex flex-row items-center gap-2 text-sm pb-2 cursor-pointer select-none">
-          <input type="checkbox" [(ngModel)]="loadAllLevels" (ngModelChange)="onToggleAllLevels()" />
-          Carregar todas relações
-        </label> -->
+        <app-combo-box class="w-56" label="Tipo da entidade" size="xs" [items]="tableOptions" compareProp="value" displayProp="label" [(comboValue)]="selectedTable" (comboValueChange)="onTableChange()" />
+        <app-combo-box class="w-full md:w-80" label="Entidade principal (opcional)" [items]="entityOptions" compareProp="id" displayProp="label" [(comboValue)]="selectedEntityId" (comboValueChange)="onRootEntitySelected()" />
+        <div class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 min-h-9 flex items-center">{{ scopeLabel }}</div>
       </div>
 
-      @if (!graphView) {
-        <div class="p-4 rounded-md border border-zinc-800 bg-zinc-900 text-sm text-zinc-300">
-          Selecione uma entidade principal para visualizar e editar as relações.
-        </div>
-      }
-
       @if (graphView; as graph) {
-        <div class="grid grid-cols-1 @4xl:grid-cols-[1fr_21rem] gap-4">
-          <div
-            class="rounded-lg border border-zinc-800 bg-zinc-925 overflow-hidden relative cursor-grab touch-none"
-            [ngClass]="{'!cursor-grabbing': isPanning}"
-            (click)="closeContextMenu()"
-            (wheel)="onGraphWheel($event)"
-            (mousedown)="startPan($event)"
-            (touchstart)="onGraphTouchStart($event)"
-          >
-            <div class="absolute z-20 top-2 right-2 flex flex-row gap-1 rounded-md border border-zinc-700 bg-zinc-900/90 p-1">
-              <button class="w-7 h-7 rounded hover:bg-zinc-800 cursor-pointer" (click)="$event.stopPropagation(); zoomOut()">-</button>
-              <button class="w-7 h-7 rounded hover:bg-zinc-800 cursor-pointer" (click)="$event.stopPropagation(); zoomIn()">+</button>
+        <div class="grid grid-cols-1 @4xl:grid-cols-[minmax(0,1fr)_22rem] gap-4">
+          <div class="rounded-lg border border-zinc-800 bg-zinc-925 overflow-hidden relative cursor-grab touch-none" [ngClass]="{'!cursor-grabbing': isPanning}" (click)="onCanvasClick($event)" (wheel)="onGraphWheel($event)" (mousedown)="startPan($event)" (touchstart)="onGraphTouchStart($event)">
+            <div class="absolute z-20 top-2 right-2 flex gap-1 rounded-md border border-zinc-700 bg-zinc-900/90 p-1">
+              <button type="button" aria-label="Diminuir zoom" class="w-7 h-7 rounded hover:bg-zinc-800 cursor-pointer" (click)="$event.stopPropagation(); zoomOut()">-</button>
+              <span class="w-10 h-7 flex items-center justify-center text-xs text-zinc-400">{{ zoomPercent }}%</span>
+              <button type="button" aria-label="Aumentar zoom" class="w-7 h-7 rounded hover:bg-zinc-800 cursor-pointer" (click)="$event.stopPropagation(); zoomIn()">+</button>
+              <button type="button" aria-label="Centralizar grafo" class="w-7 h-7 rounded hover:bg-zinc-800 cursor-pointer" (click)="$event.stopPropagation(); centerViewport()">◎</button>
             </div>
-
-            <svg #graphSvg class="w-full h-[min(60dvh,32rem)] md:h-[calc(100vh-10.5rem)]" [attr.viewBox]="graphViewBox">
+            @if (graph.nodes.length === 0) {
+              <div class="absolute inset-0 flex items-center justify-center p-8 text-center pointer-events-none"><span class="text-sm text-zinc-400">{{ emptyGraphMessage }}</span></div>
+            }
+            <svg #graphSvg class="w-full h-[min(60dvh,32rem)] md:h-[calc(100vh-10.5rem)]" [attr.viewBox]="graphViewBox" role="img" [attr.aria-label]="'Grafo de relações. ' + graph.nodes.length + ' entidades.'">
               <defs>
-                <marker
-                  id="arrow-head"
-                  markerWidth="10"
-                  markerHeight="7"
-                  refX="9"
-                  refY="3.5"
-                  orient="auto"
-                  markerUnits="strokeWidth"
-                >
-                  <polygon points="0 0, 10 3.5, 0 7" class="fill-zinc-400" />
-                </marker>
+                <marker id="relation-arrow-head" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M 0 0 L 9 3.5 L 0 7 z" class="fill-zinc-300" /></marker>
               </defs>
-
               @for (edge of graph.edges; track edge.id) {
-                @let points = edgeLinePoints(edge);
-                @if (points) {
-                  <line
-                    [attr.x1]="points.x1"
-                    [attr.y1]="points.y1"
-                    [attr.x2]="points.x2"
-                    [attr.y2]="points.y2"
-                    [attr.marker-end]="'url(#arrow-head)'"
-                    class="stroke-zinc-500/90 stroke-[2] cursor-pointer"
-                    [ngClass]="{'!stroke-yellow-500': editingLinkId === edge.id}"
-                    (click)="$event.stopPropagation(); startEditLink(edge)"
-                  />
-                  <text
-                    class="fill-zinc-200 text-xs cursor-pointer"
-                    [attr.x]="(points.x1 + points.x2) / 2"
-                    [attr.y]="(points.y1 + points.y2) / 2 - 8"
-                    text-anchor="middle"
-                    (click)="$event.stopPropagation(); startEditLink(edge)"
-                  >
-                    {{ edge.name || 'relação' }}
-                  </text>
+                @if (edgeGeometry(edge); as geometry) {
+                  <path [attr.d]="geometry.path" fill="none" stroke-width="2" stroke-linecap="round" [ngClass]="edgeClasses(edge)" [attr.marker-end]="'url(#relation-arrow-head)'" role="button" [attr.tabindex]="0" [attr.aria-label]="'Relação: ' + edgeLabel(edge)" (click)="$event.stopPropagation(); startEditLink(edge)" (keydown.enter)="startEditLink(edge)" (keydown.space)="$event.preventDefault(); startEditLink(edge)"><title>{{ edgeLabel(edge) }}</title></path>
+                  <path [attr.d]="geometry.path" fill="none" stroke="transparent" stroke-width="14" class="cursor-pointer" (click)="$event.stopPropagation(); startEditLink(edge)" />
                 }
               }
-
               @for (node of graph.nodes; track node.key) {
-                <g
-                  class="cursor-pointer"
-                  (contextmenu)="openNodeContextMenu($event, node)"
-                  (click)="$event.stopPropagation(); selectNode(node);"
-                  (mousedown)="startNodeDrag($event, node)"
-                  (touchstart)="startNodeTouchDrag($event, node)"
-                >
-                  <rect
-                    [attr.x]="nodeRect(node).x"
-                    [attr.y]="nodeRect(node).y"
-                    [attr.width]="nodeRect(node).width"
-                    [attr.height]="nodeRect(node).height"
-                    [attr.rx]="12"
-                    class="stroke-[2]"
-
-                    [style]="'stroke: ' + (getPersonalizationValue(node, 'color') || 'var(--color-zinc-800)') + ';' + ' fill: ' + hexToRgba(getPersonalizationValue(node, 'color') || 'var(--color-zinc-800)', 0.25)"
-                  />
-                  @if (node.imagePath) {
-                    <image
-                      [attr.x]="nodeImageX(node)"
-                      [attr.y]="nodeImageY(node)"
-                      [attr.width]="nodeImageSize(node)"
-                      [attr.height]="nodeImageSize(node)"
-                      [attr.href]="buildImageUrl(node.imagePath)"
-                      preserveAspectRatio="xMidYMid slice"
-                    />
-                  }
-                  <text [attr.x]="nodeLabelX(node)" [attr.y]="nodeTitleY(node)" text-anchor="start" class="fill-white text-sm font-semibold">
-                    {{ node.label | slice:0:nodeLabelLimit(node) }}
-                  </text>
-                  <text [attr.x]="nodeLabelX(node)" [attr.y]="nodeSubtitleY(node)" text-anchor="start" class="fill-zinc-300 text-xs">
-                    {{ node.table }}
-                  </text>
-                  @if (selectedNodeKey === node.key) {
-                    <rect
-                      [attr.x]="nodeResizeHandleRect(node).x"
-                      [attr.y]="nodeResizeHandleRect(node).y"
-                      [attr.width]="nodeResizeHandleRect(node).width"
-                      [attr.height]="nodeResizeHandleRect(node).height"
-                      [attr.rx]="3"
-                      class="fill-yellow-500 stroke-zinc-900 stroke-[1] cursor-se-resize"
-                      (mousedown)="startNodeResize($event, node)"
-                    />
-                  }
+                <g [attr.transform]="'translate(' + node.x + ' ' + node.y + ')'" [attr.tabindex]="0" role="button" [attr.aria-label]="node.label + ', ' + nodeTypeLabel(node.table)" class="cursor-pointer outline-none" (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation(); selectNode(node)" (keydown.enter)="selectNode(node)" (keydown.space)="$event.preventDefault(); selectNode(node)">
+                  @if (node.imagePath) { <defs><clipPath [attr.id]="nodeClipId(node)"><circle [attr.r]="node.radius" /></clipPath></defs><image [attr.x]="-node.radius" [attr.y]="-node.radius" [attr.width]="node.radius * 2" [attr.height]="node.radius * 2" [attr.href]="buildImageUrl(node.imagePath)" [attr.clip-path]="'url(#' + nodeClipId(node) + ')'" preserveAspectRatio="xMidYMid slice" /> }
+                  <circle [attr.r]="node.radius" [ngClass]="nodeClasses(node)" [style.fill]="nodeFill(node)" [style.stroke]="nodeStroke(node)" [style.stroke-width]="nodeStrokeWidth(node)" />
+                  @if (!node.imagePath) { <text y="5" text-anchor="middle" class="fill-zinc-300 text-base font-semibold pointer-events-none">{{ nodeInitials(node.label) }}</text> }
+                  <circle [attr.r]="node.radius" fill="none" [style.stroke]="nodeStroke(node)" [style.stroke-width]="nodeStrokeWidth(node)" class="pointer-events-none" />
+                  <text [attr.y]="nodeLabelY(node)" text-anchor="middle" class="fill-white text-xs font-semibold pointer-events-none">{{ node.label | slice:0:nodeLabelLimit(node) }}</text>
+                  <text [attr.y]="nodeTypeY(node)" text-anchor="middle" class="fill-zinc-400 text-[10px] pointer-events-none">{{ nodeTypeLabel(node.table) }}</text>
                 </g>
               }
+              @for (edge of graph.edges; track edge.id) {
+                @if (edgeGeometry(edge); as geometry) {
+                  @if (showEdgeLabel(edge, graph)) { <text [attr.x]="geometry.labelX" [attr.y]="geometry.labelY" text-anchor="middle" class="relation-edge-label fill-zinc-200 text-xs cursor-pointer" (click)="$event.stopPropagation(); startEditLink(edge)">{{ edgeLabel(edge) }}</text> }
+                }
+              }
             </svg>
-
-            @if (contextMenuOpen && contextMenuNode) {
-              <div
-                class="fixed z-50 min-w-56 rounded-md border border-zinc-700 bg-zinc-900 shadow-lg p-2"
-                [style.left.px]="contextMenuPosition.x"
-                [style.top.px]="contextMenuPosition.y"
-                (click)="$event.stopPropagation()"
-              >
-                <div class="text-xs text-zinc-400 mb-2">{{ contextMenuNode.label }}</div>
-                <button
-                  class="w-full text-left text-sm px-2 py-2 rounded hover:bg-zinc-800 cursor-pointer"
-                  (click)="prepareAddRelationFromContext()"
-                >
-                  Adicionar relação a partir deste nó
-                </button>
-                <button
-                  class="w-full text-left text-sm px-2 py-2 rounded hover:bg-zinc-800 cursor-pointer"
-                  (click)="openNodeRelationsInNewTab()"
-                >
-                  Abrir em nova aba
-                </button>
+          </div>
+          <aside class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 flex flex-col gap-3 max-h-[75vh] overflow-y-auto scrollbar-dark" aria-label="Painel de relações">
+            @if (selectedNode; as node) {
+              <div class="flex items-start gap-3">
+                <div class="w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-sm font-bold" [style.background]="nodeFill(node)" [style.border]="'2px solid ' + nodeStroke(node)">{{ nodeInitials(node.label) }}</div>
+                <div class="min-w-0"><h3 class="text-base font-bold text-white truncate">{{ node.label }}</h3><div class="text-xs text-zinc-400">{{ nodeTypeLabel(node.table) }} · {{ scopeLabel }}</div></div>
               </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="rounded-md bg-zinc-925 border border-zinc-800 px-3 py-2"><div class="text-zinc-500">Saindo</div><div class="text-white text-lg font-semibold">{{ outgoingEdges(graph).length }}</div></div>
+                <div class="rounded-md bg-zinc-925 border border-zinc-800 px-3 py-2"><div class="text-zinc-500">Chegando</div><div class="text-white text-lg font-semibold">{{ incomingEdges(graph).length }}</div></div>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="rounded-md bg-yellow-500 px-3 py-2 text-xs font-semibold text-zinc-900 cursor-pointer disabled:opacity-50" [disabled]="node.isRoot" (click)="makeSelectedNodeRoot()">Tornar entidade principal</button>
+                <button type="button" class="rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-200 cursor-pointer hover:bg-zinc-800" (click)="openSelectedNodeInNewTab()">Abrir relações</button>
+                <button type="button" class="rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-200 cursor-pointer hover:bg-zinc-800" (click)="openSelectedEntityInNewTab()">Abrir entidade</button>
+                <button type="button" class="rounded-md border border-zinc-700 px-3 py-2 text-xs text-zinc-200 cursor-pointer hover:bg-zinc-800" (click)="startNewRelation()">Nova relação</button>
+              </div>
+              @if (relationEditorOpen) {
+                <div class="border-t border-zinc-800 pt-3 mt-1 flex flex-col gap-3">
+                  <div class="flex items-center justify-between"><h4 class="text-sm font-semibold">{{ editingLinkId ? 'Editar relação' : 'Nova relação' }}</h4><button type="button" class="text-zinc-400 hover:text-white text-xs cursor-pointer" (click)="resetDraft()">Cancelar</button></div>
+                  <div class="text-xs text-zinc-400">Origem: {{ relationDraftFromLabel || relationDraft.fromId }}</div>
+                  <app-combo-box label="Tabela de destino" [items]="tableOptions" compareProp="value" displayProp="label" [(comboValue)]="relationDraft.toTable" (comboValueChange)="onDraftToTableChange()" />
+                  <app-combo-box label="Entidade de destino" [items]="draftTargetEntities" compareProp="id" displayProp="label" [(comboValue)]="relationDraft.toId" />
+                  <app-input label="Nome da relação" [(value)]="relationDraft.name" />
+                  <div class="flex gap-2">
+                    <app-icon-button [title]="editingLinkId ? 'Salvar relação' : 'Criar relação'" [icon]="editingLinkId ? 'fa-solid fa-floppy-disk' : 'fa-solid fa-plus'" size="xs" buttonType="white" (click)="saveDraftRelation()" />
+                    @if (editingLinkId) {
+                      <app-icon-button title="Inverter direção" icon="fa-solid fa-arrow-right-arrow-left" size="xs" buttonType="white" (click)="invertEditingLink()" />
+                      <app-icon-button title="Excluir relação" icon="fa-solid fa-trash-can" size="xs" buttonType="danger" (click)="deleteEditingLink()" />
+                    }
+                    <app-icon-button title="Cancelar edição" icon="fa-solid fa-xmark" size="xs" buttonType="danger" (click)="resetDraft()" />
+                  </div>
+                </div>
+              }
+              <div class="border-t border-zinc-800 pt-3 mt-1"><h4 class="text-sm font-semibold mb-2">Relações de saída</h4>
+                @for (edge of outgoingEdges(graph); track edge.id) { <button type="button" class="w-full text-left rounded-md border border-zinc-800 bg-zinc-925 hover:bg-zinc-800 px-2 py-2 cursor-pointer" [ngClass]="editingLinkId === edge.id ? 'border-yellow-500 bg-yellow-500/10' : ''" (click)="startEditLink(edge)"><div class="text-xs text-zinc-400">{{ edge.link.toTable }} · {{ edge.link.toId }}</div><div class="text-sm text-white">{{ edgeLabel(edge) }}</div></button> }
+                @if (outgoingEdges(graph).length === 0) { <div class="text-xs text-zinc-500">Nenhuma relação de saída.</div> }
+              </div>
+              <div class="border-t border-zinc-800 pt-3 mt-1"><h4 class="text-sm font-semibold mb-2">Relações de chegada</h4>
+                @for (edge of incomingEdges(graph); track edge.id) { <button type="button" class="w-full text-left rounded-md border border-zinc-800 bg-zinc-925 hover:bg-zinc-800 px-2 py-2 cursor-pointer" [ngClass]="editingLinkId === edge.id ? 'border-yellow-500 bg-yellow-500/10' : ''" (click)="startEditLink(edge)"><div class="text-xs text-zinc-400">{{ edge.link.fromTable }} · {{ edge.link.fromId }}</div><div class="text-sm text-white">{{ edgeLabel(edge) }}</div></button> }
+                @if (incomingEdges(graph).length === 0) { <div class="text-xs text-zinc-500">Nenhuma relação de chegada.</div> }
+              </div>
+            } @else {
+              <div class="flex flex-col gap-2 text-sm text-zinc-400"><h3 class="text-base font-bold text-white">Inspeção</h3><p>Selecione um círculo para consultar relações e abrir ações de edição.</p><p class="text-xs text-zinc-500">O layout é automático; use zoom e pan para navegar pela teia.</p></div>
             }
-          </div>
-
-          <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 flex flex-col gap-3 h-[70vh] overflow-y-auto scrollbar-dark">
-            <h3 class="text-base font-bold">Edição de Relações</h3>
-
-            <div class="text-xs text-zinc-400">Origem</div>
-            <div class="text-sm rounded-md border border-zinc-800 px-3 py-2 bg-zinc-925">
-              {{ relationDraft.fromTable || '-' }} / {{ relationDraftFromLabel || '-' }}
-            </div>
-
-            <app-combo-box
-              label="Tabela de Destino"
-              [items]="tableOptions"
-              compareProp="value"
-              displayProp="label"
-              [(comboValue)]="relationDraft.toTable"
-              (comboValueChange)="onDraftToTableChange()"
-            />
-
-            <app-combo-box
-              label="Entidade de Destino"
-              [items]="draftTargetEntities"
-              compareProp="id"
-              displayProp="label"
-              [(comboValue)]="relationDraft.toId"
-            />
-
-            <app-input label="Nome da Relação" [(value)]="relationDraft.name" />
-
-            <div class="flex flex-row gap-2">
-              @if (!editingLinkId) {
-                <!-- <app-button label="Criar Relação" size="xs" buttonType="white" (click)="saveDraftRelation()" /> -->
-                <app-icon-button title="Criar Relação" icon="fa-solid fa-plus" size="xs" buttonType="white" (click)="saveDraftRelation()" />
-              }
-              @else {
-                <!-- <app-button label="Salvar" size="xs" buttonType="white" (click)="saveDraftRelation()" /> -->
-                  <app-icon-button title="Salvar" icon="fa-solid fa-floppy-disk" size="xs" buttonType="white" (click)="saveDraftRelation()" />
-              }
-              <!-- <app-button label="Limpar" size="xs" buttonType="secondary" (click)="resetDraft()" /> -->
-              <app-icon-button title="Limpar" icon="fa-solid fa-xmark" size="xs" buttonType="danger" (click)="resetDraft()" />
-              @if (editingLinkId) {
-
-                <!-- <app-button label="Inverter Relação" size="xs" buttonType="secondary" (click)="invertEditingLink()" /> -->
-                <app-icon-button title="Inverter Relação" icon="fa-solid fa-arrow-right-arrow-left" size="xs" buttonType="white" (click)="invertEditingLink()" />
-                <!-- <app-button label="Excluir Relação" size="xs" buttonType="danger" (click)="deleteEditingLink()" /> -->
-                <app-icon-button title="Excluir Relação" icon="fa-solid fa-trash-can" size="xs" buttonType="danger" (click)="deleteEditingLink()" />
-
-              }
-
-            </div>
-
-
-            <div class="border-t border-zinc-800 pt-3 mt-2">
-              <h4 class="text-sm font-semibold mb-2">Relações de Origem (saindo)</h4>
-
-              <div class="flex flex-col gap-2">
-                @for (edge of outgoingEdges(graph); track edge.id) {
-                  <button
-                    class="text-left rounded-md border px-2 py-2 cursor-pointer transition"
-                    [ngClass]="editingLinkId === edge.id ? 'border-yellow-500 bg-yellow-500/10' : 'border-zinc-800 bg-zinc-925 hover:bg-zinc-800'"
-                    (click)="startEditLink(edge)"
-                  >
-                    <div class="text-xs text-zinc-300">{{ edge.link.fromTable }} → {{ edge.link.toTable }}</div>
-                    <div class="text-sm text-white">{{ edge.name || 'Sem nome' }}</div>
-                  </button>
-                }
-                @if (outgoingEdges(graph).length === 0) {
-                  <div class="text-xs text-zinc-500">Nenhuma relação de origem para esta entidade.</div>
-                }
-              </div>
-            </div>
-
-            <div class="border-t border-zinc-800 pt-3 mt-2">
-              <h4 class="text-sm font-semibold mb-2">Relações de Destino (chegando)</h4>
-              <div class="flex flex-col gap-2">
-                @for (edge of incomingEdges(graph); track edge.id) {
-                  <button
-                    class="text-left rounded-md border px-2 py-2 cursor-pointer transition"
-                    [ngClass]="editingLinkId === edge.id ? 'border-yellow-500 bg-yellow-500/10' : 'border-zinc-800 bg-zinc-925 hover:bg-zinc-800'"
-                    (click)="startEditLink(edge)"
-                  >
-                    <div class="text-xs text-zinc-300">{{ edge.link.fromTable }} → {{ edge.link.toTable }}</div>
-                    <div class="text-sm text-white">{{ edge.name || 'Sem nome' }}</div>
-                  </button>
-                }
-                @if (incomingEdges(graph).length === 0) {
-                  <div class="text-xs text-zinc-500">Nenhuma relação cadastrada para esta entidade.</div>
-                }
-              </div>
-            </div>
-          </div>
+          </aside>
         </div>
+      } @else {
+        <div class="rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-300">Não foi possível carregar a entidade principal selecionada.</div>
       }
     </div>
   `,
@@ -310,18 +129,14 @@ export class RelationGraphComponent implements OnInit {
   rootTable = input<string | null>(null);
   rootId = input<string | null>(null);
 
-  public getPersonalizationValue = getPersonalizationValue;
-  public hexToRgba = hexToRgba;
-
   canvasWidth = GRAPH_CANVAS_WIDTH;
   canvasHeight = GRAPH_CANVAS_HEIGHT;
   zoomLevel = 1;
-  minZoom = 0.5;
-  maxZoom = 2.5;
   zoomStep = 0.1;
   panX = 0;
   panY = 0;
   isPanning = false;
+
   private panStartX = 0;
   private panStartY = 0;
   private panOriginX = 0;
@@ -329,43 +144,27 @@ export class RelationGraphComponent implements OnInit {
   private movedDuringPan = false;
   private pinchStartDistance = 0;
   private pinchStartZoom = 1;
-  isNodeDragging = false;
-  private draggedNode: GraphNode | null = null;
-  private movedDuringNodeDrag = false;
-  isNodeResizing = false;
-  private resizedNode: GraphNode | null = null;
-  private movedDuringNodeResize = false;
-  private resizeAnchorTopLeft: { x: number; y: number } | null = null;
-
-  private dragOffsetX = 0;
-  private dragOffsetY = 0;
-
-  relationshipDepth = 2;
-  loadAllLevels = true;
-
-  get graphViewBox(): string {
-    const viewWidth = this.canvasWidth / this.zoomLevel;
-    const viewHeight = this.canvasHeight / this.zoomLevel;
-    const x = (this.canvasWidth - viewWidth) / 2 - this.panX;
-    const y = (this.canvasHeight - viewHeight) / 2 - this.panY;
-
-    return `${x} ${y} ${viewWidth} ${viewHeight}`;
-  }
+  private initialized = false;
 
   graphView: GraphView | null = null;
-
   tableOptions: SelectableTable[] = [];
   entityOptions: Array<{ table: string; id: string; label: string }> = [];
   draftTargetEntities: Array<{ table: string; id: string; label: string }> = [];
 
   selectedTable = '';
-  selectedEntityId = '';
+  selectedEntityId: string | null = null;
 
   currentRootTable = '';
   currentRootId = '';
+  currentWorldId = '';
+  currentWorldName = '';
+
+  selectedNodeKey = '';
+  currentSelectedTable = '';
+  currentSelectedId = '';
 
   editingLinkId: string | null = null;
-
+  relationEditorOpen = false;
   relationDraft: {
     fromTable: string;
     fromId: string;
@@ -379,18 +178,7 @@ export class RelationGraphComponent implements OnInit {
     toId: '',
     name: '',
   };
-
   relationDraftFromLabel = '';
-
-  selectedNodeKey = '';
-
-  currentSelectedTable = '';
-  currentSelectedId = '';
-
-
-  contextMenuOpen = false;
-  contextMenuNode: GraphNode | null = null;
-  contextMenuPosition = { x: 0, y: 0 };
 
   hasInputRoot = computed(() => !!this.rootTable() && !!this.rootId());
 
@@ -398,13 +186,21 @@ export class RelationGraphComponent implements OnInit {
     private linkService: LinkService,
     private route: ActivatedRoute,
     private tabManager: TabManagerService,
+    private worldStateService: WorldStateService,
+    private destroyRef: DestroyRef,
   ) {
     effect(() => {
       const inputTable = this.rootTable();
       const inputId = this.rootId();
 
+      if (!this.initialized) {
+        return;
+      }
+
       if (inputTable && inputId) {
         this.setRoot(inputTable, inputId, true);
+      } else if (this.currentRootTable || this.currentRootId) {
+        this.clearRoot();
       }
     });
   }
@@ -412,41 +208,96 @@ export class RelationGraphComponent implements OnInit {
   ngOnInit(): void {
     this.tableOptions = this.linkService.getSelectableTables();
 
+    const currentWorld = this.worldStateService.getCurrentWorld();
+    this.currentWorldId = currentWorld?.id || '';
+    this.currentWorldName = currentWorld?.name || '';
+
     const inputTable = this.rootTable();
     const inputId = this.rootId();
-
-    if (inputTable && inputId) {
-      this.setRoot(inputTable, inputId, true);
-      return;
-    }
-
     const queryTable = this.route.snapshot.queryParamMap.get('table');
     const queryId = this.route.snapshot.queryParamMap.get('id');
 
-    if (queryTable && queryId) {
+    if (inputTable && inputId) {
+      this.setRoot(inputTable, inputId, true);
+    } else if (queryTable && queryId) {
       this.setRoot(queryTable, queryId, true);
-      return;
+    } else {
+      this.selectedTable = this.tableOptions[0]?.value || '';
+      this.onTableChange();
+      this.loadGraph();
     }
 
-    this.selectedTable = this.tableOptions[0]?.value || '';
-    this.onTableChange();
+    this.initialized = true;
+
+    this.worldStateService.currentWorld$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(world => this.onWorldChanged(world?.id || '', world?.name || ''));
+  }
+
+  get graphViewBox(): string {
+    const graphWidth = this.graphView?.width || this.canvasWidth;
+    const graphHeight = this.graphView?.height || this.canvasHeight;
+    const viewWidth = graphWidth / this.zoomLevel;
+    const viewHeight = graphHeight / this.zoomLevel;
+    const x = (graphWidth - viewWidth) / 2 - this.panX;
+    const y = (graphHeight - viewHeight) / 2 - this.panY;
+    return x + ' ' + y + ' ' + viewWidth + ' ' + viewHeight;
+  }
+
+  get zoomPercent(): number {
+    return Math.round(this.zoomLevel * 100);
+  }
+
+  get selectedNode(): GraphNode | null {
+    return this.graphView?.nodes.find(node => node.key === this.selectedNodeKey) || null;
+  }
+
+  get effectiveScopeWorldId(): string | null {
+    if (this.currentRootTable && this.currentRootId) {
+      return this.linkService.getWorldIdForEntity(this.currentRootTable, this.currentRootId);
+    }
+
+    return this.currentWorldId || null;
+  }
+
+  get scopeLabel(): string {
+    if (this.currentRootTable && this.currentRootId) {
+      const root = this.linkService.getEntitySummary(this.currentRootTable, this.currentRootId);
+      const world = this.effectiveScopeWorldId
+        ? this.linkService.getEntitySummary('World', this.effectiveScopeWorldId)
+        : null;
+      return 'Foco: ' + (root?.label || this.currentRootId) + ' · Escopo: ' + (world?.label || 'global');
+    }
+
+    return this.currentWorldId
+      ? 'Mundo: ' + (this.currentWorldName || this.currentWorldId)
+      : 'Escopo: global';
+  }
+
+  get emptyGraphMessage(): string {
+    if (this.effectiveScopeWorldId) {
+      return 'Não há entidades disponíveis no mundo ' + (this.currentWorldName || this.effectiveScopeWorldId) + '.';
+    }
+
+    return 'Não há entidades disponíveis para montar a visão global.';
   }
 
   onTableChange(): void {
-    this.entityOptions = this.linkService.getEntitiesByTable(this.selectedTable);
+    this.entityOptions = this.linkService.getEntitiesByTable(this.selectedTable, this.effectiveScopeWorldId);
 
-    if (!this.entityOptions.length) {
-      this.selectedEntityId = '';
-      return;
-    }
-
-    if (!this.entityOptions.find((entity) => entity.id === this.selectedEntityId)) {
-      this.selectedEntityId = this.entityOptions[0].id;
+    if (this.currentRootTable === this.selectedTable && this.currentRootId) {
+      this.selectedEntityId = this.currentRootId;
+    } else {
+      this.selectedEntityId = null;
     }
   }
 
   onRootEntitySelected(): void {
-    if (!this.selectedTable || !this.selectedEntityId) return;
+    if (!this.selectedEntityId) {
+      this.clearRoot();
+      return;
+    }
+
     this.setRoot(this.selectedTable, this.selectedEntityId, true);
   }
 
@@ -454,26 +305,32 @@ export class RelationGraphComponent implements OnInit {
     this.loadGraph();
   }
 
-  onDepthChange(): void {
-    this.loadGraph();
-  }
-
-  onToggleAllLevels(): void {
-    this.loadGraph();
-  }
-
   private loadGraph(): void {
-    if (!this.currentRootTable || !this.currentRootId) {
-      if (this.selectedTable && this.selectedEntityId) {
-        this.setRoot(this.selectedTable, this.selectedEntityId, true);
-      }
+    const rootReference = this.currentRootTable && this.currentRootId
+      ? { table: this.currentRootTable, id: this.currentRootId }
+      : null;
+    const selectedWorldId = rootReference ? null : this.currentWorldId || null;
+
+    this.graphView = this.linkService.getGraphForScope(rootReference, selectedWorldId);
+
+    if (this.selectedNodeKey && !this.graphView?.nodes.some(node => node.key === this.selectedNodeKey)) {
+      this.selectedNodeKey = '';
+      this.currentSelectedTable = '';
+      this.currentSelectedId = '';
+      this.resetDraft();
+    }
+  }
+
+  private onWorldChanged(worldId: string, worldName: string): void {
+    if (this.currentWorldId === worldId && this.currentWorldName === worldName) {
       return;
     }
 
-    this.graphView = this.linkService.getGraphForRoot(this.currentRootTable, this.currentRootId, {
-      depth: this.relationshipDepth,
-      includeAllLevels: this.loadAllLevels,
-    });
+    this.currentWorldId = worldId;
+    this.currentWorldName = worldName;
+
+    this.onTableChange();
+    this.loadGraph();
   }
 
   selectNode(node: GraphNode): void {
@@ -482,385 +339,55 @@ export class RelationGraphComponent implements OnInit {
       return;
     }
 
-    this.relationDraft.fromTable = node.table;
-    this.relationDraft.fromId = node.id;
-    this.relationDraftFromLabel = node.label;
-    // this.relationDraft.toTable = this.currentRootTable || node.table;
-    // this.draftTargetEntities = this.linkService.getEntitiesByTable(this.relationDraft.toTable);
-    // this.relationDraft.toId = this.currentRootId || this.draftTargetEntities[0]?.id || '';
-    this.relationDraft.name = '';
-    this.editingLinkId = null;
-
     this.selectedNodeKey = node.key;
     this.currentSelectedTable = node.table;
     this.currentSelectedId = node.id;
-  }
-
-  onGraphTouchStart(event: TouchEvent): void {
-    if (event.touches.length === 2) {
-      event.preventDefault();
-      this.isPanning = false;
-      this.pinchStartDistance = this.touchDistance(event);
-      this.pinchStartZoom = this.zoomLevel;
-      return;
-    }
-
-    const mouseEvent = this.touchToMouseEvent(event, 'mousedown');
-    if (!mouseEvent) return;
-
-    event.preventDefault();
-    this.startPan(mouseEvent);
-  }
-
-  startNodeTouchDrag(event: TouchEvent, node: GraphNode): void {
-    const mouseEvent = this.touchToMouseEvent(event, 'mousedown');
-    if (!mouseEvent) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    this.startNodeDrag(mouseEvent, node);
-  }
-
-  onGraphTouchMove(event: TouchEvent): void {
-    if (event.touches.length === 2) {
-      event.preventDefault();
-      if (!this.pinchStartDistance) {
-        this.pinchStartDistance = this.touchDistance(event);
-        this.pinchStartZoom = this.zoomLevel;
-      }
-      const distance = this.touchDistance(event);
-      if (distance && this.pinchStartDistance) {
-        this.zoomLevel = Math.max(this.minZoom, Math.min(this.maxZoom, +(this.pinchStartZoom * distance / this.pinchStartDistance).toFixed(2)));
-      }
-      return;
-    }
-
-    if (!this.isPanning && !this.isNodeDragging && !this.isNodeResizing) return;
-
-    const mouseEvent = this.touchToMouseEvent(event, 'mousemove');
-    if (!mouseEvent) return;
-
-    event.preventDefault();
-    this.onPanMove(mouseEvent);
-  }
-
-  onGraphTouchEnd(): void {
-    this.pinchStartDistance = 0;
-    this.stopPan();
-  }
-
-  private touchDistance(event: TouchEvent): number {
-    const first = event.touches[0];
-    const second = event.touches[1];
-    if (!first || !second) return 0;
-    return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
-  }
-
-  private touchToMouseEvent(event: TouchEvent, type: string): MouseEvent | null {
-    const touch = event.touches[0] ?? event.changedTouches[0];
-    if (!touch) return null;
-
-    return new MouseEvent(type, {
-      clientX: touch.clientX,
-      clientY: touch.clientY,
-      button: 0,
-      buttons: 1,
-    });
-  }
-  startNodeDrag(event: MouseEvent, node: GraphNode): void {
-    event.stopPropagation();
-
-    if (event.button !== 0) return;
-    if (node.isRoot) return;
-
-    const point = this.mouseToGraphPoint(event);
-    if (!point) return;
-
-    this.dragOffsetX = point.x - node.x;
-    this.dragOffsetY = point.y - node.y;
-
-    this.isNodeDragging = true;
-    this.draggedNode = node;
-    this.movedDuringNodeDrag = false;
-  }
-
-  startNodeResize(event: MouseEvent, node: GraphNode): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (event.button !== 0) return;
-
-    this.selectedNodeKey = node.key;
-    this.isNodeResizing = true;
-    this.resizedNode = node;
-    const rect = this.nodeRect(node);
-    this.resizeAnchorTopLeft = { x: rect.x, y: rect.y };
-    this.movedDuringNodeResize = false;
-  }
-
-  nodeCircleClass(node: GraphNode): string {
-    if (node.isRoot) return 'fill-yellow-500/20';
-    if (this.selectedNodeKey === node.key) return 'fill-zinc-700';
-    return 'fill-zinc-800';
-  }
-
-  nodeRect(node: GraphNode): { x: number; y: number; width: number; height: number } {
-    const width = this.baseNodeWidth(node) * this.nodeWidthScale(node);
-    const height = this.baseNodeHeight(node) * this.nodeHeightScale(node);
-    return {
-      x: node.x - width / 2,
-      y: node.y - height / 2,
-      width,
-      height,
-    };
-  }
-
-  nodeResizeHandleRect(node: GraphNode): { x: number; y: number; width: number; height: number } {
-    const rect = this.nodeRect(node);
-    const size = Math.max(8, NODE_RESIZE_HANDLE_SIZE * Math.min(this.nodeWidthScale(node), this.nodeHeightScale(node)));
-    return {
-      x: rect.x + rect.width - size / 2,
-      y: rect.y + rect.height - size / 2,
-      width: size,
-      height: size,
-    };
-  }
-
-  nodeLabelLimit(node: GraphNode): number {
-    const scale = this.nodeWidthScale(node);
-    if (scale < 0.9) return 18;
-    if (scale > 1.2) return 36;
-    return 26;
-  }
-
-  nodeLabelX(node: GraphNode): number {
-    const left = this.nodeRect(node).x;
-    return left + (node.imagePath ? 44 : 12) * this.nodeWidthScale(node);
-  }
-
-  nodeImageSize(node: GraphNode): number {
-    return +(28 * Math.min(this.nodeWidthScale(node), this.nodeHeightScale(node))).toFixed(2);
-  }
-
-  nodeImageX(node: GraphNode): number {
-    return this.nodeRect(node).x + 8 * this.nodeWidthScale(node);
-  }
-
-  nodeImageY(node: GraphNode): number {
-    return this.nodeRect(node).y + 10 * this.nodeHeightScale(node);
-  }
-
-  nodeTitleY(node: GraphNode): number {
-    return node.y - 8 * this.nodeHeightScale(node);
-  }
-
-  nodeSubtitleY(node: GraphNode): number {
-    return node.y + 14 * this.nodeHeightScale(node);
-  }
-
-  edgeLinePoints(edge: GraphEdge): { x1: number; y1: number; x2: number; y2: number } | null {
-    const from = this.nodeByKey(edge.fromKey);
-    const to = this.nodeByKey(edge.toKey);
-
-    if (!from || !to) return null;
-
-    const fromRect = this.nodeRect(from);
-    const toRect = this.nodeRect(to);
-
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
-
-    if (absDx === 0 && absDy === 0) {
-      return {
-        x1: from.x,
-        y1: from.y,
-        x2: to.x,
-        y2: to.y,
-      };
-    }
-
-    const fromHalfW = fromRect.width / 2;
-    const fromHalfH = fromRect.height / 2;
-    const toHalfW = toRect.width / 2;
-    const toHalfH = toRect.height / 2;
-
-    const fromScale = Math.min(fromHalfW / (absDx || 1), fromHalfH / (absDy || 1));
-    const toScale = Math.min(toHalfW / (absDx || 1), toHalfH / (absDy || 1));
-
-    const x1 = from.x + dx * fromScale;
-    const y1 = from.y + dy * fromScale;
-    const x2 = to.x - dx * toScale;
-    const y2 = to.y - dy * toScale;
-
-    return {
-      x1,
-      y1,
-      x2,
-      y2,
-    };
-  }
-
-  openNodeContextMenu(event: MouseEvent, node: GraphNode): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    this.contextMenuOpen = true;
-    this.contextMenuNode = node;
-    this.contextMenuPosition = {
-      x: event.clientX,
-      y: event.clientY
-    };
-  }
-
-  onGraphWheel(event: WheelEvent): void {
-    if (!event.ctrlKey) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (event.deltaY < 0) {
-      this.zoomIn();
-    } else {
-      this.zoomOut();
-    }
-  }
-
-  startPan(event: MouseEvent): void {
-    if (this.isNodeDragging) return;
-    if (this.isNodeResizing) return;
-    if (event.button !== 0) return;
-
-    this.isPanning = true;
-    this.panStartX = event.clientX;
-    this.panStartY = event.clientY;
-    this.panOriginX = this.panX;
-    this.panOriginY = this.panY;
-    this.movedDuringPan = false;
-  }
-
-  @HostListener('window:mousemove', ['$event'])
-  onPanMove(event: MouseEvent): void {
-    if (this.isNodeResizing) {
-      this.moveResizedNode(event);
-      return;
-    }
-
-    if (this.isNodeDragging) {
-      this.moveDraggedNode(event);
-      return;
-    }
-
-    if (!this.isPanning) return;
-
-    const dx = (event.clientX - this.panStartX) / this.zoomLevel;
-    const dy = (event.clientY - this.panStartY) / this.zoomLevel;
-
-    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-      this.movedDuringPan = true;
-    }
-
-    this.panX = this.panOriginX + dx;
-    this.panY = this.panOriginY + dy;
-  }
-
-  @HostListener('window:mouseup')
-  stopPan(): void {
-    if (this.isNodeResizing && this.resizedNode) {
-      if (this.movedDuringNodeResize && this.graphView) {
-        this.linkService.saveNodeCardSize(
-          { table: this.currentRootTable, id: this.currentRootId },
-          {
-            table: this.resizedNode.table,
-            id: this.resizedNode.id,
-            cardWidthScale: this.nodeWidthScale(this.resizedNode),
-            cardHeightScale: this.nodeHeightScale(this.resizedNode),
-          },
-          this.graphView.edges.map((edge) => edge.link)
-        );
-      }
-
-      this.isNodeResizing = false;
-      this.resizedNode = null;
-      this.resizeAnchorTopLeft = null;
-      this.movedDuringNodeResize = false;
-    }
-
-    if (this.isNodeDragging && this.draggedNode) {
-      if (this.movedDuringNodeDrag && this.graphView) {
-        this.linkService.saveNodePosition(
-          { table: this.currentRootTable, id: this.currentRootId },
-          {
-            table: this.draggedNode.table,
-            id: this.draggedNode.id,
-            x: this.draggedNode.x,
-            y: this.draggedNode.y,
-          },
-          this.graphView.edges.map((edge) => edge.link)
-        );
-      }
-
-      this.isNodeDragging = false;
-      this.draggedNode = null;
-      this.movedDuringNodeDrag = false;
-    }
-
-    this.isPanning = false;
-  }
-
-  zoomIn(): void {
-    this.zoomLevel = Math.min(this.maxZoom, +(this.zoomLevel + this.zoomStep).toFixed(2));
-  }
-
-  zoomOut(): void {
-    this.zoomLevel = Math.max(this.minZoom, +(this.zoomLevel - this.zoomStep).toFixed(2));
-  }
-
-  closeContextMenu(): void {
-    this.contextMenuOpen = false;
-    this.contextMenuNode = null;
-  }
-
-  prepareAddRelationFromContext(): void {
-    if (!this.contextMenuNode) return;
-
-    this.relationDraft.fromTable = this.contextMenuNode.table;
-    this.relationDraft.fromId = this.contextMenuNode.id;
-    this.relationDraftFromLabel = this.contextMenuNode.label;
-    // this.relationDraft.toTable = this.currentRootTable || this.contextMenuNode.table;
-    // this.draftTargetEntities = this.linkService.getEntitiesByTable(this.relationDraft.toTable);
-    // this.relationDraft.toId = this.currentRootId || this.draftTargetEntities[0]?.id || '';
-    this.relationDraft.name = '';
+    this.relationEditorOpen = false;
     this.editingLinkId = null;
-
-    this.currentSelectedTable = this.contextMenuNode.table;
-    this.currentSelectedId = this.contextMenuNode.id;
-
-    this.closeContextMenu();
+    this.resetDraft();
   }
 
-  openNodeRelationsInNewTab(): void {
-    if (!this.contextMenuNode) return;
+  onCanvasClick(event: MouseEvent): void {
+    if (this.movedDuringPan) {
+      this.movedDuringPan = false;
+      return;
+    }
 
-    this.tabManager.openRelationsTab({
-      table: this.contextMenuNode.table,
-      id: this.contextMenuNode.id,
-      label: this.contextMenuNode.label,
-    });
-
-    this.closeContextMenu();
+    if (event.target === this.graphSvg?.nativeElement) {
+      this.selectedNodeKey = '';
+      this.currentSelectedTable = '';
+      this.currentSelectedId = '';
+      this.resetDraft();
+    }
   }
 
-  onDraftToTableChange(): void {
-    this.draftTargetEntities = this.linkService.getEntitiesByTable(this.relationDraft.toTable);
-    this.relationDraft.toId = this.draftTargetEntities[0]?.id || '';
+  startNewRelation(): void {
+    const node = this.selectedNode;
+    if (!node) return;
+
+    this.relationDraft = {
+      fromTable: node.table,
+      fromId: node.id,
+      toTable: this.tableOptions[0]?.value || '',
+      toId: '',
+      name: '',
+    };
+    this.relationDraftFromLabel = node.label;
+    this.editingLinkId = null;
+    this.relationEditorOpen = true;
+    this.onDraftToTableChange();
   }
 
   startEditLink(edge: GraphEdge): void {
+    const source = this.graphView?.nodes.find(node => node.key === edge.fromKey);
+    if (source) {
+      this.selectedNodeKey = source.key;
+      this.currentSelectedTable = source.table;
+      this.currentSelectedId = source.id;
+    }
+
     this.editingLinkId = edge.id;
+    this.relationEditorOpen = true;
     this.relationDraft = {
       fromTable: edge.link.fromTable,
       fromId: edge.link.fromId,
@@ -870,7 +397,18 @@ export class RelationGraphComponent implements OnInit {
     };
     const sourceEntity = this.linkService.getEntitySummary(edge.link.fromTable, edge.link.fromId);
     this.relationDraftFromLabel = sourceEntity?.label || edge.link.fromId;
-    this.draftTargetEntities = this.linkService.getEntitiesByTable(this.relationDraft.toTable);
+    this.onDraftToTableChange(false);
+  }
+
+  onDraftToTableChange(resetTarget = true): void {
+    this.draftTargetEntities = this.linkService.getEntitiesByTable(
+      this.relationDraft.toTable,
+      this.effectiveScopeWorldId,
+    );
+
+    if (resetTarget || !this.draftTargetEntities.some(entity => entity.id === this.relationDraft.toId)) {
+      this.relationDraft.toId = this.draftTargetEntities[0]?.id || '';
+    }
   }
 
   saveDraftRelation(): void {
@@ -896,7 +434,7 @@ export class RelationGraphComponent implements OnInit {
       });
     }
 
-    this.refreshGraph();
+    this.loadGraph();
     this.resetDraft();
   }
 
@@ -904,7 +442,7 @@ export class RelationGraphComponent implements OnInit {
     if (!this.editingLinkId) return;
 
     this.linkService.deleteLink(this.editingLinkId);
-    this.refreshGraph();
+    this.loadGraph();
     this.resetDraft();
   }
 
@@ -921,45 +459,101 @@ export class RelationGraphComponent implements OnInit {
       toId: updated.toId,
       name: updated.name || '',
     };
-
     const sourceEntity = this.linkService.getEntitySummary(updated.fromTable, updated.fromId);
     this.relationDraftFromLabel = sourceEntity?.label || updated.fromId;
-    this.draftTargetEntities = this.linkService.getEntitiesByTable(updated.toTable);
-
-    this.refreshGraph();
+    this.onDraftToTableChange(false);
+    this.loadGraph();
   }
 
   resetDraft(): void {
     this.editingLinkId = null;
+    this.relationEditorOpen = false;
     this.draftTargetEntities = [];
     this.relationDraft = {
-      fromTable: this.currentRootTable,
-      fromId: this.currentRootId,
+      fromTable: this.currentSelectedTable,
+      fromId: this.currentSelectedId,
       toTable: '',
       toId: '',
       name: '',
     };
-    const sourceEntity = this.linkService.getEntitySummary(this.currentRootTable, this.currentRootId);
+    const sourceEntity = this.currentSelectedTable && this.currentSelectedId
+      ? this.linkService.getEntitySummary(this.currentSelectedTable, this.currentSelectedId)
+      : null;
     this.relationDraftFromLabel = sourceEntity?.label || '';
   }
 
+  makeSelectedNodeRoot(): void {
+    const node = this.selectedNode;
+    if (!node) return;
+
+    this.setRoot(node.table, node.id, true);
+  }
+
+  openSelectedNodeInNewTab(): void {
+    const node = this.selectedNode;
+    if (!node) return;
+
+    this.tabManager.openRelationsTab({
+      table: node.table,
+      id: node.id,
+      label: node.label,
+    });
+  }
+
+  openSelectedEntityInNewTab(): void {
+    const node = this.selectedNode;
+    if (!node) return;
+
+    const entityType = this.getTabEntityType(node.table);
+    if (!entityType) return;
+
+    this.tabManager.openTab(entityType, node.id, node.label, 'fa-solid fa-pen-to-square');
+  }
+
+  private getTabEntityType(table: string): Exclude<TabEntityType, 'view'> | null {
+    const tableAliases: Record<string, Exclude<TabEntityType, 'view'>> = {
+      World: 'World',
+      Character: 'Character',
+      Location: 'Location',
+      Organization: 'Organization',
+      Species: 'Specie',
+      Culture: 'Culture',
+      Document: 'Document',
+      Object: 'Object',
+    };
+
+    return tableAliases[table] || null;
+  }
+
+  private clearRoot(): void {
+    this.currentRootTable = '';
+    this.currentRootId = '';
+    this.selectedNodeKey = '';
+    this.currentSelectedTable = '';
+    this.currentSelectedId = '';
+    this.selectedEntityId = null;
+    this.relationEditorOpen = false;
+    this.editingLinkId = null;
+    this.onTableChange();
+    this.loadGraph();
+  }
+
   private setRoot(table: string, id: string, syncSelectors: boolean): void {
+    if (!table || !id) return;
+
     this.currentRootTable = table;
     this.currentRootId = id;
-
+    this.selectedNodeKey = makeNodeKey(table, id);
     this.currentSelectedTable = table;
     this.currentSelectedId = id;
 
-    this.graphView = this.linkService.getGraphForRoot(table, id, {
-      depth: this.relationshipDepth,
-      includeAllLevels: this.loadAllLevels,
-    });
-
     if (syncSelectors) {
       this.selectedTable = table;
-      this.entityOptions = this.linkService.getEntitiesByTable(table);
+      this.entityOptions = this.linkService.getEntitiesByTable(table, this.effectiveScopeWorldId);
       this.selectedEntityId = id;
     }
+
+    this.loadGraph();
 
     const rootEntity = this.linkService.getEntitySummary(table, id);
     this.tabManager.pinActiveRelationsTab({
@@ -971,144 +565,328 @@ export class RelationGraphComponent implements OnInit {
     this.resetDraft();
   }
 
-  private nodeByKey(key: string): GraphNode | undefined {
-    return this.graphView?.nodes.find((node) => node.key === key);
+  centerViewport(): void {
+    this.panX = 0;
+    this.panY = 0;
+    this.zoomLevel = 1;
   }
 
-  private moveDraggedNode(event: MouseEvent): void {
-    if (!this.draggedNode) return;
-
-    const point = this.mouseToGraphPoint(event);
-    if (!point) return;
-
-     const nextX = point.x - this.dragOffsetX;
-    const nextY = point.y - this.dragOffsetY;
-
-    if (Math.abs(nextX - this.draggedNode.x) > 0.5 || Math.abs(nextY - this.draggedNode.y) > 0.5) {
-      this.movedDuringNodeDrag = true;
-    }
-
-    this.draggedNode.x = nextX;
-    this.draggedNode.y = nextY;
+  zoomIn(): void {
+    this.setZoom(this.zoomLevel * (1 + this.zoomStep));
   }
 
-  private moveResizedNode(event: MouseEvent): void {
-    if (!this.resizedNode || !this.resizeAnchorTopLeft) return;
+  zoomOut(): void {
+    this.setZoom(this.zoomLevel / (1 + this.zoomStep));
+  }
 
-    const point = this.mouseToGraphPoint(event);
-    if (!point) return;
-
-    const nextWidth = Math.max(this.minNodeWidth(this.resizedNode), point.x - this.resizeAnchorTopLeft.x);
-    const nextHeight = Math.max(this.minNodeHeight(this.resizedNode), point.y - this.resizeAnchorTopLeft.y);
-
-    const targetWidthScale = this.clampNodeDimensionScale(nextWidth / this.baseNodeWidth(this.resizedNode));
-    const targetHeightScale = this.clampNodeDimensionScale(nextHeight / this.baseNodeHeight(this.resizedNode));
-    const currentWidthScale = this.nodeWidthScale(this.resizedNode);
-    const currentHeightScale = this.nodeHeightScale(this.resizedNode);
-
-    if (Math.abs(targetWidthScale - currentWidthScale) > 0.003 || Math.abs(targetHeightScale - currentHeightScale) > 0.003) {
-      this.resizedNode.cardWidthScale = targetWidthScale;
-      this.resizedNode.cardHeightScale = targetHeightScale;
-
-      const width = this.baseNodeWidth(this.resizedNode) * targetWidthScale;
-      const height = this.baseNodeHeight(this.resizedNode) * targetHeightScale;
-      this.resizedNode.x = this.resizeAnchorTopLeft.x + width / 2;
-      this.resizedNode.y = this.resizeAnchorTopLeft.y + height / 2;
-      this.movedDuringNodeResize = true;
+  private setZoom(value: number): void {
+    const width = this.graphView?.width || this.canvasWidth;
+    const height = this.graphView?.height || this.canvasHeight;
+    if (value > 0 && Number.isFinite(value) &&
+        Number.isFinite(width / value) && Number.isFinite(height / value) &&
+        width / value > 0 && height / value > 0) {
+      this.zoomLevel = value;
     }
   }
 
-  // private mouseToGraphPoint(event: MouseEvent): { x: number; y: number } | null {
-  //   if (!this.graphSvg) return null;
+  onGraphWheel(event: WheelEvent): void {
+    if (!event.ctrlKey) return;
 
-  //   const svg = this.graphSvg.nativeElement;
-  //   const rect = svg.getBoundingClientRect();
+    event.preventDefault();
+    event.stopPropagation();
 
-  //   if (rect.width === 0 || rect.height === 0) return null;
+    if (event.deltaY < 0) this.zoomIn();
+    else this.zoomOut();
+  }
 
-  //   const [viewX, viewY, viewW, viewH] = this.graphViewBox.split(' ').map(Number);
-  //   if ([viewX, viewY, viewW, viewH].some((n) => Number.isNaN(n))) return null;
-
-  //   console.log(`svg bounding: W ${svg.getBoundingClientRect().width} H ${svg.getBoundingClientRect().height}; View: W ${viewW} H ${viewH}`);
-
-  //   const ratioX = (event.clientX - rect.left) / rect.width;
-  //   const ratioY = (event.clientY - rect.top) / rect.height;
-
-  //   return {
-  //     x: viewX + ratioX * viewW,
-  //     y: viewY + ratioY * viewH,
-  //   };
-  // }
-
-  private mouseToGraphPoint(event: MouseEvent) {
-    if (!this.graphSvg) {
-      return null;
+  onGraphTouchStart(event: TouchEvent): void {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+      this.isPanning = false;
+      this.pinchStartDistance = this.touchDistance(event);
+      this.pinchStartZoom = this.zoomLevel;
+      return;
     }
 
-    const svg = this.graphSvg.nativeElement;
+    const mouseEvent = this.touchToMouseEvent(event, 'mousedown');
+    if (!mouseEvent) return;
 
-    const point = svg.createSVGPoint();
+    event.preventDefault();
+    this.startPan(mouseEvent);
+  }
 
-    point.x = event.clientX;
-    point.y = event.clientY;
+  onGraphTouchMove(event: TouchEvent): void {
+    if (event.touches.length === 2) {
+      event.preventDefault();
+      const distance = this.touchDistance(event);
+      if (!this.pinchStartDistance) {
+        this.pinchStartDistance = distance;
+        this.pinchStartZoom = this.zoomLevel;
+      }
+      if (distance && this.pinchStartDistance) {
+        this.setZoom(this.pinchStartZoom * distance / this.pinchStartDistance);
+      }
+      return;
+    }
 
-    const transformed = point.matrixTransform(
-      svg.getScreenCTM()?.inverse()
+    if (!this.isPanning) return;
+
+    const mouseEvent = this.touchToMouseEvent(event, 'mousemove');
+    if (!mouseEvent) return;
+
+    event.preventDefault();
+    this.onPanMove(mouseEvent);
+  }
+
+  onGraphTouchEnd(): void {
+    this.pinchStartDistance = 0;
+    this.stopPan();
+  }
+
+  private touchDistance(event: TouchEvent): number {
+    const first = event.touches[0];
+    const second = event.touches[1];
+    if (!first || !second) return 0;
+    return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
+  }
+
+  private touchToMouseEvent(event: TouchEvent, type: string): MouseEvent | null {
+    const touch = event.touches[0] || event.changedTouches[0];
+    if (!touch) return null;
+
+    return new MouseEvent(type, {
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      button: 0,
+      buttons: 1,
+    });
+  }
+
+  startPan(event: MouseEvent): void {
+    if (event.button !== 0) return;
+
+    this.isPanning = true;
+    this.panStartX = event.clientX;
+    this.panStartY = event.clientY;
+    this.panOriginX = this.panX;
+    this.panOriginY = this.panY;
+    this.movedDuringPan = false;
+  }
+
+  @HostListener('window:mousemove', ['$event'])
+  onPanMove(event: MouseEvent): void {
+    if (!this.isPanning) return;
+
+    const panUnitPerPixel = this.getPanUnitPerPixel();
+    const dx = (event.clientX - this.panStartX) * panUnitPerPixel;
+    const dy = (event.clientY - this.panStartY) * panUnitPerPixel;
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) this.movedDuringPan = true;
+
+    this.panX = this.panOriginX + dx;
+    this.panY = this.panOriginY + dy;
+  }
+
+  private getPanUnitPerPixel(): number {
+    const graphWidth = this.graphView?.width || this.canvasWidth;
+    const graphHeight = this.graphView?.height || this.canvasHeight;
+    const viewWidth = graphWidth / this.zoomLevel;
+    const viewHeight = graphHeight / this.zoomLevel;
+    const bounds = this.graphSvg?.nativeElement.getBoundingClientRect();
+    const renderedWidth = bounds?.width || 0;
+    const renderedHeight = bounds?.height || 0;
+    const renderedScale = Math.min(
+      renderedWidth / viewWidth,
+      renderedHeight / viewHeight,
     );
 
+    return renderedScale > 0 && Number.isFinite(renderedScale)
+      ? 1 / renderedScale
+      : 1 / this.zoomLevel;
+  }
+
+  @HostListener('window:mouseup')
+  stopPan(): void {
+    this.isPanning = false;
+  }
+
+  edgeGeometry(edge: GraphEdge): { path: string; labelX: number; labelY: number } | null {
+    const from = this.graphView?.nodes.find(node => node.key === edge.fromKey);
+    const to = this.graphView?.nodes.find(node => node.key === edge.toKey);
+    if (!from || !to) return null;
+
+    const pairEdges = this.graphView?.edges
+      .filter(candidate => this.sameUndirectedPair(candidate, edge))
+      .sort((first, second) => first.id.localeCompare(second.id)) || [];
+    const pairIndex = Math.max(0, pairEdges.findIndex(candidate => candidate.id === edge.id));
+    const pairOffset = (pairIndex - (pairEdges.length - 1) / 2) * 26;
+
+    if (from.key === to.key) {
+      const loopIndex = pairIndex;
+      const angle = -Math.PI / 2 + loopIndex * 0.65;
+      const endAngle = angle + 0.95;
+      const start = {
+        x: from.x + Math.cos(angle) * from.radius * 0.8,
+        y: from.y + Math.sin(angle) * from.radius * 0.8,
+      };
+      const end = {
+        x: from.x + Math.cos(endAngle) * from.radius * 0.8,
+        y: from.y + Math.sin(endAngle) * from.radius * 0.8,
+      };
+      const controlOne = {
+        x: from.x + Math.cos(angle - 0.65) * (from.radius + 68 + loopIndex * 12),
+        y: from.y + Math.sin(angle - 0.65) * (from.radius + 68 + loopIndex * 12),
+      };
+      const controlTwo = {
+        x: from.x + Math.cos(endAngle + 0.65) * (from.radius + 68 + loopIndex * 12),
+        y: from.y + Math.sin(endAngle + 0.65) * (from.radius + 68 + loopIndex * 12),
+      };
+      return {
+        path: 'M ' + start.x + ' ' + start.y + ' C ' + controlOne.x + ' ' + controlOne.y + ' ' + controlTwo.x + ' ' + controlTwo.y + ' ' + end.x + ' ' + end.y,
+        labelX: from.x + Math.cos(angle + 0.5) * (from.radius + 72 + loopIndex * 12),
+        labelY: from.y + Math.sin(angle + 0.5) * (from.radius + 72 + loopIndex * 12),
+      };
+    }
+
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    const ux = dx / distance;
+    const uy = dy / distance;
+    const start = {
+      x: from.x + ux * from.radius,
+      y: from.y + uy * from.radius,
+    };
+    const end = {
+      x: to.x - ux * to.radius,
+      y: to.y - uy * to.radius,
+    };
+    const midpoint = {
+      x: (start.x + end.x) / 2,
+      y: (start.y + end.y) / 2,
+    };
+    const perpendicular = { x: -uy, y: ux };
+    const control = {
+      x: midpoint.x + perpendicular.x * pairOffset,
+      y: midpoint.y + perpendicular.y * pairOffset,
+    };
+
     return {
-      x: transformed.x,
-      y: transformed.y
+      path: 'M ' + start.x + ' ' + start.y + ' Q ' + control.x + ' ' + control.y + ' ' + end.x + ' ' + end.y,
+      labelX: (start.x + 2 * control.x + end.x) / 4,
+      labelY: (start.y + 2 * control.y + end.y) / 4 - 7,
     };
   }
 
-  private baseNodeWidth(node: GraphNode): number {
-    return node.isRoot ? 220 : 190;
+  sameUndirectedPair(first: GraphEdge, second: GraphEdge): boolean {
+    return (
+      (first.fromKey === second.fromKey && first.toKey === second.toKey) ||
+      (first.fromKey === second.toKey && first.toKey === second.fromKey)
+    );
   }
 
-  private baseNodeHeight(node: GraphNode): number {
-    return node.isRoot ? 78 : 64;
+  edgeLabel(edge: GraphEdge): string {
+    return edge.name?.trim() || 'Relação';
   }
 
-  private minNodeWidth(node: GraphNode): number {
-    return this.baseNodeWidth(node) * NODE_MIN_SCALE;
+  showEdgeLabel(edge: GraphEdge, graph: GraphView): boolean {
+    if (graph.edges.length <= 24) return true;
+    if (this.editingLinkId === edge.id) return true;
+    return edge.fromKey === this.selectedNodeKey || edge.toKey === this.selectedNodeKey;
   }
 
-  private minNodeHeight(node: GraphNode): number {
-    return this.baseNodeHeight(node) * NODE_MIN_SCALE;
+  edgeClasses(edge: GraphEdge): Record<string, boolean> {
+    const focused = edge.fromKey === this.selectedNodeKey || edge.toKey === this.selectedNodeKey;
+    return {
+      'stroke-zinc-500': !focused && this.editingLinkId !== edge.id,
+      'stroke-yellow-400': this.editingLinkId === edge.id,
+      'stroke-cyan-400': focused && this.editingLinkId !== edge.id,
+      'opacity-30': !!this.selectedNodeKey && !focused && this.editingLinkId !== edge.id,
+    };
   }
 
-  private nodeWidthScale(node: GraphNode): number {
-    return this.clampNodeDimensionScale(node.cardWidthScale ?? 1);
+  nodeClasses(node: GraphNode): Record<string, boolean> {
+    return {
+      'drop-shadow-[0_0_8px_rgba(250,204,21,0.55)]': node.isRoot,
+      'opacity-100': true,
+    };
   }
 
-  private nodeHeightScale(node: GraphNode): number {
-    return this.clampNodeDimensionScale(node.cardHeightScale ?? 1);
+  nodeFill(node: GraphNode): string {
+    const color = this.nodeColor(node.table);
+    return node.isRoot ? color + '44' : color + '28';
   }
 
-  private clampNodeDimensionScale(scale: number): number {
-    return +Math.min(NODE_MAX_SCALE, Math.max(NODE_MIN_SCALE, scale)).toFixed(3);
+  nodeStroke(node: GraphNode): string {
+    if (this.selectedNodeKey === node.key) return '#facc15';
+    if (node.isRoot) return '#facc15';
+    return this.nodeColor(node.table);
+  }
+
+  nodeStrokeWidth(node: GraphNode): number {
+    if (this.selectedNodeKey === node.key) return 4;
+    if (node.isRoot) return 3;
+    return 2;
+  }
+
+  nodeColor(table: string): string {
+    const colors: Record<string, string> = {
+      World: '#f59e0b',
+      Character: '#38bdf8',
+      Location: '#4ade80',
+      Organization: '#c084fc',
+      Species: '#fb7185',
+      Culture: '#fbbf24',
+      Document: '#a78bfa',
+      Object: '#2dd4bf',
+    };
+    return colors[table] || '#a1a1aa';
+  }
+
+  nodeTypeLabel(table: string): string {
+    return this.tableOptions.find(option => option.value === table)?.label || table;
+  }
+
+  nodeInitials(label: string): string {
+    const words = label.trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return '?';
+    return words.slice(0, 2).map(word => word[0]).join('').toUpperCase();
+  }
+
+  nodeClipId(node: GraphNode): string {
+    return 'relation-node-' + node.key.replace(/[^a-zA-Z0-9_-]/g, '-');
+  }
+
+  nodeLabelLimit(node: GraphNode): number {
+    return node.radius >= 45 ? 28 : 18;
+  }
+
+  nodeLabelY(node: GraphNode): number {
+    return node.radius + 19;
+  }
+
+  nodeTypeY(node: GraphNode): number {
+    return node.radius + 33;
   }
 
   outgoingEdges(graph: GraphView): GraphEdge[] {
-    const currentKey = makeNodeKey(this.currentSelectedTable, this.currentSelectedId);
-    return graph.edges.filter((edge) => edge.fromKey === currentKey);
+    if (!this.selectedNodeKey) return [];
+    return graph.edges.filter(edge => edge.fromKey === this.selectedNodeKey);
   }
 
   incomingEdges(graph: GraphView): GraphEdge[] {
-    const currentKey = makeNodeKey(this.currentSelectedTable, this.currentSelectedId);
-    return graph.edges.filter((edge) => edge.toKey === currentKey);
-  }
-
-  @HostListener('document:click')
-  handleDocumentClick(): void {
-    this.closeContextMenu();
+    if (!this.selectedNodeKey) return [];
+    return graph.edges.filter(edge => edge.toKey === this.selectedNodeKey);
   }
 
   @HostListener('window:keydown.escape')
   handleEscape(): void {
-    this.closeContextMenu();
-  }
+    if (this.relationEditorOpen) {
+      this.resetDraft();
+      return;
+    }
 
-  protected readonly makeNodeKey = makeNodeKey;
+    this.selectedNodeKey = '';
+    this.currentSelectedTable = '';
+    this.currentSelectedId = '';
+  }
 }
