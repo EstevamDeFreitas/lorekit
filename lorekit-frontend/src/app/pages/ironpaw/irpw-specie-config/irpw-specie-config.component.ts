@@ -14,7 +14,7 @@ import { IrpwSpecieService } from '../../../services/irpw-specie.service';
   selector: 'irpw-specie-config',
   imports: [CommonModule, FormsModule, ButtonComponent, InputComponent, TextAreaComponent],
   template: `
-    <div class="w-[min(48rem,90vw)] max-h-[80vh] overflow-y-auto scrollbar-dark rounded-lg border border-zinc-800 bg-zinc-950 p-4 text-white shadow-xl">
+    <div class="w-full h-full min-h-0 box-border overflow-y-auto scrollbar-dark bg-zinc-950 p-5 text-white">
       <div class="flex items-start justify-between gap-4 mb-4">
         <div>
           <h2 class="text-lg font-semibold">Configuração IRPW da Espécie</h2>

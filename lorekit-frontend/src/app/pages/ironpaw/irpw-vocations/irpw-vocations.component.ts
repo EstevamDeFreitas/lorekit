@@ -15,10 +15,9 @@ import {
 } from '../../../models/irpw-attributes-skills.model';
 import {
   IrpwVocation,
-  IrpwVocationAttributeGroup,
-  IrpwVocationAttributes,
   IrpwVocationHability,
 } from '../../../models/irpw-vocation.model';
+import { createDefaultVocationSkills, IrpwVocationSkills, parseVocationSkills, serializeVocationSkills } from '../../../models/irpw-rules.model';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { InputComponent } from '../../../components/input/input.component';
 import { TextAreaComponent } from '../../../components/text-area/text-area.component';
@@ -215,17 +214,12 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
               </div>
 
               <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3 overflow-y-auto">
-                <h2 class="text-center mb-3">Atributos</h2>
+                <h2 class="text-center mb-3">Perícias</h2>
                 <div class="flex flex-col gap-4">
                   @for (entry of attributeGroupEntries; track entry[0]) {
                     <div>
                       <div class="flex items-center justify-between mb-2">
                         <span class="text-xs font-semibold text-zinc-200 uppercase tracking-wide">{{ attributeGroupLabel[entry[0]] }}</span>
-                        <input
-                          type="number"
-                          class="w-12 text-center bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5 text-xs text-white outline-none focus:border-zinc-500"
-                          [(ngModel)]="attributesData[entry[0]].value"
-                          (ngModelChange)="onAttributesChange()">
                       </div>
                       <div class="flex flex-col gap-1.5 pl-1">
                         @for (skill of entry[1]; track skill) {
@@ -292,7 +286,7 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
   baseDefenseValue: number | null = null;
   passiveData: IrpwVocationHability = this.createEmptyHability();
   habilitiesData: IrpwVocationHability[] = [];
-  attributesData: IrpwVocationAttributes = this.createDefaultAttributes();
+  attributesData: IrpwVocationSkills = createDefaultVocationSkills();
 
   readonly attributeGroupEntries = Object.entries(ATTRIBUTE_GROUP_SKILLS) as [AttributeGroupCode, SkillCode[]][];
   readonly attributeGroupLabel = ATTRIBUTE_GROUP_LABEL;
@@ -443,18 +437,18 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
   onAttributesChange() {
     if (!this.currentVocation) return;
 
-    this.currentVocation.attributes = JSON.stringify(this.attributesData);
+    this.currentVocation.attributes = serializeVocationSkills(this.attributesData);
     this.scheduleAutoSave();
   }
 
   getSkillLevel(group: string, skill: string): number {
-    return this.normalizeSkillLevel(this.attributesData[group as AttributeGroupCode]?.skills[skill]);
+    return this.normalizeSkillLevel(this.attributesData[group as AttributeGroupCode]?.skills[skill as SkillCode]);
   }
 
   onCircleClick(event: Event, group: string, skill: string, level: number) {
     event.preventDefault();
     const currentLevel = this.getSkillLevel(group, skill);
-    this.attributesData[group as AttributeGroupCode].skills[skill] = currentLevel === level ? 0 : this.normalizeSkillLevel(level);
+    this.attributesData[group as AttributeGroupCode].skills[skill as SkillCode] = currentLevel === level ? 0 : this.normalizeSkillLevel(level);
     this.onAttributesChange();
   }
 
@@ -475,7 +469,7 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
     this.baseDefenseValue = null;
     this.passiveData = this.createEmptyHability();
     this.habilitiesData = [];
-    this.attributesData = this.createDefaultAttributes();
+    this.attributesData = createDefaultVocationSkills();
   }
 
   private parseHabilities(rawValue: string | null | undefined): IrpwVocationHability[] {
@@ -523,41 +517,10 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
     };
   }
 
-  private parseAttributes(rawValue: string | null | undefined): IrpwVocationAttributes {
-    let parsed: Partial<IrpwVocationAttributes> = {};
-
-    if (rawValue) {
-      try {
-        parsed = JSON.parse(rawValue);
-      } catch {
-        parsed = {};
-      }
-    }
-
-    const attributes = this.createDefaultAttributes();
-    for (const group of Object.keys(ATTRIBUTE_GROUP_SKILLS) as AttributeGroupCode[]) {
-      attributes[group].value = this.normalizeAttributeValue(parsed[group]?.value);
-      for (const skill of ATTRIBUTE_GROUP_SKILLS[group]) {
-        attributes[group].skills[skill] = this.normalizeSkillLevel(parsed[group]?.skills?.[skill]);
-      }
-    }
-
-    return attributes;
+  private parseAttributes(rawValue: string | null | undefined): IrpwVocationSkills {
+    return parseVocationSkills(rawValue);
   }
 
-  private createDefaultAttributes(): IrpwVocationAttributes {
-    const result = {} as IrpwVocationAttributes;
-
-    for (const group of Object.keys(ATTRIBUTE_GROUP_SKILLS) as AttributeGroupCode[]) {
-      const attributeGroup: IrpwVocationAttributeGroup = { value: null, skills: {} };
-      for (const skill of ATTRIBUTE_GROUP_SKILLS[group]) {
-        attributeGroup.skills[skill] = 0;
-      }
-      result[group] = attributeGroup;
-    }
-
-    return result;
-  }
 
   private parseInteger(value: string | null | undefined): number | null {
     if (value == null || value === '') return null;
@@ -573,12 +536,6 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
     return `${Math.trunc(numericValue)}`;
   }
 
-  private normalizeAttributeValue(value: number | null | undefined): number | null {
-    if (value == null) return null;
-    const numericValue = Number(value);
-    if (!Number.isFinite(numericValue)) return null;
-    return Math.trunc(numericValue);
-  }
 
   private normalizeSkillLevel(value: number | null | undefined): number {
     if (value == null) return 0;

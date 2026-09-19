@@ -17,6 +17,13 @@ export class IrpwSpecieService {
     return this.crud.findById('IRPWSpecie', specieId) as IrpwSpecie | null;
   }
 
+  ensureConfig(specieId: string): IrpwSpecie {
+    const existing = this.getConfig(specieId);
+    if (existing) return existing;
+
+    return this.crud.create('IRPWSpecie', { id: specieId }) as IrpwSpecie;
+  }
+
   saveConfig(specieId: string, config: IrpwSpecie): IrpwSpecie {
     const existing = this.crud.findById('IRPWSpecie', specieId);
     if (existing) {

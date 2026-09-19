@@ -30,6 +30,7 @@ import { getSystemDefaultConfig, UiFieldConfigService } from '../../../services/
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { activeLayoutTabId, CurrentEntityPageStateService, layoutTabStateId, resolveEntityTab } from '../../../services/current-entity-page-state.service';
 import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
+import { TabManagerService } from '../../../services/tab-manager.service';
 
 @Component({
   selector: 'app-character-edit',
@@ -58,6 +59,7 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
         }
         <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveCharacter()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="character.name" />
         <div class="flex flex-row flex-wrap gap-2 ms-auto">
+          <app-icon-button buttonType="secondary" icon="fa-solid fa-scroll" size="xl" title="Abrir ficha Ironpaw" (click)="openIronpawSheet()"></app-icon-button>
           <!-- <app-entity-transfer-button [entityId]="character.id" [entityTable]="'Character'" [size]="'xl'"></app-entity-transfer-button> -->
           <app-ui-field-config-button
             [entityTable]="'Character'"
@@ -122,6 +124,7 @@ export class CharacterEditComponent implements OnInit {
   private entityChangeService = inject(EntityChangeService);
   private currentEntityPageStateService = inject(CurrentEntityPageStateService);
   private uiFieldConfigService = inject(UiFieldConfigService);
+  private tabManager = inject(TabManagerService);
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
 
@@ -163,6 +166,14 @@ export class CharacterEditComponent implements OnInit {
 
   availableWorlds : World[] = [];
   availableSpecies : Specie[] = [];
+
+  openIronpawSheet(): void {
+    const characterId = this.character.id || this.characterId();
+    if (!characterId) return;
+
+    const icon = getPersonalizationValue(this.character, 'icon') || 'fa-solid fa-scroll';
+    this.tabManager.openTab('CharacterSheet', characterId, `Ficha: ${this.character.name || 'Personagem'}`, icon);
+  }
 
   selectTab(tab: string): void {
     this.currentTab = tab;

@@ -249,7 +249,9 @@ export class SpecieEditComponent implements OnInit {
     const { IrpwSpecieConfigComponent } = await import('../../ironpaw/irpw-specie-config/irpw-specie-config.component');
     this.dialog.open(IrpwSpecieConfigComponent, {
       data: { id: this.specie.id },
-      panelClass: 'screen-dialog',
+      panelClass: ['screen-dialog', 'ironpaw-dialog', 'max-w-none', 'max-h-none', 'overflow-hidden'],
+      height: '80vh',
+      width: '80vw',
       autoFocus: false,
       restoreFocus: false,
     });

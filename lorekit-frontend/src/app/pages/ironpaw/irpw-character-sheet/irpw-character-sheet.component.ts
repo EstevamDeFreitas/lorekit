@@ -23,6 +23,13 @@ import { ComboBoxComponent } from '../../../components/combo-box/combo-box.compo
 import { getImageByUsageKey } from '../../../models/image.model';
 import { Specie } from '../../../models/specie.model';
 import { IrpwVocation, IrpwVocationAttributes, IrpwVocationHability } from '../../../models/irpw-vocation.model';
+import {
+  getIronpawLifeMinimum,
+  getVocationSkillMinimums,
+  IrpwPerceptions,
+  normalizeIrpwInteger,
+  parseIrpwPerceptions,
+} from '../../../models/irpw-rules.model';
 import { IrpwSpecieService } from '../../../services/irpw-specie.service';
 import { IrpwVocationService } from '../../../services/irpw-vocation.service';
 import { SpecieService } from '../../../services/specie.service';
@@ -187,26 +194,59 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                       (click)="openCharacterEditor()">
                       {{ selectedCharacter.name }}
                     </button>
-                    <app-combo-box
-                      class="w-full"
-                      label="Espécie"
-                      [items]="availableSpecies"
-                      compareProp="id"
-                      displayProp="name"
-                      [clearable]="true"
-                      [(comboValue)]="selectedSpecieId"
-                      (comboValueChange)="onSpecieSelect()">
-                    </app-combo-box>
-                    <app-combo-box
-                      class="w-full"
-                      label="Vocação"
-                      [items]="availableVocations"
-                      compareProp="id"
-                      displayProp="name"
-                      [clearable]="true"
-                      [(comboValue)]="selectedVocationId"
-                      (comboValueChange)="onVocationSelect()">
-                    </app-combo-box>
+                    <div class="flex items-end gap-2">
+                      <app-combo-box
+                        class="min-w-0 flex-1"
+                        label="Espécie"
+                        [items]="availableSpecies"
+                        compareProp="id"
+                        displayProp="name"
+                        [clearable]="true"
+                        [(comboValue)]="selectedSpecieId"
+                        (comboValueChange)="onSpecieSelect()">
+                      </app-combo-box>
+                      @if (selectedSpecieId) {
+                        <button
+                          type="button"
+                          class="mb-0.5 h-8 w-8 shrink-0 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
+                          title="Configurar espécie Ironpaw"
+                          aria-label="Configurar espécie Ironpaw"
+                          (click)="openSpeciesConfig()">
+                          <i class="fa-solid fa-gear text-xs"></i>
+                        </button>
+                      }
+                    </div>
+                    <div class="flex items-end gap-2">
+                      <app-combo-box
+                        class="min-w-0 flex-1"
+                        label="Vocação"
+                        [items]="availableVocations"
+                        compareProp="id"
+                        displayProp="name"
+                        [clearable]="true"
+                        [(comboValue)]="selectedVocationId"
+                        (comboValueChange)="onVocationSelect()">
+                      </app-combo-box>
+                      @if (selectedVocationId) {
+                        <button
+                          type="button"
+                          class="mb-0.5 h-8 w-8 shrink-0 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-yellow-500 hover:text-yellow-300"
+                          title="Configurar vocação Ironpaw"
+                          aria-label="Configurar vocação Ironpaw"
+                          (click)="openVocationConfig()">
+                          <i class="fa-solid fa-gear text-xs"></i>
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="mb-0.5 h-8 w-8 shrink-0 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-yellow-500 hover:text-yellow-300"
+                          title="Criar nova vocação"
+                          aria-label="Criar nova vocação"
+                          (click)="createVocationForCharacter()">
+                          <i class="fa-solid fa-plus text-xs"></i>
+                        </button>
+                      }
+                    </div>
                   </div>
                 </div>
 
@@ -456,19 +496,25 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                       <h1 class="text-center mb-2">Percepções</h1>
                       <div class="flex flex-row justify-center gap-6">
                         <div class="flex flex-col items-center gap-1">
-                          <span class="text-xs text-zinc-400">Olfato</span>
+                          <span class="text-xs text-zinc-400">Olfato
+                            @if (getSpeciesPerceptionBase('smell') !== null) { <i class="fa-solid fa-paw ms-1 text-[9px] text-sky-300" [title]="getSpeciesPerceptionTooltip('smell')" [attr.aria-label]="getSpeciesPerceptionTooltip('smell')"></i> }
+                          </span>
                           <input type="number" class="w-12 text-center bg-zinc-900 border border-zinc-700 rounded px-1 py-0.5 text-sm text-white outline-none focus:border-zinc-500"
                             [(ngModel)]="perceptionsData.smell"
                             (ngModelChange)="onPerceptionsChange()">
                         </div>
                         <div class="flex flex-col items-center gap-1">
-                          <span class="text-xs text-zinc-400">Visão</span>
+                          <span class="text-xs text-zinc-400">Visão
+                            @if (getSpeciesPerceptionBase('vision') !== null) { <i class="fa-solid fa-paw ms-1 text-[9px] text-sky-300" [title]="getSpeciesPerceptionTooltip('vision')" [attr.aria-label]="getSpeciesPerceptionTooltip('vision')"></i> }
+                          </span>
                           <input type="number" class="w-12 text-center bg-zinc-900 border border-zinc-700 rounded px-1 py-0.5 text-sm text-white outline-none focus:border-zinc-500"
                             [(ngModel)]="perceptionsData.vision"
                             (ngModelChange)="onPerceptionsChange()">
                         </div>
                         <div class="flex flex-col items-center gap-1">
-                          <span class="text-xs text-zinc-400">Audição</span>
+                          <span class="text-xs text-zinc-400">Audição
+                            @if (getSpeciesPerceptionBase('hearing') !== null) { <i class="fa-solid fa-paw ms-1 text-[9px] text-sky-300" [title]="getSpeciesPerceptionTooltip('hearing')" [attr.aria-label]="getSpeciesPerceptionTooltip('hearing')"></i> }
+                          </span>
                           <input type="number" class="w-12 text-center bg-zinc-900 border border-zinc-700 rounded px-1 py-0.5 text-sm text-white outline-none focus:border-zinc-500"
                             [(ngModel)]="perceptionsData.hearing"
                             (ngModelChange)="onPerceptionsChange()">
@@ -490,7 +536,11 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                             <div class="flex flex-col gap-1.5 pl-1">
                               @for (skill of entry[1]; track skill) {
                                 <div class="flex items-center justify-between">
-                                  <span class="text-xs text-zinc-400">{{ skillLabel[skill] }}</span>
+                                  <span class="text-xs text-zinc-400">{{ skillLabel[skill] }}
+                                    @if (isSkillAtVocationMinimum(entry[0], skill)) {
+                                      <i class="fa-solid fa-lock ms-1 text-[9px] text-sky-300" [title]="getVocationMinimumTooltip(skill)" [attr.aria-label]="getVocationMinimumTooltip(skill)"></i>
+                                    }
+                                  </span>
                                   <div class="flex items-center gap-3">
                                     <span class="text-[11px] text-zinc-500 whitespace-nowrap">
                                       {{ getSkillRollSummary(entry[0], skill) }}
@@ -1139,7 +1189,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
   pendingLifeMaxPoints: number | null = null;
   isConditionSettingsOpen = false;
 
-  perceptionsData: { smell: number | null; vision: number | null; hearing: number | null } = { smell: null, vision: null, hearing: null };
+  perceptionsData: IrpwPerceptions = { smell: null, vision: null, hearing: null };
+  vocationSkillMinimums: Record<SkillCode, number> = {} as Record<SkillCode, number>;
 
   attributesData: Record<string, { value: number | null; skills: Record<string, number> }> = {};
   subspecializationsData: string[] = [''];
@@ -1255,7 +1306,6 @@ export class IrpwCharacterSheetComponent implements OnInit {
   loadSpecies() {
     this.availableSpecies = this.specieService
       .getSpecies(null, this.selectedWorldId || null)
-      .filter(specie => !!this.irpwSpecieService.getConfig(specie.id))
       .sort((left, right) => (left.name || 'Espécie sem nome').localeCompare(right.name || 'Espécie sem nome'));
   }
 
@@ -1287,7 +1337,11 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.selectedCharacterId = preferredCharacterId;
       this.selectedCharacter = this.characters.find(c => c.id === preferredCharacterId) ?? this.selectedCharacter;
       this.selectedSpecieId = this.selectedCharacter?.ParentSpecies?.id ?? '';
+      if (this.selectedSpecieId) {
+        this.irpwSpecieService.ensureConfig(this.selectedSpecieId);
+      }
       this.selectedVocationId = this.selectedCharacter?.ParentIRPWVocation?.id ?? '';
+      this.refreshVocationSkillMinimums();
       this.refreshInheritedHabilities();
     }
   }
@@ -1328,7 +1382,11 @@ export class IrpwCharacterSheetComponent implements OnInit {
     }
 
     this.selectedSpecieId = this.selectedCharacter?.ParentSpecies?.id ?? '';
+    if (this.selectedSpecieId) {
+      this.irpwSpecieService.ensureConfig(this.selectedSpecieId);
+    }
     this.selectedVocationId = this.selectedCharacter?.ParentIRPWVocation?.id ?? '';
+    this.refreshVocationSkillMinimums();
     this.currentSheet = this.sheetService.getSheet(characterId);
 
     if (!this.currentSheet) {
@@ -1353,6 +1411,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.selectedCharacterId = '';
     this.selectedSpecieId = '';
     this.selectedVocationId = '';
+    this.vocationSkillMinimums = {} as Record<SkillCode, number>;
     this.selectedCharacter = null;
     this.currentSheet = null;
     this.subspecializationsData = [''];
@@ -1364,8 +1423,142 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.expandedMarkIndexes.clear();
   }
 
+  private refreshVocationSkillMinimums(): void {
+    this.vocationSkillMinimums = getVocationSkillMinimums(this.selectedCharacter?.ParentIRPWVocation?.attributes);
+  }
+
+  getSpeciesPerceptionBase(key: PerceptionKey): number | null {
+    if (!this.selectedSpecieId) return null;
+    const config = this.irpwSpecieService.getConfig(this.selectedSpecieId);
+    return parseIrpwPerceptions(config?.perceptions)[key];
+  }
+
+  getSpeciesPerceptionTooltip(key: PerceptionKey): string {
+    const labels: Record<PerceptionKey, string> = {
+      smell: 'Olfato',
+      vision: 'Visão',
+      hearing: 'Audição',
+    };
+    const base = this.getSpeciesPerceptionBase(key);
+    return base === null ? '' : `${labels[key]}: mínimo da espécie ${base}`;
+  }
+
+  isSkillAtVocationMinimum(group: string, skill: string): boolean {
+    const minimum = this.vocationSkillMinimums[skill as SkillCode] ?? 0;
+    return minimum > 0 && this.getSkillLevel(group, skill) === minimum;
+  }
+
+  getVocationMinimumTooltip(skill: string): string {
+    const minimum = this.vocationSkillMinimums[skill as SkillCode] ?? 0;
+    return minimum > 0 ? `${SKILL_LABEL[skill as SkillCode]}: mínimo da vocação ${minimum}` : '';
+  }
+
+  private clampAttributesToVocationMinimums(): void {
+    for (const group of Object.keys(ATTRIBUTE_GROUP_SKILLS) as AttributeGroupCode[]) {
+      for (const skill of ATTRIBUTE_GROUP_SKILLS[group]) {
+        const minimum = this.vocationSkillMinimums[skill] ?? 0;
+        const current = this.normalizeSkillLevel(this.attributesData[group]?.skills[skill]);
+        this.attributesData[group].skills[skill] = Math.max(current, minimum);
+      }
+    }
+  }
+
+  private resetSkillsToVocationMinimums(): void {
+    for (const group of Object.keys(ATTRIBUTE_GROUP_SKILLS) as AttributeGroupCode[]) {
+      for (const skill of ATTRIBUTE_GROUP_SKILLS[group]) {
+        this.attributesData[group].skills[skill] = this.vocationSkillMinimums[skill] ?? 0;
+      }
+    }
+  }
+
+  private clampPerceptionsToSpeciesMinimums(): void {
+    for (const key of ['smell', 'vision', 'hearing'] as PerceptionKey[]) {
+      const base = this.getSpeciesPerceptionBase(key);
+      const current = normalizeIrpwInteger(this.perceptionsData[key]);
+      this.perceptionsData[key] = base === null ? current : Math.max(base, current ?? base);
+    }
+  }
+
+  private applySpeciesPerceptionMinimums(specieId: string | null): void {
+    this.perceptionsData = specieId
+      ? parseIrpwPerceptions(this.irpwSpecieService.ensureConfig(specieId).perceptions)
+      : { smell: null, vision: null, hearing: null };
+    this.onPerceptionsChange();
+  }
+
+  private getLifeMinimum(): number {
+    const vocationBaseHealth = this.selectedCharacter?.ParentIRPWVocation?.basehealth;
+    const speciesBaseHealth = this.selectedSpecieId
+      ? this.irpwSpecieService.getConfig(this.selectedSpecieId)?.basehealth
+      : null;
+    return getIronpawLifeMinimum(vocationBaseHealth, speciesBaseHealth);
+  }
+
+  private recalculateLifeMinimum(): void {
+    if (!this.currentSheet) return;
+
+    const minimum = this.getLifeMinimum();
+    this.lifepointsData.maxPoints = minimum;
+
+    this.lifepointsData.currentPoints = this.normalizeLifeCurrentPoints(this.lifepointsData.currentPoints, minimum);
+    this.currentSheet.lifepoints = JSON.stringify(this.lifepointsData);
+    this.scheduleAutoSave();
+  }
+
+  async openSpeciesConfig(): Promise<void> {
+    if (!this.selectedSpecieId) return;
+
+    this.irpwSpecieService.ensureConfig(this.selectedSpecieId);
+    const { IrpwSpecieConfigComponent } = await import('../irpw-specie-config/irpw-specie-config.component');
+    const dialogRef = this.dialog.open(IrpwSpecieConfigComponent, {
+      data: { id: this.selectedSpecieId },
+      panelClass: ['screen-dialog', 'ironpaw-dialog', 'max-w-none', 'max-h-none', 'overflow-hidden'],
+      height: '80vh',
+      width: '80vw',
+      autoFocus: false,
+      restoreFocus: false,
+    });
+
+    dialogRef.closed.subscribe(() => {
+      this.loadSpecies();
+    });
+  }
+
+  createVocationForCharacter(): void {
+    if (!this.selectedCharacterId || !this.selectedCharacter || this.selectedVocationId) return;
+
+    const createdVocation = this.vocationService.saveVocation(new IrpwVocation());
+    this.loadVocations();
+    this.selectedVocationId = createdVocation.id;
+    this.onVocationSelect();
+    void this.openVocationConfig();
+  }
+
+  async openVocationConfig(): Promise<void> {
+    if (!this.selectedVocationId) return;
+
+    const { IrpwVocationConfigComponent } = await import('../irpw-vocation-config/irpw-vocation-config.component');
+    const dialogRef = this.dialog.open(IrpwVocationConfigComponent, {
+      data: { id: this.selectedVocationId },
+      panelClass: ['screen-dialog', 'ironpaw-dialog', 'max-w-none', 'max-h-none', 'overflow-hidden'],
+      height: '80vh',
+      width: '80vw',
+      autoFocus: false,
+      restoreFocus: false,
+    });
+
+    dialogRef.closed.subscribe(() => {
+      this.loadVocations();
+      const latestVocation = this.vocationService.getVocation(this.selectedVocationId);
+      if (latestVocation && this.selectedCharacter) {
+        this.selectedCharacter = { ...this.selectedCharacter, ParentIRPWVocation: latestVocation };
+      }
+    });
+  }
+
   onSpecieSelect() {
     if (!this.selectedCharacterId || !this.selectedCharacter) return;
+    const previousSpecieId = this.selectedCharacter.ParentSpecies?.id ?? null;
 
     const normalizedSpecieId = this.selectedSpecieId || null;
     this.characterService.saveCharacterSpecie(this.selectedCharacterId, normalizedSpecieId);
@@ -1390,12 +1583,21 @@ export class IrpwCharacterSheetComponent implements OnInit {
         ? { ...character, ParentSpecies: parentSpecie }
         : character
     );
+    if (previousSpecieId !== normalizedSpecieId) {
+      if (normalizedSpecieId) {
+        this.irpwSpecieService.ensureConfig(normalizedSpecieId);
+      }
+      this.applySpeciesPerceptionMinimums(normalizedSpecieId);
+      this.recalculateLifeMinimum();
+    }
+
 
     this.refreshInheritedHabilities();
   }
 
   onVocationSelect() {
     if (!this.selectedCharacterId || !this.selectedCharacter) return;
+    const previousVocationId = this.selectedCharacter.ParentIRPWVocation?.id ?? null;
 
     const normalizedVocationId = this.selectedVocationId || null;
     this.characterService.saveCharacterVocation(this.selectedCharacterId, normalizedVocationId);
@@ -1420,6 +1622,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
         ? { ...character, ParentIRPWVocation: parentVocation }
         : character
     );
+    if (previousVocationId !== normalizedVocationId) {
+      this.refreshVocationSkillMinimums();
+      this.resetSkillsToVocationMinimums();
+      this.onAttributesChange();
+      this.recalculateLifeMinimum();
+    }
+
 
     this.refreshInheritedHabilities();
   }
@@ -1443,17 +1652,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   parsePerceptions() {
-    try {
-      this.perceptionsData = this.currentSheet?.perceptions
-        ? JSON.parse(this.currentSheet.perceptions)
-        : { smell: null, vision: null, hearing: null };
-    } catch {
-      this.perceptionsData = { smell: null, vision: null, hearing: null };
-    }
+    this.perceptionsData = parseIrpwPerceptions(this.currentSheet?.perceptions);
+    this.clampPerceptionsToSpeciesMinimums();
   }
 
   onPerceptionsChange() {
     if (this.currentSheet) {
+      this.clampPerceptionsToSpeciesMinimums();
       this.currentSheet.perceptions = JSON.stringify(this.perceptionsData);
       this.scheduleAutoSave();
     }
@@ -1474,10 +1679,12 @@ export class IrpwCharacterSheetComponent implements OnInit {
       }
     }
     this.attributesData = result;
+    this.clampAttributesToVocationMinimums();
   }
 
   onAttributesChange() {
     if (this.currentSheet) {
+      this.clampAttributesToVocationMinimums();
       this.currentSheet.attributes = JSON.stringify(this.attributesData);
       this.scheduleAutoSave();
     }
@@ -1546,7 +1753,9 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   getSkillLevel(group: string, skill: string): number {
-    return this.normalizeSkillLevel(this.attributesData[group]?.skills[skill]);
+    const storedLevel = this.normalizeSkillLevel(this.attributesData[group]?.skills[skill]);
+    const minimumLevel = this.vocationSkillMinimums[skill as SkillCode] ?? 0;
+    return Math.max(storedLevel, minimumLevel);
   }
 
   onCircleClick(event: Event, group: string, skill: string, level: number) {
@@ -1590,19 +1799,19 @@ export class IrpwCharacterSheetComponent implements OnInit {
       const parsed = this.currentSheet?.lifepoints
         ? JSON.parse(this.currentSheet.lifepoints)
         : { maxPoints: null, currentPoints: null };
-      const maxPoints = this.normalizeLifeMaxPoints(parsed.maxPoints);
+      const maxPoints = Math.max(this.normalizeLifeMaxPoints(parsed.maxPoints) ?? 0, this.getLifeMinimum());
       this.lifepointsData = {
         maxPoints,
         currentPoints: this.normalizeLifeCurrentPoints(parsed.currentPoints, maxPoints),
       };
     } catch {
-      this.lifepointsData = { maxPoints: null, currentPoints: null };
+      this.lifepointsData = { maxPoints: this.getLifeMinimum(), currentPoints: null };
     }
   }
 
   onLifepointsChange() {
     if (this.currentSheet) {
-      const maxPoints = this.normalizeLifeMaxPoints(this.lifepointsData.maxPoints);
+      const maxPoints = Math.max(this.normalizeLifeMaxPoints(this.lifepointsData.maxPoints) ?? 0, this.getLifeMinimum());
       this.lifepointsData.maxPoints = maxPoints;
       this.lifepointsData.currentPoints = this.normalizeLifeCurrentPoints(this.lifepointsData.currentPoints, maxPoints);
       this.currentSheet.lifepoints = JSON.stringify(this.lifepointsData);
@@ -1649,7 +1858,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   saveLifeMaxPoints() {
-    const maxPoints = this.normalizeLifeMaxPoints(this.pendingLifeMaxPoints);
+    const maxPoints = Math.max(this.normalizeLifeMaxPoints(this.pendingLifeMaxPoints) ?? 0, this.getLifeMinimum());
     this.lifepointsData.maxPoints = maxPoints;
     this.lifepointsData.currentPoints = this.normalizeLifeCurrentPoints(this.lifepointsData.currentPoints, maxPoints);
     this.onLifepointsChange();
@@ -1657,7 +1866,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   private getMaxLifePoints(): number {
-    return this.normalizeLifeMaxPoints(this.lifepointsData.maxPoints) ?? 0;
+    return Math.max(this.normalizeLifeMaxPoints(this.lifepointsData.maxPoints) ?? 0, this.getLifeMinimum());
   }
 
   private normalizeLifeMaxPoints(value: number | null | undefined): number | null {

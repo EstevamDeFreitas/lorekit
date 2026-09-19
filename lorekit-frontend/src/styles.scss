@@ -205,6 +205,11 @@ select:focus {
   border-width: 1px;
 }
 
+.screen-dialog.ironpaw-dialog {
+  padding: 0;
+  overflow: hidden;
+}
+
 .card-texture {
   position: relative;
   overflow: hidden;
