@@ -7,14 +7,22 @@ export function layoutWorldOverview(graph: GraphView, worldKey: string): void {
   world.radius = 52;
   const nodes = graph.nodes.filter(node => node !== world);
   const byKey = new Map(nodes.map(node => [node.key, node]));
+  const worldNeighbours = new Set<string>();
   const adjacency = new Map(nodes.map(node => [node.key, new Set<string>()]));
   for (const edge of graph.edges) {
     if (edge.fromKey === edge.toKey) continue;
+    if (edge.fromKey === worldKey && byKey.has(edge.toKey)) {
+      worldNeighbours.add(edge.toKey);
+      continue;
+    }
+    if (edge.toKey === worldKey && byKey.has(edge.fromKey)) {
+      worldNeighbours.add(edge.fromKey);
+      continue;
+    }
     if (!byKey.has(edge.fromKey) || !byKey.has(edge.toKey)) continue;
     adjacency.get(edge.fromKey)!.add(edge.toKey);
     adjacency.get(edge.toKey)!.add(edge.fromKey);
   }
-
   // Connected components occupy neighbouring sectors, independent of entity type.
   const visited = new Set<string>();
   const groups: string[][] = [];
@@ -53,6 +61,24 @@ export function layoutWorldOverview(graph: GraphView, worldKey: string): void {
     });
   });
 
+  // Edges attached to the world use an inner, deterministic orbit so the central
+  // world remains legible without inventing links between otherwise unrelated nodes.
+  const worldLinkedKeys = nodes
+    .filter(node => worldNeighbours.has(node.key))
+    .map(node => node.key)
+    .sort();
+  const worldInnerRadius = Math.max(250, 180 + Math.sqrt(worldLinkedKeys.length) * 36);
+  worldLinkedKeys.forEach((key, index) => {
+    const node = byKey.get(key)!;
+    const angle = -Math.PI / 2 + index / Math.max(1, worldLinkedKeys.length) * Math.PI * 2;
+    const anchor = {
+      x: Math.cos(angle) * worldInnerRadius,
+      y: Math.sin(angle) * worldInnerRadius,
+    };
+    node.x = anchor.x;
+    node.y = anchor.y;
+    anchors.set(key, anchor);
+  });
   for (let iteration = 0; iteration < 180; iteration++) {
     const forces = new Map(nodes.map(node => [node.key, { x: 0, y: 0 }]));
     for (let i = 0; i < nodes.length; i++) {

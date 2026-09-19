@@ -24,6 +24,13 @@ export type GraphEdge = {
   toKey: string;
   name?: string;
   link: Link;
+  visualSummary?: {
+    pairKey: string;
+    count: number;
+    forwardCount: number;
+    reverseCount: number;
+    sourceEdgeId: string;
+  };
 };
 
 export type GraphView = {

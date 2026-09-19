@@ -5,6 +5,7 @@ import { EntitySummary, GraphEdge, GraphNode, GraphView, Point } from './relatio
 export const GRAPH_CANVAS_WIDTH = 1200;
 export const GRAPH_CANVAS_HEIGHT = 700;
 export const MIN_NODE_GAP = 28;
+export const UNRELATED_NODE_GAP = 88;
 const SEPARATION_BUFFER = 1;
 
 const DEFAULT_NODE_RADIUS = 34;
@@ -17,6 +18,7 @@ const LAYOUT_PADDING = 24;
 type LayoutPlan = {
   nodeRadius: number;
   minimumDistance: number;
+  unrelatedDistance: number;
   connectedFirstRadius: number;
   levelGap: number;
   isolatedFirstRadius: number;
@@ -112,6 +114,7 @@ export function applyAutoLayout(
   const isolatedNodes = movableNodes.filter(node => node.isIsolated);
   const minDimension = Math.min(width, height);
   const plan = getLayoutPlan(nodes, rootKey);
+  const relatedPairKeys = getUndirectedRelationPairs(edges);
   const depthByKey = root
     ? getNodeDepths(rootKey, edges)
     : new Map<string, number>();
@@ -135,7 +138,7 @@ export function applyAutoLayout(
       center,
       plan.connectedFirstRadius,
       plan.ringGap,
-      plan.minimumDistance,
+      plan.unrelatedDistance,
     );
   }
   placeOnRings(
@@ -143,7 +146,7 @@ export function applyAutoLayout(
     center,
     plan.isolatedFirstRadius,
     plan.ringGap,
-    plan.minimumDistance,
+    plan.unrelatedDistance,
   );
 
   const targets = new Map<string, Point>();
@@ -164,6 +167,7 @@ export function applyAutoLayout(
   }
 
   const nodeByKey = new Map(nodes.map(node => [node.key, node]));
+  const relationPairs = getUniqueUndirectedRelationPairs(edges, nodeByKey);
   const iterations = nodes.length > 160
     ? 45
     : nodes.length > 80
@@ -190,9 +194,13 @@ export function applyAutoLayout(
           distance = 1;
         }
 
-        const minimumDistance = first.radius + second.radius + MIN_NODE_GAP + SEPARATION_BUFFER;
+        const hasDirectRelation = relatedPairKeys.has(getUndirectedPairKey(first.key, second.key));
+        const minimumDistance = getPairMinimumDistance(first, second, hasDirectRelation);
         const overlap = Math.max(0, minimumDistance - distance);
-        const strength = Math.min(18, 3600 / Math.max(distance * distance, 900) + overlap * 0.14);
+        const strength = Math.min(
+          hasDirectRelation ? 18 : 24,
+          3600 / Math.max(distance * distance, 900) + overlap * (hasDirectRelation ? 0.14 : 0.24),
+        );
         const ux = dx / distance;
         const uy = dy / distance;
         const firstForce = forces.get(first.key)!;
@@ -204,22 +212,14 @@ export function applyAutoLayout(
       }
     }
 
-    for (const edge of edges) {
-      if (edge.fromKey === edge.toKey) {
-        continue;
-      }
-
-      const from = nodeByKey.get(edge.fromKey);
-      const to = nodeByKey.get(edge.toKey);
-      if (!from || !to) {
-        continue;
-      }
-
+    for (const pair of relationPairs) {
+      const from = pair.first;
+      const to = pair.second;
       const dx = to.x - from.x;
       const dy = to.y - from.y;
       const distance = Math.max(1, Math.hypot(dx, dy));
       const desiredDistance = root ? getDesiredEdgeDistance(from, to, depthByKey, plan) : 150;
-      const spring = Math.max(-10, Math.min(10, (distance - desiredDistance) * 0.012));
+      const spring = Math.max(-16, Math.min(16, (distance - desiredDistance) * 0.022));
       const ux = dx / distance;
       const uy = dy / distance;
       const fromForce = forces.get(from.key);
@@ -243,6 +243,17 @@ export function applyAutoLayout(
       force.x += (center.x - node.x) * 0.0012;
       force.y += (center.y - node.y) * 0.0012;
 
+      if (root) {
+        const currentAngle = Math.atan2(node.y - center.y, node.x - center.x);
+        const targetAngle = Math.atan2(target.y - center.y, target.x - center.x);
+        const angularDelta = normalizeSignedAngle(targetAngle - currentAngle);
+        const angularStrength = Math.min(18, Math.max(1, Math.hypot(node.x - center.x, node.y - center.y)) * 0.012);
+        const tangentX = -Math.sin(currentAngle);
+        const tangentY = Math.cos(currentAngle);
+        force.x += tangentX * angularDelta * angularStrength;
+        force.y += tangentY * angularDelta * angularStrength;
+      }
+
       const nextX = node.x + Math.max(-24, Math.min(24, force.x));
       const nextY = node.y + Math.max(-24, Math.min(24, force.y));
       const constrained = constrainToCircle(
@@ -260,7 +271,13 @@ export function applyAutoLayout(
     }
   }
 
-  enforceMinimumSeparation(nodes, root, center, Math.max(0, minDimension / 2 - LAYOUT_PADDING));
+  enforceMinimumSeparation(
+    nodes,
+    root,
+    center,
+    Math.max(0, minDimension / 2 - LAYOUT_PADDING),
+    relatedPairKeys,
+  );
 }
 
 export function quadraticPath(from: Point, to: Point): string {
@@ -282,8 +299,8 @@ function getLayoutSize(nodes: GraphNode[], edges: GraphEdge[], rootKey: string):
   const depthByKey = rootKey ? getNodeDepths(rootKey, edges) : new Map<string, number>();
   const connectedNodes = movableNodes.filter(node => !node.isIsolated);
   const isolatedCount = movableNodes.length - connectedNodes.length;
-  const connectedCapacity = getRingCapacity(plan.connectedFirstRadius, plan.minimumDistance);
-  const isolatedCapacity = getRingCapacity(plan.isolatedFirstRadius, plan.minimumDistance);
+  const connectedCapacity = getRingCapacity(plan.connectedFirstRadius, plan.unrelatedDistance);
+  const isolatedCapacity = getRingCapacity(plan.isolatedFirstRadius, plan.unrelatedDistance);
   const connectedOuterRadius = rootKey
     ? getRootedOuterRadius(connectedNodes, depthByKey, plan)
     : getOuterRingRadius(
@@ -312,15 +329,17 @@ function getLayoutPlan(nodes: GraphNode[], rootKey: string): LayoutPlan {
   const movableNodes = nodes.filter(node => node.key !== rootKey);
   const nodeRadius = movableNodes[0]?.radius || DEFAULT_NODE_RADIUS;
   const minimumDistance = nodeRadius * 2 + MIN_NODE_GAP + SEPARATION_BUFFER;
+  const unrelatedDistance = minimumDistance + UNRELATED_NODE_GAP;
   const rootClearance = (root?.radius || 0) + nodeRadius + MIN_NODE_GAP;
 
   return {
     nodeRadius,
     minimumDistance,
+    unrelatedDistance,
     connectedFirstRadius: Math.max(root ? ROOT_ORBIT_RADIUS : 230, rootClearance),
     levelGap: Math.max(ROOT_LEVEL_GAP, minimumDistance * 2),
     isolatedFirstRadius: Math.max(270, rootClearance),
-    ringGap: minimumDistance,
+    ringGap: unrelatedDistance,
   };
 }
 
@@ -382,7 +401,7 @@ function getRootedOuterRadius(
   let outerRadius = 0;
   for (const [depth, count] of countByDepth) {
     const depthRadius = getDepthRadius(depth, plan);
-    const capacity = getRingCapacity(depthRadius, plan.minimumDistance);
+    const capacity = getRingCapacity(depthRadius, plan.unrelatedDistance);
     const ringCount = Math.ceil(count / Math.max(1, capacity));
     outerRadius = Math.max(
       outerRadius,
@@ -413,18 +432,18 @@ function placeRootedConnectedNodes(
   const angleByKey = new Map<string, number>();
   const depths = Array.from(nodesByDepth.keys()).sort((first, second) => first - second);
   for (const depth of depths) {
-    const depthNodes = nodesByDepth.get(depth)!.sort((first, second) => first.key.localeCompare(second.key));
+    const depthNodes = nodesByDepth.get(depth)!.sort((first, second) => second.degree - first.degree || first.key.localeCompare(second.key));
     const depthRadius = getDepthRadius(depth, plan);
 
     if (depth === 1) {
-      placeOnRings(depthNodes, center, depthRadius, plan.ringGap, plan.minimumDistance);
+      placeOnRings(depthNodes, center, depthRadius, plan.ringGap, plan.unrelatedDistance);
       for (const node of depthNodes) {
         angleByKey.set(node.key, Math.atan2(node.y - center.y, node.x - center.x));
       }
       continue;
     }
 
-    const nodesPerRing = getRingCapacity(depthRadius, plan.minimumDistance);
+    const nodesPerRing = getRingCapacity(depthRadius, plan.unrelatedDistance);
     for (let start = 0; start < depthNodes.length; start += nodesPerRing) {
       const ringNodes = depthNodes.slice(start, start + nodesPerRing);
       const ringRadius = depthRadius + Math.floor(start / nodesPerRing) * plan.ringGap;
@@ -438,6 +457,99 @@ function placeRootedConnectedNodes(
       }
     }
   }
+
+  optimizeRootedRingOrder(nodes, edges, depthByKey, center, plan);
+}
+
+function optimizeRootedRingOrder(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  depthByKey: Map<string, number>,
+  center: Point,
+  plan: LayoutPlan,
+): void {
+  if (!nodes.length) return;
+
+  const nodesByDepth = new Map<number, GraphNode[]>();
+  for (const node of nodes) {
+    const depth = Math.max(1, depthByKey.get(node.key) || 1);
+    const depthNodes = nodesByDepth.get(depth) || [];
+    depthNodes.push(node);
+    nodesByDepth.set(depth, depthNodes);
+  }
+
+  const depths = Array.from(nodesByDepth.keys()).sort((first, second) => first - second);
+  const angleByKey = new Map(nodes.map(node => [
+    node.key,
+    Math.atan2(node.y - center.y, node.x - center.x),
+  ]));
+
+  for (let pass = 0; pass < 6; pass++) {
+    const orderedDepths = pass % 2 === 0 ? [...depths].reverse() : depths;
+    for (const depth of orderedDepths) {
+      const depthNodes = nodesByDepth.get(depth)!;
+      const depthRadius = getDepthRadius(depth, plan);
+      const nodesPerRing = getRingCapacity(depthRadius, plan.unrelatedDistance);
+
+      for (let start = 0; start < depthNodes.length; start += nodesPerRing) {
+        const ringNodes = depthNodes.slice(start, start + nodesPerRing);
+        const ringRadius = depthRadius + Math.floor(start / nodesPerRing) * plan.ringGap;
+        const items = ringNodes.map(node => ({
+          node,
+          angle: getBarycentricAngle(node, edges, depthByKey, angleByKey, center),
+          clusterKey: node.key,
+        }));
+        placeNodesByPreferredAngles(items, center, ringRadius);
+        for (const node of ringNodes) {
+          angleByKey.set(node.key, Math.atan2(node.y - center.y, node.x - center.x));
+        }
+      }
+    }
+  }
+}
+
+function getBarycentricAngle(
+  node: GraphNode,
+  edges: GraphEdge[],
+  depthByKey: Map<string, number>,
+  angleByKey: Map<string, number>,
+  center: Point,
+): number {
+  const seenNeighbours = new Set<string>();
+  let vectorX = 0;
+  let vectorY = 0;
+  let totalWeight = 0;
+  const nodeDepth = depthByKey.get(node.key) || 1;
+
+  for (const edge of edges) {
+    const neighbourKey = edge.fromKey === node.key
+      ? edge.toKey
+      : edge.toKey === node.key
+        ? edge.fromKey
+        : null;
+    if (!neighbourKey || seenNeighbours.has(neighbourKey)) continue;
+    seenNeighbours.add(neighbourKey);
+
+    const neighbourAngle = angleByKey.get(neighbourKey);
+    const neighbourDepth = depthByKey.get(neighbourKey);
+    if (neighbourAngle === undefined || neighbourDepth === undefined) continue;
+
+    const depthDifference = Math.abs(nodeDepth - neighbourDepth);
+    const weight = depthDifference === 1
+      ? 3
+      : depthDifference === 0
+        ? 1.5
+        : 0.75;
+    vectorX += Math.cos(neighbourAngle) * weight;
+    vectorY += Math.sin(neighbourAngle) * weight;
+    totalWeight += weight;
+  }
+
+  if (totalWeight === 0) {
+    return Math.atan2(node.y - center.y, node.x - center.x);
+  }
+
+  return Math.atan2(vectorY, vectorX);
 }
 
 function getPreferredParentPlacement(
@@ -538,6 +650,11 @@ function normalizeAngle(angle: number): number {
   return ((angle % fullTurn) + fullTurn) % fullTurn;
 }
 
+function normalizeSignedAngle(angle: number): number {
+  const normalized = normalizeAngle(angle);
+  return normalized > Math.PI ? normalized - Math.PI * 2 : normalized;
+}
+
 function getDesiredEdgeDistance(
   from: GraphNode,
   to: GraphNode,
@@ -589,11 +706,53 @@ function getRingCapacity(radius: number, minimumDistance: number): number {
   return capacity;
 }
 
+function getUndirectedPairKey(firstKey: string, secondKey: string): string {
+  return firstKey < secondKey
+    ? firstKey + '|' + secondKey
+    : secondKey + '|' + firstKey;
+}
+
+function getUndirectedRelationPairs(edges: GraphEdge[]): Set<string> {
+  const pairKeys = new Set<string>();
+  for (const edge of edges) {
+    if (edge.fromKey === edge.toKey) continue;
+    pairKeys.add(getUndirectedPairKey(edge.fromKey, edge.toKey));
+  }
+  return pairKeys;
+}
+
+function getUniqueUndirectedRelationPairs(
+  edges: GraphEdge[],
+  nodeByKey: Map<string, GraphNode>,
+): Array<{ first: GraphNode; second: GraphNode }> {
+  const pairs = new Map<string, { first: GraphNode; second: GraphNode }>();
+  for (const edge of edges) {
+    if (edge.fromKey === edge.toKey || pairs.has(getUndirectedPairKey(edge.fromKey, edge.toKey))) continue;
+    const first = nodeByKey.get(edge.fromKey);
+    const second = nodeByKey.get(edge.toKey);
+    if (!first || !second) continue;
+    pairs.set(getUndirectedPairKey(first.key, second.key), { first, second });
+  }
+  return Array.from(pairs.values());
+}
+
+function getPairMinimumDistance(
+  first: GraphNode,
+  second: GraphNode,
+  hasDirectRelation: boolean,
+): number {
+  return first.radius
+    + second.radius
+    + MIN_NODE_GAP
+    + SEPARATION_BUFFER
+    + (hasDirectRelation ? 0 : UNRELATED_NODE_GAP);
+}
 function enforceMinimumSeparation(
   nodes: GraphNode[],
   root: GraphNode | undefined,
   center: Point,
   boundaryRadius: number,
+  relatedPairKeys: Set<string>,
 ): void {
   const passes = nodes.length > 160 ? 24 : 40;
 
@@ -615,7 +774,8 @@ function enforceMinimumSeparation(
           distance = 1;
         }
 
-        const minimumDistance = first.radius + second.radius + MIN_NODE_GAP + SEPARATION_BUFFER;
+        const hasDirectRelation = relatedPairKeys.has(getUndirectedPairKey(first.key, second.key));
+        const minimumDistance = getPairMinimumDistance(first, second, hasDirectRelation);
         if (distance >= minimumDistance) {
           continue;
         }

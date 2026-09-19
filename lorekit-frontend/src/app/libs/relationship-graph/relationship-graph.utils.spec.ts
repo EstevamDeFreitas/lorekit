@@ -4,6 +4,7 @@ import {
   GRAPH_CANVAS_HEIGHT,
   GRAPH_CANVAS_WIDTH,
   MIN_NODE_GAP,
+  UNRELATED_NODE_GAP,
   buildGraphView,
 } from './relationship-graph.utils';
 
@@ -100,6 +101,40 @@ describe('relationship graph utilities', () => {
     expect(childToParent).toBeLessThan(childToSibling);
   });
 
+  it('keeps unrelated siblings apart at every tree level', () => {
+    const root = entity('Character', 'root');
+    const parent = entity('Location', 'parent');
+    const children = Array.from({ length: 28 }, (_, index) => entity('Object', 'child-' + index));
+    const grandchildren = children.map((child, index) => entity('Scene', 'grandchild-' + index));
+    const links = [
+      link('root-parent', 'Character', 'root', 'Location', 'parent'),
+      ...children.map(child => link('parent-' + child.id, 'Location', 'parent', 'Object', child.id)),
+      ...children.map((child, index) =>
+        link('grandchild-' + index, 'Object', child.id, 'Scene', grandchildren[index].id)
+      ),
+    ];
+
+    const graph = buildGraphView(root, [root, parent, ...children, ...grandchildren], links);
+    const minimumPairDistance = (nodes: Array<{ x: number; y: number }>) => {
+      let minimum = Number.POSITIVE_INFINITY;
+      for (let firstIndex = 0; firstIndex < nodes.length; firstIndex++) {
+        for (let secondIndex = firstIndex + 1; secondIndex < nodes.length; secondIndex++) {
+          minimum = Math.min(
+            minimum,
+            Math.hypot(nodes[secondIndex].x - nodes[firstIndex].x, nodes[secondIndex].y - nodes[firstIndex].y),
+          );
+        }
+      }
+      return minimum;
+    };
+    const childNodes = graph.nodes.filter(node => node.table === 'Object');
+    const grandchildNodes = graph.nodes.filter(node => node.table === 'Scene');
+    const expectedUnrelatedDistance =
+      childNodes[0].radius * 2 + MIN_NODE_GAP + UNRELATED_NODE_GAP - 4;
+
+    expect(minimumPairDistance(childNodes)).toBeGreaterThanOrEqual(expectedUnrelatedDistance);
+    expect(minimumPairDistance(grandchildNodes)).toBeGreaterThanOrEqual(expectedUnrelatedDistance);
+  });
   it('keeps every node visible on a large dense graph with a smaller fallback radius', () => {
     const entities = Array.from({ length: 181 }, (_, index) => entity('Character', 'entity-' + index));
     const links = entities.slice(1).map((current, index) =>

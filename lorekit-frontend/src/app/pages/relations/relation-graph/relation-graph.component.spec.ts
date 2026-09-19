@@ -40,6 +40,8 @@ function createComponent(graphView: GraphView): RelationGraphComponent {
   component.graphView = graphView;
   component.selectedNodeKey = graphView.nodes[0]?.key || '';
   component.editingLinkId = null;
+  component.showRelationLabels = true;
+  component.hoveredEdgeId = null;
   return component;
 }
 
@@ -90,6 +92,47 @@ describe('RelationGraphComponent', () => {
 
     expect(dragDistance(1)).toBeCloseTo(90);
     expect(dragDistance(2)).toBeCloseTo(45);
+  });
+
+  it('uses entity names instead of internal keys for relation endpoints', () => {
+    const sourceNode = { ...node('Character', 'source-guid', 300, 350), label: 'Aline' };
+    const targetNode = { ...node('Location', 'target-guid', 900, 350), label: 'Porto Azul' };
+    const relation = edge('travels', 'Character', 'source-guid', 'Location', 'target-guid');
+    const component = createComponent({ nodes: [sourceNode, targetNode], edges: [relation] }) as any;
+
+    expect(component.relationEndpointLabel(relation, 'from')).toBe('Aline');
+    expect(component.relationEndpointLabel(relation, 'to')).toBe('Porto Azul');
+
+    component.relationSearchTerm = 'porto azul';
+    expect(component.filteredRelationEdges()).toEqual([relation]);
+  });
+
+  it('limits hidden relation labels to selected or hovered edges', () => {
+    const sourceNode = node('Character', 'source', 300, 350);
+    const targetNode = node('Location', 'target', 900, 350);
+    const relation = edge('travels', 'Character', 'source', 'Location', 'target');
+    const graph: GraphView = { nodes: [sourceNode, targetNode], edges: [relation] };
+    const component = createComponent(graph) as any;
+
+    component.showRelationLabels = false;
+    component.selectedNodeKey = '';
+    expect(component.showEdgeLabel(relation, graph)).toBeFalse();
+
+    component.hoveredEdgeId = relation.id;
+    expect(component.showEdgeLabel(relation, graph)).toBeTrue();
+
+    component.hoveredEdgeId = null;
+    component.selectedNodeKey = sourceNode.key;
+    expect(component.showEdgeLabel(relation, graph)).toBeTrue();
+  });
+
+  it('promotes a double-clicked node through the root setter', () => {
+    const sourceNode = node('Character', 'source', 300, 350);
+    const targetNode = node('Location', 'target', 900, 350);
+    const component = createComponent({ nodes: [sourceNode, targetNode], edges: [] }) as any;
+    component.setRoot = jasmine.createSpy('setRoot');
+    component.makeNodeRoot(targetNode);
+    expect(component.setRoot).toHaveBeenCalledWith('Location', 'target', true);
   });
 
   it('keeps contextual create/edit actions scoped to the selected node', () => {
