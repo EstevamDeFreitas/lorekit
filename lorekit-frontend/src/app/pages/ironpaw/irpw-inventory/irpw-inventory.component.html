@@ -1,0 +1,294 @@
+<section class="inventory-view">
+  <div class="inventory-header">
+    <div>
+      <p class="eyebrow">IRONPAW</p>
+      <h3>Inventário</h3>
+      <p class="muted">
+        Organize suas posses e escolha o que está pronto para uso.
+      </p>
+    </div>
+    <app-button
+      size="xs"
+      buttonType="primary"
+      label="+ Adicionar item"
+      (click)="showAdd = !showAdd"
+    ></app-button>
+  </div>
+  @if (showAdd) {
+    <div class="add-panel">
+      <app-input
+        type="search"
+        [(value)]="catalogSearch"
+        placeholder="Buscar no catálogo"
+        label="Buscar no catálogo"
+      ></app-input>
+      <div class="add-list">
+        @for (item of visibleCatalogItems(); track item.id) {
+          <button type="button" (click)="addItem(item)">
+            <i [class]="item.definition.icon"></i><span>{{ item.name }}</span
+            ><small>{{ categoryLabel(item) }}</small>
+          </button>
+        }
+      </div>
+    </div>
+  }
+  @if (invalidInventory) {
+    <div class="warning">
+      O inventário desta ficha usa um formato incompatível e foi preservado.
+      Atualize o Lorekit para editá-lo.
+    </div>
+  }
+  @if (!invalidInventory) {
+    <div class="inventory-layout" cdkDropListGroup>
+      <div class="equipment-panel">
+        <h4>Equipamentos</h4>
+        <p class="drag-hint">Arraste um item da mochila para equipá-lo. Arraste um equipado de volta para guardar. Os espaços compatíveis ficam destacados durante o arraste.</p>
+        <div class="equipment-grid">
+          <div class="equipment-group-label">
+            <span>Corpo</span><small>Proteção e vestuário</small>
+          </div>
+          @for (slot of slots; track slot) {
+            @if (slot === 'accessory1') {
+              <div class="equipment-group-label">
+                <span>Acessórios</span><small>Até três itens equipados</small>
+              </div>
+            }
+            @if (slot === 'primary') {
+              <div class="equipment-group-label">
+                <span>Arsenal</span><small>Armas e reserva</small>
+              </div>
+            }
+            <div
+              class="slot-card"
+              cdkDropList
+              [cdkDropListData]="emptyDropList"
+              (cdkDropListDropped)="dropOnSlot($event, slot)"
+              [style.background-color]="entryForSlot(slot)?.snapshot?.definition?.backgroundColor || null"
+              [style.border-color]="entryForSlot(slot)?.snapshot?.definition?.color || null"
+              [class.active]="equipment[slot]"
+              [class.drag-target-compatible]="isSlotCompatible(slot)"
+              [class.drag-target-incompatible]="!!draggedEntry && !isSlotCompatible(slot)"
+              [class.blocked]="slot === 'secondary' && secondaryBlocked"
+            >
+              <span class="slot-label">{{ slotLabel[slot] }}</span>
+              @if (entryForSlot(slot); as entry) {
+                <button
+                  type="button"
+                  class="equipped"
+                  cdkDrag
+                  [cdkDragData]="entry"
+                  (cdkDragStarted)="startDrag(entry)"
+                  (cdkDragEnded)="endDrag()"
+                  (click)="unequip(slot)"
+                  [title]="'Desequipar ' + entry.snapshot.name"
+                >
+                  <i [class]="entry.snapshot.definition.icon" [style.color]="entry.snapshot.definition.color || null"></i
+                  ><span>{{ entry.snapshot.name }}</span>
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="empty-slot"
+                  [disabled]="slot === 'secondary' && secondaryBlocked"
+                  (click)="selectSlot(slot)"
+                >
+                  {{
+                    slot === "secondary" && secondaryBlocked
+                      ? "Bloqueado · duas mãos"
+                      : slot === selectedSlot
+                        ? "Selecione um item"
+                        : "Vazio"
+                  }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+        <div class="pr-card">
+          <div>
+            <span>PR atual</span
+            ><strong>{{ defense.currentPoints ?? "—" }}</strong>
+          </div>
+          <div>
+            <span>PR máximo</span><strong>{{ defenseMax }}</strong>
+          </div>
+                    <small>Proteção equipada: +{{ protection }}</small>
+          <small>Vocação: +{{ vocationContribution }}</small>
+          <label class="manual-pr-control">
+            Ajuste manual
+            <input type="number" [value]="manualAdjustment" (change)="setManualAdjustment($any($event.target).value)" aria-label="Ajuste manual do PR">
+          </label>
+          @if (equippedEffects.length) {
+            <div class="pr-effects">
+              <span>Efeitos descritivos dos equipamentos</span>
+              <small>Aplicação narrativa manual; estes efeitos não alteram atributos automaticamente.</small>
+              @for (effect of equippedEffects; track effect) { <p>{{ effect }}</p> }
+            </div>
+          }
+        </div>
+      </div>
+      <div class="backpack-panel">
+        <div class="backpack-header">
+          <h4>Mochila</h4>
+          <app-input
+            type="search"
+            [(value)]="backpackSearch"
+            placeholder="Filtrar mochila"
+            label="Filtrar mochila"
+          ></app-input>
+        </div>
+        <div id="backpack-drop-list" class="backpack-grid" cdkDropList [cdkDropListData]="visibleEntries()" (cdkDropListDropped)="dropEntry($event)">
+          @for (entry of visibleEntries(); track entry.instanceId) {
+            <article
+              class="item-card"
+              cdkDrag
+              [cdkDragData]="entry"
+              (cdkDragStarted)="startDrag(entry)"
+              (cdkDragEnded)="endDrag()"
+              tabindex="0"
+              [attr.aria-label]="'Selecionar item ' + entry.snapshot.name"
+              (keydown.enter)="selectedEntry = entry"
+              (keydown.space)="$event.preventDefault(); selectedEntry = entry"
+              [class.selected]="selectedEntry?.instanceId === entry.instanceId"
+              (click)="selectedEntry = entry"
+            >
+              <div class="item-card-icon" [style.background-color]="entry.snapshot.definition.backgroundColor || null"
+              [style.border-color]="entry.snapshot.definition.color || null">
+                <i [class]="entry.snapshot.definition.icon" [style.color]="entry.snapshot.definition.color || null"></i>
+              </div>
+              <strong>{{ entry.snapshot.name }}</strong>
+              @if (entry.quantity > 1) {
+                <span class="quantity">x{{ entry.quantity }}</span>
+              }
+              <div class="item-actions">
+                <button
+                  type="button"
+                  (click)="useEntry(entry); $event.stopPropagation()"
+                  [disabled]="
+                    entry.snapshot.definition.category !== 'consumable'
+                  "
+                >
+                  Usar</button
+                ><button
+                  type="button"
+                  (click)="removeEntry(entry); $event.stopPropagation()"
+                >
+                  Remover
+                </button>
+              </div>
+            </article>
+          }
+          @if (!visibleEntries().length) {
+            <p class="empty">
+              {{
+                backpackSearch
+                  ? "Nenhum item corresponde à busca."
+                  : "A mochila está vazia. Adicione um item do catálogo."
+              }}
+            </p>
+          }
+        </div>
+      </div>
+    </div>
+    @if (selectedEntry; as entry) {
+      <div class="details">
+        <div>
+          <p class="eyebrow">ITEM SELECIONADO</p>
+          <app-input label="Nome" [(value)]="entry.snapshot.name"></app-input
+          ><app-text-area
+            label="Descrição"
+            [(value)]="entry.snapshot.description"
+            height="h-24"
+          ></app-text-area
+          ><app-text-area
+            label="Anotações"
+            [(value)]="entry.notes"
+            height="h-24"
+          ></app-text-area
+          ><label
+            >Quantidade<input
+              type="number"
+              min="1"
+              [max]="entry.snapshot.definition.stackLimit"
+              [disabled]="entry.location === 'equipment'"
+              [(ngModel)]="entry.quantity" /></label
+          ><small
+            >{{ categoryLabel(entry) }} · origem:
+            {{ entry.sourceItemId ? "Catálogo" : "Cópia independente" }}</small
+          >
+        </div>
+        <div class="detail-actions">
+          @for (slot of compatibleSlots(entry); track slot) {
+            <button
+              type="button"
+              class="secondary"
+              (click)="equip(entry, slot)"
+            >
+              Equipar em {{ slotLabel[slot] }}
+            </button>
+          }
+          @if (entry.slot === "reserve") {
+            <app-button
+              size="xs"
+              buttonType="secondary"
+              label="Ativar reserva"
+              (click)="activateReserve(entry)"
+            ></app-button>
+          }
+          <app-button
+            size="xs"
+            buttonType="secondary"
+            label="Dividir pilha"
+            (click)="splitEntry(entry)"
+            [disabled]="entry.quantity <= 1 || entry.location === 'equipment'"
+          ></app-button
+          ><app-button
+            size="xs"
+            buttonType="secondary"
+            label="Combinar equivalentes"
+            (click)="combineEntry(entry)"
+            [disabled]="entry.location === 'equipment'"
+          ></app-button
+          ><app-button
+            size="xs"
+            buttonType="primary"
+            label="Salvar cópia"
+            (click)="saveEntry(entry)"
+          ></app-button
+          ><app-button
+            size="xs"
+            buttonType="secondary"
+            label="Mover para o fim"
+            (click)="moveEntry(entry)"
+          ></app-button>
+          @if (hasCatalogUpdate(entry)) {
+            <app-button
+              size="xs"
+              buttonType="secondary"
+              label="Atualizar da origem"
+              (click)="previewCatalogUpdate(entry)"
+            ></app-button>
+            @if (catalogUpdatePreview?.entryId === entry.instanceId) {
+              <div class="update-preview" role="dialog" aria-label="Prévia da atualização do item">
+                <strong>Revisar atualização</strong>
+                @if (catalogUpdatePreview!.changes.length) {
+                  <ul>
+                    @for (change of catalogUpdatePreview!.changes; track change) {
+                      <li>{{ change }}</li>
+                    }
+                  </ul>
+                } @else {
+                  <p>Não há mudanças visíveis além da revisão da origem.</p>
+                }
+                <div class="detail-actions">
+                  <app-button size="xs" buttonType="secondary" label="Cancelar" (click)="catalogUpdatePreview = null"></app-button>
+                  <app-button size="xs" buttonType="primary" label="Aplicar atualização" (click)="applyCatalogUpdate(entry)"></app-button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    }
+  }
+</section>

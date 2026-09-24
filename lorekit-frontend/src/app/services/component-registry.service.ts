@@ -119,6 +119,13 @@ const REGISTRY: Record<string, RegistryEntry> = {
       ),
     inputKey: '',
   },
+  'view:content-manager': {
+    loader: () =>
+      import('../pages/ironpaw/irpw-content-manager/irpw-content-manager.component').then(
+        m => m.IrpwContentManagerComponent
+      ),
+    inputKey: '',
+  },
 };
 
 @Injectable({ providedIn: 'root' })

@@ -2,7 +2,7 @@ import type { BindParams, SqlValue } from 'sql.js';
 import { schema, TableDef } from './schema';
 import { SYNC_ENTITIES } from './sync-entity-registry';
 
-export const LOCAL_SCHEMA_VERSION = 6;
+export const LOCAL_SCHEMA_VERSION = 7;
 
 interface SqlDatabase {
   exec(sql: string, params?: BindParams): Array<{
@@ -90,6 +90,23 @@ const migrations: readonly LocalMigration[] = [
       db.exec(`UPDATE "Timeline" SET "timeUnitName" = 'Anos' WHERE TRIM(COALESCE("timeUnitName", '')) = ''`);
       db.exec(`UPDATE "GreatMark" SET "startDate" = "date" WHERE "startDate" = 0 AND "date" != 0`);
       db.exec(`UPDATE "GreatMark" SET "endDate" = "startDate" WHERE "endDate" = 0`);
+      createSyncTables(db);
+      createSyncTriggers(db);
+    },
+  },
+  {
+    version: 7,
+    name: 'catalogo-de-itens-ironpaw',
+    up: db => {
+      const itemTable = schema.find(table => table.name === 'IRPWItem');
+      if (itemTable) addMissingColumns(db, itemTable);
+      db.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS "idx_irpw_item_portable_id"
+          ON "IRPWItem" ("portableId")
+          WHERE "portableId" IS NOT NULL AND TRIM("portableId") != ''
+      `);
+      db.exec(`UPDATE "IRPWItem" SET "revision" = 1 WHERE "revision" IS NULL OR "revision" < 1`);
+      db.exec(`UPDATE "IRPWItem" SET "archived" = 0 WHERE "archived" IS NULL`);
       createSyncTables(db);
       createSyncTriggers(db);
     },

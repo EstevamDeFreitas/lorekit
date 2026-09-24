@@ -358,6 +358,10 @@ export const schema: TableDef[] = [
     columns:[
       { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
       { name: "effects",          def: `"effects" TEXT` },
+      { name: "definitionJson",   def: `"definitionJson" TEXT` },
+      { name: "portableId",       def: `"portableId" TEXT` },
+      { name: "revision",         def: `"revision" INTEGER NOT NULL DEFAULT 1` },
+      { name: "archived",         def: `"archived" INTEGER NOT NULL DEFAULT 0` },
     ]
   },
   {

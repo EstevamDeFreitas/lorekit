@@ -1,0 +1,515 @@
+<div class="content-manager">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">IRONPAW</p>
+      <h1>Gerenciador de Conteúdo</h1>
+      <p class="muted">
+        Cadastre itens reutilizáveis para as fichas e mantenha seus efeitos
+        narrativos explícitos.
+      </p>
+    </div>
+    <div class="header-actions">
+      <app-button
+        size="xs"
+        buttonType="secondary"
+        label="Exportar catálogo"
+        icon="fa-file-export"
+        (click)="exportCatalog()"
+      ></app-button
+      ><input
+        #importFile
+        type="file"
+        hidden
+        accept=".json,application/json"
+        (change)="onImportFile($event)"
+      /><app-button
+        size="xs"
+        label="Importar"
+        icon="fa-file-import"
+        buttonType="secondary"
+        (click)="importFile.click()"
+      ></app-button
+      ><app-button
+        size="xs"
+        buttonType="primary"
+        label="Novo item"
+        icon="fa-plus"
+        (click)="newItem()"
+      ></app-button>
+    </div>
+  </header>
+  @if (notice) {
+    <p
+      role="status"
+      aria-live="polite"
+      class="notice"
+      [class.error]="noticeType === 'error'"
+    >
+      {{ notice }}
+    </p>
+  }
+  @if (importPlan; as plan) {
+    <section class="import-preview" aria-label="Revisar importação">
+      <div>
+        <h3>Prévia da importação</h3>
+        <p>
+          {{ plan.added.length }} novos ·
+          {{ plan.equivalent.length }} equivalentes ·
+          {{ plan.conflicts.length }} conflitos
+        </p>
+      </div>
+      <div class="import-items">
+        @for (incoming of plan.added; track incoming.portableId) {
+          <span>{{ incoming.name }} <small>Novo</small></span>
+        }
+        @for (conflict of plan.conflicts; track conflict.incoming.portableId) {
+          <span>{{ conflict.incoming.name }} <small>Conflito</small></span>
+        }
+      </div>
+      <label
+        >Como tratar os conflitos<select [(ngModel)]="importChoice">
+          <option value="update">Atualizar conflitos</option>
+          <option value="keep">Manter locais</option>
+          <option value="copy">Importar como cópia</option>
+        </select></label
+      >
+      <div class="actions">
+        <app-button
+          size="xs"
+          buttonType="secondary"
+          label="Cancelar"
+          (click)="importPlan = null"
+        ></app-button
+        ><app-button
+          size="xs"
+          buttonType="primary"
+          label="Aplicar importação"
+          (click)="applyImport(plan)"
+        ></app-button>
+      </div>
+    </section>
+  }
+
+  <div class="manager-grid" [class.show-editor]="selectedItem">
+    <aside class="catalog-panel">
+      <div class="catalog-heading">
+        <h2>Itens do catálogo</h2>
+        <span class="count">{{ filteredItems.length }}</span>
+      </div>
+      <div class="toolbar">
+        <app-input
+          type="search"
+          [(value)]="searchTerm"
+          (valueChange)="applyFilter()"
+          placeholder="Buscar itens..."
+          label="Buscar itens"
+        ></app-input>
+        <app-combo-box
+          label="Categoria"
+          [items]="categoryOptions"
+          compareProp="value"
+          displayProp="label"
+          placeholder="Todas"
+          [comboValue]="categoryFilter === 'all' ? null : categoryFilter"
+          (comboValueChange)="categoryFilter = $event || 'all'; applyFilter()"
+        ></app-combo-box>
+        <app-combo-box
+          label="Raridade"
+          [items]="rarityOptions"
+          compareProp="value"
+          displayProp="label"
+          placeholder="Todas"
+          [comboValue]="rarityFilter === 'all' ? null : rarityFilter"
+          (comboValueChange)="rarityFilter = $event || 'all'; applyFilter()"
+        ></app-combo-box>
+      </div>
+      <label class="archived-toggle"
+        ><input
+          type="checkbox"
+          [(ngModel)]="includeArchived"
+          (ngModelChange)="reload()"
+        />
+        Mostrar arquivados</label
+      >
+      <div class="catalog-list">
+        @for (item of filteredItems; track item.id) {
+          <button
+            type="button"
+            class="catalog-row"
+            [class.selected]="selectedItem?.id === item.id"
+            [attr.aria-current]="selectedItem?.id === item.id ? 'true' : null"
+            (click)="selectItem(item)"
+          >
+                        <span class="item-icon" aria-hidden="true" [style.background-color]="item.definition.backgroundColor || null" [style.border-left-color]="item.definition.color || null">
+              <i [class]="item.definition.icon" [style.color]="item.definition.color || null"></i>
+            </span>
+            <span class="item-copy"
+              ><strong>{{ item.name || "Sem nome" }}</strong
+              ><small
+                >{{ categoryLabel[item.definition.category] }} ·
+                {{
+                  item.definition.rarity
+                    ? rarityLabel[item.definition.rarity]
+                    : "Sem raridade"
+                }}</small
+              ></span
+            >
+            @if (item.archived) {
+              <span class="archived-badge">Arquivado</span>
+            }
+          </button>
+        }
+        @if (!filteredItems.length) {
+          <div class="empty">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <p>
+              {{
+                items.length
+                  ? "Nenhum resultado. Ajuste os filtros ou tente outro nome."
+                  : "Crie seu primeiro item ou importe um catálogo compartilhado."
+              }}
+            </p>
+          </div>
+        }
+      </div>
+    </aside>
+    <main class="editor-panel">
+      @if (selectedItem; as item) {
+        <div class="editor-header">
+          <button type="button" class="back-link" (click)="selectedItem = null">
+            <i class="fa-solid fa-arrow-left"></i> Catálogo
+          </button>
+          <div>
+            <p class="eyebrow">
+              {{ item.id ? "EDITANDO ITEM" : "NOVO ITEM" }}
+            </p>
+            <h2>{{ item.name || "Novo item" }}</h2>
+          </div>
+          <div class="actions">
+            <app-button
+              size="xs"
+              buttonType="secondary"
+              label="Duplicar"
+              (click)="duplicate()"
+              [disabled]="!item.id"
+            ></app-button
+            ><app-button
+              size="xs"
+              buttonType="primary"
+              label="Salvar item"
+              icon="fa-check"
+              (click)="save()"
+            ></app-button>
+          </div>
+        </div>
+        <nav class="editor-tabs" aria-label="Seções do editor">
+          <button
+            type="button"
+            [class.active]="editorSection === 'general'"
+            [attr.aria-pressed]="editorSection === 'general'"
+            (click)="editorSection = 'general'"
+          >
+            Informações e inventário</button
+          ><button
+            type="button"
+            [class.active]="editorSection === 'rules'"
+            [attr.aria-pressed]="editorSection === 'rules'"
+            (click)="editorSection = 'rules'"
+          >
+            Regras e efeitos
+          </button>
+        </nav>
+        <div class="editor-layout">
+          <div class="editor-fields">
+            <section
+              class="section-card"
+              [hidden]="editorSection !== 'general'"
+            >
+              <h3>Informações do item</h3>
+              <p class="hint">
+                Defina a identidade, categoria e uso deste item.
+              </p>
+              <div class="form-grid">
+                <app-input
+                  label="Nome"
+                  [required]="true"
+                  [(value)]="item.name"
+                  placeholder="Ex.: Espada de ferro"
+                ></app-input>
+                <app-combo-box
+                  label="Categoria"
+                  [items]="categoryOptions"
+                  compareProp="value"
+                  displayProp="label"
+                  [comboValue]="item.definition.category"
+                  (comboValueChange)="changeCategory($event)"
+                ></app-combo-box>
+                <app-combo-box
+                  label="Raridade (opcional)"
+                  [items]="rarityOptions"
+                  compareProp="value"
+                  displayProp="label"
+                  [comboValue]="item.definition.rarity"
+                  placeholder="Sem raridade"
+                ></app-combo-box>
+                <div class="icon-picker">
+                  <span>Ícone do item</span
+                  ><app-icon-selector
+                    [selectedIcon]="item.definition.icon"
+                    (onIconSelected)="setIcon($event)"
+                  ></app-icon-selector
+                  ><small>Escolher ícone</small>
+                </div>
+                <div class="item-colors">
+                  <app-hex-color-picker
+                    label="Cor do item"
+                    [value]="item.definition.color ?? undefined"
+                    (valueChange)="setItemColor($event)"
+                  ></app-hex-color-picker>
+                  <app-hex-color-picker
+                    label="Cor do fundo"
+                    [value]="item.definition.backgroundColor ?? undefined"
+                    (valueChange)="setBackgroundColor($event)"
+                  ></app-hex-color-picker>
+                </div>
+                <app-text-area
+                  label="Descrição"
+                  [(value)]="item.description"
+                  height="h-24"
+                  placeholder="O que o personagem vê e sabe sobre o item?"
+                ></app-text-area>
+                <app-input
+                  label="Etiquetas"
+                  [value]="item.definition.tags.join(', ')"
+                  (valueChange)="item.definition.tags = splitTags($event)"
+                  placeholder="viagem, metal"
+                ></app-input>
+                <label class="stack-control"
+                  ><input
+                    type="checkbox"
+                    [(ngModel)]="item.definition.stackable"
+                  />
+                  Empilhável
+                  <input
+                    type="number"
+                    min="1"
+                    [disabled]="!item.definition.stackable"
+                    [(ngModel)]="item.definition.stackLimit"
+                  />
+                  limite</label
+                >
+                <section class="section-card wide">
+                  <h3>Espaços compatíveis</h3>
+                  <div class="checks">
+                    @for (slot of equipmentSlots; track slot) {
+                      <label
+                        ><input
+                          type="checkbox"
+                          [checked]="
+                            item.definition.equipmentSlots.includes(slot)
+                          "
+                          (change)="
+                            toggleSlot(slot, $any($event.target).checked)
+                          "
+                        />{{ equipmentSlotLabel[slot] }}</label
+                      >
+                    }
+                  </div>
+                </section>
+              </div>
+            </section>
+            <div class="rules-fields" [hidden]="editorSection !== 'rules'">
+              @if (item.definition.category === "weapon") {
+                <section class="section-card">
+                  <h3>Arma</h3>
+                  <div class="checks">
+                    @for (property of weaponProperties; track property) {
+                      <label
+                        ><input
+                          type="checkbox"
+                          [checked]="
+                            item.definition.weapon?.properties?.includes(
+                              property
+                            )
+                          "
+                          (change)="
+                            toggleWeaponProperty(
+                              property,
+                              $any($event.target).checked
+                            )
+                          "
+                        />{{ weaponPropertyLabel[property] }}</label
+                      >
+                    }
+                  </div>
+                  <app-input
+                    label="Tipos de dano"
+                    [value]="damageTypes(item).join(', ')"
+                    (valueChange)="setDamageTypes(item, $event)"
+                    placeholder="cortante, perfurante"
+                  ></app-input
+                  ><app-text-area
+                    label="Propriedade específica"
+                    [(value)]="item.definition.weapon!.specialProperty"
+                    height="h-24"
+                  ></app-text-area
+                  ><label
+                    >Mãos<select [(ngModel)]="item.definition.weapon!.hands">
+                      <option [ngValue]="1">Uma mão</option>
+                      <option [ngValue]="2">Duas mãos</option>
+                    </select></label
+                  >
+                </section>
+              }
+              @if (item.definition.category === "protection") {
+                <section class="section-card">
+                  <h3>Proteção</h3>
+                  <label
+                    >Categoria<select
+                      [(ngModel)]="item.definition.protection!.tier"
+                    >
+                      <option value="light">Leve (+1 PR)</option>
+                      <option value="medium">Média (+2 PR)</option>
+                      <option value="heavy">Pesada (+3 PR)</option>
+                    </select></label
+                  ><app-text-area
+                    label="Efeitos narrativos"
+                    [(value)]="item.definition.protection!.effects"
+                    height="h-24"
+                    placeholder="Mobilidade, redução de dano e penalidades descritas pelas regras."
+                  ></app-text-area>
+                </section>
+              }
+              @if (item.definition.category === "tool") {
+                <section class="section-card">
+                  <h3>Ferramenta</h3>
+                  <app-text-area
+                    label="Finalidade"
+                    [(value)]="item.definition.toolPurpose"
+                    height="h-24"
+                    placeholder="Ação para a qual concede +1 contextual"
+                  ></app-text-area>
+                </section>
+              }
+              @if (item.definition.category === "consumable") {
+                <section class="section-card">
+                  <h3>Consumível</h3>
+                  <label
+                    >Tipo<select
+                      [(ngModel)]="item.definition.consumable!.subtype"
+                    >
+                      <option value="recovery">Recuperação</option>
+                      <option value="offensive">Ofensivo</option>
+                      <option value="utility">Utilitário</option>
+                    </select></label
+                  ><app-text-area
+                    label="Efeito"
+                    [(value)]="item.definition.consumable!.effect"
+                    height="h-24"
+                  ></app-text-area>
+                  <p class="hint">
+                    Consumir custa 1 ação e remove uma unidade. A aplicação de
+                    CV, PR ou condições é manual nesta versão.
+                  </p>
+                </section>
+              }
+              <section class="section-card">
+                <h3>Características especiais</h3>
+                <label
+                  ><input
+                    type="checkbox"
+                    [(ngModel)]="item.definition.unique"
+                  />
+                  Item único</label
+                ><app-text-area
+                  label="Benefícios (um por linha)"
+                  [value]="item.definition.uniqueBenefits.join('\n')"
+                  (valueChange)="
+                    item.definition.uniqueBenefits = splitLines($event)
+                  "
+                  height="h-24"
+                ></app-text-area
+                ><app-text-area
+                  label="Custos, limitações ou vínculo"
+                  [value]="item.definition.uniqueCosts.join('\n')"
+                  (valueChange)="
+                    item.definition.uniqueCosts = splitLines($event)
+                  "
+                  height="h-24"
+                ></app-text-area>
+              </section>
+            </div>
+            <details class="section-card archive-options">
+              <summary>Gerenciar item</summary>
+              <p class="hint">
+                Arquivar oculta o item do catálogo ativo e preserva as posses
+                dos personagens.
+              </p>
+              <app-button
+                size="xs"
+                buttonType="secondary"
+                label="Arquivar"
+                (click)="archive()"
+                [disabled]="!item.id || !!item.archived"
+              ></app-button>
+            </details>
+          </div>
+          <aside class="preview-panel" aria-label="Prévia do item">
+            <p class="eyebrow">PRÉVIA NO INVENTÁRIO</p>
+            <div class="preview-icon" [style.background-color]="item.definition.backgroundColor || null" [style.border-left-color]="item.definition.color || null">
+              <i [class]="item.definition.icon" [style.color]="item.definition.color || null"></i>
+            </div>
+            <h3>{{ item.name || "Novo item" }}</h3>
+            <span class="badge">{{
+              categoryLabel[item.definition.category]
+            }}</span>
+            @if (item.definition.rarity) {
+              <span class="badge">{{
+                rarityLabel[item.definition.rarity]
+              }}</span>
+            }
+            <p>
+              {{
+                item.description ||
+                  "Adicione uma descrição para apresentar o item."
+              }}
+            </p>
+            <dl>
+              <div>
+                <dt>Empilhamento</dt>
+                <dd>
+                  {{
+                    item.definition.stackable
+                      ? "Até " + item.definition.stackLimit
+                      : "Individual"
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>Equipável</dt>
+                <dd>
+                  {{ item.definition.equipmentSlots.length ? "Sim" : "Não" }}
+                </dd>
+              </div>
+            </dl>
+          </aside>
+        </div>
+      } @else {
+        <div class="empty editor-empty">
+          <i class="fa-solid fa-box-open"></i>
+          <h2>Um catálogo para suas aventuras</h2>
+          <p>
+            Selecione um item para editar ou crie uma definição para usar nas
+            fichas.
+          </p>
+          <app-button
+            label="Criar item"
+            icon="fa-plus"
+            size="xs"
+            (click)="newItem()"
+          ></app-button>
+        </div>
+      }
+    </main>
+  </div>
+</div>

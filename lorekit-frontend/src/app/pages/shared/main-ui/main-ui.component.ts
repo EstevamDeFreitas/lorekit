@@ -70,6 +70,8 @@ import { TabManagerService } from '../../../services/tab-manager.service';
             (click)="tabManager.setActiveSidebarSection('character-sheet')"></app-nav-button>
           <app-nav-button [label]="'Vocações'" buttonType="pink" [showLabel]="false" [icon]="'fa-solid fa-hat-wizard'" size="xl" [fullWidth]="true" [direction]="'right'"
             (click)="tabManager.setActiveSidebarSection('vocations')"></app-nav-button>
+          <app-nav-button [label]="'Gerenciador de Conteúdo'" buttonType="pink" [showLabel]="false" [icon]="'fa-solid fa-box-open'" size="xl" [fullWidth]="true" [direction]="'right'"
+            (click)="tabManager.setActiveSidebarSection('content-manager')"></app-nav-button>
         </div>
       </div>
 

@@ -23,6 +23,7 @@ const DEFAULT_SECTION = 'character';
 /** Sections that open directly as view-tabs instead of showing a list in the sidebar. */
 const VIEW_SECTIONS: Record<string, { title: string; icon: string }> = {
   relations: { title: 'Relações', icon: 'fa-solid fa-share-nodes' },
+  'content-manager': { title: 'Gerenciador de Conteúdo', icon: 'fa-solid fa-box-open' },
 };
 
 function newPaneId() {

@@ -34,6 +34,7 @@ import { IrpwSpecieService } from '../../../services/irpw-specie.service';
 import { IrpwVocationService } from '../../../services/irpw-vocation.service';
 import { SpecieService } from '../../../services/specie.service';
 import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
+import { IrpwInventoryComponent } from '../irpw-inventory/irpw-inventory.component';
 import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 import {
   ActiveConditionState,
@@ -107,7 +108,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
 
 @Component({
   selector: 'irpw-character-sheet',
-  imports: [EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe],
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent],
   template: `
     <div [historyEntity]="{ table: 'IRPWCharacterSheet', id: selectedCharacterId }" [historyModel]="currentSheet" (historyRestored)="restoreSheetHistory()" class="flex flex-col relative">
       <div class="flex flex-row gap-4 relative">
@@ -841,7 +842,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                               </div>
                             }
                             @case ('inventory') {
-                              <p>Inventário</p>
+                              <irpw-inventory [characterId]="selectedCharacterId"></irpw-inventory>
                             }
                             @case ('skills') {
                               <div class="flex flex-col gap-4">
