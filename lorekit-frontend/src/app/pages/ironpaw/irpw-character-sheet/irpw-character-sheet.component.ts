@@ -110,8 +110,8 @@ interface InheritedCharacterHability extends IrpwVocationHability {
   selector: 'irpw-character-sheet',
   imports: [EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent],
   template: `
-    <div [historyEntity]="{ table: 'IRPWCharacterSheet', id: selectedCharacterId }" [historyModel]="currentSheet" (historyRestored)="restoreSheetHistory()" class="flex flex-col relative">
-      <div class="flex flex-row gap-4 relative">
+    <div [historyEntity]="{ table: 'IRPWCharacterSheet', id: selectedCharacterId }" [historyModel]="currentSheet" (historyRestored)="restoreSheetHistory()" class="irpw-sheet flex flex-col relative">
+      <div class="irpw-sheet-row flex flex-row gap-4 relative">
 
         @if (!characterIdInput()) {
 
@@ -174,17 +174,17 @@ interface InheritedCharacterHability extends IrpwVocationHability {
         }
 
         <!-- Sheet view -->
-        <div class="flex-1 min-h-[60vh] p-4 flex flex-col">
+        <div class="irpw-sheet-view flex-1 min-h-[60vh] p-4 flex flex-col">
           @if (selectedCharacter) {
-            <div class="grid grid-cols-3 gap-2">
-              <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3">
-                <div class="flex flex-row gap-3">
+            <div class="character-overview">
+              <div class="character-overview-card character-identity-card rounded-md bg-zinc-925 border border-zinc-800 p-3">
+                <div class="character-identity-body flex flex-row gap-3">
                   @if(getImageByUsageKey(selectedCharacter.Images, 'profile') != null){
                     @let profileImg = getImageByUsageKey(selectedCharacter.Images, 'profile');
-                    <img [src]="profileImg | assetUrl" class="h-[12vh] object-cover rounded-md">
+                    <img [src]="profileImg | assetUrl" class="character-profile-image h-[12vh] object-cover rounded-md">
                   }
                   @else {
-                    <div class="h-[12vh] w-[12vh] bg-zinc-800 rounded-md flex items-center justify-center text-zinc-500">
+                    <div class="character-profile-image h-[12vh] w-[12vh] bg-zinc-800 rounded-md flex items-center justify-center text-zinc-500">
                       <i class="fa-solid fa-user text-2xl"></i>
                     </div>
                   }
@@ -253,7 +253,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
 
               </div>
               <!-- Lifepoints & Defensepoints -->
-              <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
+              <div class="character-overview-card character-resources-card rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
                 <div>
                   <div class="flex items-center justify-between gap-3 mb-2">
                     <div class="flex items-center gap-2">
@@ -346,7 +346,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                     </div>
                   </ng-template>
                 </div>
-                <div class="flex flex-row gap-6">
+                <div class="character-resource-row flex flex-row gap-6">
                   <div>
                     <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Resistência</h2>
                     <div class="flex items-center gap-2">
@@ -372,7 +372,7 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                 </div>
               </div>
               <!-- Condições -->
-              <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
+              <div class="character-overview-card character-conditions-card rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
                 <div class="flex items-center justify-between gap-3">
                   <div>
                     <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Condições</h2>
@@ -491,8 +491,8 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                 </ng-template>
               </div>
             </div>
-            <div class="grid grid-cols-3 gap-2 mt-2 flex-1">
-                  <div class="flex flex-col h-full">
+            <div class="character-workspace">
+                  <div class="character-stats-column flex flex-col h-full">
                     <div class="flex flex-col rounded-md bg-zinc-925 border border-zinc-800 p-3 mb-2">
                       <h1 class="text-center mb-2">Percepções</h1>
                       <div class="flex flex-row justify-center gap-6">
@@ -578,15 +578,15 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                       </div>
                     </div>
                   </div>
-                  <div class="col-span-2 p-3">
+                  <div class="character-tabs-column p-3">
                     <div class="flex-4 flex flex-col">
-                      <div class="flex flex-row gap-4 ms-1">
+                      <div class="character-tabs flex flex-row flex-wrap items-end gap-1 ms-1">
                         <app-nav-button buttonType="pink" [label]="'Geral'" size="sm" [active]="currentTab === 'general'" (click)="selectTab('general')"></app-nav-button>
                         <app-nav-button buttonType="pink" [label]="'Marcos'" size="sm" [active]="currentTab === 'marks'" (click)="selectTab('marks')"></app-nav-button>
                         <app-nav-button buttonType="pink" [label]="'Inventário'" size="sm" [active]="currentTab === 'inventory'" (click)="selectTab('inventory')"></app-nav-button>
                         <app-nav-button buttonType="pink" [label]="'Habilidades'" size="sm" [active]="currentTab === 'skills'" (click)="selectTab('skills')"></app-nav-button>
                       </div>
-                      <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
+                      <div class="character-tab-content p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
                           @switch (currentTab) {
                             @case ('general') {
                               <p>Geral</p>

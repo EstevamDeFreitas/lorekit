@@ -213,35 +213,51 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
                 </div>
               </div>
 
-              <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3 overflow-y-auto">
-                <h2 class="text-center mb-3">Perícias</h2>
-                <div class="flex flex-col gap-4">
+              <section class="vocation-skills-section rounded-md bg-zinc-925 border border-zinc-800 p-3 overflow-y-auto" aria-labelledby="vocation-page-skills-title">
+                <div class="skill-section-header">
+                  <div>
+                    <h2 id="vocation-page-skills-title" class="skill-section-title">Perícias</h2>
+                    <p class="skill-section-hint">Defina os níveis mínimos da vocação.</p>
+                  </div>
+                  <div class="skill-level-legend" aria-label="Níveis de perícia">
+                    @for (level of [0,1,2,3]; track level) {
+                      <span class="skill-legend-item">
+                        <span class="skill-legend-dot level-{{level}}" aria-hidden="true"></span>
+                        {{ getSkillLevelLabel(level) }}
+                      </span>
+                    }
+                  </div>
+                </div>
+
+                <div class="skill-groups">
                   @for (entry of attributeGroupEntries; track entry[0]) {
-                    <div>
-                      <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs font-semibold text-zinc-200 uppercase tracking-wide">{{ attributeGroupLabel[entry[0]] }}</span>
-                      </div>
-                      <div class="flex flex-col gap-1.5 pl-1">
+                    <section class="skill-group" [attr.aria-labelledby]="'vocation-page-skill-group-' + entry[0]">
+                      <h3 class="skill-group-title" [id]="'vocation-page-skill-group-' + entry[0]">{{ attributeGroupLabel[entry[0]] }}</h3>
+                      <div class="skill-list">
                         @for (skill of entry[1]; track skill) {
-                          <div class="flex items-center justify-between gap-3">
-                            <span class="text-xs text-zinc-400">{{ skillLabel[skill] }}</span>
-                            <div class="flex gap-1.5">
-                              @for (level of [0,1,2,3]; track level) {
-                                <input
-                                  type="checkbox"
-                                  class="circle-checkbox level-{{level}}"
-                                  [checked]="getSkillLevel(entry[0], skill) >= level"
-                                  [title]="getSkillLevelLabel(level)"
-                                  (click)="onCircleClick($event, entry[0], skill, level)">
-                              }
+                          <div class="skill-row">
+                            <span class="skill-label">{{ skillLabel[skill] }}</span>
+                            <div class="skill-control">
+                              <span class="skill-level-summary">{{ getSkillLevelLabel(getSkillLevel(entry[0], skill)) }}</span>
+                              <div class="skill-levels" role="group" [attr.aria-label]="'Nível mínimo de ' + skillLabel[skill]">
+                                @for (level of [0,1,2,3]; track level) {
+                                  <input
+                                    type="checkbox"
+                                    class="circle-checkbox level-{{level}}"
+                                    [checked]="getSkillLevel(entry[0], skill) >= level"
+                                    [title]="getSkillLevelLabel(level)"
+                                    [attr.aria-label]="'Nível ' + getSkillLevelLabel(level) + ' para ' + skillLabel[skill]"
+                                    (click)="onCircleClick($event, entry[0], skill, level)">
+                                }
+                              </div>
                             </div>
                           </div>
                         }
                       </div>
-                    </div>
+                    </section>
                   }
                 </div>
-              </div>
+              </section>
             </div>
           } @else {
             <div class="h-full rounded-md flex items-center justify-center text-zinc-500">

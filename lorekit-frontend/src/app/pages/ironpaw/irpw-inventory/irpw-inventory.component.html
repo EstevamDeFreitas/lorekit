@@ -1,7 +1,6 @@
 <section class="inventory-view">
   <div class="inventory-header">
     <div>
-      <p class="eyebrow">IRONPAW</p>
       <h3>Inventário</h3>
       <p class="muted">
         Organize suas posses e escolha o que está pronto para uso.
@@ -193,7 +192,7 @@
     @if (selectedEntry; as entry) {
       <div class="details">
         <div>
-          <p class="eyebrow">ITEM SELECIONADO</p>
+          <h4 class="details-heading">Item selecionado</h4>
           <app-input label="Nome" [(value)]="entry.snapshot.name"></app-input
           ><app-text-area
             label="Descrição"

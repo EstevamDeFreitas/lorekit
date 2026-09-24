@@ -71,40 +71,58 @@ import { IrpwVocationService } from '../../../services/irpw-vocation.service';
         </div>
       </div>
 
-      <div class="rounded-md border border-zinc-800 bg-zinc-925 p-3 mt-4">
-        <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-3">Perícias mínimas</h3>
-        <div class="grid grid-cols-2 gap-4">
+              <section class="vocation-skills-section rounded-md border border-zinc-800 bg-zinc-925 p-3 mt-4" aria-labelledby="vocation-skills-title">
+        <div class="skill-section-header">
+          <div>
+            <h3 id="vocation-skills-title" class="skill-section-title">Perícias mínimas</h3>
+            <p class="skill-section-hint">Defina o nível inicial exigido por cada perícia.</p>
+          </div>
+          <div class="skill-level-legend" aria-label="Níveis de perícia">
+            @for (level of [0,1,2,3]; track level) {
+              <span class="skill-legend-item">
+                <span class="skill-legend-dot level-{{level}}" aria-hidden="true"></span>
+                {{ getSkillLevelLabel(level) }}
+              </span>
+            }
+          </div>
+        </div>
+
+        <div class="skill-groups">
           @for (entry of attributeGroupEntries; track entry[0]) {
-            <div>
-              <div class="text-xs font-semibold uppercase tracking-wide text-zinc-200 mb-2">{{ attributeGroupLabel[entry[0]] }}</div>
-              <div class="flex flex-col gap-1.5">
+            <section class="skill-group" [attr.aria-labelledby]="'vocation-skill-group-' + entry[0]">
+              <h4 class="skill-group-title" [id]="'vocation-skill-group-' + entry[0]">{{ attributeGroupLabel[entry[0]] }}</h4>
+              <div class="skill-list">
                 @for (skill of entry[1]; track skill) {
-                  <div class="flex items-center justify-between gap-3">
-                    <span class="text-xs text-zinc-400">{{ skillLabel[skill] }}</span>
-                    <div class="flex gap-1.5">
-                      @for (level of [0,1,2,3]; track level) {
-                        <input
-                          type="checkbox"
-                          class="circle-checkbox level-{{level}}"
-                          [checked]="getSkillLevel(entry[0], skill) >= level"
-                          [title]="getSkillLevelLabel(level)"
-                          (click)="onCircleClick($event, entry[0], skill, level)">
-                      }
+                  <div class="skill-row">
+                    <span class="skill-label">{{ skillLabel[skill] }}</span>
+                    <div class="skill-control">
+                      <span class="skill-level-summary">{{ getSkillLevelLabel(getSkillLevel(entry[0], skill)) }}</span>
+                      <div class="skill-levels" role="group" [attr.aria-label]="'Nível mínimo de ' + skillLabel[skill]">
+                        @for (level of [0,1,2,3]; track level) {
+                          <input
+                            type="checkbox"
+                            class="circle-checkbox level-{{level}}"
+                            [checked]="getSkillLevel(entry[0], skill) >= level"
+                            [title]="getSkillLevelLabel(level)"
+                            [attr.aria-label]="'Nível ' + getSkillLevelLabel(level) + ' para ' + skillLabel[skill]"
+                            (click)="onCircleClick($event, entry[0], skill, level)">
+                        }
+                      </div>
                     </div>
                   </div>
                 }
               </div>
-            </div>
+            </section>
           }
         </div>
-      </div>
-
+      </section>
       <div class="mt-4 flex justify-end gap-2">
         <app-button label="Fechar" buttonType="secondary" size="sm" (click)="close()"></app-button>
         <app-button label="Salvar" size="sm" (click)="saveNow()"></app-button>
       </div>
     </div>
   `,
+  styleUrl: './irpw-vocation-config.component.css',
 })
 export class IrpwVocationConfigComponent implements OnInit {
   readonly dialogRef = inject<DialogRef<any>>(DialogRef<any>);
