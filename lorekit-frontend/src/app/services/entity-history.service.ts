@@ -178,6 +178,16 @@ export class EntityHistoryService {
     }
   }
 
+  hasAssetReference(reference: string): boolean {
+    for (const history of this.histories.values()) {
+      for (const state of history.fields.values()) {
+        if (state.value.includes(reference) || state.persisted.includes(reference)) return true;
+      }
+      if (history.steps.some(step => step.before.includes(reference) || step.after.includes(reference))) return true;
+    }
+    return false;
+  }
+
   private record(address: HistoryAddress, after: string, kind: HistoryEditKind, group: number, time: number): void {
     const h = this.history(address.entity);
     const key = historyFieldKey(address.field);

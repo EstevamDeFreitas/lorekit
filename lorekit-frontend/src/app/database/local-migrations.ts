@@ -2,7 +2,7 @@ import type { BindParams, SqlValue } from 'sql.js';
 import { schema, TableDef } from './schema';
 import { SYNC_ENTITIES } from './sync-entity-registry';
 
-export const LOCAL_SCHEMA_VERSION = 7;
+export const LOCAL_SCHEMA_VERSION = 8;
 
 interface SqlDatabase {
   exec(sql: string, params?: BindParams): Array<{
@@ -107,6 +107,15 @@ const migrations: readonly LocalMigration[] = [
       `);
       db.exec(`UPDATE "IRPWItem" SET "revision" = 1 WHERE "revision" IS NULL OR "revision" < 1`);
       db.exec(`UPDATE "IRPWItem" SET "archived" = 0 WHERE "archived" IS NULL`);
+      createSyncTables(db);
+      createSyncTriggers(db);
+    },
+  },
+  {
+    version: 8,
+    name: 'operacoes-de-assets-do-catalogo',
+    up: db => {
+      createAssetOperationTable(db);
       createSyncTables(db);
       createSyncTriggers(db);
     },
@@ -291,6 +300,13 @@ function createSyncTables(db: SqlDatabase): void {
       "sha256" TEXT,
       "updatedAt" TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS "_AssetOperations" (
+      "operationId" TEXT NOT NULL PRIMARY KEY,
+      "state" TEXT NOT NULL CHECK ("state" IN ('pending', 'committed')),
+      "assetIds" TEXT NOT NULL,
+      "createdAt" TEXT NOT NULL
+    );
   `);
 
   addColumnIfMissing(db, '_SyncOutbox', 'modifiedAt', 'TEXT');
@@ -301,6 +317,17 @@ function createSyncTables(db: SqlDatabase): void {
       "modifiedAt" = COALESCE("modifiedAt", CAST(strftime('%s', "createdAt") AS INTEGER) * 1000),
       "changeId" = COALESCE("changeId", lower(hex(randomblob(16))))
     WHERE "modifiedAt" IS NULL OR "changeId" IS NULL
+  `);
+}
+
+function createAssetOperationTable(db: SqlDatabase): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS "_AssetOperations" (
+      "operationId" TEXT NOT NULL PRIMARY KEY,
+      "state" TEXT NOT NULL CHECK ("state" IN ('pending', 'committed')),
+      "assetIds" TEXT NOT NULL,
+      "createdAt" TEXT NOT NULL
+    )
   `);
 }
 

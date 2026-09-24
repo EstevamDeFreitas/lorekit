@@ -7,6 +7,8 @@ import { isElectronRuntime } from '../utils/runtime-platform';
 import { AssetResolverService } from './asset-resolver.service';
 import { AuthService } from './auth.service';
 import { WorkspaceRuntimeService } from './workspace-runtime.service';
+import { EntityHistoryService } from './entity-history.service';
+import { SYNC_ENTITIES } from '../database/sync-entity-registry';
 
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set([
@@ -17,6 +19,21 @@ const ALLOWED_IMAGE_TYPES = new Set([
   'image/avif',
 ]);
 
+export interface ReadableImageAsset {
+  readonly bytes: ArrayBuffer;
+  readonly mimeType: string;
+  readonly sha256: string;
+  readonly originalName: string | null;
+}
+
+export interface StagedImageAsset {
+  readonly blobId: string;
+  readonly reference: string;
+  readonly sha256: string;
+  readonly mimeType: string;
+  readonly localPath: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ImageService {
   private readonly dbProvider = inject(DbProvider);
@@ -24,6 +41,7 @@ export class ImageService {
   private readonly auth = inject(AuthService);
   private readonly workspace = inject(WorkspaceRuntimeService);
   private readonly assetResolver = inject(AssetResolverService);
+  private readonly history = inject(EntityHistoryService, { optional: true });
 
   async uploadImage(file: File, entityTable: string, entityId: string, usageKey: string): Promise<Image> {
     this.validateFile(file);
@@ -109,6 +127,76 @@ export class ImageService {
     return canonicalAssetReference(blobId);
   }
 
+  async readAsset(reference: string): Promise<ReadableImageAsset> {
+    const blobId = assetIdFromReference(reference);
+    if (!blobId) throw new Error('A imagem do item não usa uma referência de asset válida.');
+    const db = this.dbProvider.getDb();
+    const image = db.exec(
+      `SELECT "filePath", "originalName", "mimeType", "sha256" FROM "Image" WHERE "blobId" = ? LIMIT 1`,
+      [blobId],
+    )[0]?.values[0];
+    const cache = db.exec(
+      `SELECT "cacheKey", "mimeType", "sha256" FROM "_LocalBlobCache" WHERE "blobId" = ? LIMIT 1`,
+      [blobId],
+    )[0]?.values[0];
+    const filePath = typeof image?.[0] === 'string' ? image[0] : typeof cache?.[0] === 'string' ? cache[0] : '';
+    const mimeType = typeof image?.[2] === 'string' ? image[2] : typeof cache?.[1] === 'string' ? cache[1] : 'image/jpeg';
+    const expectedSha256 = typeof image?.[3] === 'string' ? image[3] : typeof cache?.[2] === 'string' ? cache[2] : '';
+    let bytes: ArrayBuffer | null = null;
+    if (isElectronRuntime() && filePath) {
+      const value = await ElectronSafeAPI.electron.readFile(filePath);
+      bytes = value ? toArrayBuffer(value) : null;
+    } else {
+      const user = this.auth.user();
+      const vault = this.workspace.vault();
+      if (user && vault) {
+        const cached = await this.browserStorage.readBlob(user.id, vault.id, blobId);
+        bytes = cached?.bytes ?? null;
+      }
+    }
+    if (!bytes) throw new Error('A imagem do item não está disponível localmente para exportação.');
+    const sha256 = await sha256Hex(bytes);
+    if (expectedSha256 && expectedSha256.toLowerCase() !== sha256) throw new Error('A imagem do item está corrompida ou não corresponde ao hash registrado.');
+    return {
+      bytes,
+      mimeType,
+      sha256,
+      originalName: typeof image?.[1] === 'string' ? image[1] : null,
+    };
+  }
+
+  async stagePortableAsset(asset: { bytes: ArrayBuffer; mimeType: string; sha256: string; originalName?: string | null }, operationId: string): Promise<StagedImageAsset> {
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(asset.mimeType)) throw new Error('Formato de imagem não permitido.');
+    const blobId = crypto.randomUUID();
+    const extension = extensionForMime(asset.mimeType);
+    const file = new File([asset.bytes], asset.originalName || `${blobId}.${extension}`, { type: asset.mimeType });
+    const localPath = await this.storeLocalBlob(blobId, file, asset.bytes, `ironpaw-import/${operationId}`, asset.sha256);
+    const now = new Date().toISOString();
+    const db = this.dbProvider.getDb();
+    db.run(
+      `INSERT INTO "_BlobOutbox" ("blobId", "localPath", "mimeType", "originalName", "sha256", "state", "createdAt", "lastError")
+       VALUES (?, ?, ?, ?, ?, 'pending', ?, NULL)`,
+      [blobId, isElectronRuntime() ? localPath : null, asset.mimeType, file.name, asset.sha256, now],
+    );
+    db.run(
+      `INSERT INTO "_LocalBlobCache" ("blobId", "cacheKey", "mimeType", "sha256", "updatedAt")
+       VALUES (?, ?, ?, ?, ?)`,
+      [blobId, isElectronRuntime() ? localPath : blobId, asset.mimeType, asset.sha256, now],
+    );
+    return { blobId, reference: canonicalAssetReference(blobId), sha256: asset.sha256, mimeType: asset.mimeType, localPath: isElectronRuntime() ? localPath : null };
+  }
+
+  async cleanupStagedAsset(asset: Pick<StagedImageAsset, 'blobId' | 'localPath'>): Promise<void> {
+    if (isElectronRuntime() && asset.localPath) await ElectronSafeAPI.electron.deleteFile(asset.localPath);
+    const user = this.auth.user();
+    const vault = this.workspace.vault();
+    if (!isElectronRuntime() && user && vault) await this.browserStorage.deleteBlob(user.id, vault.id, asset.blobId);
+    clearAssetUrl(asset.blobId);
+    const db = this.dbProvider.getDb();
+    db.run(`DELETE FROM "_BlobOutbox" WHERE "blobId" = ?`, [asset.blobId]);
+    db.run(`DELETE FROM "_LocalBlobCache" WHERE "blobId" = ?`, [asset.blobId]);
+  }
+
   async deleteAssetReference(reference: string): Promise<void> {
     const blobId = assetIdFromReference(reference);
     if (!blobId) {
@@ -121,7 +209,7 @@ export class ImageService {
       `SELECT COUNT(*) FROM "Image" WHERE "blobId" = ?`,
       [blobId],
     )[0]?.values[0]?.[0] ?? 0);
-    if (imageReferenceCount > 0) return;
+    if (imageReferenceCount > 0 || this.hasCanonicalReference(db, canonicalAssetReference(blobId)) || this.history?.hasAssetReference(canonicalAssetReference(blobId))) return;
 
     const cacheResult = db.exec(
       `SELECT "mimeType", "sha256" FROM "_LocalBlobCache" WHERE "blobId" = ?`,
@@ -176,6 +264,15 @@ export class ImageService {
     return this.dbProvider.getCrudHelper();
   }
 
+  private hasCanonicalReference(db: any, reference: string): boolean {
+    for (const definition of SYNC_ENTITIES) {
+      const result = db.exec(`SELECT * FROM "${definition.entityType.replaceAll('"', '""')}"`);
+      if (!result.length) continue;
+      if (result[0].values.some((values: unknown[]) => values.some(value => typeof value === 'string' && value.includes(reference)))) return true;
+    }
+    return false;
+  }
+
   private validateFile(file: File): void {
     if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
       throw new Error('Formato de imagem n\u00e3o permitido. Use PNG, JPEG, WebP, GIF ou AVIF.');
@@ -214,6 +311,11 @@ export class ImageService {
     });
     return this.assetResolver.registerBrowserBytes(blobId, bytes, file.type);
   }
+}
+
+function toArrayBuffer(value: Uint8Array | ArrayBuffer): ArrayBuffer {
+  if (value instanceof ArrayBuffer) return value;
+  return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength) as ArrayBuffer;
 }
 
 async function sha256Hex(bytes: ArrayBuffer): Promise<string> {

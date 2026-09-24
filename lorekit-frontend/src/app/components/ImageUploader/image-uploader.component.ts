@@ -15,11 +15,13 @@ import {
 } from '../image-crop-dialog/image-crop-dialog.component';
 
 interface ImageUploaderData {
-  entityTable: string;
-  entityId: string;
+  entityTable?: string;
+  entityId?: string;
   usageKey: string;
   aspectRatio?: number;
   initialFile?: File;
+  standalone?: boolean;
+  directory?: string;
 }
 
 @Component({
@@ -30,7 +32,7 @@ interface ImageUploaderData {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ImageUploaderComponent implements OnInit {
-  private readonly dialogRef = inject<DialogRef<void>>(DialogRef);
+  private readonly dialogRef = inject<DialogRef<void | string>>(DialogRef);
   private readonly data = inject<ImageUploaderData>(DIALOG_DATA);
   private readonly dialog = inject(Dialog);
   private readonly imageService = inject(ImageService);
@@ -43,13 +45,15 @@ export class ImageUploaderComponent implements OnInit {
   private readonly entityTable = this.data.entityTable ?? '';
   private readonly entityId = this.data.entityId ?? '';
   private readonly usageKey = this.data.usageKey ?? 'default';
+  private readonly standalone = this.data.standalone === true;
+  private readonly directory = this.data.directory ?? 'standalone';
   private readonly aspectRatio =
     Number.isFinite(this.data.aspectRatio) && (this.data.aspectRatio ?? 0) > 0
       ? this.data.aspectRatio!
       : 10 / 1;
 
   ngOnInit(): void {
-    if (this.entityTable && this.entityId) {
+    if (!this.standalone && this.entityTable && this.entityId) {
       this.loadImages();
     }
 
@@ -161,6 +165,12 @@ export class ImageUploaderComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set('');
     try {
+      if (this.standalone) {
+        const reference = await this.imageService.uploadStandaloneImage(blob, this.directory);
+        this.dialogRef.close(reference);
+        return;
+      }
+
       const image = await this.imageService.uploadImage(
         file,
         this.entityTable,

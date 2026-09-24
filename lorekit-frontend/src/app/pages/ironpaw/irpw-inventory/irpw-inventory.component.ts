@@ -1,6 +1,7 @@
 import { ButtonComponent } from '../../../components/button/button.component';
 import { InputComponent } from '../../../components/input/input.component';
 import { TextAreaComponent } from '../../../components/text-area/text-area.component';
+import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 import { CdkDrag, CdkDragDrop, CdkDropList, CdkDropListGroup, moveItemInArray } from '@angular/cdk/drag-drop';
 import {
   ChangeDetectionStrategy,
@@ -43,7 +44,7 @@ export interface IrpwCatalogUpdatePreview {
 
 @Component({
   selector: 'irpw-inventory',
-  imports: [FormsModule, ButtonComponent, InputComponent, TextAreaComponent, CdkDrag, CdkDropList, CdkDropListGroup],
+  imports: [FormsModule, ButtonComponent, InputComponent, TextAreaComponent, AssetUrlPipe, CdkDrag, CdkDropList, CdkDropListGroup],
   templateUrl: './irpw-inventory.component.html',
   styleUrl: './irpw-inventory.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

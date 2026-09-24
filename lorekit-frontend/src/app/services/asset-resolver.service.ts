@@ -7,7 +7,7 @@ import { BrowserDatabaseStorageService, isStorageQuotaError } from '../database/
 import { ElectronSafeAPI } from '../database/database.helper';
 import { DbProvider } from '../database/db-provider.service';
 import { SYNC_ENTITIES } from '../database/sync-entity-registry';
-import { buildImageUrl, clearAssetUrl, registerAssetUrl, setAssetUrlRequestHandler } from '../models/image.model';
+import { buildImageUrl, canonicalAssetReference, clearAssetUrl, registerAssetUrl, setAssetUrlRequestHandler } from '../models/image.model';
 import { isElectronRuntime } from '../utils/runtime-platform';
 import { AuthService } from './auth.service';
 import { CloudTransferPacerService } from './cloud-transfer-pacer.service';
@@ -65,6 +65,32 @@ export class AssetResolverService {
     ))) {
       this.registerLocal(String(row['blobId']), String(row['cacheKey']));
     }
+  }
+
+  /** Removes or completes asset import markers left by an interrupted process. */
+  async recoverPendingAssetOperations(): Promise<void> {
+    if (!this.dbProvider.ready() || this.dbProvider.readOnly()) return;
+    const db = this.dbProvider.getDb<Database>();
+    const rows = resultRows(db.exec(`SELECT "operationId", "state", "assetIds" FROM "_AssetOperations"`));
+    let changed = false;
+    for (const row of rows) {
+      const operationId = String(row['operationId'] ?? '');
+      let assetIds: string[] = [];
+      try {
+        const parsed = JSON.parse(String(row['assetIds'] ?? '[]'));
+        assetIds = Array.isArray(parsed) ? parsed.filter(value => typeof value === 'string') : [];
+      } catch { /* An invalid marker is treated as an incomplete operation. */ }
+      const referenced = assetIds.some(blobId => this.isAssetReferenced(db, blobId));
+      if (row['state'] === 'committed' || referenced) {
+        db.run(`DELETE FROM "_AssetOperations" WHERE "operationId" = ?`, [operationId]);
+        changed = true;
+        continue;
+      }
+      for (const blobId of assetIds) await this.removeStagedAsset(db, blobId);
+      db.run(`DELETE FROM "_AssetOperations" WHERE "operationId" = ?`, [operationId]);
+      changed = true;
+    }
+    if (changed) this.dbProvider.requestPersist();
   }
 
   async hydrateImages(vaultId: string): Promise<void> {
@@ -270,6 +296,32 @@ export class AssetResolverService {
     this.objectUrls.set(blobId, url);
     registerAssetUrl(blobId, url);
     return url;
+  }
+
+  private isAssetReferenced(db: Database, blobId: string): boolean {
+    const needle = canonicalAssetReference(blobId);
+    for (const definition of SYNC_ENTITIES) {
+      for (const row of resultRows(db.exec(`SELECT * FROM ${quoteIdentifier(definition.entityType)}`))) {
+        if (Object.values(row).some(value => typeof value === 'string' && value.includes(needle))) return true;
+      }
+    }
+    return false;
+  }
+
+  private async removeStagedAsset(db: Database, blobId: string): Promise<void> {
+    const row = resultRows(db.exec(
+      `SELECT "localPath" FROM "_BlobOutbox" WHERE "blobId" = ? LIMIT 1`,
+      [blobId],
+    ))[0];
+    if (isElectronRuntime() && typeof row?.['localPath'] === 'string' && row['localPath']) {
+      await ElectronSafeAPI.electron.deleteFile(String(row['localPath']));
+    }
+    const user = this.auth.user();
+    const vaultId = this.currentVaultId;
+    if (!isElectronRuntime() && user && vaultId) await this.browserStorage.deleteBlob(user.id, vaultId, blobId);
+    clearAssetUrl(blobId);
+    db.run(`DELETE FROM "_BlobOutbox" WHERE "blobId" = ?`, [blobId]);
+    db.run(`DELETE FROM "_LocalBlobCache" WHERE "blobId" = ?`, [blobId]);
   }
 }
 

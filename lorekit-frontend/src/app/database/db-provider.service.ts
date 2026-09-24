@@ -14,6 +14,8 @@ export class DbProvider {
   private persistence: DatabasePersistenceCoordinator | null = null;
   private writer: PersistWriter | null = null;
   private readonly mutationListeners = new Set<() => void>();
+  private transactionDepth = 0;
+  private mutationsDuringTransaction = false;
 
   readonly ready = signal(false);
   readonly readOnly = signal(false);
@@ -51,7 +53,11 @@ export class DbProvider {
     this.assertWritable();
     if (!this.persistence) throw new Error('DB not initialized');
     this.persistence.requestPersist();
-    this.mutationListeners.forEach(listener => listener());
+    if (this.transactionDepth > 0) {
+      this.mutationsDuringTransaction = true;
+      return;
+    }
+    this.notifyMutations();
   }
 
   async runInTransaction<T>(operation: () => Promise<T>): Promise<T> {
@@ -61,6 +67,7 @@ export class DbProvider {
     if (!db || !persistence) throw new Error('DB not initialized');
 
     persistence.pause();
+    this.transactionDepth++;
     let transactionActive = false;
     try {
       db.exec('BEGIN IMMEDIATE');
@@ -68,6 +75,11 @@ export class DbProvider {
       const result = await operation();
       db.exec('COMMIT');
       transactionActive = false;
+      this.transactionDepth--;
+      if (this.transactionDepth === 0 && this.mutationsDuringTransaction) {
+        this.mutationsDuringTransaction = false;
+        this.notifyMutations();
+      }
       return result;
     } catch (error) {
       if (transactionActive) {
@@ -77,6 +89,8 @@ export class DbProvider {
           console.error('Failed to rollback SQLite transaction', rollbackError);
         }
       }
+      this.transactionDepth = Math.max(0, this.transactionDepth - 1);
+      if (this.transactionDepth === 0) this.mutationsDuringTransaction = false;
       throw error;
     } finally {
       persistence.resume();
@@ -100,6 +114,8 @@ export class DbProvider {
     this.writer = null;
     this.db?.close();
     this.db = null;
+    this.transactionDepth = 0;
+    this.mutationsDuringTransaction = false;
     this.ready.set(false);
     this.readOnly.set(false);
   }
@@ -108,5 +124,11 @@ export class DbProvider {
     if (this.readOnly()) {
       throw new Error('Este vault já está aberto para edição em outra aba.');
     }
+  }
+
+  private notifyMutations(): void {
+    this.mutationListeners.forEach(listener => {
+      try { listener(); } catch (error) { console.error('Mutation listener failed', error); }
+    });
   }
 }

@@ -53,6 +53,7 @@ export class WorkspaceRuntimeService {
     }
 
     this.dbProvider.setDb(database);
+    await this.assetResolver.recoverPendingAssetOperations();
     this.assetResolver.hydrateLocalAssets();
     if (this.auth.isAuthenticated() && this.auth.syncEnabled()) {
       try {
@@ -222,6 +223,8 @@ export class WorkspaceRuntimeService {
         !writerLockAcquired,
       );
       this.vault.set(vault);
+      this.assetResolver.prepareAssets(vault.id);
+      await this.assetResolver.recoverPendingAssetOperations();
 
       if (writerLockAcquired) {
         database.run(

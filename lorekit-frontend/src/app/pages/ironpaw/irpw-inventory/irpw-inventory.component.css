@@ -94,6 +94,26 @@ input:focus {
   align-items: center;
   gap: 0.4rem;
 }
+.catalog-item-icon,
+.equipped-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.catalog-item-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  overflow: hidden;
+  border-radius: 0.25rem;
+  background: #3f3f46;
+}
+.catalog-item-icon img,
+.equipped-icon img,
+.item-card-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .add-list small {
   color: #a1a1aa;
 }
@@ -186,6 +206,15 @@ input:focus {
   flex: 0 0 auto;
   color: #f0abfc;
 }
+.equipped-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  overflow: hidden;
+  border-radius: 0.25rem;
+}
+.equipped-icon i {
+  flex: none;
+}
 .equipped span {
   min-width: 0;
   overflow: hidden;
@@ -253,6 +282,7 @@ input:focus {
   place-items: center;
   width: 1.8rem;
   height: 1.8rem;
+  overflow: hidden;
   border-radius: 0.35rem;
   background: #3f3f46;
   color: #f0abfc;

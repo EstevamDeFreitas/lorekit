@@ -24,7 +24,13 @@
       <div class="add-list">
         @for (item of visibleCatalogItems(); track item.id) {
           <button type="button" (click)="addItem(item)">
-            <i [class]="item.definition.icon"></i><span>{{ item.name }}</span
+            <span class="catalog-item-icon" aria-hidden="true">
+              @if ((item.definition.imageReference | assetUrl); as imageUrl) {
+                <img [src]="imageUrl" alt="" />
+              } @else {
+                <i [class]="item.definition.icon"></i>
+              }
+            </span><span>{{ item.name }}</span
             ><small>{{ categoryLabel(item) }}</small>
           </button>
         }
@@ -81,7 +87,13 @@
                   (click)="unequip(slot)"
                   [title]="'Desequipar ' + entry.snapshot.name"
                 >
-                  <i [class]="entry.snapshot.definition.icon" [style.color]="entry.snapshot.definition.color || null"></i
+                  <span class="equipped-icon" aria-hidden="true">
+                    @if ((entry.snapshot.definition.imageReference | assetUrl); as imageUrl) {
+                      <img [src]="imageUrl" alt="" />
+                    } @else {
+                      <i [class]="entry.snapshot.definition.icon" [style.color]="entry.snapshot.definition.color || null"></i>
+                    }
+                  </span
                   ><span>{{ entry.snapshot.name }}</span>
                 </button>
               } @else {
@@ -153,7 +165,11 @@
             >
               <div class="item-card-icon" [style.background-color]="entry.snapshot.definition.backgroundColor || null"
               [style.border-color]="entry.snapshot.definition.color || null">
-                <i [class]="entry.snapshot.definition.icon" [style.color]="entry.snapshot.definition.color || null"></i>
+                @if ((entry.snapshot.definition.imageReference | assetUrl); as imageUrl) {
+                  <img [src]="imageUrl" alt="" />
+                } @else {
+                  <i [class]="entry.snapshot.definition.icon" [style.color]="entry.snapshot.definition.color || null"></i>
+                }
               </div>
               <strong>{{ entry.snapshot.name }}</strong>
               @if (entry.quantity > 1) {

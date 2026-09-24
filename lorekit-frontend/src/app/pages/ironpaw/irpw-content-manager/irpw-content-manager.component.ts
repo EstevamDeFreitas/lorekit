@@ -4,10 +4,14 @@ import { InputComponent } from '../../../components/input/input.component';
 import { TextAreaComponent } from '../../../components/text-area/text-area.component';
 import { IconSelectorComponent } from '../../../components/icon-selector/icon-selector.component';
 import { HexColorPickerComponent } from '../../../components/hex-color-picker/hex-color-picker.component';
+import { ImageUploaderComponent } from '../../../components/ImageUploader/image-uploader.component';
+import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
+import { Dialog } from '@angular/cdk/dialog';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  Injector,
   OnDestroy,
   OnInit,
   inject,
@@ -37,6 +41,7 @@ import {
   IrpwWeaponProperty,
   normalizeIrpwItemDefinition,
 } from '../../../models/irpw-item.model';
+import { ImageService } from '../../../services/image.service';
 @Component({
   selector: 'irpw-content-manager',
   imports: [
@@ -47,6 +52,7 @@ import {
     IconSelectorComponent,
     HexColorPickerComponent,
     ComboBoxComponent,
+    AssetUrlPipe,
   ],
   templateUrl: './irpw-content-manager.component.html',
   styleUrl: './irpw-content-manager.component.css',
@@ -72,6 +78,8 @@ export class IrpwContentManagerComponent implements OnInit, OnDestroy {
   }
   private readonly catalog = inject(IrpwItemCatalogService);
   private readonly portability = inject(IrpwItemPortabilityService);
+  private readonly injector = inject(Injector);
+  private readonly dialog = inject(Dialog);
   readonly categories = IRPW_ITEM_CATEGORIES;
   readonly rarities = IRPW_RARITIES;
   readonly categoryLabel = IRPW_ITEM_CATEGORY_LABEL;
@@ -242,6 +250,96 @@ export class IrpwContentManagerComponent implements OnInit, OnDestroy {
     this.selectedItem.definition.backgroundColor = color ?? null;
     this.scheduleAutoSave();
   }
+  openItemImageUploader(): void {
+    if (!this.selectedItem) return;
+
+    const dialogRef = this.dialog.open<string>(ImageUploaderComponent, {
+      data: {
+        usageKey: 'default',
+        aspectRatio: 1,
+        standalone: true,
+        directory: 'ironpaw-items',
+      },
+      panelClass: 'screen-dialog',
+      width: '30rem',
+      maxWidth: '95vw',
+    });
+
+    dialogRef.closed.subscribe(reference => {
+      if (reference) {
+        void this.persistItemImage(reference);
+      }
+    });
+  }
+
+  private async persistItemImage(reference: string): Promise<void> {
+    if (!this.selectedItem) {
+      await this.deleteItemAsset(reference);
+      return;
+    }
+
+    const previousReference = this.selectedItem.definition.imageReference;
+    const previousHash = this.selectedItem.definition.imageAssetSha256;
+    let persisted = false;
+    this.clearAutoSave();
+    try {
+      this.selectedItem.definition.imageReference = reference;
+      this.selectedItem.definition.imageAssetSha256 = null;
+      const saved = this.catalog.saveItem(this.selectedItem);
+      persisted = true;
+      this.selectedItem = saved;
+      this.reload();
+      if (previousReference && previousReference !== reference) {
+        await this.deleteItemAsset(previousReference);
+      }
+      this.noticeType = 'info';
+      this.notice = 'Imagem do item salva.';
+    } catch (error) {
+      await this.deleteItemAsset(reference);
+      if (!persisted && this.selectedItem) {
+        this.selectedItem.definition.imageReference = previousReference;
+        this.selectedItem.definition.imageAssetSha256 = previousHash;
+      }
+      this.noticeType = 'error';
+      this.notice = error instanceof Error ? error.message : 'Não foi possível salvar a imagem.';
+    } finally {
+      this.cdr.markForCheck();
+    }
+  }
+  async removeItemImage(): Promise<void> {
+    if (!this.selectedItem?.definition.imageReference) return;
+    const previousReference = this.selectedItem.definition.imageReference;
+    const previousHash = this.selectedItem.definition.imageAssetSha256;
+    let persisted = false;
+    this.clearAutoSave();
+    try {
+      this.selectedItem.definition.imageReference = null;
+      this.selectedItem.definition.imageAssetSha256 = null;
+      const saved = this.catalog.saveItem(this.selectedItem);
+      persisted = true;
+      this.selectedItem = saved;
+      this.reload();
+      await this.deleteItemAsset(previousReference);
+      this.noticeType = 'info';
+      this.notice = 'Imagem removida.';
+    } catch (error) {
+      if (!persisted && this.selectedItem) {
+        this.selectedItem.definition.imageReference = previousReference;
+        this.selectedItem.definition.imageAssetSha256 = previousHash;
+      }
+      this.noticeType = 'error';
+      this.notice = error instanceof Error ? error.message : 'Não foi possível remover a imagem.';
+    } finally {
+      this.cdr.markForCheck();
+    }
+  }
+  private async deleteItemAsset(reference: string): Promise<void> {
+    try {
+      await this.injector.get(ImageService).deleteAssetReference(reference).catch(() => undefined);
+    } catch {
+      // Test doubles and lightweight embedded contexts may not register asset storage.
+    }
+  }
   onEditorInput(event: Event): void {
     this.scheduleFromEditorEvent(event);
   }
@@ -251,6 +349,7 @@ export class IrpwContentManagerComponent implements OnInit, OnDestroy {
   private scheduleFromEditorEvent(event: Event): void {
     const target = event.target;
     if (!(target instanceof Element) || !target.closest('.editor-fields')) return;
+    if (target instanceof HTMLInputElement && target.type === 'file') return;
     if (target.closest('app-combo-box, app-hex-color-picker')) return;
     this.scheduleAutoSave();
   }
@@ -270,8 +369,14 @@ export class IrpwContentManagerComponent implements OnInit, OnDestroy {
     }
   }
   exportCatalog(): void {
+    void this.exportCatalogAsync(true);
+  }
+  exportCatalogWithoutImages(): void {
+    void this.exportCatalogAsync(false);
+  }
+  private async exportCatalogAsync(includeImages: boolean): Promise<void> {
     try {
-      const payload = this.portability.exportItems(this.items);
+      const payload = await this.portability.exportItems(this.items, 'Itens Ironpaw', { includeImages });
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: 'application/json',
       });

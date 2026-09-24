@@ -21,7 +21,7 @@
 - [x] 3.4 Implementar atualização explícita de snapshots com prévia de diferenças; verificar preservação de anotações/quantidades, divisão por novo limite e retorno à mochila quando incompatível.
 - [x] 3.5 Implementar máximo de PR com origens, contribuição de vocação aplicada e ajuste manual; verificar casos 1/3 para 1/5, redução 4/5 para 2/2, troca de vocação e ausência de recuperação ao reequipar.
 - [x] 3.6 Integrar comandos compostos a persistência e histórico; verificar desfazer/refazer de inventário e PR em conjunto, incluindo consumo e atualização de cópia.
-- [ ] 3.7 Preservar referências de imagem de snapshots e histórico na limpeza de assets; verificar que editar/arquivar origem não quebra imagem de posse nem restauração histórica.
+- [x] 3.7 Preservar referências de imagem de snapshots e histórico na limpeza de assets; verificar que editar/arquivar origem não quebra imagem de posse nem restauração histórica.
 
 ## 4. Interface de inventário
 
@@ -32,12 +32,12 @@
 
 ## 5. Portabilidade
 
-- [ ] 5.1 Implementar serialização de item/seleção/catálogo no envelope portável e recursos por hash; verificar round-trip e ausência de IDs locais, caminhos e dados de personagens.
+- [x] 5.1 Implementar serialização de item/seleção/catálogo no envelope portável e recursos por hash; verificar round-trip e ausência de IDs locais, caminhos e dados de personagens.
 - [x] 5.2 Implementar parser e validação compartilhados para arquivo/texto, incluindo limites e imagens; verificar versões desconhecidas, referências ausentes, duplicações de identidade, números inválidos e recursos não permitidos.
 - [x] 5.3 Implementar planejamento de conflitos por identidade e conteúdo canônico; verificar reimportação idempotente, nomes iguais com identidades diferentes e escolhas manter/atualizar/copiar.
 - [x] 5.4 Implementar prévia e escolhas de importação seguindo a experiência de layouts; verificar cancelamento sem mutação, nova validação quando destino muda e exportação explícita sem imagens quando necessário.
 - [x] 5.5 Preparar unidade de escrita/persistência sem flush intermediário, reutilizando coordenação existente; verificar rollback de Item/IRPWItem/referências/outbox após falha injetada.
-- [ ] 5.6 Integrar staging de imagens, marcador de operação e recuperação no desktop/browser; verificar falha de asset, falha de persistência e encerramento entre etapas sem catálogo parcial ou referências quebradas.
+- [x] 5.6 Integrar staging de imagens, marcador de operação e recuperação no desktop/browser; verificar falha de asset, falha de persistência e encerramento entre etapas sem catálogo parcial ou referências quebradas.
 - [x] 5.7 Conectar aplicação integral ao gerenciador e publicação de sync somente após sucesso; verificar importação em workspace limpo e atualização sem mudar snapshots de personagens.
 
 ## 6. Validação integrada

@@ -66,6 +66,10 @@ export interface IrpwItemDefinition {
   version: 1;
   category: IrpwItemCategory;
   icon: string;
+  /** Workspace asset reference used by the renderer. Portable packages replace this with asset-sha256:<hash>. */
+  imageReference?: string | null;
+  /** Stable content identity for an image. Kept beside the local reference so imports can compare canonically. */
+  imageAssetSha256?: string | null;
   color?: string | null;
   backgroundColor?: string | null;
   tags: string[];
@@ -137,7 +141,7 @@ export interface IrpwDefensePointsEnvelope {
 
 export function createEmptyItemDefinition(category: IrpwItemCategory = 'common'): IrpwItemDefinition {
   return {
-    version: 1, category, icon: 'fa-solid fa-box', color: null, backgroundColor: null, tags: [], rarity: null,
+    version: 1, category, icon: 'fa-solid fa-box', imageReference: null, imageAssetSha256: null, color: null, backgroundColor: null, tags: [], rarity: null,
     stackable: true, stackLimit: 99, equipmentSlots: [], unique: false,
     uniqueBenefits: [], uniqueCosts: [],
     ...(category === 'weapon' ? { weapon: { properties: [], damageTypes: [], specialProperty: '', hands: 1 as const } } : {}),
@@ -164,6 +168,8 @@ export function normalizeIrpwItemDefinition(value: Partial<IrpwItemDefinition>):
   return {
     ...base, ...value, version: 1, category,
     icon: typeof value.icon === 'string' && value.icon.trim() ? value.icon.trim() : base.icon,
+    imageReference: normalizeImageReference(value.imageReference),
+    imageAssetSha256: normalizeAssetHash(value.imageAssetSha256),
     color: normalizeIrpwItemColor(value.color),
     backgroundColor: normalizeIrpwItemColor(value.backgroundColor),
     tags: normalizeStrings(value.tags),
@@ -195,6 +201,8 @@ export function validateIrpwItemDefinition(definition: IrpwItemDefinition): stri
   if (!isItemCategory(definition.category)) errors.push('Categoria inválida.');
   if (definition.color !== null && definition.color !== undefined && !normalizeIrpwItemColor(definition.color)) errors.push('A cor do item deve ser um hexadecimal no formato #RRGGBB.');
   if (definition.backgroundColor !== null && definition.backgroundColor !== undefined && !normalizeIrpwItemColor(definition.backgroundColor)) errors.push('A cor do fundo deve ser um hexadecimal no formato #RRGGBB.');
+  if (definition.imageReference && !isValidImageReference(definition.imageReference)) errors.push('A referência da imagem do item é inválida.');
+  if (definition.imageAssetSha256 && !normalizeAssetHash(definition.imageAssetSha256)) errors.push('O hash da imagem do item é inválido.');
   if (!Number.isInteger(definition.stackLimit) || definition.stackLimit < 1) errors.push('O limite da pilha deve ser um inteiro positivo.');
   if (definition.category === 'weapon' && !definition.weapon) errors.push('Configure os dados da arma.');
   if (definition.category === 'protection' && !definition.protection) errors.push('Configure a categoria da proteção.');
@@ -262,6 +270,18 @@ export function normalizeIrpwItemColor(value: unknown): string | null {
 }
 
 function normalizeStrings(values: unknown) { return Array.isArray(values) ? values.map(value => String(value).trim()).filter(Boolean) : []; }
+function normalizeImageReference(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+function normalizeAssetHash(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const hash = value.trim().toLowerCase();
+  return /^[a-f0-9]{64}$/.test(hash) ? hash : null;
+}
+function isValidImageReference(value: string): boolean {
+  return /^lorekit-asset:\/\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    || /^asset-sha256:[a-f0-9]{64}$/i.test(value);
+}
 function normalizeSlots(values: unknown): IrpwEquipmentSlot[] { return Array.isArray(values) ? values.filter(isSlot) : []; }
 function normalizeStackLimit(value: unknown): number { const n = Number(value); return Number.isInteger(n) && n > 0 ? n : 99; }
 function normalizeNumber(value: unknown): number { const n = Number(value); return Number.isFinite(n) ? Math.trunc(n) : 0; }

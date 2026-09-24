@@ -16,6 +16,13 @@
         icon="fa-file-export"
         (click)="exportCatalog()"
       ></app-button
+      ><app-button
+        size="xs"
+        buttonType="secondary"
+        label="Exportar sem imagens"
+        icon="fa-image"
+        (click)="exportCatalogWithoutImages()"
+      ></app-button
       ><input
         #importFile
         type="file"
@@ -140,8 +147,12 @@
             [attr.aria-current]="selectedItem?.id === item.id ? 'true' : null"
             (click)="selectItem(item)"
           >
-                        <span class="item-icon" aria-hidden="true" [style.background-color]="item.definition.backgroundColor || null" [style.border-left-color]="item.definition.color || null">
-              <i [class]="item.definition.icon" [style.color]="item.definition.color || null"></i>
+            <span class="item-icon" aria-hidden="true" [style.background-color]="item.definition.backgroundColor || null" [style.border-left-color]="item.definition.color || null">
+              @if ((item.definition.imageReference | assetUrl); as imageUrl) {
+                <img [src]="imageUrl" alt="" />
+              } @else {
+                <i [class]="item.definition.icon" [style.color]="item.definition.color || null"></i>
+              }
             </span>
             <span class="item-copy"
               ><strong>{{ item.name || "Sem nome" }}</strong
@@ -271,6 +282,35 @@
                     [value]="item.definition.backgroundColor ?? undefined"
                     (valueChange)="setBackgroundColor($event)"
                   ></app-hex-color-picker>
+                </div>
+                <div class="image-picker wide">
+                  <div class="image-picker-heading">
+                    <div>
+                      <span>Imagem do item</span>
+                      <small>PNG, JPEG ou WebP · até 2 MiB</small>
+                    </div>
+                    <div class="image-picker-actions">
+                      @if (item.definition.imageReference) {
+                        <button type="button" class="text-action danger" (click)="removeItemImage()">
+                          <i class="fa-solid fa-trash-can"></i> Remover
+                        </button>
+                      }
+                      <button type="button" class="text-action" (click)="openItemImageUploader()">
+                        <i class="fa-solid fa-upload"></i>
+                        {{ item.definition.imageReference ? 'Trocar imagem' : 'Escolher imagem' }}
+                      </button>
+                    </div>
+                  </div>
+                  @if ((item.definition.imageReference | assetUrl); as imageUrl) {
+                    <div class="image-preview">
+                      <img [src]="imageUrl" alt="Prévia da imagem do item" />
+                    </div>
+                  } @else {
+                    <div class="image-empty">
+                      <i class="fa-regular fa-image"></i>
+                      <span>Sem imagem personalizada</span>
+                    </div>
+                  }
                 </div>
                 <app-text-area
                   label="Descrição"
@@ -457,7 +497,11 @@
           <aside class="preview-panel" aria-label="Prévia do item">
             <p class="eyebrow">PRÉVIA NO INVENTÁRIO</p>
             <div class="preview-icon" [style.background-color]="item.definition.backgroundColor || null" [style.border-left-color]="item.definition.color || null">
-              <i [class]="item.definition.icon" [style.color]="item.definition.color || null"></i>
+              @if ((item.definition.imageReference | assetUrl); as imageUrl) {
+                <img [src]="imageUrl" alt="Prévia da imagem do item" />
+              } @else {
+                <i [class]="item.definition.icon" [style.color]="item.definition.color || null"></i>
+              }
             </div>
             <h3>{{ item.name || "Novo item" }}</h3>
             <span class="badge">{{
