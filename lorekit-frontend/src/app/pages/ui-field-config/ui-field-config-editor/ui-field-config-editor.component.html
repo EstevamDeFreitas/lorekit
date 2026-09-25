@@ -1,0 +1,320 @@
+    <div class=" flex flex-col gap-4 h-full">
+      <div class="flex flex-row items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+        <div>
+          <h1 class="text-xl font-semibold text-white">Editor de layout</h1>
+          <p class="text-sm text-zinc-400">Organize os campos no canvas e ajuste o layout pelo painel lateral.</p>
+        </div>
+        @if (!embeddedMode()) {
+          @if (isDialogMode) {
+            <app-icon-button title="Fechar" icon="fa-solid fa-xmark" buttonType="secondaryActive" size="base" (click)="closeDialog()"></app-icon-button>
+          } @else {
+            <app-button label="Voltar" buttonType="secondary" size="xs" [route]="backRoute"></app-button>
+          }
+        }
+      </div>
+
+      @if (!embeddedMode()) {
+      <div class="flex flex-wrap gap-4 items-end bg-zinc-925 p-3 rounded-lg border border-zinc-800">
+        <app-combo-box
+          class="min-w-0 md:min-w-56"
+          label="Escopo"
+          [items]="scopeModeItems"
+          compareProp="value"
+          displayProp="label"
+          [comboValue]="scopeMode"
+          (comboValueChange)="onScopeModeChange($event)">
+        </app-combo-box>
+
+        @if (scopeMode === 'template') {
+          <app-combo-box
+            class="min-w-0 md:min-w-72"
+            label="Template"
+            [items]="availableTemplates"
+            compareProp="value"
+            displayProp="label"
+            [comboValue]="selectedTemplateId"
+            (comboValueChange)="onTemplateSelected($event)">
+          </app-combo-box>
+
+        }
+
+        @if (scopeMode === 'parent' && parentScopeOptions.length > 0) {
+          <app-combo-box
+            class="min-w-0 md:min-w-72"
+            label="Pai"
+            [items]="parentScopeItems"
+            compareProp="value"
+            displayProp="label"
+            [(comboValue)]="selectedParentScopeKey">
+          </app-combo-box>
+        }
+
+        @if (scopeMode === 'parent' && allowParentSelection) {
+          <app-combo-box
+            class="min-w-0 md:min-w-48"
+            label="Tabela Pai"
+            [items]="parentSelectableTables"
+            [comboValue]="selectedParentTable"
+            (comboValueChange)="onParentTableChange($event)">
+          </app-combo-box>
+
+          <app-combo-box
+            class="min-w-0 md:min-w-72"
+            label="Entidade Pai"
+            [items]="parentEntityItems"
+            compareProp="id"
+            displayProp="label"
+            [(comboValue)]="selectedParentEntityId">
+          </app-combo-box>
+        }
+
+      </div>
+      }
+
+      <div class="flex flex-wrap items-end gap-2 rounded-lg border border-zinc-800 bg-zinc-925 p-3">
+        @for (tab of layout.tabs; track tab.id) {
+          <button type="button" class="rounded px-3 py-2 text-sm"
+            [class.bg-zinc-700]="tab.id === activeTabId" (click)="selectLayoutTab(tab.id)">{{ tab.name }}</button>
+        }
+        <app-icon-button title="Nova aba" icon="fa-solid fa-plus" size="xs" buttonType="primary" (click)="addLayoutTab()"></app-icon-button>
+        <app-icon-button title="Mover aba para esquerda" icon="fa-solid fa-arrow-left" size="xs" buttonType="secondary" (click)="moveLayoutTab(-1)"></app-icon-button>
+        <app-icon-button title="Mover aba para direita" icon="fa-solid fa-arrow-right" size="xs" buttonType="secondary" (click)="moveLayoutTab(1)"></app-icon-button>
+        <app-icon-button title="Excluir aba" icon="fa-solid fa-trash" size="xs" buttonType="danger" (click)="removeLayoutTab()"></app-icon-button>
+        <app-input class="min-w-56" label="Nome da aba" [(value)]="activeTab.name"></app-input>
+        <div class="ms-auto flex items-center gap-2 text-xs text-zinc-400">
+          <span>Arraste os elementos para o grid</span>
+          <div class="catalog-item catalog-item--separator" draggable="true" (dragstart)="onSeparatorDragStart($event, 'horizontal')" (dragend)="clearDragState()">Separador horizontal</div>
+          <div class="catalog-item catalog-item--separator" draggable="true" (dragstart)="onSeparatorDragStart($event, 'vertical')" (dragend)="clearDragState()">Separador vertical</div>
+        </div>
+      </div>
+
+      <div class="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">
+        <div class="min-w-0">
+          <div class="text-sm mb-2 text-zinc-300">Grid de visualizacao</div>
+          <div
+            class="grid-surface"
+            #gridSurface
+            [ngStyle]="getGridStyle()"
+            (dragover)="allowDrop($event)"
+            (drop)="onGridDrop($event)"
+            (click)="closeContextMenu()">
+
+            @for (item of activeTab.items; track item.id) {
+              <div
+                class="layout-item"
+                [class.layout-item--separator]="item.kind === 'separator'"
+                [ngStyle]="getItemStyle(item)"
+                (mousedown)="startMove($event, item)"
+                (click)="openItemMenu($event, item)">
+                @if (item.kind === 'separator') {
+                  <div class="layout-separator-preview" [class.layout-separator-preview--vertical]="item.orientation === 'vertical'" [style.color]="item.color || null">
+                    <span></span>@if (item.label) { <b>{{ item.label }}</b> }<span></span>
+                  </div>
+                } @else {
+                  <div class="layout-item-header">
+                    <span>{{ getItemLabel(item) }}</span>
+                    <span class="text-[10px] text-zinc-400">Editar</span>
+                  </div>
+                  <div class="layout-item-body"><span>{{ item.width }} x {{ item.height }}</span></div>
+                }
+
+                @if (item.kind === 'separator') {
+                  <div class="separator-resize-handle"
+                    [class.separator-resize-handle--vertical]="item.orientation === 'vertical'"
+                    (mousedown)="startResize($event, item, item.orientation === 'horizontal' ? 'right' : 'bottom')"></div>
+                } @else {
+                  <div class="resize-handle-right" (mousedown)="startResize($event, item, 'right')"></div>
+                  <div class="resize-handle-bottom" (mousedown)="startResize($event, item, 'bottom')"></div>
+                  <div class="resize-handle-corner" (mousedown)="startResize($event, item, 'corner')"></div>
+                }
+              </div>
+            }
+            @if (contextMenuItem; as item) {
+              <div #contextMenuElement class="layout-context-menu" [style.left.px]="contextMenu!.x" [style.top.px]="contextMenu!.y"
+                (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+                <div class="flex items-center justify-between gap-4"><strong>{{ getItemLabel(item) }}</strong><button type="button" (click)="closeContextMenu()">×</button></div>
+                <span class="text-xs text-zinc-400">{{ item.width }} x {{ item.height }}</span>
+                @if (item.kind === 'separator') {
+                  <app-input label="Título opcional" size="xs" [(value)]="item.label"></app-input>
+                  <div class="flex gap-2">
+                    <app-button label="Horizontal" buttonType="secondary" size="xs" (click)="item.orientation = 'horizontal'"></app-button>
+                    <app-button label="Vertical" buttonType="secondary" size="xs" (click)="item.orientation = 'vertical'"></app-button>
+                  </div>
+                }
+                <app-hex-color-picker label="Destaque" [(value)]="item.color"></app-hex-color-picker>
+                <app-button label="Remover" buttonType="danger" size="xs" (click)="removeItem(item.id)"></app-button>
+              </div>
+            }
+          </div>
+        </div>
+
+        <aside class="editor-sidebar flex h-[66vh] min-h-0 flex-col gap-4 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-925 p-3 scrollbar-dark">
+          @if (scopeMode === 'template') {
+            <section class="border-b border-zinc-800 pb-4 last:border-b-0 last:pb-0">
+              @if (activeTemplateId) {
+                <div class="mb-3 flex items-center gap-3">
+                  <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 text-yellow-400"><i class="fa-solid fa-bookmark"></i></div>
+                  <div>
+                    <h2 class="text-sm font-semibold text-zinc-100">Layout selecionado</h2>
+                    <p class="mt-1 text-xs text-zinc-400">Nome e ações deste layout</p>
+                  </div>
+                </div>
+                <app-input label="Nome do layout" [placeholder]="'Ex.: Ficha de combate'" [(value)]="activeTemplateName"></app-input>
+                <div class="mt-3 flex justify-end gap-2">
+                  <app-icon-button title="Salvar layout" icon="fa-solid fa-floppy-disk" buttonType="primary" size="base" (click)="save()"></app-icon-button>
+                  <app-icon-button title="Exportar layout" icon="fa-solid fa-download" buttonType="secondary" size="base" (click)="exportLayout()"></app-icon-button>
+                  <app-icon-button title="Excluir layout" icon="fa-solid fa-trash" buttonType="danger" size="base" (click)="deleteActiveTemplate()"></app-icon-button>
+                </div>
+              } @else {
+                <div class="flex items-center gap-3">
+                  <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 text-zinc-300"><i class="fa-solid fa-bookmark"></i></div>
+                  <div>
+                    <h2 class="text-sm font-semibold text-zinc-100">Selecione um layout</h2>
+                    <p class="mt-1 text-xs text-zinc-400">Use o seletor acima para escolher um layout salvo.</p>
+                  </div>
+                </div>
+              }
+            </section>
+          } @else {
+            <section class="border-b border-zinc-800 pb-4 last:border-b-0 last:pb-0">
+              <div class="mb-3 flex items-center gap-3">
+                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 text-yellow-400"><i class="fa-solid fa-table-cells-large"></i></div>
+                <div>
+                  <h2 class="text-sm font-semibold text-zinc-100">{{ scopeMode === 'global' ? 'Layout global' : 'Layout deste escopo' }}</h2>
+                  <p class="mt-1 text-xs text-zinc-400">Salve, exporte ou crie uma cópia.</p>
+                </div>
+              </div>
+              <div class="flex items-center justify-end gap-2">
+                <app-icon-button title="Restaurar padrão do sistema" icon="fa-solid fa-rotate-left" buttonType="secondary" size="base" (click)="confirmResetToDefault()"></app-icon-button>
+                <app-icon-button title="Criar layout nomeado" icon="fa-solid fa-bookmark" buttonType="secondary" size="base" (click)="toggleCreateTemplateForm()"></app-icon-button>
+                <app-icon-button title="Exportar layout" icon="fa-solid fa-download" buttonType="secondary" size="base" (click)="exportLayout()"></app-icon-button>
+                <app-icon-button title="Salvar layout" icon="fa-solid fa-floppy-disk" buttonType="primary" size="base" (click)="save()"></app-icon-button>
+              </div>
+
+              @if (showCreateTemplateForm) {
+                <div class="mt-3 flex items-end gap-2 rounded-lg border border-zinc-700 bg-zinc-950/60 p-3">
+                  <app-input class="min-w-0 flex-1" label="Nome do novo layout" [placeholder]="'Ex.: Ficha de combate'" [(value)]="newTemplateName"></app-input>
+                  <app-icon-button title="Criar layout" icon="fa-solid fa-check" buttonType="primary" size="base" (click)="confirmCreateTemplate()"></app-icon-button>
+                  <app-icon-button title="Cancelar criação" icon="fa-solid fa-xmark" buttonType="secondary" size="base" (click)="showCreateTemplateForm = false; newTemplateName = ''"></app-icon-button>
+                </div>
+              }
+            </section>
+          }
+
+          @if (noticeMessage) {
+            <p class="rounded-md border border-emerald-900/70 bg-emerald-950/30 px-3 py-2 text-xs text-emerald-200" role="status">{{ noticeMessage }}</p>
+          }
+
+          <section class="border-b border-zinc-800 pb-4 last:border-b-0 last:pb-0">
+            <div class="mb-3 flex items-center gap-3">
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800 text-yellow-400"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+              <div>
+                <h2 class="text-sm font-semibold text-zinc-100">Novo campo dinâmico</h2>
+                <p class="mt-1 text-xs text-zinc-400">Adicione campos para esta entidade.</p>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <app-input label="Nome do campo" [placeholder]="'Digite o nome do campo'" [(value)]="newFieldName"></app-input>
+              <app-combo-box label="Tipo" [items]="fieldTypeItems" compareProp="value" displayProp="label" [(comboValue)]="newFieldType"></app-combo-box>
+
+              @if (newFieldType === 'options') {
+                <app-input label="Opções" [placeholder]="'Separe por ; (ex.: opção 1; opção 2)'" [(value)]="newFieldOptions"></app-input>
+              }
+              @if (newFieldType === 'entity') {
+                <app-combo-box label="Entidade relacionada" [items]="entityTableOptions" [(comboValue)]="newFieldTargetEntityTable"></app-combo-box>
+              }
+              @if (newFieldType === 'image') {
+                <app-combo-box label="Proporção da imagem" [items]="imageAspectRatioItems" compareProp="value" displayProp="label" [(comboValue)]="newFieldImageAspectRatio"></app-combo-box>
+              }
+
+              <div class="flex justify-end pt-1">
+                <app-icon-button title="Adicionar campo dinâmico" icon="fa-solid fa-plus" buttonType="primary" size="base" [disabled]="creatingDynamicField || !newFieldName.trim()" (click)="createDynamicField()"></app-icon-button>
+              </div>
+            </div>
+          </section>
+
+          <section class="border-b border-zinc-800 pb-4 last:border-b-0 last:pb-0">
+            <div class="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <h2 class="text-sm font-semibold text-zinc-100">Campos dinâmicos</h2>
+                <p class="mt-1 text-xs text-zinc-400">Gerencie e arraste campos para o canvas.</p>
+              </div>
+              <span class="rounded-full bg-zinc-800 px-2 py-1 text-xs tabular-nums text-zinc-300">{{ dynamicFields.length }}</span>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              @for (field of dynamicFields; track field.id) {
+                <article
+                  class="cursor-grab rounded-[0.65rem] border border-zinc-700 bg-zinc-900 p-2.5 transition-[border-color,background-color,opacity] duration-150 hover:border-zinc-500 hover:bg-zinc-800"
+                  [class.field-list-row--placed]="isTokenPlaced('dynamic:' + field.id)"
+                  [attr.draggable]="!isTokenPlaced('dynamic:' + field.id)"
+                  (dragstart)="onCatalogDragStart($event, 'dynamic:' + field.id)">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-medium text-zinc-100">{{ field.name }}</p>
+                      <p class="mt-1 truncate text-xs text-zinc-400">{{ getDynamicFieldTypeLabel(field) }}</p>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1">
+                      @if (isTokenPlaced('dynamic:' + field.id)) {
+                        <span class="px-1.5 py-1 text-[10px] text-yellow-300">No canvas</span>
+                      }
+                      @if (editingDynamicFieldId === field.id) {
+                        <app-icon-button [title]="'Cancelar edição de ' + field.name" icon="fa-solid fa-xmark" buttonType="secondary" size="xs" (click)="cancelEditDynamicField()"></app-icon-button>
+                      } @else {
+                        <app-icon-button [title]="'Editar campo ' + field.name" icon="fa-solid fa-pencil" buttonType="secondary" size="xs" (click)="startEditDynamicField(field)"></app-icon-button>
+                      }
+                      <app-icon-button [title]="'Excluir campo ' + field.name" icon="fa-solid fa-trash" buttonType="danger" size="xs" (click)="deleteDynamicField(field)"></app-icon-button>
+                    </div>
+                  </div>
+
+                  @if (editingDynamicFieldId === field.id) {
+                    <div class="mt-3 grid gap-2 border-t border-zinc-800 pt-3" (click)="$event.stopPropagation()">
+                      <app-input label="Nome do campo" [(value)]="field.name"></app-input>
+                      <app-combo-box label="Tipo" [items]="fieldTypeItems" compareProp="value" displayProp="label" [comboValue]="field.fieldType || 'text'" (comboValueChange)="setDynamicFieldType(field, $event)"></app-combo-box>
+                      @if (field.fieldType === 'options') {
+                        <app-input label="Opções" [placeholder]="'Separe por ;'" [(value)]="field.options"></app-input>
+                      }
+                      @if (field.fieldType === 'entity') {
+                        <app-combo-box label="Entidade relacionada" [items]="entityTableOptions" [comboValue]="field.targetEntityTable ?? ''" (comboValueChange)="field.targetEntityTable = $event"></app-combo-box>
+                      }
+                      @if (field.fieldType === 'image') {
+                        <app-combo-box label="Proporção da imagem" [items]="imageAspectRatioItems" compareProp="value" displayProp="label" [comboValue]="field.options ?? '1'" (comboValueChange)="field.options = $event"></app-combo-box>
+                      }
+                      <div class="flex justify-end gap-2">
+                        <app-icon-button [title]="'Salvar campo ' + field.name" icon="fa-solid fa-check" buttonType="primary" size="sm" (click)="saveDynamicField(field)"></app-icon-button>
+                      </div>
+                    </div>
+                  }
+                </article>
+              } @empty {
+                <div class="rounded-lg border border-dashed border-zinc-700 px-3 py-4 text-center">
+                  <p class="text-xs text-zinc-400">Nenhum campo dinâmico criado para {{ entityTable }}.</p>
+                </div>
+              }
+            </div>
+          </section>
+
+          <section class="border-b border-zinc-800 pb-4 last:border-b-0 last:pb-0">
+            <div class="mb-2">
+              <h2 class="text-sm font-semibold text-zinc-100">Campos do sistema</h2>
+              <p class="mt-1 text-xs text-zinc-400">Arraste os campos fixos para o canvas.</p>
+            </div>
+            <div class="flex flex-col gap-2">
+              @for (field of systemCatalog; track field.token) {
+                <div class="catalog-item relative" [class.catalog-item--disabled]="isTokenPlaced(field.token)" [attr.draggable]="!isTokenPlaced(field.token)" (dragstart)="onCatalogDragStart($event, field.token)">
+                  <div class="flex flex-col">
+                    <span class="text-sm">{{ field.label }}</span>
+                    <span class="text-[11px] text-zinc-400">{{ field.fieldType && field.fieldType !== 'text' ? field.fieldType : field.control }}</span>
+                  </div>
+                  @if (isTokenPlaced(field.token)) {
+                    <span class="absolute bottom-1 right-2 text-[10px] text-zinc-300">No canvas</span>
+                  }
+                </div>
+              }
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+  

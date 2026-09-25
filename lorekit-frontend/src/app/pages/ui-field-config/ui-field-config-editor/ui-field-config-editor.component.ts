@@ -1,12 +1,13 @@
 import { NgStyle } from '@angular/common';
-import { Component, ElementRef, inject, ViewChild } from '@angular/core';
+import { Component, ElementRef, inject, input, output, ViewChild } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
 import { createFieldLayoutItem, UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem, UiFieldLayoutTab, UiFieldTemplate, validateUiConfigPayload } from '../../../models/ui-field-config.model';
 import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
 import { UiFieldLayoutPortabilityService } from '../../../services/ui-field-layout-portability.service';
-import { DynamicField } from '../../../models/dynamicfields.model';
-import { DbProvider } from '../../../app.config';
+import { DynamicField, DynamicFieldType } from '../../../models/dynamicfields.model';
+import { DynamicFieldService } from '../../../services/dynamic-field.service';
+import { DbProvider } from '../../../database/db-provider.service';
 import { schema } from '../../../database/schema';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
@@ -34,277 +35,23 @@ interface SelectOptionItem {
 @Component({
   selector: 'app-ui-field-config-editor',
   imports: [NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent, InputComponent, HexColorPickerComponent],
-  template: `
-    <div class=" flex flex-col gap-4 h-full">
-      <div class="flex flex-row items-center justify-between gap-3 border-b border-zinc-800 pb-4">
-        <div>
-          @if (scopeMode === 'template' && activeTemplateName) {
-            <h1 class="text-xl font-semibold text-white">Editando Template: {{ activeTemplateName }}</h1>
-          } @else {
-            <h1 class="text-xl font-semibold text-white">Configurar Layout de Campos</h1>
-          }
-          <p class="text-sm text-zinc-400">Arraste campos para o grid e redimensione pelas bordas.</p>
-        </div>
-        @if (isDialogMode) {
-          <app-icon-button title="Fechar" icon="fa-solid fa-xmark" buttonType="secondaryActive" size="base" (click)="closeDialog()"></app-icon-button>
-        } @else {
-          <app-button label="Voltar" buttonType="secondary" size="xs" [route]="backRoute"></app-button>
-        }
-      </div>
-
-      <div class="flex flex-wrap gap-4 items-end bg-zinc-925 p-3 rounded-lg border border-zinc-800">
-        <app-combo-box
-          class="min-w-0 md:min-w-56"
-          label="Escopo"
-          [items]="scopeModeItems"
-          compareProp="value"
-          displayProp="label"
-          [comboValue]="scopeMode"
-          (comboValueChange)="onScopeModeChange($event)">
-        </app-combo-box>
-
-        @if (scopeMode === 'template') {
-          <app-combo-box
-            class="min-w-0 md:min-w-72"
-            label="Template"
-            [items]="availableTemplates"
-            compareProp="value"
-            displayProp="label"
-            [comboValue]="selectedTemplateId"
-            (comboValueChange)="onTemplateSelected($event)">
-          </app-combo-box>
-
-          @if (activeTemplateId) {
-            <app-input
-              class="min-w-0 md:min-w-56"
-              label="Nome do template"
-              [(value)]="activeTemplateName">
-            </app-input>
-          }
-        }
-
-        @if (scopeMode === 'parent' && parentScopeOptions.length > 0) {
-          <app-combo-box
-            class="min-w-0 md:min-w-72"
-            label="Pai"
-            [items]="parentScopeItems"
-            compareProp="value"
-            displayProp="label"
-            [(comboValue)]="selectedParentScopeKey">
-          </app-combo-box>
-        }
-
-        @if (scopeMode === 'parent' && allowParentSelection) {
-          <app-combo-box
-            class="min-w-0 md:min-w-48"
-            label="Tabela Pai"
-            [items]="parentSelectableTables"
-            [comboValue]="selectedParentTable"
-            (comboValueChange)="onParentTableChange($event)">
-          </app-combo-box>
-
-          <app-combo-box
-            class="min-w-0 md:min-w-72"
-            label="Entidade Pai"
-            [items]="parentEntityItems"
-            compareProp="id"
-            displayProp="label"
-            [(comboValue)]="selectedParentEntityId">
-          </app-combo-box>
-        }
-
-        <div class="flex flex-col items-end gap-1 ms-auto">
-          <div class="flex flex-row gap-2">
-            @if (scopeMode !== 'template') {
-              <app-icon-button title="Padrão do Sistema" icon="fa-solid fa-computer" buttonType="white" size="base" (click)="confirmResetToDefault()"></app-icon-button>
-              <app-icon-button title="Criar Template" icon="fa-solid fa-bookmark" buttonType="white" size="base" (click)="toggleCreateTemplateForm()"></app-icon-button>
-            }
-            <app-icon-button title="Exportar Layout" icon="fa-solid fa-download" buttonType="white" size="base" (click)="exportLayout()"></app-icon-button>
-            <app-icon-button title="Salvar Layout" icon="fa-solid fa-floppy-disk" buttonType="primary" size="base" (click)="save()"></app-icon-button>
-          </div>
-
-          @if (showCreateTemplateForm) {
-            <div class="flex flex-row gap-2 items-end mt-2">
-              <app-input label="Nome do template" [placeholder]="'Ex: Ficha de combate'" [(value)]="newTemplateName"></app-input>
-              <app-button label="Confirmar" buttonType="primary" size="xs" (click)="confirmCreateTemplate()"></app-button>
-              <app-button label="Cancelar" buttonType="secondary" size="xs" (click)="showCreateTemplateForm = false; newTemplateName = ''"></app-button>
-            </div>
-          }
-
-          @if (noticeMessage) {
-            <span class="text-xs text-emerald-300">{{ noticeMessage }}</span>
-          }
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-end gap-2 rounded-lg border border-zinc-800 bg-zinc-925 p-3">
-        @for (tab of layout.tabs; track tab.id) {
-          <button type="button" class="rounded px-3 py-2 text-sm"
-            [class.bg-zinc-700]="tab.id === activeTabId" (click)="selectLayoutTab(tab.id)">{{ tab.name }}</button>
-        }
-        <app-icon-button title="Nova aba" icon="fa-solid fa-plus" size="xs" buttonType="primary" (click)="addLayoutTab()"></app-icon-button>
-        <app-icon-button title="Mover aba para esquerda" icon="fa-solid fa-arrow-left" size="xs" buttonType="secondary" (click)="moveLayoutTab(-1)"></app-icon-button>
-        <app-icon-button title="Mover aba para direita" icon="fa-solid fa-arrow-right" size="xs" buttonType="secondary" (click)="moveLayoutTab(1)"></app-icon-button>
-        <app-icon-button title="Excluir aba" icon="fa-solid fa-trash" size="xs" buttonType="danger" (click)="removeLayoutTab()"></app-icon-button>
-        <app-input class="min-w-56" label="Nome da aba" [(value)]="activeTab.name"></app-input>
-        <div class="ms-auto flex items-center gap-2 text-xs text-zinc-400">
-          <span>Arraste os elementos para o grid</span>
-          <div class="catalog-item catalog-item--separator" draggable="true" (dragstart)="onSeparatorDragStart($event, 'horizontal')" (dragend)="clearDragState()">Separador horizontal</div>
-          <div class="catalog-item catalog-item--separator" draggable="true" (dragstart)="onSeparatorDragStart($event, 'vertical')" (dragend)="clearDragState()">Separador vertical</div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4">
-        <div>
-          <div class="text-sm mb-2 text-zinc-300">Grid de visualizacao</div>
-          <div
-            class="grid-surface"
-            #gridSurface
-            [ngStyle]="getGridStyle()"
-            (dragover)="allowDrop($event)"
-            (drop)="onGridDrop($event)"
-            (click)="closeContextMenu()">
-
-            @for (item of activeTab.items; track item.id) {
-              <div
-                class="layout-item"
-                [class.layout-item--separator]="item.kind === 'separator'"
-                [ngStyle]="getItemStyle(item)"
-                (mousedown)="startMove($event, item)"
-                (click)="openItemMenu($event, item)">
-                @if (item.kind === 'separator') {
-                  <div class="layout-separator-preview" [class.layout-separator-preview--vertical]="item.orientation === 'vertical'" [style.color]="item.color || null">
-                    <span></span>@if (item.label) { <b>{{ item.label }}</b> }<span></span>
-                  </div>
-                } @else {
-                  <div class="layout-item-header">
-                    <span>{{ getItemLabel(item) }}</span>
-                    <span class="text-[10px] text-zinc-400">Editar</span>
-                  </div>
-                  <div class="layout-item-body"><span>{{ item.width }} x {{ item.height }}</span></div>
-                }
-
-                @if (item.kind === 'separator') {
-                  <div class="separator-resize-handle"
-                    [class.separator-resize-handle--vertical]="item.orientation === 'vertical'"
-                    (mousedown)="startResize($event, item, item.orientation === 'horizontal' ? 'right' : 'bottom')"></div>
-                } @else {
-                  <div class="resize-handle-right" (mousedown)="startResize($event, item, 'right')"></div>
-                  <div class="resize-handle-bottom" (mousedown)="startResize($event, item, 'bottom')"></div>
-                  <div class="resize-handle-corner" (mousedown)="startResize($event, item, 'corner')"></div>
-                }
-              </div>
-            }
-            @if (contextMenuItem; as item) {
-              <div #contextMenuElement class="layout-context-menu" [style.left.px]="contextMenu!.x" [style.top.px]="contextMenu!.y"
-                (mousedown)="$event.stopPropagation()" (click)="$event.stopPropagation()">
-                <div class="flex items-center justify-between gap-4"><strong>{{ getItemLabel(item) }}</strong><button type="button" (click)="closeContextMenu()">×</button></div>
-                <span class="text-xs text-zinc-400">{{ item.width }} x {{ item.height }}</span>
-                @if (item.kind === 'separator') {
-                  <app-input label="Título opcional" size="xs" [(value)]="item.label"></app-input>
-                  <div class="flex gap-2">
-                    <app-button label="Horizontal" buttonType="secondary" size="xs" (click)="item.orientation = 'horizontal'"></app-button>
-                    <app-button label="Vertical" buttonType="secondary" size="xs" (click)="item.orientation = 'vertical'"></app-button>
-                  </div>
-                }
-                <app-hex-color-picker label="Destaque" [(value)]="item.color"></app-hex-color-picker>
-                <app-button label="Remover" buttonType="danger" size="xs" (click)="removeItem(item.id)"></app-button>
-              </div>
-            }
-          </div>
-        </div>
-
-        <div class="bg-zinc-925 rounded-lg border border-zinc-800 p-3 h-[65vh] overflow-y-auto scrollbar-dark flex flex-col min-h-0">
-          <div class="border-b border-zinc-800 bg-zinc-925 p-3 mb-6 pb-6">
-            <div class="text-sm text-zinc-200 mb-2">Novo campo dinamico</div>
-
-            <div class="flex flex-col gap-2">
-              <app-input
-                label="Nome do campo"
-                [placeholder]="'Digite o nome do campo'"
-                [(value)]="newFieldName">
-              </app-input>
-
-              <app-combo-box
-                label="Tipo"
-                [items]="fieldTypeItems"
-                compareProp="value"
-                displayProp="label"
-                [(comboValue)]="newFieldType">
-              </app-combo-box>
-
-              @if (newFieldType === 'options') {
-                <app-input
-                  label="Opcoes"
-                  [placeholder]="'Separe por ; (ex: op1;op2;op3)'"
-                  [(value)]="newFieldOptions">
-                </app-input>
-              }
-
-              @if (newFieldType === 'entity') {
-                <app-combo-box
-                  label="Entidade relacionada"
-                  [items]="entityTableOptions"
-                  [(comboValue)]="newFieldTargetEntityTable">
-                </app-combo-box>
-              }
-              @if (newFieldType === 'image') {
-                <app-combo-box
-                  label="Propor??o do recorte"
-                  [items]="imageAspectRatioItems"
-                  compareProp="value"
-                  displayProp="label"
-                  [(comboValue)]="newFieldImageAspectRatio">
-                </app-combo-box>
-              }
-
-
-              <div class="flex justify-end">
-                <app-icon-button
-                  title="Criar Campo"
-                  buttonType="primary"
-                  size="xs"
-                  [disabled]="creatingDynamicField"
-                  (click)="createDynamicField()">
-                </app-icon-button>
-              </div>
-            </div>
-          </div>
-
-          <div class="text-sm text-zinc-300 mb-3">Campos disponiveis</div>
-          <div class="flex flex-col gap-2 pr-1 min-h-0 flex-1">
-            @for (field of catalog; track field.token) {
-              <div
-                class="catalog-item relative"
-                [class.catalog-item--disabled]="isTokenPlaced(field.token)"
-                [attr.draggable]="!isTokenPlaced(field.token)"
-                (dragstart)="onCatalogDragStart($event, field.token)">
-                <div class="flex flex-col">
-                  <span class="text-sm">{{ field.label }}</span>
-                  <span class="text-[11px] text-zinc-400">{{ field.source }}{{ field.fieldType && field.fieldType !== 'text' ? ' · ' + field.fieldType : '' }}{{ field.isEditorField && field.fieldType === 'text' ? ' - editor' : '' }}</span>
-                </div>
-                @if (isTokenPlaced(field.token)){
-                  <div class="absolute bottom-1 right-2" >
-                    <p class="text-xs">Presente no Grid</p>
-                  </div>
-                }
-
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './ui-field-config-editor.component.html',
   styleUrl: './ui-field-config-editor.component.css',
 })
 export class UiFieldConfigEditorComponent {
+  readonly entityTableInput = input<string | null>(null, { alias: 'entityTable' });
+  readonly templateIdInput = input<string | null>(null, { alias: 'templateId' });
+  readonly scopeModeInput = input<'entity' | 'parent' | 'global' | 'template' | null>(null, { alias: 'scopeMode' });
+  readonly embeddedMode = input(false);
+  readonly templatesChanged = output<void>();
+
   private dialogRef = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
   private dialogData = inject<any>(DIALOG_DATA, { optional: true });
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private dbProvider = inject(DbProvider);
   private uiFieldConfigService = inject(UiFieldConfigService);
+  private dynamicFieldService = inject(DynamicFieldService);
   private uiFieldLayoutPortabilityService = inject(UiFieldLayoutPortabilityService);
   private confirmService = inject(ConfirmService);
 
@@ -313,6 +60,8 @@ export class UiFieldConfigEditorComponent {
   backRoute = '/app/culture/list';
 
   catalog: UiFieldCatalogItem[] = [];
+  dynamicFields: DynamicField[] = [];
+  editingDynamicFieldId = '';
   layout: UiConfigPayload = getSystemDefaultConfig('');
   activeTabId = 'tab:properties';
 
@@ -361,6 +110,10 @@ export class UiFieldConfigEditorComponent {
       'GlobalParameter', 'OrganizationType', 'Link',
     ]);
     return schema.map((t) => t.name).filter((name) => !ignored.has(name));
+  }
+
+  get systemCatalog(): UiFieldCatalogItem[] {
+    return this.catalog.filter((field) => field.source === 'schema');
   }
 
   // Template
@@ -431,7 +184,7 @@ export class UiFieldConfigEditorComponent {
 
   ngOnInit(): void {
     const queryMap = this.route.snapshot.queryParamMap;
-    this.entityTable = this.dialogData?.entityTable ?? queryMap.get('entityTable') ?? '';
+    this.entityTable = this.entityTableInput() ?? this.dialogData?.entityTable ?? queryMap.get('entityTable') ?? '';
     this.entityId = this.dialogData?.entityId ?? queryMap.get('entityId');
     this.backRoute = this.dialogData?.backRoute ?? queryMap.get('backRoute') ?? '/app/culture/list';
 
@@ -441,9 +194,10 @@ export class UiFieldConfigEditorComponent {
     // }
 
     this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
+    this.loadDynamicFields();
     this.refreshTemplates();
 
-    const incomingTemplateId = this.dialogData?.templateId as string | undefined;
+    const incomingTemplateId = this.templateIdInput() ?? (this.dialogData?.templateId as string | undefined);
     if (incomingTemplateId) {
       const tpl = this.uiFieldConfigService.getTemplates(this.entityTable)
         .find((t) => t.id === incomingTemplateId);
@@ -488,7 +242,7 @@ export class UiFieldConfigEditorComponent {
       this.selectedParentEntityId = parentId;
     }
 
-    const requestedScopeMode = this.dialogData?.scopeMode as 'entity' | 'parent' | 'global' | 'template' | undefined;
+    const requestedScopeMode = this.scopeModeInput() ?? (this.dialogData?.scopeMode as 'entity' | 'parent' | 'global' | 'template' | undefined);
     if (!incomingTemplateId && requestedScopeMode) {
       this.scopeMode = requestedScopeMode;
     } else if (!incomingTemplateId && this.entityId) {
@@ -509,6 +263,32 @@ export class UiFieldConfigEditorComponent {
 
   closeDialog(): void {
     this.dialogRef?.close();
+  }
+
+  setEntityTable(entityTable: string): void {
+    if (!entityTable) return;
+
+    this.entityTable = entityTable;
+    this.entityId = null;
+    this.scopeMode = 'global';
+    this.activeTemplateId = '';
+    this.activeTemplateName = '';
+    this.selectedTemplateId = '';
+    this.catalog = this.uiFieldConfigService.getCatalog(entityTable);
+    this.loadDynamicFields();
+    this.refreshTemplates();
+    this.layout = this.uiFieldConfigService.getResolvedConfig(entityTable, null);
+    this.ensureActiveTab();
+    this.editingDynamicFieldId = '';
+  }
+
+  useGlobalLayout(): void {
+    this.scopeMode = 'global';
+    this.activeTemplateId = '';
+    this.activeTemplateName = '';
+    this.selectedTemplateId = '';
+    this.layout = this.uiFieldConfigService.getResolvedConfig(this.entityTable, this.entityId);
+    this.ensureActiveTab();
   }
   async onScopeModeChange(nextScope: string): Promise<void> {
     if (!this.isScopeMode(nextScope) || nextScope === this.scopeMode) return;
@@ -942,7 +722,21 @@ export class UiFieldConfigEditorComponent {
         this.showNotice('Selecione um template para salvar.');
         return;
       }
-      this.uiFieldConfigService.updateTemplate(this.activeTemplateId, this.activeTemplateName, cleanedLayout);
+      const name = this.activeTemplateName.trim();
+      if (!name) {
+        this.showNotice('Informe um nome para o layout.');
+        return;
+      }
+      const duplicateName = this.uiFieldConfigService.getTemplates(this.entityTable).some((template) => (
+        template.id !== this.activeTemplateId && template.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase()
+      ));
+      if (duplicateName) {
+        this.showNotice('Já existe um layout com esse nome para esta entidade.');
+        return;
+      }
+      this.activeTemplateName = name;
+      this.uiFieldConfigService.updateTemplate(this.activeTemplateId, name, cleanedLayout);
+      this.templatesChanged.emit();
 
       // Link the template to the appropriate scope so getResolvedConfig can find it
       if (this.entityId) {
@@ -1069,6 +863,7 @@ export class UiFieldConfigEditorComponent {
     this.activeTemplateName = created.name;
     this.selectedTemplateId = created.id;
     this.scopeMode = 'template';
+    this.templatesChanged.emit();
     this.showNotice(`Template "${name}" criado.`);
   }
 
@@ -1131,6 +926,7 @@ export class UiFieldConfigEditorComponent {
 
       this.uiFieldConfigService.saveDynamicField(dynamicField);
       this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
+      this.loadDynamicFields();
 
       this.newFieldName = '';
       this.newFieldOptions = '';
@@ -1141,6 +937,115 @@ export class UiFieldConfigEditorComponent {
     } finally {
       this.creatingDynamicField = false;
     }
+  }
+
+  private loadDynamicFields(): void {
+    this.dynamicFields = this.dynamicFieldService.getDynamicFields(this.entityTable);
+  }
+
+  async startEditDynamicField(field: DynamicField): Promise<void> {
+    if (this.editingDynamicFieldId === field.id) return;
+
+    if (this.editingDynamicFieldId) {
+      const confirmed = await this.confirmService.ask('Descartar as alterações não salvas do campo atual?');
+      if (!confirmed) return;
+    }
+
+    this.loadDynamicFields();
+    this.editingDynamicFieldId = field.id;
+  }
+
+  cancelEditDynamicField(): void {
+    this.loadDynamicFields();
+    this.editingDynamicFieldId = '';
+  }
+
+  setDynamicFieldType(field: DynamicField, value: string): void {
+    if (!['text', 'options', 'editor', 'entity', 'image'].includes(value)) return;
+
+    field.fieldType = value as DynamicFieldType;
+    field.isEditorField = field.fieldType === 'editor';
+    if (field.fieldType !== 'options' && field.fieldType !== 'image') field.options = undefined;
+    if (field.fieldType === 'image' && !this.imageAspectRatioItems.some((option) => option.value === field.options)) {
+      field.options = '1';
+    }
+    if (field.fieldType !== 'entity') field.targetEntityTable = undefined;
+  }
+
+  saveDynamicField(field: DynamicField): void {
+    const name = field.name.trim();
+    if (!name) {
+      this.showNotice('Informe um nome para o campo dinâmico.');
+      return;
+    }
+
+    const duplicateName = this.dynamicFields.some((existing) => (
+      existing.id !== field.id && existing.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase()
+    ));
+    if (duplicateName) {
+      this.showNotice('Já existe um campo dinâmico com esse nome.');
+      return;
+    }
+
+    field.name = name;
+    field.isEditorField = field.fieldType === 'editor';
+    if (field.fieldType === 'options' || field.fieldType === 'image') {
+      field.options = field.options?.trim() || undefined;
+    } else {
+      field.options = undefined;
+    }
+    if (field.fieldType !== 'entity') field.targetEntityTable = undefined;
+
+    this.uiFieldConfigService.saveDynamicField(field);
+    this.loadDynamicFields();
+    this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
+    this.editingDynamicFieldId = '';
+    this.showNotice('Campo dinâmico atualizado.');
+  }
+
+  async deleteDynamicField(field: DynamicField): Promise<void> {
+    const confirmed = await this.confirmService.ask(
+      `Excluir o campo dinâmico "${field.name}"? Ele pode estar incluído em layouts desta entidade.`
+    );
+    if (!confirmed) return;
+
+    this.dynamicFieldService.deleteDynamicField(field);
+    this.loadDynamicFields();
+    this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
+    if (this.editingDynamicFieldId === field.id) this.editingDynamicFieldId = '';
+    this.showNotice('Campo dinâmico excluído.');
+  }
+
+  getDynamicFieldTypeLabel(field: DynamicField): string {
+    switch (field.fieldType) {
+      case 'options': return `Opções${field.options ? `: ${field.options}` : ''}`;
+      case 'editor': return 'Editor de texto';
+      case 'entity': return `Entidade relacionada${field.targetEntityTable ? `: ${field.targetEntityTable}` : ''}`;
+      case 'image': return 'Imagem';
+      default: return 'Texto';
+    }
+  }
+
+  async deleteActiveTemplate(): Promise<void> {
+    if (!this.activeTemplateId) return;
+
+    const templateId = this.activeTemplateId;
+    const templateName = this.activeTemplateName.trim() || 'este layout';
+    const confirmed = await this.confirmService.ask(
+      `Excluir o layout "${templateName}"? Essa ação não pode ser desfeita.`
+    );
+    if (!confirmed) return;
+
+    this.uiFieldConfigService.deleteTemplate(templateId);
+    this.activeTemplateId = '';
+    this.activeTemplateName = '';
+    this.selectedTemplateId = '';
+    this.scopeMode = this.entityId ? 'entity' : 'global';
+    this.refreshTemplates();
+    this.layout = this.uiFieldConfigService.getResolvedConfig(this.entityTable, this.entityId);
+    this.ensureActiveTab();
+    this.templatesChanged.emit();
+    this.showNotice(`Layout "${templateName}" excluído.`);
   }
 
   private getDefaultWidth(token: string): number {

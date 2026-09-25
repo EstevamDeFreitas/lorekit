@@ -1,15 +1,12 @@
-import { DialogRef } from '@angular/cdk/dialog';
-import { Dialog } from '@angular/cdk/dialog';
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { NgClass } from '@angular/common';
+import { Component, inject, OnInit, ViewChild, ViewContainerRef } from '@angular/core';
+import type { ComponentRef } from '@angular/core';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
-import { LocationService } from '../../../services/location.service';
 import { LocationCategory } from '../../../models/location.model';
 import { InputComponent } from "../../../components/input/input.component";
 import {OverlayModule} from '@angular/cdk/overlay';
 import { LocationCategoriesService } from '../../../services/location-categories.service';
-import { FormOverlayComponent, FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
+import { FormOverlayDirective, FormField } from '../../../components/form-overlay/form-overlay.component';
 import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { GlobalParameterService } from '../../../services/global-parameter.service';
 import { FormsModule } from '@angular/forms';
@@ -19,10 +16,8 @@ import { ObjectType } from '../../../models/object.model';
 import { ObjectTypeService } from '../../../services/object-type.service';
 import { schema } from '../../../database/schema';
 import { ComboBoxComponent } from "../../../components/combo-box/combo-box.component";
-import { DynamicFieldService } from '../../../services/dynamic-field.service';
-import { DynamicField, DynamicFieldType } from '../../../models/dynamicfields.model';
 import { ElectronService } from '../../../services/electron.service';
-import { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-config-editor/ui-field-config-editor.component';
+import type { UiFieldConfigEditorComponent } from '../../ui-field-config/ui-field-config-editor/ui-field-config-editor.component';
 import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
 import { UiFieldTemplate } from '../../../models/ui-field-config.model';
 import { UiFieldLayoutImportDestination, UiFieldLayoutImportPlan, UiFieldLayoutPortabilityService } from '../../../services/ui-field-layout-portability.service';
@@ -31,495 +26,35 @@ import { EventTypeService } from '../../../services/event-type.service';
 
 @Component({
   selector: 'app-settings',
-  imports: [NgClass, FormsModule, ButtonComponent, IconButtonComponent, FormOverlayDirective, OverlayModule, ComboBoxComponent, InputComponent],
-  template: `
-  <div class="w-[60vw] h-[60vh] rounded-md border border-zinc-800">
-
-    <div class="flex flex-row ">
-      <div class="w-75 h-[60vh] rounded-s-md border-e border-zinc-700 bg-zinc-900">
-        <h2 class="text-xl mb-6 p-4">Configurações</h2>
-        <div class="flex flex-col gap-1">
-          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('general_settings')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'general_settings'}">
-            <p>Configurações Gerais</p>
-            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'general_settings','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'general_settings' }"></div>
-            </a>
-          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('location_categories')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'location_categories'}">
-            <p>Categorias de Localidade</p>
-            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'location_categories','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'location_categories'}"></div>
-            </a>
-          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('organization_types')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'organization_types'}">
-            <p>Tipos de Organização</p>
-            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'organization_types','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'organization_types'}"></div>
-            </a>
-          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('object_types')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'object_types'}">
-            <p>Tipos de Objeto</p>
-            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'object_types','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'object_types'}"></div>
-            </a>
-          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('event_types')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'event_types'}">
-            <p>Tipos de Evento</p>
-            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'event_types','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'event_types'}"></div>
-            </a>
-          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('dynamic_fields')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'dynamic_fields'}">
-            <p>Campos Dinâmicos</p>
-            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'dynamic_fields','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'dynamic_fields'}"></div>
-            </a>
-          <a class="px-4 py-2 text-sm cursor-pointer relative group hover:bg-zinc-800" (click)="selectTab('global_field_config')" [ngClass]="{'text-yellow-400 font-bold': currentTab === 'global_field_config'}">
-            <p>Campos Globais</p>
-            <div class="absolute transition-all duration-300  rounded-md" [ngClass]="{'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4 bg-white': currentTab != 'global_field_config','right-0 top-0 w-1 h-full bg-yellow-400': currentTab === 'global_field_config'}"></div>
-            </a>
-        </div>
-      </div>
-      <div class="flex-1 p-4 h-[60vh] bg-zinc-925 overflow-y-auto rounded-md scrollbar-dark">
-        @switch (currentTab) {
-          @case ('location_categories') {
-            <div>
-              <div class="flex flex-row justify-between items-center mb-4">
-                <h3 class="text-base mb-2">Categorias de Localidade</h3>
-                <app-button
-                  label="Adicionar"
-                  buttonType="primary"
-                  size="xs"
-                  icon="fa-solid fa-plus"
-                  appFormOverlay
-                  [title]="'Adicionar Categoria'"
-                  [fields]="categoryFormFields"
-                  (onSave)="createCategory($event)"
-                  ></app-button>
-              </div>
-              <div class=" rounded-md ">
-                @for (item of locationCategories; track item.id) {
-                  <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
-                    <p>{{item.name}}</p>
-                    <div class="flex flex-row gap-2">
-                      <app-icon-button
-                        icon="fa-solid fa-pencil"
-                        size="sm"
-                        buttonType="secondary"
-                        appFormOverlay
-                        [title]="'Editar Categoria'"
-                        [fields]="[{ key: 'name', label: 'Nome da categoria', value: item.name, type: 'text' }]"
-                        [saveLabel]="'Atualizar'"
-                        (onSave)="saveCategory($event, item.id)"
-                        ></app-icon-button>
-                      <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" (click)="deleteCategory(item)"></app-icon-button>
-                    </div>
-                  </div>
-                }
-                @empty {
-                  <div class="flex flex-row justify-between items-center p-2">
-                    <p>Nenhuma categoria encontrada.</p>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-          @case ('general_settings') {
-            <div>
-              <h3 class="text-base mb-2">Configurações Gerais</h3>
-              <br>
-              <p>Ao exportar textos, considerar o formato:</p>
-              <div class="border border-zinc-700 rounded-md p-2">
-                <div class="flex flex-row gap-6">
-                  <div class="flex flex-row items-center gap-2">
-                    <input type="radio" id="txtFormat" name="exportTextFormat" value="txt" [(ngModel)]="exportTextFormat" (ngModelChange)="globalParameterService.setParameter('exportTextFormat', exportTextFormat)">
-                    <label for="txtFormat">.txt (Texto simples)</label>
-                  </div>
-                  <div class="flex flex-row gap-4">
-                    <div class="flex flex-row items-center gap-2">
-                      <input type="radio" id="mdFormat" name="exportTextFormat" value="md" [(ngModel)]="exportTextFormat" (ngModelChange)="globalParameterService.setParameter('exportTextFormat', exportTextFormat)">
-                      <label for="mdFormat">.md (Markdown)</label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-              <div class="mt-6">
-                <p class="mb-2">Editor de texto rico:</p>
-                <div class="border border-zinc-700 rounded-md p-2 flex flex-row gap-6">
-                  <div class="flex flex-row items-center gap-2"><input type="radio" id="editorJsEngine" name="textEditorEngine" value="editorjs" [(ngModel)]="textEditorEngine" (ngModelChange)="globalParameterService.setParameter('textEditorEngine', textEditorEngine)"><label for="editorJsEngine">Editor.js</label></div>
-                  <div class="flex flex-row items-center gap-2"><input type="radio" id="tiptapEngine" name="textEditorEngine" value="tiptap" [(ngModel)]="textEditorEngine" (ngModelChange)="globalParameterService.setParameter('textEditorEngine', textEditorEngine)"><label for="tiptapEngine">Tiptap</label></div>
-                </div>
-                <p class="text-xs text-zinc-400 mt-2">A alteração é aplicada ao reabrir campos de texto que já estejam abertos.</p>
-              </div>
-
-          }
-          @case ("organization_types") {
-            <div>
-              <div class="flex flex-row justify-between items-center mb-4">
-                <h3 class="text-base mb-2">Tipos de Organização</h3>
-                <app-button
-                  label="Adicionar"
-                  buttonType="primary"
-                  size="xs"
-                  icon="fa-solid fa-plus"
-                  appFormOverlay
-                  [title]="'Adicionar Tipo de Organização'"
-                  [fields]="organizationTypeFormFields"
-                  (onSave)="createOrganizationType($event)"
-                  ></app-button>
-              </div>
-              <div class=" rounded-md ">
-                @for (item of organizationTypes; track item.id) {
-                  <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
-                    <p>{{item.name}}</p>
-                    <div class="flex flex-row gap-2">
-                      <app-icon-button
-                        icon="fa-solid fa-pencil"
-                        size="sm"
-                        buttonType="secondary"
-                        appFormOverlay
-                        [title]="'Editar Categoria'"
-                        [fields]="[{ key: 'name', label: 'Nome do Tipo de Organização', value: item.name, type: 'text' }]"
-                        [saveLabel]="'Atualizar'"
-                        (onSave)="saveOrganizationType($event, item.id)"
-                        ></app-icon-button>
-                      <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" (click)="deleteOrganizationType(item)"></app-icon-button>
-                    </div>
-                  </div>
-                }
-                @empty {
-                  <div class="flex flex-row justify-between items-center p-2">
-                    <p>Nenhum tipo de organização encontrado.</p>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-          @case ("object_types") {
-            <div>
-              <div class="flex flex-row justify-between items-center mb-4">
-                <h3 class="text-base mb-2">Tipos de Objeto</h3>
-                <app-button
-                  label="Adicionar"
-                  buttonType="primary"
-                  size="xs"
-                  icon="fa-solid fa-plus"
-                  appFormOverlay
-                  [title]="'Adicionar Tipo de Objeto'"
-                  [fields]="objectTypeFormFields"
-                  (onSave)="createObjectType($event)"
-                  ></app-button>
-              </div>
-              <div class=" rounded-md ">
-                @for (item of objectTypes; track item.id) {
-                  <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
-                    <p>{{item.name}}</p>
-                    <div class="flex flex-row gap-2">
-                      <app-icon-button
-                        icon="fa-solid fa-pencil"
-                        size="sm"
-                        buttonType="secondary"
-                        appFormOverlay
-                        [title]="'Editar Tipo de Objeto'"
-                        [fields]="[{ key: 'name', label: 'Nome do Tipo de Objeto', value: item.name, type: 'text' }]"
-                        [saveLabel]="'Atualizar'"
-                        (onSave)="saveObjectType($event, item.id)"
-                        ></app-icon-button>
-                      <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" (click)="deleteObjectType(item)"></app-icon-button>
-                    </div>
-                  </div>
-                }
-                @empty {
-                  <div class="flex flex-row justify-between items-center p-2">
-                    <p>Nenhum tipo de objeto encontrado.</p>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-          @case ("event_types") {
-            <div>
-              <div class="flex flex-row justify-between items-center mb-4">
-                <h3 class="text-base mb-2">Tipos de Evento</h3>
-                <app-button
-                  label="Adicionar"
-                  buttonType="primary"
-                  size="xs"
-                  icon="fa-solid fa-plus"
-                  appFormOverlay
-                  [title]="'Adicionar Tipo de Evento'"
-                  [fields]="eventTypeFormFields"
-                  (onSave)="createEventType($event)"
-                  ></app-button>
-              </div>
-              <div class="rounded-md ">
-                @for (item of eventTypes; track item.id) {
-                  <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
-                    <p>{{item.name}}</p>
-                    <div class="flex flex-row gap-2">
-                      <app-icon-button
-                        icon="fa-solid fa-pencil"
-                        size="sm"
-                        buttonType="secondary"
-                        appFormOverlay
-                        [title]="'Editar Tipo de Evento'"
-                        [fields]="[{ key: 'name', label: 'Nome do Tipo de Evento', value: item.name, type: 'text' }]"
-                        [saveLabel]="'Atualizar'"
-                        (onSave)="saveEventType($event, item.id)"
-                        ></app-icon-button>
-                      <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" (click)="deleteEventType(item)"></app-icon-button>
-                    </div>
-                  </div>
-                }
-                @empty {
-                  <div class="flex flex-row justify-between items-center p-2">
-                    <p>Nenhum tipo de evento encontrado.</p>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-          @case ("dynamic_fields") {
-            <div>
-              <h3 class="text-base mb-2">Campos Dinâmicos</h3>
-              <br>
-              <app-combo-box class="w-60" label="Entidade" [items]="availableTables" (comboValueChange)="onTableSelected($event)"></app-combo-box>
-              <br>
-              @if(currentTable) {
-                <div>
-                  <div class="flex flex-row justify-between align-middle mb-4">
-                    <h4 class="text-md mb-4">Campos para a entidade {{currentTable}}</h4>
-                    <app-button
-                      label="Adicionar"
-                      buttonType="primary"
-                      size="xs"
-                      icon="fa-solid fa-plus"
-                      appFormOverlay
-                      [title]="'Adicionar Campo Dinâmico para ' + currentTable"
-                      [fields]="[
-                        { key: 'name', label: 'Nome do campo', value: '', type: 'text' },
-                        { key: 'fieldType', label: 'Tipo do campo', value: 'text', options: fieldTypeOptions },
-                        { key: 'options', label: 'Opções (separar por ;) — somente tipo opções', value: '', type: 'text' },
-                        { key: 'targetEntityTable', label: 'Entidade relacionada — somente tipo entity', value: '', options: availableTables }
-                      ]"
-                      (onSave)="createDynamicField($event)"
-                    ></app-button>
-                  </div>
-
-                  @for (field of dynamicFields; track field.id) {
-                    <div class="grid grid-cols-3 items-center p-2 not-last:border-b not-last:border-zinc-700">
-                      <p>{{field.name}}</p>
-                      <p class="text-sm text-zinc-400">
-                        {{ getDynamicFieldTypeLabel(field) }}
-                      </p>
-                      <div class="flex flex-row gap-2 justify-end">
-                        <app-icon-button
-                          label="Editar"
-                          buttonType="primary"
-                          size="xs"
-                          icon="fa-solid fa-pencil"
-                          appFormOverlay
-                          [title]="'Editar Campo Dinâmico'"
-                          [fields]="[
-                            { key: 'name', label: 'Nome do campo', value: field.name, type: 'text' },
-                            { key: 'fieldType', label: 'Tipo do campo', value: field.fieldType || 'text', options: fieldTypeOptions },
-                            { key: 'options', label: 'Opções (separar por ;) — somente tipo opções', value: field.options ?? '', type: 'text' },
-                            { key: 'targetEntityTable', label: 'Entidade relacionada — somente tipo entity', value: field.targetEntityTable ?? '', options: availableTables }
-                          ]"
-                          [saveLabel]="'Atualizar'"
-                          (onSave)="saveDynamicField($event, field.id)"
-                        ></app-icon-button>
-                        <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" (click)="deleteDynamicField(field)"></app-icon-button>
-                      </div>
-                    </div>
-                  }
-                  @empty {
-                    <div class="flex flex-row justify-between items-center p-2">
-                      <p>Nenhum campo dinâmico encontrado para esta entidade.</p>
-                    </div>
-                  }
-                </div>
-              }
-            </div>
-          }
-          @case ("global_field_config") {
-            <div>
-              <h3 class="text-base mb-2">Configuração Global de Campos</h3>
-              <br>
-              <p class="text-sm text-zinc-400 mb-3">Selecione uma entidade para definir o layout global dos campos exibidos.</p>
-              <div class="flex flex-col gap-4">
-                <div class="max-w-96">
-                  <app-combo-box
-                    class="w-full"
-                    label="Entidade"
-                    [items]="fieldConfigAvailableTables"
-                    [comboValue]="selectedFieldConfigTable"
-                    (comboValueChange)="onFieldConfigTableChange($event)">
-                  </app-combo-box>
-                </div>
-
-                @if (selectedFieldConfigTable) {
-                  <div class="flex flex-row gap-2">
-                    <app-button
-                      label="Configurar Layout Global"
-                      buttonType="primary"
-                      size="sm"
-                      icon="fa-solid fa-table-cells-large"
-                      (click)="openGlobalFieldConfigDialog()">
-                    </app-button>
-                    <app-button
-                      label="Importar Layout"
-                      buttonType="secondary"
-                      size="sm"
-                      icon="fa-solid fa-file-import"
-                      (click)="openLayoutImport()">
-                    </app-button>
-                  </div>
-
-                  @if (showLayoutImportForm) {
-                    <div class="mb-4 rounded-lg border border-zinc-700 bg-zinc-900 p-4">
-                      <div class="mb-3 flex items-center justify-between gap-3">
-                        <div>
-                          <h4 class="text-sm font-medium text-zinc-100">Importar layout</h4>
-                          <p class="mt-1 text-xs text-zinc-400">Selecione um arquivo JSON ou cole o conteudo para validar antes de salvar.</p>
-                        </div>
-                        <app-button label="Fechar" buttonType="secondary" size="xs" (click)="closeLayoutImport()"></app-button>
-                      </div>
-
-                      <div class="flex flex-wrap gap-2">
-                        <app-button label="Selecionar arquivo JSON" buttonType="secondary" size="xs" icon="fa-solid fa-file-arrow-up" (click)="selectLayoutImportFile()"></app-button>
-                        <app-button label="Validar importacao" buttonType="primary" size="xs" icon="fa-solid fa-magnifying-glass" (click)="analyzeLayoutImport()"></app-button>
-                      </div>
-
-                      <label class="mt-3 block text-xs text-zinc-200" for="layout-import-json">JSON do layout</label>
-                      <textarea
-                        id="layout-import-json"
-                        class="mt-1 min-h-36 w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 font-mono text-xs text-zinc-100 outline-none focus:border-zinc-400"
-                        placeholder="Cole aqui o JSON exportado pelo Lorekit"
-                        [(ngModel)]="layoutImportSerialized">
-                      </textarea>
-
-                      @if (layoutImportError) {
-                        <p class="mt-3 rounded-md border border-red-900 bg-red-950/40 p-2 text-xs text-red-200">{{ layoutImportError }}</p>
-                      }
-
-                      @if (layoutImportPlan) {
-                        <div class="mt-3 rounded-md border border-zinc-700 bg-zinc-950 p-3 text-sm">
-                          <p><span class="text-zinc-400">Entidade detectada:</span> {{ layoutImportPlan.document.entityTable }}</p>
-                          <p class="mt-1"><span class="text-zinc-400">Campos dinamicos:</span> {{ layoutImportPlan.fieldsToCreate.length }} a criar, {{ layoutImportPlan.reusedFields.length }} a reutilizar.</p>
-                          @if (layoutImportPlan.fieldsToCreate.length > 0) {
-                            <p class="mt-2 text-xs text-zinc-300">Campos a criar:</p>
-                            <ul class="list-inside list-disc text-xs text-zinc-300">
-                              @for (field of layoutImportPlan.fieldsToCreate; track field.name) {
-                                <li>{{ field.name }}</li>
-                              }
-                            </ul>
-                          }
-                          @if (layoutImportPlan.reusedFields.length > 0) {
-                            <p class="mt-2 text-xs text-zinc-300">Campos a reutilizar:</p>
-                            <ul class="list-inside list-disc text-xs text-zinc-300">
-                              @for (field of layoutImportPlan.reusedFields; track field.id) {
-                                <li>{{ field.name }}</li>
-                              }
-                            </ul>
-                          }
-                        </div>
-
-                        @if (layoutImportPlan.hasExistingGlobalConfig) {
-                          <div class="mt-3 rounded-md border border-amber-800/70 bg-amber-950/20 p-3">
-                            <p class="text-sm text-amber-100">Ja existe um layout global para esta entidade. Escolha o destino da importacao.</p>
-                            <div class="mt-2 flex flex-wrap gap-2">
-                              <app-button label="Substituir" buttonType="primary" size="xs" (click)="selectLayoutImportDestination('replace-global')"></app-button>
-                              <app-button label="Criar novo template" buttonType="secondary" size="xs" (click)="selectLayoutImportDestination('create-template')"></app-button>
-                              <app-button label="Cancelar" buttonType="secondary" size="xs" (click)="closeLayoutImport()"></app-button>
-                            </div>
-                          </div>
-                        }
-
-                        @if (layoutImportDestination === 'create-template') {
-                          <div class="mt-3 max-w-96">
-                            <app-input label="Nome do novo template" [(value)]="layoutImportTemplateName"></app-input>
-                          </div>
-                        }
-
-                        @if (layoutImportDestination) {
-                          <div class="mt-3 flex gap-2">
-                            <app-button label="Aplicar importacao" buttonType="primary" size="xs" icon="fa-solid fa-file-import" (click)="applyLayoutImport()"></app-button>
-                            <app-button label="Cancelar" buttonType="secondary" size="xs" (click)="closeLayoutImport()"></app-button>
-                          </div>
-                        }
-                      }
-                    </div>
-                  }
-                  <div>
-                    <div class="flex flex-row justify-between items-center mb-3">
-                      <h4 class="text-sm text-zinc-200 font-medium">Templates de Layout</h4>
-                      <app-button
-                        label="Criar Novo Template"
-                        buttonType="secondary"
-                        size="xs"
-                        icon="fa-solid fa-plus"
-                        (click)="startNewTemplate()">
-                      </app-button>
-                    </div>
-
-                    @if (showNewTemplateForm) {
-                      <div class="flex flex-row gap-2 items-end mb-3 p-3 bg-zinc-800 rounded-lg border border-zinc-700">
-                        <app-input
-                          class="flex-1"
-                          label="Nome do template"
-                          [placeholder]="'Ex: Ficha de combate'"
-                          [(value)]="newTemplateNameInline">
-                        </app-input>
-                        <app-button label="Criar" buttonType="primary" size="xs" (click)="confirmNewTemplate()"></app-button>
-                        <app-button label="Cancelar" buttonType="secondary" size="xs" (click)="showNewTemplateForm = false; newTemplateNameInline = ''"></app-button>
-                      </div>
-                    }
-                    <div class="border border-zinc-700 rounded-md bg-zinc-900">
-                      @for (template of fieldConfigTemplates; track template.id) {
-                        <div class="flex flex-row justify-between items-center p-2 not-last:border-b not-last:border-zinc-700">
-                          <p class="text-sm">{{ template.name }}</p>
-                          <div class="flex flex-row gap-2">
-                            <app-icon-button
-                              icon="fa-solid fa-pencil"
-                              size="sm"
-                              buttonType="secondary"
-                              title="Editar layout do template"
-                              (click)="openEditTemplateDialog(template)">
-                            </app-icon-button>
-                            <app-icon-button
-                              icon="fa-solid fa-trash"
-                              size="sm"
-                              buttonType="danger"
-                              (click)="deleteTemplate(template)">
-                            </app-icon-button>
-                          </div>
-                        </div>
-                      }
-                      @empty {
-                        <div class="flex flex-row justify-between items-center p-2">
-                          <p class="text-sm text-zinc-400">Nenhum template encontrado para esta entidade.</p>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        }
-
-      </div>
-
-    </div>
-  </div>
-  <div class="mt-2 text-center text-xs text-zinc-500">
-    Versão {{appVersion}}
-  </div>
-  `,
+  imports: [FormsModule, ButtonComponent, IconButtonComponent, FormOverlayDirective, OverlayModule, ComboBoxComponent, InputComponent],
+  templateUrl: './settings.component.html',
   styleUrl: './settings.component.css',
 })
 export class SettingsComponent implements OnInit{
-  dialogref = inject<DialogRef<any>>(DialogRef<any>);
   confirm = inject<ConfirmService>(ConfirmService);
   globalParameterService = inject(GlobalParameterService);
   organizationTypeService = inject(OrganizationTypeService);
   objectTypeService = inject(ObjectTypeService);
   eventTypeService = inject(EventTypeService);
-  dynamicFieldService = inject(DynamicFieldService);
   uiFieldConfigService = inject(UiFieldConfigService);
   uiFieldLayoutPortabilityService = inject(UiFieldLayoutPortabilityService);
-  private dialog = inject(Dialog);
+  private layoutEditorRef: ComponentRef<UiFieldConfigEditorComponent> | null = null;
+  private layoutEditorContainer?: ViewContainerRef;
+  private editorLoadingContainer?: ViewContainerRef;
+  layoutEditorLoading = false;
+  layoutEditorLoadError = '';
+
+  @ViewChild('layoutEditorHost', { read: ViewContainerRef })
+  set layoutEditorHost(container: ViewContainerRef | undefined) {
+    this.layoutEditorContainer = container;
+    if (!container) {
+      this.layoutEditorRef?.destroy();
+      this.layoutEditorRef = null;
+      this.layoutEditorLoading = false;
+      return;
+    }
+    void this.attachLayoutEditor(container);
+  }
 
   currentTab: string = '';
 
@@ -588,6 +123,7 @@ export class SettingsComponent implements OnInit{
   availableTables = schema.filter(t => !this.ignoredTables.includes(t.name)).map(t => t.name);
   fieldConfigAvailableTables = [...this.availableTables];
   selectedFieldConfigTable: string = this.fieldConfigAvailableTables[0] || '';
+  selectedLayoutTemplateId = '';
   fieldConfigTemplates: UiFieldTemplate[] = [];
   showNewTemplateForm = false;
   newTemplateNameInline = '';
@@ -597,12 +133,6 @@ export class SettingsComponent implements OnInit{
   layoutImportError = '';
   layoutImportDestination: UiFieldLayoutImportDestination | null = null;
   layoutImportTemplateName = 'Layout importado';
-
-  currentTable: string = '';
-
-  dynamicFields : DynamicField[] = [];
-
-  readonly fieldTypeOptions = ['text', 'options', 'editor', 'entity', 'image'];
 
   appVersion: string = '';
   electronService = inject(ElectronService);
@@ -836,35 +366,56 @@ export class SettingsComponent implements OnInit{
     this.eventTypes = this.eventTypeService.getEventTypes();
   }
 
-  onTableSelected(event : any) {
-
-    this.currentTable = event;
-
-    this.dynamicFields = this.dynamicFieldService.getDynamicFields(this.currentTable);
-  }
-
-  openGlobalFieldConfigDialog() {
-    if (!this.selectedFieldConfigTable) {
-      return;
-    }
-
-    const ref = this.dialog.open(UiFieldConfigEditorComponent, {
-      panelClass: ['screen-dialog', 'overflow-y-auto',  'scrollbar-dark'],
-      width: '95vw',
-      maxWidth: '1400px',
-      height: '90vh',
-      data: {
-        entityTable: this.selectedFieldConfigTable,
-        scopeMode: 'global',
-        allowParentSelection: true,
-      },
-    });
-    ref.closed.subscribe(() => this.loadFieldConfigTemplates());
+  selectGlobalLayout(): void {
+    this.selectedLayoutTemplateId = '';
+    this.layoutEditorRef?.instance.useGlobalLayout();
   }
 
   onFieldConfigTableChange(table: string): void {
     this.selectedFieldConfigTable = table;
+    this.selectedLayoutTemplateId = '';
+    this.showNewTemplateForm = false;
+    this.newTemplateNameInline = '';
     this.loadFieldConfigTemplates();
+    this.layoutEditorRef?.instance.setEntityTable(table);
+  }
+
+  selectLayoutTemplate(template: UiFieldTemplate): void {
+    this.selectedLayoutTemplateId = template.id;
+    this.layoutEditorRef?.instance.onTemplateSelected(template.id);
+  }
+
+  onEditorTemplatesChanged(): void {
+    this.loadFieldConfigTemplates();
+    this.selectedLayoutTemplateId = this.layoutEditorRef?.instance.activeTemplateId ?? '';
+  }
+
+  private async attachLayoutEditor(container: ViewContainerRef): Promise<void> {
+    if (this.layoutEditorRef || this.editorLoadingContainer === container) return;
+
+    this.editorLoadingContainer = container;
+    this.layoutEditorLoading = true;
+    this.layoutEditorLoadError = '';
+
+    try {
+      const { UiFieldConfigEditorComponent } = await import(
+        '../../ui-field-config/ui-field-config-editor/ui-field-config-editor.component'
+      );
+      if (this.layoutEditorContainer !== container) return;
+
+      const ref = container.createComponent(UiFieldConfigEditorComponent);
+      this.layoutEditorRef = ref;
+      ref.setInput('entityTable', this.selectedFieldConfigTable);
+      ref.setInput('templateId', this.selectedLayoutTemplateId);
+      ref.setInput('scopeMode', 'global');
+      ref.setInput('embeddedMode', true);
+      ref.instance.templatesChanged.subscribe(() => this.onEditorTemplatesChanged());
+    } catch {
+      this.layoutEditorLoadError = 'Não foi possível carregar o editor de layouts.';
+    } finally {
+      if (this.editorLoadingContainer === container) this.editorLoadingContainer = undefined;
+      if (this.layoutEditorContainer === container) this.layoutEditorLoading = false;
+    }
   }
 
   loadFieldConfigTemplates(): void {
@@ -893,49 +444,7 @@ export class SettingsComponent implements OnInit{
     this.showNewTemplateForm = false;
     this.newTemplateNameInline = '';
     this.loadFieldConfigTemplates();
-
-    const ref = this.dialog.open(UiFieldConfigEditorComponent, {
-      panelClass: ['screen-dialog', 'overflow-y-auto', 'scrollbar-dark'],
-      width: '95vw',
-      maxWidth: '1400px',
-      height: '90vh',
-      data: {
-        entityTable: this.selectedFieldConfigTable,
-        templateId: created.id,
-        templateName: created.name,
-      },
-    });
-    ref.closed.subscribe(() => this.loadFieldConfigTemplates());
-  }
-
-  openCreateTemplateDialog(): void {
-    if (!this.selectedFieldConfigTable) { return; }
-    const ref = this.dialog.open(UiFieldConfigEditorComponent, {
-      panelClass: ['screen-dialog', 'overflow-y-auto', 'scrollbar-dark'],
-      width: '95vw',
-      maxWidth: '1400px',
-      height: '90vh',
-      data: {
-        entityTable: this.selectedFieldConfigTable,
-        scopeMode: 'global',
-      },
-    });
-    ref.closed.subscribe(() => this.loadFieldConfigTemplates());
-  }
-
-  openEditTemplateDialog(template: UiFieldTemplate): void {
-    const ref = this.dialog.open(UiFieldConfigEditorComponent, {
-      panelClass: ['screen-dialog', 'overflow-y-auto', 'scrollbar-dark'],
-      width: '95vw',
-      maxWidth: '1400px',
-      height: '90vh',
-      data: {
-        entityTable: template.entityTable,
-        templateId: template.id,
-        templateName: template.name,
-      },
-    });
-    ref.closed.subscribe(() => this.loadFieldConfigTemplates());
+    this.selectLayoutTemplate(created);
   }
 
   openLayoutImport(): void {
@@ -997,11 +506,13 @@ export class SettingsComponent implements OnInit{
         destination === 'create-template' ? this.layoutImportTemplateName : undefined,
       );
       this.selectedFieldConfigTable = plan.document.entityTable;
+      this.selectedLayoutTemplateId = '';
       this.loadFieldConfigTemplates();
+      this.layoutEditorRef?.instance.setEntityTable(plan.document.entityTable);
       this.closeLayoutImport();
 
       if (destination === 'create-template') {
-        this.openEditTemplateDialog(imported as UiFieldTemplate);
+        this.selectLayoutTemplate(imported as UiFieldTemplate);
       }
     } catch (error) {
       this.layoutImportError = error instanceof Error ? error.message : 'Nao foi possivel aplicar a importacao.';
@@ -1015,75 +526,6 @@ export class SettingsComponent implements OnInit{
       input.accept = '.json,application/json';
       input.onchange = async () => resolve(input.files?.[0] ? await input.files[0].text() : null);
       input.click();
-    });
-  }
-  deleteTemplate(template: UiFieldTemplate): void {
-    this.confirm.ask(`Tem certeza que deseja deletar o template "${template.name}"?`).then((confirmed) => {
-      if (confirmed) {
-        this.uiFieldConfigService.deleteTemplate(template.id);
-        this.loadFieldConfigTemplates();
-      }
-    });
-  }
-
-  createDynamicField(formData: Record<string, string>) {
-    const fieldName = formData['name'];
-    const fieldType = (formData['fieldType'] as DynamicFieldType) || 'text';
-
-    if (fieldName.trim() === '') {
-      return;
-    }
-
-    const newField: DynamicField = {
-      id: '',
-      name: fieldName.trim(),
-      entityTable: this.currentTable,
-      options: fieldType === 'options' ? formData['options'] : undefined,
-      isEditorField: fieldType === 'editor',
-      fieldType,
-      targetEntityTable: fieldType === 'entity' ? formData['targetEntityTable'] : undefined,
-    };
-
-    let field = this.dynamicFieldService.saveDynamicField(newField);
-    this.dynamicFields.push(field);
-  }
-
-  saveDynamicField(formData: Record<string, string>, fieldId: string) {
-    const fieldName = formData['name'];
-    const fieldType = (formData['fieldType'] as DynamicFieldType) || 'text';
-
-    if (fieldName.trim() === '') {
-      return;
-    }
-
-    const fieldToUpdate = this.dynamicFields.find(f => f.id === fieldId);
-    if (fieldToUpdate) {
-      fieldToUpdate.name = fieldName.trim();
-      fieldToUpdate.fieldType = fieldType;
-      fieldToUpdate.options = fieldType === 'options' ? formData['options'] : undefined;
-      fieldToUpdate.isEditorField = fieldType === 'editor';
-      fieldToUpdate.targetEntityTable = fieldType === 'entity' ? formData['targetEntityTable'] : undefined;
-      this.dynamicFieldService.saveDynamicField(fieldToUpdate);
-      this.onTableSelected(this.currentTable);
-    }
-  }
-
-  getDynamicFieldTypeLabel(field: DynamicField): string {
-    switch (field.fieldType) {
-      case 'options': return `opções: ${field.options || ''}`;
-      case 'editor': return 'editor de texto';
-      case 'entity': return `entidade: ${field.targetEntityTable || ''}`;
-      case 'image': return 'imagem';
-      default: return 'texto';
-    }
-  }
-
-  deleteDynamicField(field: DynamicField) {
-    this.confirm.ask(`Tem certeza que deseja deletar o campo dinâmico ${field.name}?`).then(confirmed => {
-      if (confirmed) {
-        this.dynamicFieldService.deleteDynamicField(field);
-        this.onTableSelected(this.currentTable);
-      }
     });
   }
 }

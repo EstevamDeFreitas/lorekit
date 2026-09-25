@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 @Component({
   selector: 'app-icon-button',
   imports: [NgClass, RouterLink],
-  template: `<button [ngClass]="buttonClasses" [routerLink]="this.route()" [title]="title()" [disabled]="disabled()">
+  template: `<button [ngClass]="buttonClasses" [routerLink]="this.route()" [title]="title()" [attr.aria-label]="title()" [disabled]="disabled()">
   <i [ngClass]="icon()"></i>
   </button>`,
   styleUrl: './icon-button.component.css',
@@ -20,7 +20,7 @@ export class IconButtonComponent {
   route = input<string>();
 
   get buttonClasses(): string {
-    const base = 'rounded-md relative font-medium focus:outline-none transition text-' + this.size();
+    const base = 'rounded-md relative font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition text-' + this.size();
 
     const size = this.getSize(this.size());
 

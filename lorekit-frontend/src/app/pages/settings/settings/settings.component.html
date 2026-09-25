@@ -1,0 +1,414 @@
+  <div class="settings-shell flex h-[90vh] w-[96vw] max-w-[1680px] flex-col overflow-hidden rounded-xl border border-zinc-800 md:flex-row">
+    <aside class="flex w-full shrink-0 flex-col border-b border-zinc-800 bg-zinc-900 md:w-60 md:border-b-0 md:border-r">
+      <header class="border-b border-zinc-800 p-5">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-800 text-yellow-400">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-zinc-100">Configurações</h2>
+            <p class="mt-1 text-xs text-zinc-400">Ajuste o Lorekit ao seu fluxo</p>
+          </div>
+        </div>
+      </header>
+
+      <nav class="grid min-w-0 grid-cols-2 gap-1 p-3 md:flex md:flex-1 md:flex-col md:overflow-y-auto scrollbar-dark" aria-label="Seções de configurações">
+        <button type="button" class="settings-nav-item" [class.settings-nav-item--active]="currentTab === 'general_settings'" [attr.aria-current]="currentTab === 'general_settings' ? 'page' : null" (click)="selectTab('general_settings')">
+          <i class="fa-solid fa-sliders"></i><span>Configurações gerais</span>
+        </button>
+        <button type="button" class="settings-nav-item" [class.settings-nav-item--active]="currentTab === 'location_categories'" [attr.aria-current]="currentTab === 'location_categories' ? 'page' : null" (click)="selectTab('location_categories')">
+          <i class="fa-solid fa-map-location-dot"></i><span>Categorias de localidade</span>
+        </button>
+        <button type="button" class="settings-nav-item" [class.settings-nav-item--active]="currentTab === 'organization_types'" [attr.aria-current]="currentTab === 'organization_types' ? 'page' : null" (click)="selectTab('organization_types')">
+          <i class="fa-solid fa-people-group"></i><span>Tipos de organização</span>
+        </button>
+        <button type="button" class="settings-nav-item" [class.settings-nav-item--active]="currentTab === 'object_types'" [attr.aria-current]="currentTab === 'object_types' ? 'page' : null" (click)="selectTab('object_types')">
+          <i class="fa-solid fa-cubes"></i><span>Tipos de objeto</span>
+        </button>
+        <button type="button" class="settings-nav-item" [class.settings-nav-item--active]="currentTab === 'event_types'" [attr.aria-current]="currentTab === 'event_types' ? 'page' : null" (click)="selectTab('event_types')">
+          <i class="fa-solid fa-calendar-days"></i><span>Tipos de evento</span>
+        </button>
+        <button type="button" class="settings-nav-item" [class.settings-nav-item--active]="currentTab === 'global_field_config'" [attr.aria-current]="currentTab === 'global_field_config' ? 'page' : null" (click)="selectTab('global_field_config')">
+          <i class="fa-solid fa-table-cells-large"></i><span>Campos globais</span>
+        </button>
+      </nav>
+
+      <div class="hidden border-t border-zinc-800 px-5 py-4 text-xs text-zinc-500 md:block">
+        Lorekit <span class="mx-1 text-zinc-700">·</span> v{{ appVersion }}
+      </div>
+    </aside>
+
+    <main class="flex min-w-0 flex-1 flex-col overflow-hidden bg-zinc-925">
+      <div class="min-h-0 flex-1 overflow-y-auto p-4 scrollbar-dark md:p-4">
+        @switch (currentTab) {
+          @case ('general_settings') {
+            <section class="settings-screen">
+              <header class="settings-page-heading">
+                <div class="flex min-w-0 items-center gap-3.5">
+                  <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-base text-yellow-400"><i class="fa-solid fa-sliders"></i></span>
+                  <div>
+                    <h3>Configurações gerais</h3>
+                    <p>Defina como o Lorekit exporta textos e abre o editor rico.</p>
+                  </div>
+                </div>
+              </header>
+
+              <div class="mt-5 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+                <section class="grid grid-cols-1 items-center gap-3.5 border-b border-zinc-800 p-4 last:border-b-0 md:grid-cols-[minmax(220px,0.85fr)_minmax(0,1.15fr)] md:gap-5 md:p-5">
+                  <div class="flex items-start gap-3">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-sm text-zinc-300"><i class="fa-solid fa-file-export"></i></span>
+                    <div>
+                      <h4>Formato de exportação</h4>
+                      <p>Escolha o formato usado ao exportar textos.</p>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="Formato de exportação">
+                    <label class="flex min-w-0 items-start gap-2.5 rounded-[0.65rem] border border-zinc-700 bg-zinc-950 p-3 text-zinc-300 transition-colors duration-150 hover:border-zinc-500 hover:bg-zinc-800 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-yellow-300" [class.settings-choice--active]="exportTextFormat === 'txt'" for="txtFormat">
+                      <input class="mt-0.5 shrink-0 accent-yellow-400" type="radio" id="txtFormat" name="exportTextFormat" value="txt" [(ngModel)]="exportTextFormat" (ngModelChange)="globalParameterService.setParameter('exportTextFormat', exportTextFormat)">
+                      <span><strong class="block text-[13px] font-semibold text-zinc-100">.txt</strong><small class="mt-0.5 block text-[11px] leading-4 text-zinc-400">Texto simples</small></span>
+                    </label>
+                    <label class="flex min-w-0 items-start gap-2.5 rounded-[0.65rem] border border-zinc-700 bg-zinc-950 p-3 text-zinc-300 transition-colors duration-150 hover:border-zinc-500 hover:bg-zinc-800 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-yellow-300" [class.settings-choice--active]="exportTextFormat === 'md'" for="mdFormat">
+                      <input class="mt-0.5 shrink-0 accent-yellow-400" type="radio" id="mdFormat" name="exportTextFormat" value="md" [(ngModel)]="exportTextFormat" (ngModelChange)="globalParameterService.setParameter('exportTextFormat', exportTextFormat)">
+                      <span><strong class="block text-[13px] font-semibold text-zinc-100">.md</strong><small class="mt-0.5 block text-[11px] leading-4 text-zinc-400">Markdown</small></span>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="grid grid-cols-1 items-center gap-3.5 border-b border-zinc-800 p-4 last:border-b-0 md:grid-cols-[minmax(220px,0.85fr)_minmax(0,1.15fr)] md:gap-5 md:p-5">
+                  <div class="flex items-start gap-3">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-sm text-zinc-300"><i class="fa-solid fa-pen-to-square"></i></span>
+                    <div>
+                      <h4>Editor de texto rico</h4>
+                      <p>Selecione a ferramenta usada para editar conteúdo.</p>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="Editor de texto rico">
+                      <label class="flex min-w-0 items-start gap-2.5 rounded-[0.65rem] border border-zinc-700 bg-zinc-950 p-3 text-zinc-300 transition-colors duration-150 hover:border-zinc-500 hover:bg-zinc-800 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-yellow-300" [class.settings-choice--active]="textEditorEngine === 'editorjs'" for="editorJsEngine">
+                        <input class="mt-0.5 shrink-0 accent-yellow-400" type="radio" id="editorJsEngine" name="textEditorEngine" value="editorjs" [(ngModel)]="textEditorEngine" (ngModelChange)="globalParameterService.setParameter('textEditorEngine', textEditorEngine)">
+                        <span><strong class="block text-[13px] font-semibold text-zinc-100">Editor.js</strong><small class="mt-0.5 block text-[11px] leading-4 text-zinc-400">Blocos de conteúdo</small></span>
+                      </label>
+                      <label class="flex min-w-0 items-start gap-2.5 rounded-[0.65rem] border border-zinc-700 bg-zinc-950 p-3 text-zinc-300 transition-colors duration-150 hover:border-zinc-500 hover:bg-zinc-800 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-yellow-300" [class.settings-choice--active]="textEditorEngine === 'tiptap'" for="tiptapEngine">
+                        <input class="mt-0.5 shrink-0 accent-yellow-400" type="radio" id="tiptapEngine" name="textEditorEngine" value="tiptap" [(ngModel)]="textEditorEngine" (ngModelChange)="globalParameterService.setParameter('textEditorEngine', textEditorEngine)">
+                        <span><strong class="block text-[13px] font-semibold text-zinc-100">Tiptap</strong><small class="mt-0.5 block text-[11px] leading-4 text-zinc-400">Editor de texto rico</small></span>
+                      </label>
+                    </div>
+                    <p class="mt-2 text-xs leading-5 text-zinc-400">A alteração vale ao reabrir campos de texto que já estejam abertos.</p>
+                  </div>
+                </section>
+              </div>
+            </section>
+          }
+          @case ('location_categories') {
+            <section class="settings-screen">
+              <header class="settings-page-heading">
+                <div class="flex min-w-0 items-center gap-3.5">
+                  <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-base text-yellow-400"><i class="fa-solid fa-map-location-dot"></i></span>
+                  <div>
+                    <h3>Categorias de localidade</h3>
+                    <p>Organize os tipos de lugar disponíveis no seu mundo.</p>
+                  </div>
+                </div>
+                <app-button label="Nova categoria" buttonType="primary" size="xs" icon="fa-solid fa-plus" appFormOverlay [title]="'Adicionar categoria'" [fields]="categoryFormFields" (onSave)="createCategory($event)"></app-button>
+              </header>
+
+              <section class="mt-5 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900" aria-label="Categorias cadastradas">
+                <div class="flex min-h-11 items-center justify-between gap-3 border-b border-zinc-800 px-4 py-2.5 text-xs font-medium text-zinc-300">
+                  <span>Categorias cadastradas</span>
+                  <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-zinc-800 px-2 text-[11px] tabular-nums text-zinc-300">{{ locationCategories.length }}</span>
+                </div>
+                <div class="settings-record-list">
+                  @for (item of locationCategories; track item.id) {
+                    <div class="flex min-h-[60px] items-center gap-3 border-b border-zinc-800 px-4 py-2.5 transition-colors duration-150 last:border-b-0 hover:bg-zinc-800">
+                      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-xs text-zinc-300"><i class="fa-solid fa-location-dot"></i></span>
+                      <p class="min-w-0 flex-1 break-words text-sm font-medium text-zinc-100">{{ item.name }}</p>
+                      <div class="flex shrink-0 items-center gap-1">
+                        <app-icon-button icon="fa-solid fa-pencil" size="sm" buttonType="secondary" appFormOverlay [title]="'Editar categoria: ' + item.name" [fields]="[{ key: 'name', label: 'Nome da categoria', value: item.name, type: 'text' }]" [saveLabel]="'Atualizar'" (onSave)="saveCategory($event, item.id)"></app-icon-button>
+                        <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" [title]="'Excluir categoria: ' + item.name" (click)="deleteCategory(item)"></app-icon-button>
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="settings-empty-state settings-empty-state--compact">
+                      <i class="fa-solid fa-map-location-dot text-xl text-zinc-500"></i>
+                      <h4 class="mt-3 text-sm font-semibold text-zinc-200">Nenhuma categoria cadastrada</h4>
+                      <p class="mt-1 text-xs text-zinc-400">Crie uma categoria para organizar as localidades.</p>
+                    </div>
+                  }
+                </div>
+              </section>
+            </section>
+          }
+          @case ('organization_types') {
+            <section class="settings-screen">
+              <header class="settings-page-heading">
+                <div class="flex min-w-0 items-center gap-3.5">
+                  <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-base text-yellow-400"><i class="fa-solid fa-people-group"></i></span>
+                  <div>
+                    <h3>Tipos de organização</h3>
+                    <p>Defina classificações para as organizações do seu mundo.</p>
+                  </div>
+                </div>
+                <app-button label="Novo tipo" buttonType="primary" size="xs" icon="fa-solid fa-plus" appFormOverlay [title]="'Adicionar tipo de organização'" [fields]="organizationTypeFormFields" (onSave)="createOrganizationType($event)"></app-button>
+              </header>
+
+              <section class="mt-5 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900" aria-label="Tipos de organização cadastrados">
+                <div class="flex min-h-11 items-center justify-between gap-3 border-b border-zinc-800 px-4 py-2.5 text-xs font-medium text-zinc-300">
+                  <span>Tipos cadastrados</span>
+                  <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-zinc-800 px-2 text-[11px] tabular-nums text-zinc-300">{{ organizationTypes.length }}</span>
+                </div>
+                <div class="settings-record-list">
+                  @for (item of organizationTypes; track item.id) {
+                    <div class="flex min-h-[60px] items-center gap-3 border-b border-zinc-800 px-4 py-2.5 transition-colors duration-150 last:border-b-0 hover:bg-zinc-800">
+                      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-xs text-zinc-300"><i class="fa-solid fa-building"></i></span>
+                      <p class="min-w-0 flex-1 break-words text-sm font-medium text-zinc-100">{{ item.name }}</p>
+                      <div class="flex shrink-0 items-center gap-1">
+                        <app-icon-button icon="fa-solid fa-pencil" size="sm" buttonType="secondary" appFormOverlay [title]="'Editar tipo: ' + item.name" [fields]="[{ key: 'name', label: 'Nome do Tipo de Organização', value: item.name, type: 'text' }]" [saveLabel]="'Atualizar'" (onSave)="saveOrganizationType($event, item.id)"></app-icon-button>
+                        <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" [title]="'Excluir tipo: ' + item.name" (click)="deleteOrganizationType(item)"></app-icon-button>
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="settings-empty-state settings-empty-state--compact">
+                      <i class="fa-solid fa-people-group text-xl text-zinc-500"></i>
+                      <h4 class="mt-3 text-sm font-semibold text-zinc-200">Nenhum tipo cadastrado</h4>
+                      <p class="mt-1 text-xs text-zinc-400">Adicione um tipo para classificar as organizações.</p>
+                    </div>
+                  }
+                </div>
+              </section>
+            </section>
+          }
+          @case ('object_types') {
+            <section class="settings-screen">
+              <header class="settings-page-heading">
+                <div class="flex min-w-0 items-center gap-3.5">
+                  <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-base text-yellow-400"><i class="fa-solid fa-cubes"></i></span>
+                  <div>
+                    <h3>Tipos de objeto</h3>
+                    <p>Organize os objetos com classificações reutilizáveis.</p>
+                  </div>
+                </div>
+                <app-button label="Novo tipo" buttonType="primary" size="xs" icon="fa-solid fa-plus" appFormOverlay [title]="'Adicionar tipo de objeto'" [fields]="objectTypeFormFields" (onSave)="createObjectType($event)"></app-button>
+              </header>
+
+              <section class="mt-5 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900" aria-label="Tipos de objeto cadastrados">
+                <div class="flex min-h-11 items-center justify-between gap-3 border-b border-zinc-800 px-4 py-2.5 text-xs font-medium text-zinc-300">
+                  <span>Tipos cadastrados</span>
+                  <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-zinc-800 px-2 text-[11px] tabular-nums text-zinc-300">{{ objectTypes.length }}</span>
+                </div>
+                <div class="settings-record-list">
+                  @for (item of objectTypes; track item.id) {
+                    <div class="flex min-h-[60px] items-center gap-3 border-b border-zinc-800 px-4 py-2.5 transition-colors duration-150 last:border-b-0 hover:bg-zinc-800">
+                      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-xs text-zinc-300"><i class="fa-solid fa-cube"></i></span>
+                      <p class="min-w-0 flex-1 break-words text-sm font-medium text-zinc-100">{{ item.name }}</p>
+                      <div class="flex shrink-0 items-center gap-1">
+                        <app-icon-button icon="fa-solid fa-pencil" size="sm" buttonType="secondary" appFormOverlay [title]="'Editar tipo: ' + item.name" [fields]="[{ key: 'name', label: 'Nome do Tipo de Objeto', value: item.name, type: 'text' }]" [saveLabel]="'Atualizar'" (onSave)="saveObjectType($event, item.id)"></app-icon-button>
+                        <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" [title]="'Excluir tipo: ' + item.name" (click)="deleteObjectType(item)"></app-icon-button>
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="settings-empty-state settings-empty-state--compact">
+                      <i class="fa-solid fa-cubes text-xl text-zinc-500"></i>
+                      <h4 class="mt-3 text-sm font-semibold text-zinc-200">Nenhum tipo cadastrado</h4>
+                      <p class="mt-1 text-xs text-zinc-400">Adicione um tipo para organizar os objetos.</p>
+                    </div>
+                  }
+                </div>
+              </section>
+            </section>
+          }
+          @case ('event_types') {
+            <section class="settings-screen">
+              <header class="settings-page-heading">
+                <div class="flex min-w-0 items-center gap-3.5">
+                  <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-base text-yellow-400"><i class="fa-solid fa-calendar-days"></i></span>
+                  <div>
+                    <h3>Tipos de evento</h3>
+                    <p>Padronize as categorias usadas nas linhas do tempo.</p>
+                  </div>
+                </div>
+                <app-button label="Novo tipo" buttonType="primary" size="xs" icon="fa-solid fa-plus" appFormOverlay [title]="'Adicionar tipo de evento'" [fields]="eventTypeFormFields" (onSave)="createEventType($event)"></app-button>
+              </header>
+
+              <section class="mt-5 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900" aria-label="Tipos de evento cadastrados">
+                <div class="flex min-h-11 items-center justify-between gap-3 border-b border-zinc-800 px-4 py-2.5 text-xs font-medium text-zinc-300">
+                  <span>Tipos cadastrados</span>
+                  <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-zinc-800 px-2 text-[11px] tabular-nums text-zinc-300">{{ eventTypes.length }}</span>
+                </div>
+                <div class="settings-record-list">
+                  @for (item of eventTypes; track item.id) {
+                    <div class="flex min-h-[60px] items-center gap-3 border-b border-zinc-800 px-4 py-2.5 transition-colors duration-150 last:border-b-0 hover:bg-zinc-800">
+                      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-xs text-zinc-300"><i class="fa-solid fa-calendar-day"></i></span>
+                      <p class="min-w-0 flex-1 break-words text-sm font-medium text-zinc-100">{{ item.name }}</p>
+                      <div class="flex shrink-0 items-center gap-1">
+                        <app-icon-button icon="fa-solid fa-pencil" size="sm" buttonType="secondary" appFormOverlay [title]="'Editar tipo: ' + item.name" [fields]="[{ key: 'name', label: 'Nome do Tipo de Evento', value: item.name, type: 'text' }]" [saveLabel]="'Atualizar'" (onSave)="saveEventType($event, item.id)"></app-icon-button>
+                        <app-icon-button icon="fa-solid fa-trash" size="sm" buttonType="danger" [title]="'Excluir tipo: ' + item.name" (click)="deleteEventType(item)"></app-icon-button>
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="settings-empty-state settings-empty-state--compact">
+                      <i class="fa-solid fa-calendar-days text-xl text-zinc-500"></i>
+                      <h4 class="mt-3 text-sm font-semibold text-zinc-200">Nenhum tipo cadastrado</h4>
+                      <p class="mt-1 text-xs text-zinc-400">Adicione um tipo para organizar os eventos.</p>
+                    </div>
+                  }
+                </div>
+              </section>
+            </section>
+          }
+          @case ("global_field_config") {
+            <section class="settings-global-fields">
+              <header class="settings-page-heading">
+                <div>
+                  <h3>Campos globais</h3>
+                  <p>Selecione uma entidade e edite o layout sem sair desta tela.</p>
+                </div>
+                <app-icon-button title="Importar layout" icon="fa-solid fa-file-import" buttonType="secondary" size="lg" (click)="openLayoutImport()"></app-icon-button>
+              </header>
+
+              @if (showLayoutImportForm) {
+                <section class="mt-4 rounded-lg border border-zinc-700 bg-zinc-900 p-4">
+                  <div class="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <h4 class="text-sm font-semibold text-zinc-100">Importar layout</h4>
+                      <p class="mt-1 text-xs text-zinc-400">Selecione um JSON ou cole o conteúdo para validar antes de salvar.</p>
+                    </div>
+                    <app-icon-button title="Fechar importação" icon="fa-solid fa-xmark" buttonType="secondary" size="sm" (click)="closeLayoutImport()"></app-icon-button>
+                  </div>
+
+                  <div class="flex flex-wrap gap-2">
+                    <app-button label="Selecionar arquivo JSON" buttonType="secondary" size="xs" icon="fa-solid fa-file-arrow-up" (click)="selectLayoutImportFile()"></app-button>
+                    <app-button label="Validar importação" buttonType="primary" size="xs" icon="fa-solid fa-magnifying-glass" (click)="analyzeLayoutImport()"></app-button>
+                  </div>
+
+                  <label class="mt-3 block text-xs text-zinc-200" for="layout-import-json">JSON do layout</label>
+                  <textarea id="layout-import-json" class="mt-1 min-h-32 w-full rounded-lg border border-zinc-700 bg-zinc-950 p-3 font-mono text-xs text-zinc-100 outline-none focus:border-yellow-400" placeholder="Cole aqui o JSON exportado pelo Lorekit" [(ngModel)]="layoutImportSerialized"></textarea>
+
+                  @if (layoutImportError) {
+                    <p class="mt-3 rounded-md border border-red-900 bg-red-950/40 p-2 text-xs text-red-200" role="alert">{{ layoutImportError }}</p>
+                  }
+
+                  @if (layoutImportPlan) {
+                    <div class="mt-3 rounded-md border border-zinc-700 bg-zinc-950 p-3 text-sm">
+                      <p><span class="text-zinc-400">Entidade detectada:</span> {{ layoutImportPlan.document.entityTable }}</p>
+                      <p class="mt-1"><span class="text-zinc-400">Campos dinâmicos:</span> {{ layoutImportPlan.fieldsToCreate.length }} a criar, {{ layoutImportPlan.reusedFields.length }} a reutilizar.</p>
+                      @if (layoutImportPlan.fieldsToCreate.length > 0) {
+                        <p class="mt-2 text-xs text-zinc-300">Campos a criar:</p>
+                        <ul class="list-inside list-disc text-xs text-zinc-300">
+                          @for (field of layoutImportPlan.fieldsToCreate; track field.name) { <li>{{ field.name }}</li> }
+                        </ul>
+                      }
+                      @if (layoutImportPlan.reusedFields.length > 0) {
+                        <p class="mt-2 text-xs text-zinc-300">Campos a reutilizar:</p>
+                        <ul class="list-inside list-disc text-xs text-zinc-300">
+                          @for (field of layoutImportPlan.reusedFields; track field.id) { <li>{{ field.name }}</li> }
+                        </ul>
+                      }
+                    </div>
+
+                    @if (layoutImportPlan.hasExistingGlobalConfig) {
+                      <div class="mt-3 rounded-md border border-amber-800/70 bg-amber-950/20 p-3">
+                        <p class="text-sm text-amber-100">Já existe um layout global para esta entidade. Escolha o destino da importação.</p>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                          <app-button label="Substituir" buttonType="primary" size="xs" (click)="selectLayoutImportDestination('replace-global')"></app-button>
+                          <app-button label="Criar novo layout" buttonType="secondary" size="xs" (click)="selectLayoutImportDestination('create-template')"></app-button>
+                          <app-button label="Cancelar" buttonType="secondary" size="xs" (click)="closeLayoutImport()"></app-button>
+                        </div>
+                      </div>
+                    }
+
+                    @if (layoutImportDestination === 'create-template') {
+                      <div class="mt-3 max-w-96">
+                        <app-input label="Nome do novo layout" [(value)]="layoutImportTemplateName"></app-input>
+                      </div>
+                    }
+
+                    @if (layoutImportDestination) {
+                      <div class="mt-3 flex gap-2">
+                        <app-button label="Aplicar importação" buttonType="primary" size="xs" icon="fa-solid fa-file-import" (click)="applyLayoutImport()"></app-button>
+                        <app-button label="Cancelar" buttonType="secondary" size="xs" (click)="closeLayoutImport()"></app-button>
+                      </div>
+                    }
+                  }
+                </section>
+              }
+
+              @if (selectedFieldConfigTable) {
+                <div class="global-fields-workspace mt-4 grid min-h-[66vh] grid-cols-1 gap-4 lg:grid-cols-[minmax(180px,0.72fr)_minmax(0,2.65fr)]">
+                  <aside class="settings-layout-sidebar">
+                    <section>
+                      <div class="mb-3 flex items-center gap-3">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-800 text-yellow-400"><i class="fa-solid fa-cube"></i></div>
+                        <div>
+                          <h4 class="text-sm font-semibold text-zinc-100">Entidade</h4>
+                          <p class="mt-1 text-xs text-zinc-400">Escolha onde aplicar os layouts.</p>
+                        </div>
+                      </div>
+                      <app-combo-box class="w-full" label="Tabela do sistema" [items]="fieldConfigAvailableTables" [comboValue]="selectedFieldConfigTable" (comboValueChange)="onFieldConfigTableChange($event)"></app-combo-box>
+                    </section>
+
+                    <section class="min-h-0 flex-1">
+                      <div class="mb-2 flex items-center justify-between gap-2">
+                        <div>
+                          <h4 class="text-sm font-semibold text-zinc-100">Layouts</h4>
+                          <p class="mt-1 text-xs text-zinc-400">{{ selectedFieldConfigTable }}</p>
+                        </div>
+                        <app-icon-button title="Criar layout" icon="fa-solid fa-plus" buttonType="secondary" size="base" (click)="startNewTemplate()"></app-icon-button>
+                      </div>
+
+                      <button type="button" class="settings-layout-choice" [class.settings-layout-choice--active]="!selectedLayoutTemplateId" [attr.aria-pressed]="!selectedLayoutTemplateId" (click)="selectGlobalLayout()">
+                        <i class="fa-solid fa-table-cells-large"></i>
+                        <span>Layout global</span>
+                        @if (!selectedLayoutTemplateId) { <i class="fa-solid fa-check ms-auto text-yellow-400"></i> }
+                      </button>
+
+                      @if (showNewTemplateForm) {
+                        <div class="mt-3 flex items-end gap-2 rounded-lg border border-zinc-700 bg-zinc-950/60 p-3">
+                          <app-input class="min-w-0 flex-1" label="Nome do layout" [placeholder]="'Ex.: Ficha de combate'" [(value)]="newTemplateNameInline"></app-input>
+                          <app-icon-button title="Criar layout e editar" icon="fa-solid fa-check" buttonType="primary" size="base" (click)="confirmNewTemplate()"></app-icon-button>
+                          <app-icon-button title="Cancelar criação" icon="fa-solid fa-xmark" buttonType="secondary" size="base" (click)="showNewTemplateForm = false; newTemplateNameInline = ''"></app-icon-button>
+                        </div>
+                      }
+
+                      <div class="mt-2 flex max-h-[38vh] flex-col gap-1 overflow-y-auto scrollbar-dark">
+                        @for (template of fieldConfigTemplates; track template.id) {
+                          <button type="button" class="settings-layout-choice" [class.settings-layout-choice--active]="selectedLayoutTemplateId === template.id" [attr.aria-pressed]="selectedLayoutTemplateId === template.id" (click)="selectLayoutTemplate(template)">
+                            <i class="fa-regular fa-file-lines"></i>
+                            <span class="min-w-0 flex-1 truncate">{{ template.name }}</span>
+                            @if (selectedLayoutTemplateId === template.id) { <i class="fa-solid fa-check text-yellow-400"></i> }
+                          </button>
+                        } @empty {
+                          <p class="px-2 py-3 text-xs text-zinc-500">Ainda não há layouts salvos para esta entidade.</p>
+                        }
+                      </div>
+                    </section>
+                  </aside>
+
+                  <div class="min-w-0">
+                    @if (layoutEditorLoading) {
+                      <div class="settings-empty-state h-[66vh] text-sm text-zinc-400" role="status">
+                        <i class="fa-solid fa-spinner animate-spin text-yellow-400"></i>
+                        <p class="mt-3">Carregando editor de layouts...</p>
+                      </div>
+                    }
+                    @if (layoutEditorLoadError) {
+                      <p class="rounded-lg border border-red-900 bg-red-950/40 p-4 text-sm text-red-200" role="alert">{{ layoutEditorLoadError }}</p>
+                    }
+                    <ng-container #layoutEditorHost></ng-container>
+                  </div>
+                </div>
+              } @else {
+                <div class="settings-empty-state mt-6">
+                  <i class="fa-solid fa-table-cells-large text-xl text-zinc-500"></i>
+                  <p class="mt-3 text-sm text-zinc-300">Selecione uma entidade para ver os layouts.</p>
+                </div>
+              }
+            </section>
+          }
+        }
+
+      </div>
+      <footer class="border-t border-zinc-800 px-4 py-2 text-center text-xs text-zinc-500 md:hidden">
+        Lorekit <span class="mx-1 text-zinc-700">·</span> v{{ appVersion }}
+      </footer>
+    </main>
+  </div>
