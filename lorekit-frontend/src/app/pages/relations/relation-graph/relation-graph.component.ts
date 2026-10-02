@@ -636,6 +636,7 @@ export class RelationGraphComponent implements OnInit {
     }
 
     this.loadGraph();
+    this.centerRootEntity();
 
     const rootEntity = this.linkService.getEntitySummary(table, id);
     this.tabManager.pinActiveRelationsTab({
@@ -651,6 +652,20 @@ export class RelationGraphComponent implements OnInit {
     this.panX = 0;
     this.panY = 0;
     this.zoomLevel = 1;
+  }
+
+  private centerRootEntity(): void {
+    const graph = this.graphView;
+    if (!graph) return;
+
+    const root = graph.nodes.find(node =>
+      node.table === this.currentRootTable && node.id === this.currentRootId
+    );
+    if (!root) return;
+
+    this.zoomLevel = 1;
+    this.panX = (graph.width || this.canvasWidth) / 2 - root.x;
+    this.panY = (graph.height || this.canvasHeight) / 2 - root.y;
   }
 
   fitGraph(): void {

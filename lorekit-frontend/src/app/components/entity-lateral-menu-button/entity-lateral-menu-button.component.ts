@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, input, output, signal } from '@angular/core';
+import { A11yModule } from '@angular/cdk/a11y';
 import { IconButtonComponent } from '../icon-button/icon-button.component';
 import { EntityLateralMenuComponent } from '../entity-lateral-menu/entity-lateral-menu.component';
 import { FormField } from '../form-overlay/form-overlay.component';
 
 @Component({
   selector: 'app-entity-lateral-menu-button',
-  imports: [IconButtonComponent, EntityLateralMenuComponent],
+  imports: [A11yModule, IconButtonComponent, EntityLateralMenuComponent],
   templateUrl: './entity-lateral-menu-button.component.html',
   styleUrl: './entity-lateral-menu-button.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,6 +24,7 @@ export class EntityLateralMenuButtonComponent {
 
   protected readonly isOpen = signal(false);
   protected readonly panelWidth = signal(384);
+  protected readonly panelTitleId = `entity-lateral-menu-title-${crypto.randomUUID()}`;
 
   protected togglePanel(): void {
     this.isOpen.update(isOpen => !isOpen);

@@ -6,12 +6,30 @@ import { debounceTime, distinctUntilChanged, Subject, Subscription } from 'rxjs'
 import { CrudHelper } from '../../database/database.helper';
 import { DbProvider } from '../../app.config';
 import { schema } from '../../database/schema';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { EntityTransferService } from '../../services/entity-transfer.service';
+import { TabManagerService } from '../../services/tab-manager.service';
+import { TabEntityType } from '../../models/workspace.model';
+
+type SearchableTabEntityType = Exclude<TabEntityType, 'view'>;
+type SearchResult = { id: string; name?: string; title?: string; concept?: string };
+
+const SEARCHABLE_TABLES: Partial<Record<string, SearchableTabEntityType>> = {
+  World: 'World',
+  Location: 'Location',
+  Document: 'Document',
+  Species: 'Specie',
+  Character: 'Character',
+  Culture: 'Culture',
+  Organization: 'Organization',
+  Object: 'Object',
+  Timeline: 'Timeline',
+  Moodboard: 'Moodboard',
+};
 
 @Component({
   selector: 'app-search',
-  imports: [CommonModule, OverlayModule, FormsModule, RouterLink],
+  imports: [CommonModule, OverlayModule, FormsModule],
   template: `
   <div class="flex flex-row items-center gap-2">
     <div
@@ -67,7 +85,7 @@ import { EntityTransferService } from '../../services/entity-transfer.service';
               </div>
               <div  class="flex flex-col gap-1 max-h-60 overflow-y-auto scrollbar-dark">
                 @for (result of searchResults[key]; track result.id) {
-                  <div [routerLink]="getEditUrl(key, result.id)" class="p-1 rounded-md hover:bg-zinc-800 cursor-pointer">
+                  <button type="button" (click)="openSearchResult(key, result)" class="w-full min-h-11 p-2 rounded-md text-left hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-zinc-100 cursor-pointer">
                     @if (key === 'Document'){
                       <div>
                         <div class="font-bold">{{ result.title }}</div>
@@ -79,7 +97,7 @@ import { EntityTransferService } from '../../services/entity-transfer.service';
                         <div class="text-xs text-zinc-500 line-clamp-2">{{ result.concept }}</div>
                       </div>
                     }
-                  </div>
+                  </button>
                 }
               </div>
             </div>
@@ -107,12 +125,14 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   tablesToIgnore = input<string[]>(['Personalization', 'Image', 'Relationship', 'GlobalParameter', 'Link', 'LocationCategory', 'OrganizationType', 'GreatMark', 'EventType', 'Event']);
 
-  searchResults: { [tableName: string]: any[] } = {};
+  searchResults: Record<string, SearchResult[]> = {};
   searchResultKeys: string[] = [];
 
   constructor(private dbProvider : DbProvider) {
     this.crud = this.dbProvider.getCrudHelper();
   }
+
+  private readonly tabManager = inject(TabManagerService);
 
   search(term: string) {
     this.searchResults = {};
@@ -123,7 +143,7 @@ export class SearchComponent implements OnInit, OnDestroy {
     }
 
     this.currentTables.forEach((table) => {
-      if(this.tablesToIgnore().includes(table.name)) {
+      if(this.tablesToIgnore().includes(table.name) || !SEARCHABLE_TABLES[table.name]) {
         return;
       }
 
@@ -168,6 +188,25 @@ export class SearchComponent implements OnInit, OnDestroy {
       return `/app/timeline/edit/${id}`;
     }
     return `/app/${tableName.toLowerCase()}/edit/${id}`;
+  }
+
+  openSearchResult(tableName: string, result: SearchResult): void {
+    const entityType = SEARCHABLE_TABLES[tableName];
+    if (!entityType || !result.id) return;
+
+    const title = tableName === 'Document' ? result.title : result.name;
+    this.tabManager.openTab(
+      entityType,
+      result.id,
+      title?.trim() || 'Sem título',
+      'fa-solid fa-pen-to-square'
+    );
+
+    this.isOpen = false;
+    this.searchTerm = '';
+    this.searchResults = {};
+    this.searchResultKeys = [];
+    this.searchSubject.next('');
   }
 
   openImportFilePicker(fileInput: HTMLInputElement) {

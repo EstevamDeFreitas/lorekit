@@ -14,9 +14,9 @@
     (click)="closePanel()">
   </button>
 
-  <aside class="entity-lateral-menu-button__panel" [style.width.px]="panelWidth()">
+  <aside cdkTrapFocus [cdkTrapFocusAutoCapture]="true" class="entity-lateral-menu-button__panel" role="dialog" aria-modal="true" [attr.aria-labelledby]="panelTitleId" [style.width.px]="panelWidth()" (keydown.escape)="closePanel()">
     <div class="entity-lateral-menu-button__header">
-      <span class="entity-lateral-menu-button__title">Campos</span>
+      <span [id]="panelTitleId" class="entity-lateral-menu-button__title">Campos</span>
       <app-icon-button
         buttonType="secondaryActive"
         icon="fa-solid fa-xmark"
