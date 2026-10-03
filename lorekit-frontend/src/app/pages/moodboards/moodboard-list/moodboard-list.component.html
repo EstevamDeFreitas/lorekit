@@ -1,32 +1,41 @@
-<div class="flex flex-col h-full relative">
-  <div class="flex flex-row h-full gap-4">
-    <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
-      <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
+<div class="moodboard-list-layout" [class.moodboard-list-layout--panel]="panelMode()">
+  <aside
+    class="moodboard-browser"
+    [class.moodboard-browser--panel]="panelMode()"
+    [class.moodboard-browser--collapsed]="!panelMode() && !showsidebar">
+    <div class="moodboard-browser-inner">
+      @if (!panelMode()) {
+        <header class="moodboard-browser-heading">
+          <span class="moodboard-browser-icon"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i></span>
+          <div class="min-w-0">
+            <h2>Moodboards</h2>
+            <p>Organize referências e ideias visuais.</p>
+          </div>
+        </header>
+      }
 
-        <div class="mb-4">
-          <app-combo-box
-            class="w-full"
-            label="Filtro de mundo"
-            [items]="availableWorlds"
-            compareProp="id"
-            displayProp="name"
-            [(comboValue)]="selectedWorldId"
-            (comboValueChange)="onWorldSelect()">
-          </app-combo-box>
-        </div>
+      <div class="moodboard-browser-controls">
+        <app-combo-box
+          class="w-full"
+          label="Filtrar por mundo"
+          [items]="availableWorlds"
+          compareProp="id"
+          displayProp="name"
+          [clearable]="true"
+          [(comboValue)]="selectedWorldId"
+          (comboValueChange)="onWorldSelect()">
+        </app-combo-box>
 
-        <div class="flex flex-row items-center gap-1 mb-4">
-          <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus-within:border-white">
-            <div class="w-8 h-5 flex flex-row justify-center items-center">
-              <i class="fa fa-search"></i>
-            </div>
+        <div class="moodboard-search-row">
+          <label class="moodboard-search">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
             <input
               type="text"
               [(ngModel)]="searchTerm"
               (ngModelChange)="filterMoodboards()"
-              placeholder="Pesquisar..."
-              class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10" />
-          </div>
+              placeholder="Pesquisar moodboards"
+              aria-label="Pesquisar moodboards" />
+          </label>
           <app-icon-button
             size="sm"
             buttonType="secondaryActive"
@@ -37,38 +46,152 @@
             (onSave)="createMoodboard($event)">
           </app-icon-button>
         </div>
+      </div>
 
-        <app-tree-view-list
-          [openInDialog]="false"
-          [allowCreate]="true"
-          [useCustomCreate]="true"
-          [dragEnabled]="!searchTerm.trim()"
-          [dragContextId]="'moodboard-list:' + (selectedWorldId || 'root')"
-          [canReparent]="canReparentMoodboard"
-          [fallbackIcon]="'fa-table-cells-large'"
-          [createTitle]="'Criar Moodboard'"
-          [createFieldLabel]="'Nome'"
-          [emptyChildrenLabel]="'Nenhum moodboard encontrado'"
-          (onDocumentSelect)="selectMoodboard($event.id)"
-          (onCreateChild)="createChildMoodboard($event)"
-          (onReparentRequested)="reparentMoodboard($event)"
-          (onDelete)="deleteMoodboard($event)"
-          (onDocumentNewTab)="openMoodboard($event)"
-          [documentArray]="filteredMoodboardTreeNodes">
-        </app-tree-view-list>
+      <div class="moodboard-browser-cards scrollbar-dark">
+        @for (moodboard of filteredMoodboards; track moodboard.id) {
+          <article class="moodboard-compact-card" [class.moodboard-compact-card--selected]="selectedMoodboardId === moodboard.id">
+            <div class="moodboard-compact-card-main">
+              <button
+                type="button"
+                class="moodboard-compact-card-icon"
+                [attr.aria-label]="'Abrir moodboard ' + (moodboard.name || 'sem nome')"
+                (click)="selectMoodboard(moodboard.id)">
+                <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="moodboard-compact-card-copy" (click)="selectMoodboard(moodboard.id)">
+                <span>{{ moodboard.name || 'Moodboard sem nome' }}</span>
+                <small>{{ moodboard.ParentWorld?.name || 'Quadro visual' }}</small>
+              </button>
+            </div>
+            <div class="moodboard-compact-card-actions">
+              <app-icon-button
+                size="sm"
+                buttonType="secondary"
+                icon="fa-solid fa-arrow-up-right-from-square"
+                title="Abrir em nova aba"
+                (click)="openMoodboard(moodboard.id)">
+              </app-icon-button>
+              <app-icon-button
+                size="sm"
+                buttonType="secondary"
+                icon="fa-solid fa-trash-can"
+                [title]="'Excluir ' + (moodboard.name || 'Moodboard')"
+                (click)="deleteMoodboard(moodboard.id)">
+              </app-icon-button>
+            </div>
+          </article>
+        } @empty {
+          <div class="moodboard-browser-empty">
+            <i class="fa-solid" [class.fa-table-cells-large]="moodboards.length === 0" [class.fa-magnifying-glass]="moodboards.length > 0" aria-hidden="true"></i>
+            <p>{{ moodboards.length === 0 ? 'Nenhum moodboard criado ainda.' : 'Nenhum moodboard corresponde aos filtros.' }}</p>
+            @if (moodboards.length > 0) {
+              <button type="button" (click)="clearMoodboardFilters()">Limpar filtros</button>
+            }
+          </div>
+        }
       </div>
     </div>
+  </aside>
 
-    @if (!panelMode()) {
-      <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
-        <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
-      </small>
-    }
+  @if (!panelMode()) {
+    <button
+      type="button"
+      class="moodboard-sidebar-toggle"
+      [class.moodboard-sidebar-toggle--open]="showsidebar"
+      [attr.aria-expanded]="showsidebar"
+      [attr.aria-label]="showsidebar ? 'Recolher lista de moodboards' : 'Mostrar lista de moodboards'"
+      [title]="showsidebar ? 'Recolher lista de moodboards' : 'Mostrar lista de moodboards'"
+      (click)="showsidebar = !showsidebar">
+      <i class="fa-solid" [class.fa-angles-left]="showsidebar" [class.fa-angles-right]="!showsidebar" aria-hidden="true"></i>
+    </button>
 
-    @if (!panelMode()) {
-      <div class="flex-1 h-full flex items-center justify-center text-zinc-500">
-        Selecione um moodboard para editar
-      </div>
-    }
-  </div>
+    <main class="moodboard-directory scrollbar-dark">
+      <header class="moodboard-directory-heading">
+        <div class="min-w-0">
+          <p class="moodboard-eyebrow">Biblioteca visual</p>
+          <h1>Moodboards</h1>
+          <p class="moodboard-directory-description">Reúna referências, imagens e elementos para dar forma às suas ideias.</p>
+        </div>
+        <div class="moodboard-directory-actions">
+          <span class="moodboard-result-count">{{ filteredMoodboards.length }} {{ filteredMoodboards.length === 1 ? 'quadro' : 'quadros' }}</span>
+          <button
+            type="button"
+            class="moodboard-create-button"
+            appFormOverlay
+            [title]="'Criar Moodboard'"
+            [fields]="getFormFields()"
+            (onSave)="createMoodboard($event)">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            <span>Novo moodboard</span>
+          </button>
+        </div>
+      </header>
+
+      @if (filteredMoodboards.length > 0) {
+        <div class="moodboard-card-grid">
+          @for (moodboard of filteredMoodboards; track moodboard.id) {
+            <article class="moodboard-card" [class.moodboard-card--selected]="selectedMoodboardId === moodboard.id">
+              <button
+                type="button"
+                class="moodboard-card-open"
+                [attr.aria-label]="'Abrir moodboard ' + (moodboard.name || 'sem nome')"
+                (click)="selectMoodboard(moodboard.id)">
+                <div class="moodboard-card-cover">
+                  <span class="moodboard-card-icon"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i></span>
+                  <span class="moodboard-card-type">Quadro visual</span>
+                </div>
+                <div class="moodboard-card-body">
+                  <h2>{{ moodboard.name || 'Moodboard sem nome' }}</h2>
+                  <p>{{ moodboard.ParentWorld?.name || 'Sem mundo associado' }}</p>
+                </div>
+              </button>
+              <footer class="moodboard-card-footer">
+                <span>Disponível para edição</span>
+                <div class="moodboard-card-actions">
+                  <app-icon-button
+                    size="sm"
+                    buttonType="secondary"
+                    icon="fa-solid fa-arrow-up-right-from-square"
+                    title="Abrir em nova aba"
+                    (click)="openMoodboard(moodboard.id)">
+                  </app-icon-button>
+                  <app-icon-button
+                    size="sm"
+                    buttonType="secondary"
+                    icon="fa-solid fa-trash-can"
+                    [title]="'Excluir ' + (moodboard.name || 'Moodboard')"
+                    (click)="deleteMoodboard(moodboard.id)">
+                  </app-icon-button>
+                </div>
+              </footer>
+            </article>
+          }
+        </div>
+      } @else if (moodboards.length > 0) {
+        <section class="moodboard-empty-state">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <h2>Nenhum moodboard encontrado</h2>
+          <p>Não há quadros que correspondam à pesquisa ou ao mundo selecionado.</p>
+          <button type="button" class="moodboard-empty-action" (click)="clearMoodboardFilters()">Limpar filtros</button>
+        </section>
+      } @else {
+        <section class="moodboard-empty-state">
+          <span class="moodboard-empty-icon"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i></span>
+          <h2>Sua biblioteca visual começa aqui</h2>
+          <p>Crie um moodboard para reunir imagens, notas e elementos ligados ao seu universo.</p>
+          <button
+            type="button"
+            class="moodboard-create-button"
+            appFormOverlay
+            [title]="'Criar Moodboard'"
+            [fields]="getFormFields()"
+            (onSave)="createMoodboard($event)">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            <span>Criar moodboard</span>
+          </button>
+        </section>
+      }
+    </main>
+  }
 </div>

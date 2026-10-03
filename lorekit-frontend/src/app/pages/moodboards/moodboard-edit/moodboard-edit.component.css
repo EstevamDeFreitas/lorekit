@@ -4,6 +4,105 @@
   min-height: 0;
 }
 
+.moodboard-editor-page {
+  gap: .6rem;
+  overflow: hidden;
+  padding: .65rem;
+}
+
+.moodboard-toolbar {
+  z-index: 10;
+  display: flex;
+  min-height: 4rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: .85rem;
+  border: 1px solid var(--color-zinc-800);
+  border-radius: .75rem;
+  background: linear-gradient(120deg, rgb(250 204 21 / .035), transparent 42%), rgb(24 24 27 / .95);
+  padding: .5rem .65rem;
+}
+
+.moodboard-title-group {
+  display: flex;
+  min-width: 12rem;
+  flex: 1 1 12rem;
+  align-items: center;
+  gap: .65rem;
+}
+
+.moodboard-title-icon {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(250 204 21 / .22);
+  border-radius: .7rem;
+  background: rgb(250 204 21 / .1);
+  color: var(--color-yellow-300);
+  font-size: .9rem;
+}
+
+.moodboard-title-field {
+  display: block;
+  min-width: 0;
+  flex: 1;
+}
+
+.moodboard-title-eyebrow {
+  display: block;
+  overflow: hidden;
+  color: var(--color-yellow-300);
+  font-size: .59rem;
+  font-weight: 750;
+  letter-spacing: .09em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.moodboard-name-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-zinc-100);
+  font-size: 1.125rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.moodboard-name-input:focus-visible {
+  border-radius: .2rem;
+  outline: 1px solid var(--color-zinc-600);
+  outline-offset: 2px;
+}
+
+.moodboard-toolbar-tools {
+  display: flex;
+  min-width: 0;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .4rem;
+}
+
+.moodboard-tool-group {
+  display: flex;
+  align-items: center;
+  gap: .12rem;
+  border: 1px solid var(--color-zinc-700);
+  border-radius: .55rem;
+  background: rgb(9 9 11 / .62);
+  padding: .18rem;
+}
+
 .tool-button {
   width: 1.85rem;
   height: 1.85rem;
@@ -18,8 +117,14 @@
 
 .tool-button:hover,
 .tool-button-active {
-  background: var(--color-zinc-700);
-  color: white;
+  background: rgb(250 204 21 / .14);
+  color: var(--color-yellow-300);
+}
+
+.tool-button:focus-visible,
+.zoom-label:focus-visible {
+  outline: 2px solid var(--color-yellow-300);
+  outline-offset: 2px;
 }
 
 .tool-button-danger:hover {
@@ -38,8 +143,8 @@
 }
 
 .zoom-label:hover {
-  background: var(--color-zinc-800);
-  color: white;
+  background: rgb(250 204 21 / .1);
+  color: var(--color-yellow-300);
 }
 
 .color-control {
@@ -66,15 +171,17 @@
   display: grid;
   min-height: 0;
   flex: 1;
-  grid-template-columns: 13rem minmax(0, 1fr) 19rem;
+  grid-template-columns: 13rem minmax(0, 1fr) 18rem;
+  gap: .45rem;
   overflow: hidden;
 }
 
 .moodboard-style-panel {
   min-height: 0;
   overflow-y: auto;
-  border-right: 1px solid var(--color-zinc-800);
-  background: var(--color-zinc-925);
+  border: 1px solid var(--color-zinc-800);
+  border-radius: .75rem;
+  background: var(--color-zinc-900);
 }
 
 .moodboard-style-panel-content {
@@ -181,7 +288,9 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #09090b;
+  border: 1px solid var(--color-zinc-800);
+  border-radius: .75rem;
+  background: radial-gradient(circle at 50% 0%, rgb(250 204 21 / .035), transparent 42%), #09090b;
 }
 
 .moodboard-item-toolbar {
@@ -680,8 +789,9 @@ svg {
 
 .moodboard-entity-panel {
   min-height: 0;
-  border-left: 1px solid var(--color-zinc-800);
-  background: var(--color-zinc-925);
+  border: 1px solid var(--color-zinc-800);
+  border-radius: .75rem;
+  background: var(--color-zinc-900);
   padding: 0.85rem;
   overflow: hidden;
 }
@@ -739,16 +849,38 @@ svg {
 }
 
 @media (max-width: 1023px) {
+  .moodboard-editor-page {
+    padding: .5rem;
+  }
+
+  .moodboard-toolbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .moodboard-title-group {
+    flex-basis: 100%;
+  }
+
+  .moodboard-toolbar-tools {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .moodboard-workspace {
     grid-template-columns: minmax(0, 1fr);
+    gap: .45rem;
     grid-template-rows: auto minmax(26rem, 1fr) minmax(16rem, auto);
     overflow-y: auto;
   }
 
   .moodboard-style-panel {
     max-height: 13rem;
-    border-right: 0;
     border-bottom: 1px solid var(--color-zinc-800);
+  }
+
+  .moodboard-stage {
+    min-height: 26rem;
   }
 
   .moodboard-style-panel-content {
@@ -770,6 +902,16 @@ svg {
 }
 
 @media (max-width: 640px) {
+  .moodboard-toolbar-tools {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: .15rem;
+  }
+
+  .moodboard-tool-group {
+    flex: 0 0 auto;
+  }
+
   .moodboard-workspace {
     grid-template-rows: auto minmax(22rem, 1fr) minmax(18rem, auto);
   }
@@ -790,5 +932,12 @@ svg {
 
   .color-swatch-grid {
     grid-template-columns: repeat(11, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-button,
+  .entity-search-card {
+    transition: none;
   }
 }

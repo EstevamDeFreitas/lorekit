@@ -1,64 +1,72 @@
-<div [historyEntity]="{ table: 'Moodboard', id: moodboard().id }" [historyModel]="moodboard()" (historyRestored)="restoreMoodboardHistory($event)" class="h-full min-h-0 flex flex-col bg-zinc-950 text-white">
-  <div class="shrink-0 border-b border-zinc-800 bg-zinc-950/95 px-3 py-2">
-    <div class="flex flex-row flex-wrap items-center gap-2">
-      <input
-        type="text"
-        class="min-w-0 md:min-w-48 flex-1 bg-transparent text-lg font-semibold outline-none border-0 focus:ring-0"
-        [historyField]="{ column: 'name', label: 'Nome' }" [ngModel]="moodboard().name"
-        (ngModelChange)="updateMoodboardName($event)"
-        (blur)="saveMoodboardName()" />
+<div [historyEntity]="{ table: 'Moodboard', id: moodboard().id }" [historyModel]="moodboard()" (historyRestored)="restoreMoodboardHistory($event)" class="moodboard-editor-page h-full min-h-0 flex flex-col bg-zinc-950 text-white">
+  <header class="moodboard-toolbar">
+    <div class="moodboard-title-group">
+      <span class="moodboard-title-icon"><i class="fa-solid fa-table-cells-large" aria-hidden="true"></i></span>
+      <label class="moodboard-title-field">
+        <span class="moodboard-title-eyebrow">{{ moodboard().ParentWorld?.name || 'Quadro visual' }}</span>
+        <input
+          type="text"
+          class="moodboard-name-input"
+          [historyField]="{ column: 'name', label: 'Nome' }"
+          [ngModel]="moodboard().name"
+          (ngModelChange)="updateMoodboardName($event)"
+          (blur)="saveMoodboardName()"
+          aria-label="Nome do moodboard" />
+      </label>
+    </div>
 
-      <div class="flex flex-row gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-1">
-        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'select'" title="Selecionar" (click)="setTool('select')">
-          <i class="fa-solid fa-arrow-pointer"></i>
+    <div class="moodboard-toolbar-tools">
+      <div class="moodboard-tool-group" role="toolbar" aria-label="Ferramentas do quadro">
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'select'" [attr.aria-pressed]="activeTool() === 'select'" title="Selecionar" (click)="setTool('select')">
+          <i class="fa-solid fa-arrow-pointer" aria-hidden="true"></i>
         </button>
-        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'text'" title="Texto" (click)="setTool('text')">
-          <i class="fa-solid fa-font"></i>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'text'" [attr.aria-pressed]="activeTool() === 'text'" title="Texto" (click)="setTool('text')">
+          <i class="fa-solid fa-font" aria-hidden="true"></i>
         </button>
-        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'rectangle'" title="Retângulo" (click)="setTool('rectangle')">
-          <i class="fa-regular fa-square"></i>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'rectangle'" [attr.aria-pressed]="activeTool() === 'rectangle'" title="Retângulo" (click)="setTool('rectangle')">
+          <i class="fa-regular fa-square" aria-hidden="true"></i>
         </button>
-        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'circle'" title="Círculo" (click)="setTool('circle')">
-          <i class="fa-regular fa-circle"></i>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'circle'" [attr.aria-pressed]="activeTool() === 'circle'" title="Círculo" (click)="setTool('circle')">
+          <i class="fa-regular fa-circle" aria-hidden="true"></i>
         </button>
-        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'line'" title="Linha" (click)="setTool('line')">
-          <i class="fa-solid fa-minus"></i>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'line'" [attr.aria-pressed]="activeTool() === 'line'" title="Linha" (click)="setTool('line')">
+          <i class="fa-solid fa-minus" aria-hidden="true"></i>
         </button>
-        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'arrow'" title="Seta" (click)="setTool('arrow')">
-          <i class="fa-solid fa-arrow-right-long"></i>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'arrow'" [attr.aria-pressed]="activeTool() === 'arrow'" title="Seta" (click)="setTool('arrow')">
+          <i class="fa-solid fa-arrow-right-long" aria-hidden="true"></i>
         </button>
-        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'draw'" title="Desenhar" (click)="setTool('draw')">
-          <i class="fa-solid fa-pencil"></i>
+        <button type="button" class="tool-button" [class.tool-button-active]="activeTool() === 'draw'" [attr.aria-pressed]="activeTool() === 'draw'" title="Desenhar" (click)="setTool('draw')">
+          <i class="fa-solid fa-pencil" aria-hidden="true"></i>
         </button>
         <button type="button" class="tool-button" title="Imagem" (click)="triggerImageUpload()">
-          <i class="fa-regular fa-image"></i>
+          <i class="fa-regular fa-image" aria-hidden="true"></i>
         </button>
         <input #imageInput type="file" accept="image/*" class="hidden" (change)="onImageSelected($event)" />
       </div>
 
-      <div class="flex flex-row gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-1">
+      <div class="moodboard-tool-group" role="toolbar" aria-label="Organizar elementos">
         <button type="button" class="tool-button" title="Trazer para frente" (click)="bringSelectedToFront()">
-          <i class="fa-solid fa-up-long"></i>
+          <i class="fa-solid fa-up-long" aria-hidden="true"></i>
         </button>
         <button type="button" class="tool-button" title="Enviar para trás" (click)="sendSelectedToBack()">
-          <i class="fa-solid fa-down-long"></i>
+          <i class="fa-solid fa-down-long" aria-hidden="true"></i>
         </button>
         <button type="button" class="tool-button tool-button-danger" title="Excluir" (click)="deleteSelected()">
-          <i class="fa-solid fa-trash"></i>
+          <i class="fa-solid fa-trash" aria-hidden="true"></i>
         </button>
       </div>
 
-      <div class="flex flex-row gap-1 rounded-md border border-zinc-800 bg-zinc-900 p-1">
+      <div class="moodboard-tool-group" role="toolbar" aria-label="Zoom do quadro">
         <button type="button" class="tool-button" title="Diminuir zoom" (click)="zoomOut()">
-          <i class="fa-solid fa-minus"></i>
+          <i class="fa-solid fa-minus" aria-hidden="true"></i>
         </button>
         <button type="button" class="zoom-label" title="Restaurar visão" (click)="resetView()">{{ (zoom() * 100).toFixed(0) }}%</button>
         <button type="button" class="tool-button" title="Aumentar zoom" (click)="zoomIn()">
-          <i class="fa-solid fa-plus"></i>
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
         </button>
       </div>
     </div>
-  </div>
+  </header>
 
   <div class="moodboard-workspace">
     <aside class="moodboard-style-panel scrollbar-dark">

@@ -1,5 +1,4 @@
 import { Dialog } from '@angular/cdk/dialog';
-import { NgClass } from '@angular/common';
 import { inject, DestroyRef, ChangeDetectionStrategy, Component, input, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -13,13 +12,9 @@ import { MoodboardService } from '../../../services/moodboard.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
-
-import { TreeViewListComponent } from '../../../components/entity-lateral-menu/entity-lateral-menu.component';
-import { buildTreeViewNodes, filterTreeViewNodes, TreeViewNode, TreeViewReparentRequest } from '../../../components/entity-lateral-menu/tree-view.models';
-import { EntityHierarchyService } from '../../../services/entity-hierarchy.service';
 @Component({
   selector: 'app-moodboard-list',
-  imports: [NgClass, FormsModule, ComboBoxComponent, IconButtonComponent, FormOverlayDirective, TreeViewListComponent],
+  imports: [FormsModule, ComboBoxComponent, IconButtonComponent, FormOverlayDirective],
   templateUrl: './moodboard-list.component.html',
   styleUrl: './moodboard-list.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,7 +22,6 @@ import { EntityHierarchyService } from '../../../services/entity-hierarchy.servi
 export class MoodboardListComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly moodboardService = inject(MoodboardService);
-  private readonly entityHierarchyService = inject(EntityHierarchyService);
   private readonly worldService = inject(WorldService);
   private readonly worldStateService = inject(WorldStateService);
   private readonly tabManager = inject(TabManagerService);
@@ -36,14 +30,11 @@ export class MoodboardListComponent implements OnInit {
   panelMode = input<boolean>(false);
 
   moodboards: Moodboard[] = [];
-  moodboardTreeNodes: TreeViewNode[] = [];
-  filteredMoodboardTreeNodes: TreeViewNode[] = [];
+  filteredMoodboards: Moodboard[] = [];
   availableWorlds: World[] = [];
   selectedWorldId = '';
   selectedMoodboardId = '';
   searchTerm = '';
-  readonly canReparentMoodboard = (draggedId: string, newParentId: string | null) =>
-    this.entityHierarchyService.canReparent('Moodboard', draggedId, newParentId);
   showsidebar = true;
 
   ngOnInit(): void {
@@ -59,7 +50,6 @@ export class MoodboardListComponent implements OnInit {
 
   loadMoodboards(): void {
     this.moodboards = this.moodboardService.getMoodboards(this.selectedWorldId || null);
-    this.moodboardTreeNodes = buildTreeViewNodes(this.moodboards, moodboard => moodboard.name || 'Moodboard', moodboard => moodboard.ParentMoodboard?.id);
     this.filterMoodboards();
 
     if (this.selectedMoodboardId && !this.moodboards.some(moodboard => moodboard.id === this.selectedMoodboardId)) {
@@ -72,7 +62,16 @@ export class MoodboardListComponent implements OnInit {
   }
 
   filterMoodboards(): void {
-    this.filteredMoodboardTreeNodes = filterTreeViewNodes(this.moodboardTreeNodes, this.searchTerm);
+    const term = this.searchTerm.trim().toLocaleLowerCase();
+    this.filteredMoodboards = this.moodboards.filter(moodboard =>
+      !term || (moodboard.name || '').toLocaleLowerCase().includes(term)
+    );
+  }
+
+  clearMoodboardFilters(): void {
+    this.searchTerm = '';
+    this.selectedWorldId = '';
+    this.onWorldSelect();
   }
   getFormFields(): FormField[] {
     return [
@@ -89,29 +88,6 @@ export class MoodboardListComponent implements OnInit {
     ];
   }
 
-  createChildMoodboard(event: { parentId: string, formData: Record<string, string> }): void {
-    const name = event.formData['name']?.trim();
-    const parent = this.moodboards.find(moodboard => moodboard.id === event.parentId);
-    if (!name || !parent) {
-      return;
-    }
-
-    const child = this.moodboardService.saveMoodboard(
-      new Moodboard('', name),
-      parent.ParentWorld?.id || this.selectedWorldId || null
-    );
-    this.entityHierarchyService.reparent('Moodboard', child.id, parent.id);
-    this.loadMoodboards();
-  }
-
-  reparentMoodboard(event: TreeViewReparentRequest): void {
-    try {
-      this.entityHierarchyService.reparent('Moodboard', event.draggedId, event.newParentId);
-      this.loadMoodboards();
-    } catch (error: unknown) {
-      alert(error instanceof Error ? error.message : 'Falha ao reorganizar o moodboard.');
-    }
-  }
   createMoodboard(formData: Record<string, string>): void {
     const name = formData['name']?.trim();
     if (!name) {

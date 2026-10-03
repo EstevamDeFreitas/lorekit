@@ -1,4 +1,611 @@
 :host {
   display: block;
   height: 100%;
+  min-height: 0;
+}
+
+.moodboard-list-layout {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: .75rem;
+  color: var(--color-zinc-100);
+}
+
+.moodboard-browser {
+  width: 20rem;
+  min-width: 0;
+  flex: 0 0 auto;
+  overflow: hidden;
+  transition: width .25s ease;
+}
+
+.moodboard-browser--collapsed {
+  width: 0;
+}
+
+.moodboard-browser--panel {
+  width: 100%;
+}
+
+.moodboard-browser-inner {
+  display: flex;
+  width: 20rem;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-zinc-800);
+  border-radius: .85rem;
+  background: var(--color-zinc-900);
+  padding: .9rem;
+}
+
+.moodboard-browser--panel .moodboard-browser-inner {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: var(--color-zinc-900);
+}
+
+.moodboard-browser-heading {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  border-bottom: 1px solid var(--color-zinc-800);
+  padding: .1rem 0 .85rem;
+}
+
+.moodboard-browser-icon,
+.moodboard-card-icon,
+.moodboard-empty-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(250 204 21 / .2);
+  border-radius: .7rem;
+  background: rgb(250 204 21 / .1);
+  color: var(--color-yellow-300);
+}
+
+.moodboard-browser-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  font-size: .95rem;
+}
+
+.moodboard-browser-heading h2 {
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+.moodboard-browser-heading p {
+  margin-top: .15rem;
+  color: var(--color-zinc-400);
+  font-size: .68rem;
+}
+
+.moodboard-browser-controls {
+  display: flex;
+  flex-direction: column;
+  gap: .65rem;
+  padding: .9rem 0;
+}
+
+.moodboard-search-row {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
+
+.moodboard-search {
+  display: flex;
+  min-width: 0;
+  min-height: 2.25rem;
+  flex: 1;
+  align-items: center;
+  gap: .55rem;
+  border: 1px solid var(--color-zinc-700);
+  border-radius: .6rem;
+  background: var(--color-zinc-950);
+  padding: 0 .65rem;
+  color: var(--color-zinc-400);
+  font-size: .75rem;
+  transition: border-color .15s ease;
+}
+
+.moodboard-search:focus-within {
+  border-color: var(--color-yellow-400);
+}
+
+.moodboard-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-zinc-100);
+  font: inherit;
+}
+
+.moodboard-search input::placeholder {
+  color: var(--color-zinc-500);
+}
+
+.moodboard-browser-cards {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: .45rem;
+  overflow: auto;
+  border-top: 1px solid var(--color-zinc-800);
+  padding-top: .65rem;
+}
+
+.moodboard-compact-card {
+  overflow: hidden;
+  border: 1px solid var(--color-zinc-800);
+  border-radius: .7rem;
+  background: rgb(9 9 11 / .62);
+  transition: border-color .15s ease;
+}
+
+.moodboard-compact-card:hover {
+  border-color: var(--color-zinc-600);
+}
+
+.moodboard-compact-card--selected {
+  border-color: var(--color-yellow-500);
+}
+
+.moodboard-compact-card-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: .55rem;
+  padding: .5rem;
+}
+
+.moodboard-compact-card-icon {
+  display: flex;
+  width: 3.1rem;
+  height: 3.1rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(250 204 21 / .2);
+  border-radius: .6rem;
+  background:
+    linear-gradient(145deg, rgb(250 204 21 / .2), transparent 72%),
+    var(--color-zinc-800);
+  color: var(--color-yellow-300);
+  font-size: .9rem;
+}
+
+.moodboard-compact-card-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: .18rem;
+  overflow: hidden;
+  text-align: left;
+}
+
+.moodboard-compact-card-copy span,
+.moodboard-compact-card-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moodboard-compact-card-copy span {
+  color: var(--color-zinc-100);
+  font-size: .78rem;
+  font-weight: 650;
+}
+
+.moodboard-compact-card-copy small {
+  color: var(--color-zinc-400);
+  font-size: .66rem;
+}
+
+.moodboard-compact-card-actions {
+  display: flex;
+  min-height: 2.1rem;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .25rem;
+  border-top: 1px solid var(--color-zinc-800);
+  padding: .15rem .45rem;
+}
+
+.moodboard-browser-empty {
+  display: flex;
+  min-height: 7rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  border: 1px dashed var(--color-zinc-700);
+  border-radius: .7rem;
+  padding: 1rem;
+  color: var(--color-zinc-400);
+  text-align: center;
+}
+
+.moodboard-browser-empty > i {
+  color: var(--color-yellow-300);
+  font-size: .9rem;
+}
+
+.moodboard-browser-empty p {
+  font-size: .68rem;
+  line-height: 1.4;
+}
+
+.moodboard-browser-empty button {
+  color: var(--color-yellow-300);
+  font-size: .66rem;
+  font-weight: 650;
+}
+
+.moodboard-compact-card-icon:focus-visible,
+.moodboard-compact-card-copy:focus-visible,
+.moodboard-browser-empty button:focus-visible {
+  outline: 2px solid var(--color-yellow-300);
+  outline-offset: 2px;
+}
+
+.moodboard-sidebar-toggle {
+  position: absolute;
+  z-index: 5;
+  top: .65rem;
+  left: 19.35rem;
+  display: flex;
+  width: 1.7rem;
+  height: 1.7rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-zinc-700);
+  border-radius: .55rem;
+  background: var(--color-zinc-900);
+  color: var(--color-zinc-300);
+  font-size: .7rem;
+  transition: left .25s ease, color .15s ease, background-color .15s ease;
+}
+
+.moodboard-sidebar-toggle:hover {
+  background: var(--color-zinc-800);
+  color: var(--color-zinc-100);
+}
+
+.moodboard-sidebar-toggle:not(.moodboard-sidebar-toggle--open) {
+  left: .45rem;
+}
+
+.moodboard-sidebar-toggle:focus-visible,
+.moodboard-create-button:focus-visible,
+.moodboard-empty-action:focus-visible,
+.moodboard-card-open:focus-visible {
+  outline: 2px solid var(--color-yellow-300);
+  outline-offset: 2px;
+}
+
+.moodboard-directory {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--color-zinc-800);
+  border-radius: .85rem;
+  background: radial-gradient(circle at 90% 0%, rgb(250 204 21 / .055), transparent 34%), var(--color-zinc-950);
+  padding: 1.2rem;
+}
+
+.moodboard-directory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--color-zinc-800);
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+}
+
+.moodboard-eyebrow {
+  color: var(--color-yellow-300);
+  font-size: .63rem;
+  font-weight: 750;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.moodboard-directory-heading h1 {
+  margin-top: .15rem;
+  color: var(--color-zinc-100);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.moodboard-directory-description {
+  margin-top: .3rem;
+  color: var(--color-zinc-400);
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.moodboard-directory-actions,
+.moodboard-card-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .5rem;
+}
+
+.moodboard-result-count {
+  color: var(--color-zinc-400);
+  font-size: .7rem;
+  white-space: nowrap;
+}
+
+.moodboard-create-button,
+.moodboard-empty-action {
+  display: inline-flex;
+  min-height: 2.35rem;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  border: 1px solid rgb(250 204 21 / .55);
+  border-radius: .6rem;
+  background: var(--color-yellow-400);
+  padding: .4rem .75rem;
+  color: var(--color-zinc-950);
+  font-size: .72rem;
+  font-weight: 700;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+
+.moodboard-create-button:hover,
+.moodboard-empty-action:hover {
+  border-color: var(--color-yellow-300);
+  background: var(--color-yellow-300);
+}
+
+.moodboard-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  align-items: start;
+  gap: .85rem;
+}
+
+.moodboard-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-zinc-800);
+  border-radius: .8rem;
+  background: var(--color-zinc-900);
+  transition: border-color .18s ease, transform .18s ease;
+}
+
+.moodboard-card:hover,
+.moodboard-card--selected {
+  border-color: var(--color-zinc-600);
+}
+
+.moodboard-card--selected {
+  box-shadow: inset 0 0 0 1px rgb(250 204 21 / .24);
+}
+
+.moodboard-card:hover {
+  transform: translateY(-2px);
+}
+
+.moodboard-card-open {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+}
+
+.moodboard-card-cover {
+  position: relative;
+  display: flex;
+  height: 7.5rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgb(250 204 21 / .13), transparent 55%),
+    radial-gradient(circle at 80% 18%, rgb(244 114 182 / .13), transparent 35%),
+    repeating-linear-gradient(0deg, transparent 0 23px, rgb(255 255 255 / .035) 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, rgb(255 255 255 / .035) 24px),
+    var(--color-zinc-950);
+  padding: .75rem;
+}
+
+.moodboard-card-cover::after {
+  position: absolute;
+  right: -1.2rem;
+  bottom: -2.9rem;
+  width: 8rem;
+  height: 8rem;
+  border: 1px solid rgb(250 204 21 / .18);
+  border-radius: 1.5rem;
+  content: '';
+  transform: rotate(26deg);
+}
+
+.moodboard-card-icon {
+  position: relative;
+  z-index: 1;
+  width: 2.2rem;
+  height: 2.2rem;
+  font-size: .9rem;
+}
+
+.moodboard-card-type {
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgb(161 161 170 / .24);
+  border-radius: 999px;
+  background: rgb(9 9 11 / .72);
+  padding: .25rem .5rem;
+  color: var(--color-zinc-300);
+  font-size: .61rem;
+}
+
+.moodboard-card-body {
+  min-height: 4.2rem;
+  padding: .75rem .85rem .65rem;
+}
+
+.moodboard-card-body h2 {
+  overflow: hidden;
+  color: var(--color-zinc-100);
+  font-size: .87rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moodboard-card-body p {
+  overflow: hidden;
+  margin-top: .3rem;
+  color: var(--color-zinc-400);
+  font-size: .68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moodboard-card-footer {
+  display: flex;
+  min-height: 2.55rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  border-top: 1px solid var(--color-zinc-800);
+  padding: .25rem .65rem;
+  color: var(--color-zinc-500);
+  font-size: .64rem;
+}
+
+.moodboard-empty-state {
+  display: flex;
+  min-height: 18rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--color-zinc-700);
+  border-radius: .85rem;
+  background: rgb(24 24 27 / .38);
+  padding: 2rem;
+  text-align: center;
+}
+
+.moodboard-empty-state > i {
+  color: var(--color-zinc-400);
+  font-size: 1rem;
+}
+
+.moodboard-empty-icon {
+  width: 2.8rem;
+  height: 2.8rem;
+  font-size: 1rem;
+}
+
+.moodboard-empty-state h2 {
+  margin-top: .8rem;
+  color: var(--color-zinc-100);
+  font-size: .95rem;
+  font-weight: 700;
+}
+
+.moodboard-empty-state p {
+  max-width: 28rem;
+  margin: .35rem 0 .9rem;
+  color: var(--color-zinc-400);
+  font-size: .75rem;
+  line-height: 1.5;
+}
+
+.moodboard-empty-action {
+  min-height: 2rem;
+  border-color: var(--color-zinc-700);
+  background: var(--color-zinc-900);
+  color: var(--color-zinc-200);
+}
+
+@media (max-width: 767px) {
+  .moodboard-list-layout:not(.moodboard-list-layout--panel) {
+    flex-direction: column;
+    gap: .55rem;
+    overflow: auto;
+  }
+
+  .moodboard-browser,
+  .moodboard-browser--collapsed {
+    width: 100%;
+    max-height: 19rem;
+  }
+
+  .moodboard-browser--collapsed {
+    display: none;
+  }
+
+  .moodboard-browser-inner {
+    width: 100%;
+    max-height: inherit;
+    border-radius: .75rem;
+  }
+
+  .moodboard-browser--panel,
+  .moodboard-browser--panel .moodboard-browser-inner {
+    max-height: none;
+    height: 100%;
+  }
+
+  .moodboard-sidebar-toggle {
+    display: none;
+  }
+
+  .moodboard-browser-cards {
+    max-height: 12rem;
+  }
+
+  .moodboard-directory {
+    flex: 1 0 auto;
+    overflow: visible;
+    padding: .9rem;
+  }
+
+  .moodboard-directory-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .moodboard-directory-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .moodboard-card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moodboard-browser,
+  .moodboard-sidebar-toggle,
+  .moodboard-card {
+    transition: none;
+  }
 }

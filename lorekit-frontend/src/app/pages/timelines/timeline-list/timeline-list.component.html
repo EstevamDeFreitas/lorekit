@@ -1,0 +1,213 @@
+<div class="timeline-list-layout" [class.timeline-list-layout--panel]="panelMode()">
+  <aside
+    class="timeline-browser"
+    [class.timeline-browser--panel]="panelMode()"
+    [class.timeline-browser--collapsed]="!panelMode() && !showsidebar">
+    <div class="timeline-browser-inner">
+      @if (!panelMode()) {
+        <header class="timeline-browser-heading">
+          <span class="timeline-browser-icon"><i class="fa-solid fa-timeline" aria-hidden="true"></i></span>
+          <div class="min-w-0">
+            <h2>Linhas do tempo</h2>
+            <p>Organize eras, marcos e eventos.</p>
+          </div>
+        </header>
+      }
+
+      <div class="timeline-browser-controls">
+        <app-combo-box
+          class="w-full"
+          label="Filtrar por mundo"
+          [items]="availableWorlds"
+          compareProp="id"
+          displayProp="name"
+          [clearable]="true"
+          [(comboValue)]="selectedWorldId"
+          (comboValueChange)="onWorldSelect()">
+        </app-combo-box>
+
+        <div class="timeline-search-row">
+          <label class="timeline-search">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input
+              type="text"
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="filterTimelines()"
+              placeholder="Pesquisar linhas do tempo"
+              aria-label="Pesquisar linhas do tempo" />
+          </label>
+          <app-icon-button
+            size="sm"
+            buttonType="secondaryActive"
+            icon="fa-solid fa-plus"
+            appFormOverlay
+            [title]="'Criar Linha do Tempo'"
+            [fields]="getFormFields()"
+            (onSave)="createTimeline($event)">
+          </app-icon-button>
+        </div>
+      </div>
+
+      <div class="timeline-browser-cards scrollbar-dark">
+        @for (timeline of filteredTimelines; track timeline.id) {
+          <article class="timeline-compact-card" [class.timeline-compact-card--selected]="selectedTimelineId === timeline.id">
+            <div class="timeline-compact-card-main">
+              <button
+                type="button"
+                class="timeline-compact-card-icon"
+                [attr.aria-label]="'Abrir linha do tempo ' + timeline.name"
+                (click)="selectTimeline(timeline.id)">
+                <i class="fa-solid fa-timeline" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="timeline-compact-card-copy" (click)="selectTimeline(timeline.id)">
+                <span>{{ timeline.name }}</span>
+                <small>{{ timeline.ParentWorld?.name || timeline.timeUnitName || 'Linha do tempo' }}</small>
+              </button>
+            </div>
+            <div class="timeline-compact-card-actions">
+              <app-icon-button
+                size="sm"
+                buttonType="secondary"
+                icon="fa-solid fa-arrow-up-right-from-square"
+                title="Abrir em nova aba"
+                (click)="newTabTimeline(timeline.id)">
+              </app-icon-button>
+              <app-icon-button
+                size="sm"
+                buttonType="secondary"
+                icon="fa-solid fa-trash-can"
+                [title]="'Excluir ' + timeline.name"
+                (click)="deleteTimeline(timeline.id)">
+              </app-icon-button>
+            </div>
+          </article>
+        } @empty {
+          <div class="timeline-browser-empty">
+            <i class="fa-solid" [class.fa-timeline]="timelines.length === 0" [class.fa-magnifying-glass]="timelines.length > 0" aria-hidden="true"></i>
+            <p>{{ timelines.length === 0 ? 'Nenhuma linha do tempo criada ainda.' : 'Nenhuma linha do tempo corresponde aos filtros.' }}</p>
+            @if (timelines.length > 0) {
+              <button type="button" (click)="clearTimelineFilters()">Limpar filtros</button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </aside>
+
+  @if (!panelMode()) {
+    <button
+      type="button"
+      class="timeline-sidebar-toggle"
+      [class.timeline-sidebar-toggle--open]="showsidebar"
+      [attr.aria-expanded]="showsidebar"
+      [attr.aria-label]="showsidebar ? 'Recolher lista de linhas do tempo' : 'Mostrar lista de linhas do tempo'"
+      [title]="showsidebar ? 'Recolher lista de linhas do tempo' : 'Mostrar lista de linhas do tempo'"
+      (click)="showsidebar = !showsidebar">
+      <i class="fa-solid" [class.fa-angles-left]="showsidebar" [class.fa-angles-right]="!showsidebar" aria-hidden="true"></i>
+    </button>
+
+    @if (selectedTimelineId) {
+      <main class="timeline-editor-host">
+        @if (showTimelineEditor && timelineEditComponent) {
+          <ng-container *ngComponentOutlet="timelineEditComponent; inputs: { timelineIdInput: selectedTimelineId }"></ng-container>
+        } @else {
+          <div class="timeline-loading-state" role="status">
+            <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+            <p>Carregando linha do tempo...</p>
+          </div>
+        }
+      </main>
+    } @else {
+      <main class="timeline-directory scrollbar-dark">
+        <header class="timeline-directory-heading">
+          <div class="min-w-0">
+            <p class="timeline-eyebrow">História em perspectiva</p>
+            <h1>Linhas do tempo</h1>
+            <p class="timeline-directory-description">Acompanhe eras, marcos importantes e eventos do seu universo.</p>
+          </div>
+          <div class="timeline-directory-actions">
+            <span class="timeline-result-count">{{ filteredTimelines.length }} {{ filteredTimelines.length === 1 ? 'linha do tempo' : 'linhas do tempo' }}</span>
+            <button
+              type="button"
+              class="timeline-create-button"
+              appFormOverlay
+              [title]="'Criar Linha do Tempo'"
+              [fields]="getFormFields()"
+              (onSave)="createTimeline($event)">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+              <span>Nova linha do tempo</span>
+            </button>
+          </div>
+        </header>
+
+        @if (filteredTimelines.length > 0) {
+          <div class="timeline-card-grid">
+            @for (timeline of filteredTimelines; track timeline.id) {
+              <article class="timeline-card">
+                <button
+                  type="button"
+                  class="timeline-card-open"
+                  [attr.aria-label]="'Abrir linha do tempo ' + timeline.name"
+                  (click)="selectTimeline(timeline.id)">
+                  <div class="timeline-card-cover">
+                    <span class="timeline-card-icon"><i class="fa-solid fa-timeline" aria-hidden="true"></i></span>
+                    <span class="timeline-card-unit">{{ timeline.timeUnitName || 'Anos' }}</span>
+                    <div class="timeline-card-axis" aria-hidden="true">
+                      <i></i><i></i><i></i>
+                    </div>
+                  </div>
+                  <div class="timeline-card-body">
+                    <h2>{{ timeline.name }}</h2>
+                    <p>{{ timeline.ParentWorld?.name || 'Sem mundo associado' }}</p>
+                  </div>
+                </button>
+                <footer class="timeline-card-footer">
+                  <span>Disponível para edição</span>
+                  <div class="timeline-card-actions">
+                    <app-icon-button
+                      size="sm"
+                      buttonType="secondary"
+                      icon="fa-solid fa-arrow-up-right-from-square"
+                      title="Abrir em nova aba"
+                      (click)="newTabTimeline(timeline.id)">
+                    </app-icon-button>
+                    <app-icon-button
+                      size="sm"
+                      buttonType="secondary"
+                      icon="fa-solid fa-trash-can"
+                      [title]="'Excluir ' + timeline.name"
+                      (click)="deleteTimeline(timeline.id)">
+                    </app-icon-button>
+                  </div>
+                </footer>
+              </article>
+            }
+          </div>
+        } @else if (timelines.length > 0) {
+          <section class="timeline-empty-state">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <h2>Nenhuma linha do tempo encontrada</h2>
+            <p>Não há linhas do tempo que correspondam à pesquisa ou ao mundo selecionado.</p>
+            <button type="button" class="timeline-empty-action" (click)="clearTimelineFilters()">Limpar filtros</button>
+          </section>
+        } @else {
+          <section class="timeline-empty-state">
+            <span class="timeline-empty-icon"><i class="fa-solid fa-timeline" aria-hidden="true"></i></span>
+            <h2>Comece a organizar a história</h2>
+            <p>Crie uma linha do tempo para conectar eras, grandes marcos e eventos.</p>
+            <button
+              type="button"
+              class="timeline-create-button"
+              appFormOverlay
+              [title]="'Criar Linha do Tempo'"
+              [fields]="getFormFields()"
+              (onSave)="createTimeline($event)">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i>
+              <span>Criar linha do tempo</span>
+            </button>
+          </section>
+        }
+      </main>
+    }
+  }
+</div>
