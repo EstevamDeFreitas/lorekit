@@ -1,0 +1,107 @@
+<div class="world-info-page @container" [historyEntity]="{ table: 'World', id: currentWorld.id || '' }" [historyModel]="currentWorld">
+  @if (getImageByUsageKey(currentWorld.Images, 'default') != null) {
+    @let img = getImageByUsageKey(currentWorld.Images, 'default');
+    <div class="world-info-cover">
+      <img [src]="img | assetUrl" [alt]="'Imagem de ' + currentWorld.name">
+    </div>
+  } @else {
+    <div
+      class="world-info-cover world-info-cover--empty"
+      [ngStyle]="{'background-image': 'linear-gradient(145deg, ' + (getPersonalizationValue(currentWorld, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}">
+      <i class="fa" [ngClass]="getPersonalizationValue(currentWorld, 'icon') || 'fa-earth'" aria-hidden="true"></i>
+    </div>
+  }
+
+  <header class="world-info-toolbar">
+    @if (isRouteComponent()) {
+      <app-icon-button class="world-info-back" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/world"></app-icon-button>
+    }
+    <label class="world-name-field">
+      <span class="sr-only">Nome do mundo</span>
+      <input
+        [historyField]="{ column: 'name', label: 'Nome' }"
+        type="text"
+        (blur)="saveWorldName()"
+        [(ngModel)]="currentWorld.name">
+    </label>
+    <div class="world-info-actions">
+      <app-ui-field-config-button
+        [entityTable]="'World'"
+        [entityId]="currentWorld.id"
+        [backRoute]="'/app/world/info/' + currentWorld.id">
+      </app-ui-field-config-button>
+      @if (!isLoading) {
+        <app-entity-lateral-menu-button
+          [fields]="fields"
+          (onSave)="onWorldSave($event)"
+          entityTable="World"
+          [entityId]="currentWorld.id">
+        </app-entity-lateral-menu-button>
+      }
+      <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" (onClose)="getWorld()"></app-personalization-button>
+      <app-icon-button
+        size="xl"
+        [buttonType]="currentMainWorldId === currentWorld.id ? 'primary' : 'secondary'"
+        icon="fa-solid fa-star"
+        [title]="currentMainWorldId === currentWorld.id ? 'Remover como mundo principal' : 'Definir como mundo principal'"
+        (click)="toggleMainWorld()">
+      </app-icon-button>
+      <app-safe-delete-button [entityName]="currentWorld.name" [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'"></app-safe-delete-button>
+    </div>
+  </header>
+
+  <div class="world-info-layout">
+    <nav class="world-info-tabs" aria-label="Seções do mundo">
+      <app-nav-button [label]="'Detalhes do mundo'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
+      @for (tab of fieldLayout.tabs; track tab.id) {
+        <app-nav-button [label]="tab.name" size="sm" [active]="currentTab === layoutTabStateId(tab.id)" (click)="selectTab(layoutTabStateId(tab.id))"></app-nav-button>
+      }
+      <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button>
+    </nav>
+
+    <section class="world-info-content">
+      @if (!isLoading) {
+        @switch (currentTab) {
+          @case ('details') {
+            <div class="world-info-editor-surface">
+              <app-editor
+                [historyField]="{ column: 'description', label: 'Descrição' }"
+                [entityId]="currentWorld.id"
+                docTitle="Descrição"
+                entityTable="World"
+                [entityName]="currentWorld.name"
+                [document]="currentWorld.description || ''"
+                (saveDocument)="onDocumentSave($event)"
+                style="--tiptap-toolbar-sticky-top: 5rem">
+              </app-editor>
+            </div>
+          }
+          @case ('localities') {
+            <div class="w-full flex-1">
+              @if (locationListComponent) {
+                <ng-container *ngComponentOutlet="locationListComponent; inputs: { worldId: currentWorld.id }"></ng-container>
+              } @else {
+                <p class="world-info-loading">Carregando localidades...</p>
+              }
+            </div>
+          }
+          @case ('characters') {
+            <p>Personagens</p>
+          }
+          @case ('objects') {
+            <p>Objetos</p>
+          }
+          @default {
+            <app-entity-configured-fields
+              entityTable="World"
+              [entity]="currentWorld"
+              [layout]="fieldLayout"
+              [activeTabId]="activeLayoutTabId()"
+              (requestSave)="saveWorldName()">
+            </app-entity-configured-fields>
+          }
+        }
+      }
+    </section>
+  </div>
+</div>

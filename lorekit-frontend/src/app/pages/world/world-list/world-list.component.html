@@ -1,0 +1,242 @@
+<div class="flex h-full min-h-[65vh] flex-col">
+  <div class="flex h-full min-h-[65vh] gap-4 max-md:flex-col">
+    <aside
+      class="world-sidebar-region shrink-0 overflow-hidden transition-all duration-300 motion-reduce:transition-none"
+      [ngClass]="panelMode() ? 'world-sidebar-region--panel' : (showsidebar ? 'world-sidebar-region--expanded' : 'world-sidebar-region--collapsed')">
+      <div class="world-sidebar-panel flex h-full min-h-0 w-80 flex-col overflow-y-auto border-r border-zinc-800 bg-zinc-900 p-4 scrollbar-dark max-md:w-full max-md:border-r-0 max-md:border-b" [ngClass]="panelMode() ? 'w-full border-r-0' : ''">
+        @if (!panelMode()) {
+          <header class="flex items-center gap-3 border-b border-zinc-800 pb-4">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-base text-yellow-400"><i class="fa-solid fa-earth"></i></span>
+            <div class="min-w-0">
+              <h2 class="text-base font-semibold leading-snug text-zinc-100">Mundos</h2>
+              <p class="mt-1 text-xs leading-snug text-zinc-400">Seu espaço de criação</p>
+            </div>
+          </header>
+        }
+
+        <div class="flex flex-col gap-2.5 py-4">
+          <app-combo-box
+            class="w-full"
+            label="Filtrar mundos"
+            [items]="worlds"
+            compareProp="id"
+            displayProp="name"
+            [clearable]="true"
+            [(comboValue)]="selectedWorldFilter"
+            (comboValueChange)="filterWorlds()">
+          </app-combo-box>
+
+          <div class="flex items-center gap-1.5">
+            <label class="flex min-h-9 min-w-0 flex-1 items-center gap-2 rounded-[0.6rem] border border-zinc-700 bg-zinc-950 px-2.5 text-xs text-zinc-400 transition-colors focus-within:border-yellow-400">
+              <i class="fa-solid fa-magnifying-glass text-xs" aria-hidden="true"></i>
+              <input
+                type="text"
+                class="min-w-0 w-full border-0 bg-transparent text-xs text-zinc-100 caret-yellow-400 outline-none placeholder:text-zinc-400"
+                [(ngModel)]="searchTerm"
+                (ngModelChange)="filterWorlds()"
+                placeholder="Pesquisar mundos"
+                aria-label="Pesquisar mundos" />
+            </label>
+            <app-icon-button
+              size="sm"
+              buttonType="secondaryActive"
+              icon="fa-solid fa-plus"
+              appFormOverlay
+              [title]="'Criar Mundo'"
+              [fields]="getFormFields()"
+              (onSave)="createWorld($event)">
+            </app-icon-button>
+          </div>
+        </div>
+
+        @if (panelMode()) {
+          <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-1 scrollbar-dark">
+            @for (world of filteredWorlds; track world.id) {
+              <article
+                class="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/60 transition-colors hover:border-zinc-600 motion-reduce:transition-none"
+                [class.border-yellow-500]="selectedEntityId === world.id">
+                <div class="flex min-w-0 items-center gap-2.5 p-2.5">
+                  <button
+                    type="button"
+                    class="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-cover bg-center"
+                    [ngStyle]="getWorldCardStyle(world)"
+                    [attr.aria-label]="'Abrir mundo ' + world.name"
+                    (click)="selectEntity(world.id)">
+                    <span class="relative z-[1] flex h-8 w-8 items-center justify-center rounded-md border border-white/20 bg-zinc-900/80 text-sm text-zinc-100">
+                      <i class="fa" [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-earth'" aria-hidden="true"></i>
+                    </span>
+                    @if (currentWorldId === world.id) {
+                      <i class="fa-solid fa-star absolute right-1 top-1 z-[1] text-[10px] text-yellow-300" aria-label="Mundo padrão"></i>
+                    }
+                  </button>
+                  <button type="button" class="min-w-0 flex-1 text-left" (click)="selectEntity(world.id)">
+                    <span class="block truncate text-sm font-semibold leading-snug text-zinc-100">{{ world.name }}</span>
+                    <span class="mt-1 line-clamp-2 block text-[11px] leading-relaxed text-zinc-400">{{ world.concept || 'Ainda sem conceito definido.' }}</span>
+                  </button>
+                </div>
+                <div class="flex justify-end gap-1 border-t border-zinc-800 px-2 py-1">
+                  <app-icon-button
+                    size="sm"
+                    [buttonType]="currentWorldId === world.id ? 'primary' : 'secondary'"
+                    icon="fa-solid fa-star"
+                    [title]="currentWorldId === world.id ? 'Remover como mundo principal' : 'Definir como mundo principal'"
+                    (click)="setWorldAsDefault(world)">
+                  </app-icon-button>
+                  <app-icon-button
+                    size="sm"
+                    buttonType="secondary"
+                    icon="fa-solid fa-arrow-up-right-from-square"
+                    title="Abrir em nova aba"
+                    (click)="openNewTabEntity(world.id)">
+                  </app-icon-button>
+                  <app-icon-button
+                    size="sm"
+                    buttonType="secondary"
+                    icon="fa-solid fa-trash-can"
+                    [title]="'Excluir ' + world.name"
+                    (click)="deleteWorld(world.id)">
+                  </app-icon-button>
+                </div>
+              </article>
+            } @empty {
+              <div class="rounded-xl border border-dashed border-zinc-700 bg-zinc-950/40 px-4 py-6 text-center">
+                <i class="fa-solid" [ngClass]="worlds.length === 0 ? 'fa-earth text-yellow-400' : 'fa-magnifying-glass text-zinc-400'" aria-hidden="true"></i>
+                <p class="mt-2 text-xs leading-relaxed text-zinc-300">
+                  {{ worlds.length === 0 ? 'Nenhum mundo criado ainda.' : 'Nenhum mundo corresponde aos filtros atuais.' }}
+                </p>
+                @if (worlds.length > 0) {
+                  <button type="button" class="mt-2 text-xs font-semibold text-yellow-300 hover:text-yellow-200" (click)="clearWorldFilters()">Limpar filtros</button>
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="min-h-0 flex-1">
+            <app-tree-view-list
+              [openInDialog]="false"
+              [allowCreate]="false"
+              [dragEnabled]="false"
+              [fallbackIcon]="'fa-earth'"
+              [emptyChildrenLabel]="'Nenhum mundo encontrado'"
+              (onDocumentSelect)="selectEntity($event.id)"
+              (onDelete)="deleteWorld($event)"
+              (onDocumentNewTab)="openNewTabEntity($event)"
+              [documentArray]="filteredWorldTreeNodes">
+            </app-tree-view-list>
+          </div>
+        }
+      </div>
+    </aside>
+
+    @if (!panelMode()) {
+      <main class="flex min-h-[60vh] min-w-0 flex-1 overflow-hidden rounded-xl bg-zinc-925 max-md:min-h-[45vh]">
+        @if (selectedEntityId) {
+          @if (showEntityEditor && worldInfoComponent) {
+            <div class="min-w-0 flex-1 overflow-y-auto scrollbar-dark">
+              <ng-container *ngComponentOutlet="worldInfoComponent; inputs: { worldIdInput: selectedEntityId }"></ng-container>
+            </div>
+          } @else {
+            <div class="flex min-h-[60vh] w-full flex-col items-center justify-center text-zinc-400" role="status">
+              <i class="fa-solid fa-spinner fa-spin text-base text-yellow-400" aria-hidden="true"></i>
+              <p class="mt-3 text-[13px]">Carregando mundo...</p>
+            </div>
+          }
+        } @else {
+          <section class="h-full w-full min-w-0 overflow-y-auto p-5 scrollbar-dark max-md:p-4">
+            <header class="flex items-center justify-between gap-5 border-b border-zinc-800 pb-4 mb-5 max-md:items-start max-md:flex-col max-md:gap-3.5">
+              <div class="min-w-0">
+                <div class="flex items-center gap-3">
+                  <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-base text-yellow-400"><i class="fa-solid fa-earth"></i></span>
+                  <h1 class="text-xl font-semibold leading-snug text-zinc-100">Mundos</h1>
+                </div>
+                <p class="mt-1 ml-[3.25rem] text-[13px] leading-relaxed text-zinc-400">Encontre um cenário ou continue a construir seu universo.</p>
+              </div>
+              <div class="flex shrink-0 items-center gap-3 max-md:w-full max-md:justify-between">
+                <span class="whitespace-nowrap text-xs text-zinc-400">
+                  {{ filteredWorlds.length }} {{ filteredWorlds.length === 1 ? 'mundo' : 'mundos' }}
+                </span>
+                <button
+                  type="button"
+                  class="inline-flex min-h-10 items-center justify-center gap-2 rounded-[0.65rem] bg-yellow-400 px-3.5 py-2 text-xs font-semibold text-zinc-950 transition-colors hover:bg-yellow-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300 motion-reduce:transition-none"
+                  appFormOverlay
+                  [title]="'Criar Mundo'"
+                  [fields]="getFormFields()"
+                  (onSave)="createWorld($event)">
+                  <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                  <span>Novo mundo</span>
+                </button>
+              </div>
+            </header>
+
+            @if (filteredWorlds.length > 0) {
+              <div class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] items-start gap-4">
+                @for (world of filteredWorlds; track world.id) {
+                  <article class="world-card min-w-0 overflow-hidden rounded-[0.85rem] border border-zinc-800 bg-zinc-900 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-zinc-600 motion-reduce:transition-none" [class.world-card--default]="currentWorldId === world.id">
+                    <button
+                      type="button"
+                      class="group flex w-full flex-col border-0 bg-transparent p-0 text-left text-inherit"
+                      [attr.aria-label]="'Abrir mundo ' + world.name"
+                      (click)="selectEntity(world.id)">
+                      <div class="world-card-cover relative flex h-[8.5rem] w-full items-start justify-between overflow-hidden bg-cover bg-center p-3" [ngStyle]="getWorldCardStyle(world)">
+                        <span class="relative z-[1] flex h-9 w-9 items-center justify-center rounded-[0.7rem] border border-white/20 bg-zinc-900/80 text-base text-zinc-100">
+                          <i class="fa" [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-earth'" aria-hidden="true"></i>
+                        </span>
+                        @if (currentWorldId === world.id) {
+                          <span class="relative z-[1] inline-flex items-center gap-1.5 rounded-full border border-yellow-300/40 bg-zinc-900/90 px-2 py-1 text-[11px] font-semibold text-yellow-300"><i class="fa-solid fa-star" aria-hidden="true"></i> Mundo padrão</span>
+                        }
+                      </div>
+                      <div class="flex min-h-32 flex-col items-start px-3.5 pt-3.5 pb-3">
+                        <h2 class="w-full truncate text-base font-semibold leading-snug text-zinc-100">{{ world.name }}</h2>
+                        <p class="mt-1 line-clamp-2 min-h-[2.4rem] text-xs leading-relaxed text-zinc-400">{{ world.concept || 'Ainda sem conceito definido.' }}</p>
+                        <span class="mt-auto inline-flex items-center gap-2 pt-2.5 text-xs font-semibold text-zinc-300">Abrir mundo <i class="fa-solid fa-arrow-right text-[11px] text-yellow-400 transition-transform group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true"></i></span>
+                      </div>
+                    </button>
+                    <footer class="flex min-h-11 items-center justify-between gap-3 border-t border-zinc-800 px-3.5 py-1.5 text-[11px] text-zinc-400">
+                      <span class="truncate">{{ currentWorldId === world.id ? 'Mundo padrão' : 'Disponível para edição' }}</span>
+                      <button
+                        type="button"
+                        class="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-[11px] text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300 motion-reduce:transition-none"
+                        [class.text-yellow-300]="currentWorldId === world.id"
+                        [attr.aria-pressed]="currentWorldId === world.id"
+                        [attr.aria-label]="currentWorldId === world.id ? 'Desfixar ' + world.name + ' como mundo padrão' : 'Definir ' + world.name + ' como mundo padrão'"
+                        (click)="setWorldAsDefault(world)">
+                        <i [ngClass]="currentWorldId === world.id ? 'fa-solid fa-star' : 'fa-regular fa-star'" aria-hidden="true"></i>
+                        <span>{{ currentWorldId === world.id ? 'Padrão' : 'Fixar' }}</span>
+                      </button>
+                    </footer>
+                  </article>
+                }
+              </div>
+            } @else if (worlds.length > 0) {
+              <div class="flex min-h-[19rem] flex-col items-center justify-center rounded-[0.85rem] border border-dashed border-zinc-700 bg-zinc-900/50 p-8 text-center">
+                <i class="fa-solid fa-magnifying-glass text-lg text-zinc-400" aria-hidden="true"></i>
+                <h2 class="mt-3 text-base font-semibold text-zinc-100">Nenhum mundo encontrado</h2>
+                <p class="mt-1 max-w-xl text-[13px] leading-relaxed text-zinc-400">Não há mundos que correspondam aos filtros atuais.</p>
+                <button type="button" class="mt-3 min-h-9 rounded-[0.6rem] border border-zinc-700 bg-zinc-900 px-3 text-xs text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300" (click)="clearWorldFilters()">Limpar filtros</button>
+              </div>
+            } @else {
+              <div class="flex min-h-[19rem] flex-col items-center justify-center rounded-[0.85rem] border border-dashed border-zinc-700 bg-zinc-900/50 p-8 text-center">
+                <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-800 text-lg text-yellow-400"><i class="fa-solid fa-earth" aria-hidden="true"></i></span>
+                <h2 class="mt-3 text-base font-semibold text-zinc-100">Nenhum mundo criado ainda</h2>
+                <p class="mt-1 max-w-xl text-[13px] leading-relaxed text-zinc-400">Crie um mundo para reunir personagens, lugares, documentos e histórias.</p>
+              </div>
+            }
+          </section>
+        }
+      </main>
+    }
+  </div>
+
+  @if (!panelMode()) {
+    <button
+      type="button"
+      class="world-sidebar-toggle fixed top-12 z-10 flex h-7 w-7 items-center justify-center rounded-[0.65rem] border border-zinc-700 bg-zinc-900 text-xs text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300 max-md:right-3 motion-reduce:transition-none"
+      [ngClass]="showsidebar ? 'start-92' : 'start-12'"
+      [attr.aria-expanded]="showsidebar"
+      [attr.aria-label]="showsidebar ? 'Recolher lista de mundos' : 'Mostrar lista de mundos'"
+      [title]="showsidebar ? 'Recolher lista de mundos' : 'Mostrar lista de mundos'"
+      (click)="showsidebar = !showsidebar">
+      <i class="fa-solid" [ngClass]="showsidebar ? 'fa-angles-left' : 'fa-angles-right'" aria-hidden="true"></i>
+    </button>
+  }
+</div>

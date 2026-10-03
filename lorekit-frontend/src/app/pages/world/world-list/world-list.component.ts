@@ -7,7 +7,7 @@ import { Router } from '@angular/router';
 import { WorldStateService } from '../../../services/world-state.service';
 import {OverlayModule} from '@angular/cdk/overlay';
 import { buildImageUrl, getImageByUsageKey } from '../../../models/image.model';
-import { getPersonalizationValue, getTextClass } from '../../../models/personalization.model';
+import { getPersonalizationValue } from '../../../models/personalization.model';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { TabManagerService } from '../../../services/tab-manager.service';
@@ -22,130 +22,7 @@ import { buildFlatTreeViewNodes, filterFlatTreeViewNodes, TreeViewNode } from '.
 @Component({
   selector: 'app-world-list',
   imports: [CommonModule, FormsModule, IconButtonComponent, ComboBoxComponent, NgClass, OverlayModule, FormOverlayDirective, TreeViewListComponent],
-  template: `
-  <div class="flex flex-col h-full relative" >
-    <div class="flex flex-row h-full gap-4">
-      <div [ngClass]="panelMode() ? 'flex-1 overflow-hidden' : (showsidebar ? 'transition-all duration-300 overflow-clip shrink-0 w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0')">
-        <div [ngClass]="panelMode() ? 'w-full bg-zinc-925 p-3 h-full overflow-y-auto scrollbar-dark' : 'w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800'">
-
-          <div class="mb-4">
-            <app-combo-box
-              class="w-full"
-              label="Filtro de mundo"
-              [items]="worlds"
-              compareProp="id"
-              displayProp="name"
-              [clearable]="true"
-              [(comboValue)]="selectedWorldFilter"
-              (comboValueChange)="filterWorlds()">
-            </app-combo-box>
-          </div>
-
-          <div class="flex flex-row items-center gap-1 mb-4">
-            <div class="flex flex-row flex-1 text-xs items-center gap-1 rounded-md bg-zinc-925 border border-zinc-700 text-white focus-within:border-white">
-              <div class="w-8 h-5 flex flex-row justify-center items-center"><i class="fa fa-search"></i></div>
-              <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="filterWorlds()" placeholder="Pesquisar..." class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10" />
-            </div>
-            @if (selectedEntityId) {
-              <app-icon-button
-                size="sm"
-                [buttonType]="currentWorldId === selectedEntityId ? 'primary' : 'secondary'"
-                icon="fa-solid fa-star"
-                [title]="currentWorldId === selectedEntityId ? 'Desfixar mundo padrão' : 'Definir como mundo padrão'"
-                (click)="setSelectedWorldAsDefault()">
-              </app-icon-button>
-            }
-            <app-icon-button size="sm" buttonType="secondaryActive" icon="fa-solid fa-plus" appFormOverlay [title]="'Criar Mundo'" [fields]="getFormFields()" (onSave)="createWorld($event)"></app-icon-button>
-          </div>
-
-          <app-tree-view-list
-            [openInDialog]="false"
-            [allowCreate]="false"
-            [dragEnabled]="false"
-            [fallbackIcon]="'fa-earth'"
-            [emptyChildrenLabel]="'Nenhum mundo encontrado'"
-            (onDocumentSelect)="selectEntity($event.id)"
-            (onDelete)="deleteWorld($event)"
-            (onDocumentNewTab)="openNewTabEntity($event)"
-            [documentArray]="filteredWorldTreeNodes">
-          </app-tree-view-list>
-        </div>
-      </div>
-        @if (!panelMode()) {
-          <small class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[showsidebar ? 'start-92' : 'start-12']" (click)="showsidebar = !showsidebar">
-            <i class="fa-solid text-zinc-400" [ngClass]="[showsidebar ? 'fa-angles-left' : 'fa-angles-right']"></i>
-          </small>
-        }
-
-      @if (!panelMode()) {
-        <div class="flex-1 min-h-[60vh]">
-          @if (selectedEntityId && showEntityEditor) {
-            <div class="rounded-md px-2">
-              @if (showEntityEditor && worldInfoComponent) {
-                <ng-container *ngComponentOutlet="worldInfoComponent; inputs: { worldIdInput: selectedEntityId }"></ng-container>
-              }
-              @else {
-                <div class="h-full rounded-md  flex items-center justify-center text-zinc-500">
-                  Carregando mundo...
-                </div>
-              }
-            </div>
-          }
-          @else {
-            <div class="h-full rounded-md  flex items-center justify-center text-zinc-500">
-              Selecione uma localidade na árvore para editar
-            </div>
-          }
-        </div>
-      }
-    </div>
-    <!-- <div class="flex flex-row justify-between items-center mb-4 sticky top-0 z-50 bg-zinc-950 py-2">
-      <h3 class="text-xl font-bold">Mundos</h3>
-      <app-button buttonType="white" label="Novo"
-          appFormOverlay
-          size="sm"
-          [title]="'Criar Mundo'"
-          [fields]="getFormFields()"
-          (onSave)="createWorld($event)"
-        ></app-button>
-    </div>
-
-    <div class="">
-      <br>
-      @if (worlds.length === 0){
-        <div class="text-center">
-          <p>Nenhum mundo disponível.</p>
-        </div>
-      } @else{
-        <div class=" grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          @for (world of worlds; track world.id) {
-            @let img = getImageByUsageKey(world.Images, 'default');
-              <div (click)="onWorldSelected(world.id)" [ngClass]="[
-                  'rounded-md flex flex-col gap-1 cursor-pointer selectable-jump border  p-3 mb-2',
-                  currentWorldId === world.id ? 'border-yellow-500' : 'border-zinc-800'
-                ]" [ngStyle]="img ? buildCardBgStyle(img?.filePath) : {'background-color': getPersonalizationValue(world, 'color') || 'var(--color-zinc-800)'}">
-                <div class="flex h-35 flex-row gap-2 items-top">
-                  <div class="flex-1 flex flex-col overflow-hidden justify-between" [ngClass]="getTextClass(getPersonalizationValue(world, 'color'))">
-                    <div class="flex flex-row items-center gap-2">
-                      <i class="fa" [ngClass]="getPersonalizationValue(world, 'icon') || 'fa-paw'"></i>
-                      <div class="text-base font-bold">{{ world.name }}</div>
-                    </div>
-                    <div class="text-xs font-bold overflow-hidden text-ellipsis text-justify line-clamp-3">{{world.concept}}</div>
-                    <div class="flex flex-row gap-1">
-                      <app-button [label]="currentWorldId === world.id ?'Desfixar como Mundo Padrão' :'Fixar como Mundo Padrão'" [buttonType]="currentWorldId === world.id ? 'primary' : 'white'" size="xs" (click)="$event.stopPropagation(); setWorldAsDefault(world)"></app-button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-          }
-        </div>
-      }
-    </div> -->
-
-
-  </div>
-
-  `,
+  templateUrl: './world-list.component.html',
   styleUrl: './world-list.component.css',
   changeDetection: ChangeDetectionStrategy.Default,
 })
@@ -156,7 +33,6 @@ export class WorldListComponent {
 
   public buildImageUrl = buildImageUrl;
   public getPersonalizationValue = getPersonalizationValue;
-  public getTextClass = getTextClass;
   public getImageByUsageKey = getImageByUsageKey;
   showsidebar = true;
   panelMode = input<boolean>(false);
@@ -181,6 +57,7 @@ export class WorldListComponent {
   }
 
   worlds: World[] = [];
+  filteredWorlds: World[] = [];
   worldTreeNodes: TreeViewNode[] = [];
   filteredWorldTreeNodes: TreeViewNode[] = [];
   selectedWorldFilter = '';
@@ -216,14 +93,16 @@ export class WorldListComponent {
       : this.worldTreeNodes;
 
     this.filteredWorldTreeNodes = filterFlatTreeViewNodes(worldNodes, this.searchTerm);
+    const visibleIds = new Set(this.filteredWorldTreeNodes.map(node => node.id));
+    this.filteredWorlds = this.worlds.filter(world => visibleIds.has(world.id));
   }
 
-  setSelectedWorldAsDefault() {
-    const world = this.worlds.find(item => item.id === this.selectedEntityId);
-    if (world) {
-      this.setWorldAsDefault(world);
-    }
+  clearWorldFilters() {
+    this.searchTerm = '';
+    this.selectedWorldFilter = '';
+    this.filterWorlds();
   }
+
   onWorldSelected(worldId : string) {
     const world = this.worlds.find(w => w.id === worldId);
 
@@ -323,6 +202,15 @@ export class WorldListComponent {
           'background-position': 'center',
         }
       : null;
+  }
+
+  getWorldCardStyle(world: World) {
+    const image = this.getImageByUsageKey(world.Images, 'default');
+    const imageStyle = this.buildCardBgStyle(image?.filePath);
+
+    return imageStyle ?? {
+      'background-color': this.getPersonalizationValue(world, 'color') || 'var(--color-zinc-800)',
+    };
   }
 
   setWorldAsDefault(world: World) {

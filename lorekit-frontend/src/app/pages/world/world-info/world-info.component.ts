@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorldStateService } from '../../../services/world-state.service';
 import { World } from '../../../models/world.model';
 import { Router, ActivatedRoute } from '@angular/router';
-import { NgComponentOutlet, NgStyle } from '@angular/common';
+import { NgClass, NgComponentOutlet, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from "../../../components/button/button.component";
 import { WorldService } from '../../../services/world.service';
@@ -34,97 +34,8 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
 
 @Component({
   selector: 'app-world-info',
-  imports: [EntityHistoryContextDirective, HistoryFieldDirective, NgStyle, NgComponentOutlet, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
-  template: `
-    <div [historyEntity]="{ table: 'World', id: currentWorld.id || '' }" [historyModel]="currentWorld" class="flex flex-col @container">
-      @if(getImageByUsageKey(currentWorld.Images, 'default') != null){
-        @let img = getImageByUsageKey(currentWorld.Images, 'default');
-        <div class="relative w-full h-[30vh]  overflow-hidden">
-          <img [src]="img | assetUrl" class="w-full h-full object-cover">
-          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
-        </div>
-      }
-      @else{
-        <div class="w-full h-[30vh] object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(currentWorld, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
-      }
-      <div class="flex flex-row flex-wrap items-center gap-y-2 sticky py-2 top-0 z-50 bg-zinc-950">
-        @if (isRouteComponent()){
-          <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/world"></app-icon-button>
-        }
-        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveWorldName()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="currentWorld.name" />
-        <div class="flex flex-row flex-wrap gap-2 ms-auto">
-          <!-- <app-entity-transfer-button [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'"></app-entity-transfer-button> -->
-          <app-ui-field-config-button
-            [entityTable]="'World'"
-            [entityId]="currentWorld.id"
-            [backRoute]="'/app/world/info/' + currentWorld.id">
-          </app-ui-field-config-button>
-          @if (!isLoading) {
-            <app-entity-lateral-menu-button
-              [fields]="fields"
-              (onSave)="onWorldSave($event)"
-              entityTable="World"
-              [entityId]="currentWorld.id">
-            </app-entity-lateral-menu-button>
-          }
-          <app-personalization-button [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" (onClose)="getWorld()"></app-personalization-button>
-          <app-safe-delete-button [entityName]="currentWorld.name" [entityId]="currentWorld.id" [entityTable]="'World'" [size]="'xl'" ></app-safe-delete-button>
-        </div>
-      </div>
-      <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
-        <div class="flex-1 flex flex-col">
-          <div class="flex flex-row flex-wrap gap-4 ms-1">
-            <app-nav-button [label]="'Detalhes do mundo'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
-            @for (tab of fieldLayout.tabs; track tab.id) {
-              <app-nav-button [label]="tab.name" size="sm" [active]="currentTab === layoutTabStateId(tab.id)" (click)="selectTab(layoutTabStateId(tab.id))"></app-nav-button>
-            }
-            <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button>
-            <!-- <app-nav-button [label]="'Personagens'" size="sm" [active]="currentTab === 'characters'" (click)="selectTab('characters')"></app-nav-button>
-            <app-nav-button [label]="'Objetos'" size="sm" [active]="currentTab === 'objects'" (click)="selectTab('objects')"></app-nav-button> -->
-          </div>
-          <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
-            @if (!isLoading) {
-              @switch (currentTab) {
-                @case ('details') {
-                  <div class="w-full flex-1">
-                    <app-editor [historyField]="{ column: 'description', label: 'Descrição' }" [entityId]="currentWorld.id" docTitle="Descrição" entityTable="World" [entityName]="currentWorld.name" [document]="currentWorld.description || ''" (saveDocument)="onDocumentSave($event)" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
-                  </div>
-                }
-                @case ('localities') {
-                  <div class="w-full flex-1">
-                    @if (locationListComponent) {
-                      <ng-container *ngComponentOutlet="locationListComponent; inputs: { worldId: currentWorld.id }"></ng-container>
-                    }
-                    @else {
-                      <p class="text-zinc-500">Carregando localidades...</p>
-                    }
-                  </div>
-                }
-                @case ('characters') {
-                  <p>Personagens</p>
-                }
-                @case ('objects') {
-                  <p>Objetos</p>
-                }
-                @default {
-                  <app-entity-configured-fields
-                    entityTable="World"
-                    [entity]="currentWorld"
-                    [layout]="fieldLayout"
-                    [activeTabId]="activeLayoutTabId()"
-                    (requestSave)="saveWorldName()">
-                  </app-entity-configured-fields>
-                }
-              }
-            }
-
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-  `,
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, NgClass, NgStyle, NgComponentOutlet, FormsModule, IconButtonComponent, EditorComponent, PersonalizationButtonComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
+  templateUrl: './world-info.component.html',
   styleUrl: './world-info.component.css',
   changeDetection: ChangeDetectionStrategy.Default,
 })
@@ -138,6 +49,7 @@ export class WorldInfoComponent implements OnInit {
 
   currentWorld: World = new World();
   currentWorldId: string | null = null;
+  currentMainWorldId = '';
 
   public getPersonalizationValue = getPersonalizationValue;
   public getImageByUsageKey = getImageByUsageKey;
@@ -169,7 +81,7 @@ export class WorldInfoComponent implements OnInit {
     return this.currentRoute.snapshot.paramMap.get('worldId') ?? this.currentWorldId ?? '';
   });
 
-  constructor(private router:Router, private currentRoute : ActivatedRoute, private worldService : WorldService) {
+  constructor(private router:Router, private currentRoute : ActivatedRoute, private worldService : WorldService, private worldStateService: WorldStateService) {
     this.isLoading = true;
 
     effect(() => {
@@ -204,6 +116,10 @@ export class WorldInfoComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.worldStateService.currentWorld$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(world => {
+      this.currentMainWorldId = world?.id ?? '';
+    });
+
     const restoredTab = this.currentEntityPageStateService.getCurrentTab('World', this.worldId(), 'details');
     if (restoredTab === 'localities') {
       this.openLocalitiesTab();
@@ -251,6 +167,17 @@ export class WorldInfoComponent implements OnInit {
     this.currentWorld.concept = formData['concept'];
 
     this.worldService.updateWorld(this.currentWorld.id, this.currentWorld);
+  }
+
+  toggleMainWorld() {
+    if (!this.currentWorld.id) return;
+
+    if (this.currentMainWorldId === this.currentWorld.id) {
+      this.worldStateService.clearWorld();
+      return;
+    }
+
+    this.worldStateService.setWorld(this.currentWorld);
   }
 
   private buildFields() {

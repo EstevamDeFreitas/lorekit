@@ -1,3 +1,183 @@
 :host {
   display: block;
+  min-width: 0;
+}
+
+.world-info-page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 1rem 1rem 1.25rem;
+}
+
+.world-info-cover {
+  position: relative;
+  height: clamp(9rem, 18vh, 13rem);
+  overflow: hidden;
+  border: 1px solid var(--color-zinc-800);
+  border-radius: 0.85rem;
+  background-position: center;
+  background-size: cover;
+}
+
+.world-info-cover::after {
+  position: absolute;
+  background: linear-gradient(180deg, rgb(9 9 11 / 2%) 28%, rgb(9 9 11 / 38%) 100%);
+  content: '';
+  inset: 0;
+  pointer-events: none;
+}
+
+.world-info-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.world-info-cover--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(250 250 250 / 72%);
+  font-size: 1.125rem;
+}
+
+.world-info-toolbar {
+  position: sticky;
+  z-index: 50;
+  top: 0;
+  display: flex;
+  min-height: 4.75rem;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--color-zinc-800);
+  background: var(--color-zinc-950);
+  padding: 0.6rem 0;
+}
+
+.world-name-field {
+  display: block;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.world-name-field input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--color-zinc-100);
+  caret-color: var(--color-yellow-400);
+  font-size: 1.5rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.world-name-field input:focus-visible {
+  border-radius: 0.2rem;
+  outline: 1px solid var(--color-zinc-600);
+  outline-offset: 2px;
+}
+
+.world-info-actions {
+  display: flex;
+  min-width: 0;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.world-info-layout {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  margin-top: 0.75rem;
+}
+
+.world-info-tabs {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.3rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-zinc-800);
+  padding: 0 0.1rem 0.6rem;
+  scrollbar-color: var(--color-zinc-600) var(--color-zinc-950);
+  scrollbar-width: thin;
+}
+
+.world-info-content {
+  display: flex;
+  min-width: 0;
+  min-height: 24rem;
+  flex: 1 1 auto;
+  flex-direction: column;
+  margin-top: 0.75rem;
+  border: 1px solid var(--color-zinc-800);
+  border-radius: 0.75rem;
+  background: var(--color-zinc-900);
+  padding: 1rem;
+}
+
+.world-info-editor-surface {
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.world-info-loading {
+  color: var(--color-zinc-400);
+  font-size: 0.8125rem;
+}
+
+@media (max-width: 767px) {
+  .world-info-page {
+    padding: 0.75rem 0.75rem 1rem;
+  }
+
+  .world-info-cover {
+    height: 9rem;
+  }
+
+  .world-info-toolbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .world-info-back {
+    order: 0;
+  }
+
+  .world-name-field {
+    min-height: 2.5rem;
+    flex-basis: calc(100% - 4rem);
+    order: 1;
+  }
+
+  .world-name-field input {
+    font-size: 1.25rem;
+  }
+
+  .world-info-actions {
+    width: 100%;
+    justify-content: flex-end;
+    order: 2;
+  }
+
+  .world-info-content {
+    min-height: 18rem;
+    padding: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .world-info-cover,
+  .world-info-toolbar,
+  .world-info-content {
+    scroll-behavior: auto;
+  }
 }

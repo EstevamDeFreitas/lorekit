@@ -1,3 +1,35 @@
 :host {
   display: block;
+  height: 100%;
+  min-height: 65vh;
+  color: var(--color-zinc-100);
+}
+
+.world-sidebar-region {
+  width: 20rem;
+  height: 100%;
+  flex: 0 0 auto;
+}
+
+.world-sidebar-region--expanded { width: 20rem; }
+.world-sidebar-region--collapsed { width: 0; }
+.world-sidebar-region--panel { width: 100%; flex: 1 1 auto; }
+
+.world-card--default { border-color: rgb(234 179 8 / 55%); }
+.world-card--default:hover { border-color: var(--color-yellow-400); }
+
+.world-card-cover::after {
+  position: absolute;
+  z-index: 0;
+  background: linear-gradient(180deg, rgb(9 9 11 / 4%) 30%, rgb(9 9 11 / 35%) 100%);
+  content: '';
+  inset: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 767px) {
+  .world-sidebar-region--expanded { width: 100%; height: 16rem; flex-basis: 16rem; }
+  .world-sidebar-region--collapsed { height: 0; }
+  .world-sidebar-region--panel { height: 100%; flex: 1 1 auto; }
+  .world-sidebar-toggle { top: 3.25rem; right: 0.75rem; left: auto !important; }
 }
