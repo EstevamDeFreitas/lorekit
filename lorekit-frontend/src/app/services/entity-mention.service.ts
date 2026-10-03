@@ -42,7 +42,7 @@ export class EntityMentionService {
     this.crud = this.dbProvider.getCrudHelper();
   }
 
-  search(term: string, limit: number = 8): MentionEntity[] {
+  search(term: string, limit: number = 8, allowedEntityKeys?: ReadonlySet<string>): MentionEntity[] {
     const normalizedTerm = term.trim();
     if (!normalizedTerm) return [];
 
@@ -55,6 +55,7 @@ export class EntityMentionService {
         const label = String(row[def.column] ?? '').trim();
 
         if (!id || !label) continue;
+        if (allowedEntityKeys && !allowedEntityKeys.has(`${def.table}:${id}`)) continue;
 
         out.push({
           entityTable: def.table,

@@ -1,0 +1,71 @@
+<div cdkOverlayOrigin #trigger="cdkOverlayOrigin" class="w-full">
+  <label [for]="inputId" class="mb-1 block text-xs text-white">{{ label() }}</label>
+  <div class="flex min-h-8 items-center gap-1 rounded-md border border-zinc-700 bg-zinc-925 text-white focus-within:border-white">
+    <div class="flex h-5 w-8 shrink-0 items-center justify-center">
+      <i class="fa fa-search text-zinc-400" aria-hidden="true"></i>
+    </div>
+    <input
+      #searchInput
+      [id]="inputId"
+      type="text"
+      role="combobox"
+      autocomplete="off"
+      aria-autocomplete="list"
+      [attr.aria-label]="label()"
+      [attr.aria-controls]="listId"
+      [attr.aria-expanded]="isOpen"
+      [attr.aria-activedescendant]="activeOptionId"
+      [(ngModel)]="searchTerm"
+      (ngModelChange)="onInput($event)"
+      (focus)="onFocus()"
+      (blur)="onBlur()"
+      (keydown)="onKeydown($event)"
+      [placeholder]="placeholder()"
+      class="min-w-0 w-full border-none bg-transparent p-1 text-sm leading-6 outline-none placeholder:text-white/25"
+    />
+    @if (selectedEntity() || searchTerm) {
+      <button
+        type="button"
+        class="mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded text-zinc-400 hover:bg-zinc-800 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-zinc-100"
+        [attr.aria-label]="'Limpar ' + label()"
+        (mousedown)="$event.preventDefault()"
+        (click)="clearSelection(searchInput)">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    }
+  </div>
+</div>
+
+<ng-template
+  cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="trigger"
+  [cdkConnectedOverlayOpen]="isOpen"
+  [cdkConnectedOverlayWidth]="trigger.elementRef.nativeElement.offsetWidth"
+  [cdkConnectedOverlayOffsetY]="4"
+  (overlayOutsideClick)="onOverlayOutsideClick()">
+  <div [id]="listId" role="listbox" class="entity-search-dropdown scrollbar-dark">
+    @if (!searchTerm.trim()) {
+      <div class="px-2 py-1 text-xs text-zinc-400">Digite para buscar uma entidade.</div>
+    } @else if (results.length === 0) {
+      <div class="px-2 py-1 text-sm text-zinc-400">Nenhum resultado encontrado.</div>
+    } @else {
+      @for (result of results; track result.entityTable + ':' + result.entityId; let index = $index) {
+        <button
+          type="button"
+          role="option"
+          tabindex="-1"
+          [id]="optionId(result)"
+          [attr.aria-label]="result.label + ', ' + result.subtitle"
+          [attr.aria-selected]="index === activeIndex"
+          [class.entity-search-option--active]="index === activeIndex"
+          class="entity-search-option"
+          (mousedown)="$event.preventDefault()"
+          (mouseenter)="activeIndex = index"
+          (click)="selectEntity(result)">
+          <span class="min-w-0 truncate font-bold text-white">{{ result.label }}</span>
+          <span class="shrink-0 text-xs text-zinc-500">{{ result.subtitle }}</span>
+        </button>
+      }
+    }
+  </div>
+</ng-template>

@@ -3,12 +3,15 @@ import { SlicePipe, NgClass } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { EntityAutocompleteComponent } from '../../../components/entity-autocomplete/entity-autocomplete.component';
 import { InputComponent } from '../../../components/input/input.component';
 import { LinkService, SelectableTable } from '../../../services/link.service';
+import { EntityMentionService } from '../../../services/entity-mention.service';
+import type { MentionEntity } from '../../../services/entity-mention.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
 import { WorldStateService } from '../../../services/world-state.service';
 import { GraphEdge, GraphNode, GraphView } from '../../../libs/relationship-graph/relationship-graph.types';
+import type { EntitySummary } from '../../../libs/relationship-graph/relationship-graph.types';
 import { allocateNonOverlappingLabels, calculateDenseEdgeGeometry, createGraphIndexes, DenseEdgeGeometry, GraphIndexes, getUndirectedPairKey } from '../../../libs/relationship-graph/relationship-graph-geometry';
 import type { TabEntityType } from '../../../models/workspace.model';
 import { GRAPH_CANVAS_HEIGHT, GRAPH_CANVAS_WIDTH, makeNodeKey } from '../../../libs/relationship-graph/relationship-graph.utils';
@@ -16,7 +19,7 @@ import { buildImageUrl } from '../../../models/image.model';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 @Component({
   selector: 'app-relation-graph',
-  imports: [FormsModule, NgClass, SlicePipe, ComboBoxComponent, InputComponent, IconButtonComponent],
+  imports: [FormsModule, NgClass, SlicePipe, EntityAutocompleteComponent, InputComponent, IconButtonComponent],
   host: {
     '(window:touchmove)': 'onGraphTouchMove($event)',
     '(window:touchend)': 'onGraphTouchEnd()',
@@ -25,8 +28,15 @@ import { IconButtonComponent } from '../../../components/icon-button/icon-button
   template: `
     <div class="flex flex-col pt-2 gap-4 @container">
       <div class="flex flex-wrap items-end gap-3">
-        <app-combo-box class="w-56" label="Tipo da entidade" size="xs" [items]="tableOptions" compareProp="value" displayProp="label" [(comboValue)]="selectedTable" (comboValueChange)="onTableChange()" />
-        <app-combo-box class="w-full md:w-80" label="Entidade principal (opcional)" [items]="entityOptions" compareProp="id" displayProp="label" [(comboValue)]="selectedEntityId" (comboValueChange)="onRootEntitySelected()" />
+        <div class="w-full md:w-90">
+          <app-entity-autocomplete
+            label="Entidade principal (opcional)"
+            placeholder="Pesquisar..."
+            [selectedEntity]="rootSearchSelection"
+            [allowedEntityKeys]="rootSearchEntityKeys"
+            (entitySelected)="selectRootEntity($event)"
+            (entityCleared)="clearRootSearch()" />
+        </div>
         <div class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 min-h-9 flex items-center">{{ scopeLabel }}</div>
         <div class="flex flex-wrap items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900 p-1 text-xs">
           <button type="button" class="rounded px-2 py-1 hover:bg-zinc-800 cursor-pointer" (click)="fitGraph()">Ajustar</button>
@@ -97,8 +107,13 @@ import { IconButtonComponent } from '../../../components/icon-button/icon-button
                 <div class="border-t border-zinc-800 pt-3 mt-1 flex flex-col gap-3">
                   <div class="flex items-center justify-between"><h4 class="text-sm font-semibold">{{ editingLinkId ? 'Editar relação' : 'Nova relação' }}</h4><button type="button" class="text-zinc-400 hover:text-white text-xs cursor-pointer" (click)="resetDraft()">Cancelar</button></div>
                   <div class="text-xs text-zinc-400">Origem: {{ relationDraftFromLabel || relationDraft.fromId }}</div>
-                  <app-combo-box label="Tabela de destino" [items]="tableOptions" compareProp="value" displayProp="label" [(comboValue)]="relationDraft.toTable" (comboValueChange)="onDraftToTableChange()" />
-                  <app-combo-box label="Entidade de destino" [items]="draftTargetEntities" compareProp="id" displayProp="label" [(comboValue)]="relationDraft.toId" />
+                  <app-entity-autocomplete
+                    label="Entidade de destino"
+                    placeholder="Pesquisar..."
+                    [selectedEntity]="draftTargetSelection"
+                    [allowedEntityKeys]="draftSearchEntityKeys"
+                    (entitySelected)="selectDraftTarget($event)"
+                    (entityCleared)="clearDraftTarget()" />
                   <app-input label="Nome da relação" [(value)]="relationDraft.name" />
                   <div class="flex gap-2">
                     <app-icon-button [title]="editingLinkId ? 'Salvar relação' : 'Criar relação'" [icon]="editingLinkId ? 'fa-solid fa-floppy-disk' : 'fa-solid fa-plus'" size="xs" buttonType="white" (click)="saveDraftRelation()" />
@@ -189,11 +204,11 @@ export class RelationGraphComponent implements OnInit {
 
   graphView: GraphView | null = null;
   tableOptions: SelectableTable[] = [];
-  entityOptions: Array<{ table: string; id: string; label: string }> = [];
-  draftTargetEntities: Array<{ table: string; id: string; label: string }> = [];
+  draftSearchEntityKeys = new Set<string>();
+  draftTargetSelection: MentionEntity | null = null;
 
-  selectedTable = '';
-  selectedEntityId: string | null = null;
+  rootSearchSelection: MentionEntity | null = null;
+  rootSearchEntityKeys = new Set<string>();
 
   currentRootTable = '';
   currentRootId = '';
@@ -225,6 +240,7 @@ export class RelationGraphComponent implements OnInit {
 
   constructor(
     private linkService: LinkService,
+    private entityMentionService: EntityMentionService,
     private route: ActivatedRoute,
     private tabManager: TabManagerService,
     private worldStateService: WorldStateService,
@@ -239,7 +255,7 @@ export class RelationGraphComponent implements OnInit {
       }
 
       if (inputTable && inputId) {
-        this.setRoot(inputTable, inputId, true);
+        this.setRoot(inputTable, inputId);
       } else if (this.currentRootTable || this.currentRootId) {
         this.clearRoot();
       }
@@ -259,12 +275,10 @@ export class RelationGraphComponent implements OnInit {
     const queryId = this.route.snapshot.queryParamMap.get('id');
 
     if (inputTable && inputId) {
-      this.setRoot(inputTable, inputId, true);
+      this.setRoot(inputTable, inputId);
     } else if (queryTable && queryId) {
-      this.setRoot(queryTable, queryId, true);
+      this.setRoot(queryTable, queryId);
     } else {
-      this.selectedTable = this.tableOptions[0]?.value || '';
-      this.onTableChange();
       this.loadGraph();
     }
 
@@ -351,23 +365,12 @@ export class RelationGraphComponent implements OnInit {
     return 'Não há entidades disponíveis para montar a visão global.';
   }
 
-  onTableChange(): void {
-    this.entityOptions = this.linkService.getEntitiesByTable(this.selectedTable, this.effectiveScopeWorldId);
-
-    if (this.currentRootTable === this.selectedTable && this.currentRootId) {
-      this.selectedEntityId = this.currentRootId;
-    } else {
-      this.selectedEntityId = null;
-    }
+  selectRootEntity(entity: MentionEntity): void {
+    this.setRoot(entity.entityTable, entity.entityId);
   }
 
-  onRootEntitySelected(): void {
-    if (!this.selectedEntityId) {
-      this.clearRoot();
-      return;
-    }
-
-    this.setRoot(this.selectedTable, this.selectedEntityId, true);
+  clearRootSearch(): void {
+    this.clearRoot();
   }
 
   refreshGraph(): void {
@@ -381,6 +384,10 @@ export class RelationGraphComponent implements OnInit {
     const selectedWorldId = rootReference ? null : this.currentWorldId || null;
 
     this.graphView = this.linkService.getGraphForScope(rootReference, selectedWorldId);
+    this.rootSearchEntityKeys = new Set(
+      this.linkService.getEntitiesForScope(this.effectiveScopeWorldId)
+        .map(entity => `${entity.table}:${entity.id}`)
+    );
     this.hoveredEdgeId = null;
     this.relationFocusDepth = 0;
     this.relationFocusRootKey = '';
@@ -404,7 +411,6 @@ export class RelationGraphComponent implements OnInit {
     this.currentWorldId = worldId;
     this.currentWorldName = worldName;
 
-    this.onTableChange();
     this.loadGraph();
   }
 
@@ -445,14 +451,14 @@ export class RelationGraphComponent implements OnInit {
     this.relationDraft = {
       fromTable: node.table,
       fromId: node.id,
-      toTable: this.tableOptions[0]?.value || '',
+      toTable: '',
       toId: '',
       name: '',
     };
     this.relationDraftFromLabel = node.label;
     this.editingLinkId = null;
     this.relationEditorOpen = true;
-    this.onDraftToTableChange();
+    this.refreshDraftEntitySearch();
   }
 
   startEditLink(edge: GraphEdge): void {
@@ -474,18 +480,19 @@ export class RelationGraphComponent implements OnInit {
     };
     const sourceEntity = this.linkService.getEntitySummary(edge.link.fromTable, edge.link.fromId);
     this.relationDraftFromLabel = sourceEntity?.label || edge.link.fromId;
-    this.onDraftToTableChange(false);
+    this.refreshDraftEntitySearch();
   }
 
-  onDraftToTableChange(resetTarget = true): void {
-    this.draftTargetEntities = this.linkService.getEntitiesByTable(
-      this.relationDraft.toTable,
-      this.effectiveScopeWorldId,
-    );
+  selectDraftTarget(entity: MentionEntity): void {
+    this.relationDraft.toTable = entity.entityTable;
+    this.relationDraft.toId = entity.entityId;
+    this.draftTargetSelection = entity;
+  }
 
-    if (resetTarget || !this.draftTargetEntities.some(entity => entity.id === this.relationDraft.toId)) {
-      this.relationDraft.toId = this.draftTargetEntities[0]?.id || '';
-    }
+  clearDraftTarget(): void {
+    this.relationDraft.toTable = '';
+    this.relationDraft.toId = '';
+    this.draftTargetSelection = null;
   }
 
   saveDraftRelation(): void {
@@ -538,14 +545,14 @@ export class RelationGraphComponent implements OnInit {
     };
     const sourceEntity = this.linkService.getEntitySummary(updated.fromTable, updated.fromId);
     this.relationDraftFromLabel = sourceEntity?.label || updated.fromId;
-    this.onDraftToTableChange(false);
+    this.refreshDraftEntitySearch();
     this.loadGraph();
   }
 
   resetDraft(): void {
     this.editingLinkId = null;
     this.relationEditorOpen = false;
-    this.draftTargetEntities = [];
+    this.draftTargetSelection = null;
     this.relationDraft = {
       fromTable: this.currentSelectedTable,
       fromId: this.currentSelectedId,
@@ -557,17 +564,18 @@ export class RelationGraphComponent implements OnInit {
       ? this.linkService.getEntitySummary(this.currentSelectedTable, this.currentSelectedId)
       : null;
     this.relationDraftFromLabel = sourceEntity?.label || '';
+    this.refreshDraftEntitySearch();
   }
 
   makeNodeRoot(node: GraphNode): void {
-    this.setRoot(node.table, node.id, true);
+    this.setRoot(node.table, node.id);
   }
 
   makeSelectedNodeRoot(): void {
     const node = this.selectedNode;
     if (!node) return;
 
-    this.setRoot(node.table, node.id, true);
+    this.setRoot(node.table, node.id);
   }
 
   openSelectedNodeInNewTab(): void {
@@ -609,18 +617,17 @@ export class RelationGraphComponent implements OnInit {
   private clearRoot(): void {
     this.currentRootTable = '';
     this.currentRootId = '';
+    this.rootSearchSelection = null;
     this.selectedNodeKey = '';
     this.hoveredEdgeId = null;
     this.currentSelectedTable = '';
     this.currentSelectedId = '';
-    this.selectedEntityId = null;
     this.relationEditorOpen = false;
     this.editingLinkId = null;
-    this.onTableChange();
     this.loadGraph();
   }
 
-  private setRoot(table: string, id: string, syncSelectors: boolean): void {
+  private setRoot(table: string, id: string): void {
     if (!table || !id) return;
 
     this.currentRootTable = table;
@@ -629,16 +636,11 @@ export class RelationGraphComponent implements OnInit {
     this.currentSelectedTable = table;
     this.currentSelectedId = id;
 
-    if (syncSelectors) {
-      this.selectedTable = table;
-      this.entityOptions = this.linkService.getEntitiesByTable(table, this.effectiveScopeWorldId);
-      this.selectedEntityId = id;
-    }
-
     this.loadGraph();
     this.centerRootEntity();
 
     const rootEntity = this.linkService.getEntitySummary(table, id);
+    this.rootSearchSelection = rootEntity ? this.toMentionEntity(rootEntity) : null;
     this.tabManager.pinActiveRelationsTab({
       table,
       id,
@@ -646,6 +648,32 @@ export class RelationGraphComponent implements OnInit {
     });
 
     this.resetDraft();
+  }
+
+  private toMentionEntity(entity: EntitySummary): MentionEntity {
+    const table = entity.table as MentionEntity['entityTable'];
+    return {
+      entityTable: table,
+      entityId: entity.id,
+      label: entity.label,
+      subtitle: this.nodeTypeLabel(entity.table),
+      href: this.entityMentionService.buildMentionHref(table, entity.id),
+    };
+  }
+
+  private refreshDraftEntitySearch(): void {
+    const sourceTable = this.relationDraft.fromTable;
+    const sourceId = this.relationDraft.fromId;
+    this.draftSearchEntityKeys = new Set(
+      this.linkService.getEntitiesForScope(this.effectiveScopeWorldId)
+        .filter(entity => entity.table !== sourceTable || entity.id !== sourceId)
+        .map(entity => `${entity.table}:${entity.id}`),
+    );
+
+    const target = this.relationDraft.toTable && this.relationDraft.toId
+      ? this.linkService.getEntitySummary(this.relationDraft.toTable, this.relationDraft.toId)
+      : null;
+    this.draftTargetSelection = target ? this.toMentionEntity(target) : null;
   }
 
   centerViewport(): void {
