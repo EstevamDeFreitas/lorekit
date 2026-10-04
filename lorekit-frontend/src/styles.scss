@@ -100,7 +100,106 @@ html[data-lorekit-glass] body {
     radial-gradient(ellipse 58rem 42rem at -8% -12%, rgb(250 204 21 / 8%), transparent 70%),
     radial-gradient(ellipse 48rem 38rem at 108% 108%, rgb(79 70 229 / 9%), transparent 72%),
     linear-gradient(145deg, rgb(9 9 11 / 32%), rgb(17 17 22 / 38%) 58%, rgb(9 9 11 / 44%));
-  background-attachment: fixed;
+}
+
+.workspace-tab-viewport.workspace-tab-full-bleed > :is(
+  app-character-edit,
+  app-culture-edit,
+  app-document-edit,
+  app-location-edit,
+  app-object-edit,
+  app-organization-edit,
+  app-specie-edit
+) {
+  display: block;
+  min-height: 100%;
+  width: 100%;
+}
+
+.workspace-tab-viewport.workspace-tab-full-bleed > :is(
+  app-character-edit,
+  app-culture-edit,
+  app-document-edit,
+  app-location-edit,
+  app-object-edit,
+  app-organization-edit,
+  app-specie-edit
+) > [data-history-table] {
+  min-height: 100%;
+}
+
+.workspace-tab-viewport.workspace-tab-full-bleed > :is(
+  app-character-edit,
+  app-culture-edit,
+  app-document-edit,
+  app-location-edit,
+  app-object-edit,
+  app-organization-edit,
+  app-specie-edit
+) > [data-history-table] > .sticky,
+.workspace-tab-viewport.workspace-tab-full-bleed > :is(
+  app-character-edit,
+  app-culture-edit,
+  app-document-edit,
+  app-location-edit,
+  app-object-edit,
+  app-organization-edit,
+  app-specie-edit
+) > [data-history-table] > [class~="mt-10"] {
+  margin-inline: clamp(0.75rem, 1.4vw, 1.25rem);
+}
+
+html[data-lorekit-glass] .workspace-tab-viewport.workspace-tab-full-bleed > :is(
+  app-character-edit,
+  app-culture-edit,
+  app-document-edit,
+  app-location-edit,
+  app-object-edit,
+  app-organization-edit,
+  app-specie-edit
+) > [data-history-table] > .sticky {
+  min-height: 3.5rem;
+  border: 1px solid rgb(161 161 170 / 18%);
+  border-radius: 0.85rem;
+  background-color: rgb(24 24 27 / 52%);
+  background-image: linear-gradient(140deg, rgb(255 255 255 / 4%), transparent 48%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%), 0 12px 32px rgb(0 0 0 / 18%);
+  padding-inline: 0.75rem;
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+html[data-lorekit-glass] .workspace-tab-viewport.workspace-tab-full-bleed > :is(
+  app-character-edit,
+  app-culture-edit,
+  app-document-edit,
+  app-location-edit,
+  app-object-edit,
+  app-organization-edit,
+  app-specie-edit
+) > [data-history-table] > .sticky:focus-within {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 7%),
+    0 12px 32px rgb(0 0 0 / 20%),
+    0 0 20px color-mix(in srgb, var(--entity-glass-color, transparent) 8%, transparent);
+}
+
+.workspace-tab-viewport.workspace-tab-full-bleed > :is(
+  app-character-edit,
+  app-culture-edit,
+  app-document-edit,
+  app-location-edit,
+  app-object-edit,
+  app-organization-edit,
+  app-specie-edit
+) > [data-history-table] > .sticky > input {
+  min-height: 2.5rem;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: 0;
+  padding: 0.25rem 0.75rem;
 }
 
 html[data-lorekit-glass] :where(
@@ -174,6 +273,14 @@ html[data-lorekit-glass] :where(.moodboard-browser-inner, .timeline-browser-inne
 
 html[data-lorekit-glass] :where(.moodboard-directory, .timeline-directory) {
   background-color: rgb(9 9 11 / 78%);
+}
+
+html[data-lorekit-glass] app-input input,
+html[data-lorekit-glass] app-text-area textarea,
+html[data-lorekit-glass] app-combo-box [class~="bg-zinc-940"] {
+  background-color: var(--color-zinc-940) !important;
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
 }
 
 html[data-lorekit-noise] body::after {

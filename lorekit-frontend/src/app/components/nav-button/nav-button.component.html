@@ -1,0 +1,28 @@
+@if (route() == null) {
+  <a [ngClass]="getButtonClasses()" [style.--nav-active-color]="getActiveColorCss()" [title]="label()">
+    <div class="nav-button-content" [ngClass]="getContentClasses()">
+      @if (icon()) {
+        <div [ngClass]="getIconWrapperClasses()">
+          <i [class]="icon()"></i>
+        </div>
+      }
+      @if (showLabel()) {
+        <span>{{ label() }}</span>
+      }
+    </div>
+  </a>
+} @else {
+  <a [routerLink]="route()" [title]="label()" [queryParams]="params()" routerLinkActive="" #rla="routerLinkActive"
+    [ngClass]="getButtonClasses(rla.isActive)" [style.--nav-active-color]="getActiveColorCss()">
+    <div class="nav-button-content" [ngClass]="getContentClasses()">
+      @if (icon()) {
+        <div [ngClass]="getIconWrapperClasses()">
+          <i [class]="icon()"></i>
+        </div>
+      }
+      @if (showLabel()) {
+        <span>{{ label() }}</span>
+      }
+    </div>
+  </a>
+}

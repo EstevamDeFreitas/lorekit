@@ -6,38 +6,7 @@ import { NgClass } from '@angular/common';
 @Component({
   selector: 'app-nav-button',
   imports: [NgClass, RouterLink, RouterLinkActive],
-  template: `
-    @if (this.route() == null){
-      <a [ngClass]="getButtonClasses()" [title]="label()">
-        <div [ngClass]="getContentClasses()">
-          @if (icon()) {
-            <div [ngClass]="getIconWrapperClasses()">
-              <i [class]="icon()"></i>
-            </div>
-          }
-          @if (showLabel()) {
-            <span>{{label()}}</span>
-          }
-        </div>
-        <div [ngClass]="getBarClasses()"></div>
-      </a>
-    }
-    @else {
-      <a [routerLink]="this.route()" [title]="label()" [queryParams]="this.params()" [routerLinkActive]="getRouterLinkActiveClasses()" #rla="routerLinkActive" [ngClass]="getButtonClasses(rla.isActive)">
-        <div [ngClass]="getContentClasses()" >
-          @if (icon()) {
-            <div [ngClass]="getIconWrapperClasses()">
-              <i [class]="icon()"></i>
-            </div>
-          }
-          @if (showLabel()) {
-            <span>{{label()}}</span>
-          }
-        </div>
-        <div [ngClass]="getBarClasses(rla.isActive)"></div>
-      </a>
-    }
-  `,
+  templateUrl: './nav-button.component.html',
   styleUrl: './nav-button.component.css',
 })
 export class NavButtonComponent {
@@ -58,7 +27,10 @@ export class NavButtonComponent {
     let layout = this.fullWidth() ? 'w-full flex flex-row items-center rounded-md px-1 py-1 h-7' : 'inline-block px-2 py-3';
     const isActive = this.active() || routeIsActive;
 
-    let base = `${layout} cursor-pointer relative group text-${this.size()}`;
+    let base = `nav-button ${layout} cursor-pointer relative group text-${this.size()}`;
+    if (this.fullWidth() && !this.showLabel()) {
+      base += ' nav-button--activity';
+    }
 
     const types = {
         primary: 'text-zinc-400 hover:text-zinc-200',
@@ -82,7 +54,19 @@ export class NavButtonComponent {
       overrideColor = 'text-'+overrideColor;
     }
 
-    return base + ' ' + ` ${isActive? 'font-bold' : ''} ` + (isActive ? overrideColor ?? activeTypes[this.buttonType()] : types[this.buttonType()]) ;
+    return base + ' ' + `${isActive ? 'nav-button--active font-bold' : ''} ` + (isActive ? overrideColor ?? activeTypes[this.buttonType()] : types[this.buttonType()]);
+  }
+
+  getActiveColorCss(): string {
+    const activeColors = {
+      primary: 'yellow-400',
+      secondary: 'zinc-300',
+      white: 'zinc-50',
+      danger: 'red-500',
+      pink: 'pink-400',
+    };
+
+    return `var(--color-${this.activeColor() ?? activeColors[this.buttonType()]})`;
   }
 
   getContentClasses(): string {
@@ -96,54 +80,5 @@ export class NavButtonComponent {
       ? 'w-5 flex flex-row justify-center'
       : '';
   }
-
-  getRouterLinkActiveClasses():string {
-    const activeTypes = {
-      primary: 'text-yellow-300 font-bold',
-      secondary: 'text-zinc-800 font-bold',
-      white: 'text-zinc-50 font-bold',
-      danger: 'text-red-600 font-bold',
-      pink: 'text-pink-400 font-bold'
-    }
-
-    return activeTypes[this.buttonType()];
-  }
-
-  getBarClasses(routeIsActive: boolean = false):string {
-    let base = 'absolute rounded-md transition-all duration-300';
-    const isActive = this.active() || routeIsActive;
-
-    const positions = {
-      down: isActive
-        ? 'bottom-0 left-0 w-full h-1'
-        : 'bottom-0 left-1/2 -translate-x-1/2 w-0 h-1 group-hover:w-8',
-      up: isActive
-        ? 'top-0 left-0 w-full h-1'
-        : 'top-0 left-1/2 -translate-x-1/2 w-0 h-1 group-hover:w-8',
-      left: isActive
-        ? 'left-0 top-0 w-1 h-full'
-        : 'left-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4',
-      right: isActive
-        ? 'right-0 top-0 w-1 h-full'
-        : 'right-0 top-1/2 -translate-y-1/2 w-1 h-0 group-hover:h-4'
-    }
-
-    const activeColors = {
-      primary: 'bg-yellow-300',
-      secondary: 'bg-zinc-800',
-      white: 'bg-zinc-50',
-      danger: 'bg-red-600',
-      pink: 'bg-pink-400'
-    }
-
-    let overrideColor = this.activeColor();
-
-    if(overrideColor){
-      overrideColor = 'bg-'+overrideColor;
-    }
-
-    return base + ' ' + (isActive ? overrideColor ?? activeColors[this.buttonType()] : 'bg-white') + ' ' + positions[this.direction()];
-  }
-
 
 }

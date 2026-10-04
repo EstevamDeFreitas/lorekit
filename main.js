@@ -463,7 +463,7 @@ function createWindow() {
     ...(process.platform === 'win32'
       ? {
           backgroundColor: '#00000000',
-          backgroundMaterial: 'acrylic',
+          backgroundMaterial: 'mica',
           transparent: true,
         }
       : { backgroundColor: '#09090b' }),

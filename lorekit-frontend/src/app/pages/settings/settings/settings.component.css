@@ -2,13 +2,42 @@
   display: block;
 }
 
+.settings-shell {
+  background-color: var(--color-zinc-950);
+}
+
+:host-context(html[data-lorekit-glass]) .settings-shell {
+  border-color: rgb(161 161 170 / 26%);
+  background-color: rgb(18 18 22 / 78%);
+  box-shadow:
+    0 24px 64px rgb(0 0 0 / 42%),
+    inset 0 1px 0 rgb(255 255 255 / 5%);
+  backdrop-filter: blur(28px) saturate(145%);
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+}
+
+:host-context(html[data-lorekit-glass]) .settings-shell > aside,
+:host-context(html[data-lorekit-glass]) .settings-shell > main {
+  background-color: rgb(24 24 27 / 28%);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+}
+
+:host-context(html[data-lorekit-glass]) .settings-shell main .settings-screen > .mt-5.bg-zinc-900,
+:host-context(html[data-lorekit-glass]) .settings-shell main .settings-screen > section.bg-zinc-900 {
+  border-color: rgb(161 161 170 / 19%);
+  background-color: rgb(24 24 27 / 56%);
+  backdrop-filter: blur(14px) saturate(130%);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+}
+
 .settings-nav-item {
   display: flex;
   min-height: 2.65rem;
   width: 100%;
   align-items: center;
   gap: 0.625rem;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 0.65rem;
   background: transparent;
   padding: 0.55rem 0.7rem;
@@ -33,12 +62,18 @@
 }
 
 .settings-nav-item--active {
-  background: var(--color-zinc-800);
+  background: rgb(250 204 21 / 6%);
   color: var(--color-yellow-400);
 }
 
 .settings-nav-item--active i {
   color: var(--color-yellow-400);
+}
+
+:host-context(html[data-lorekit-glass]) .settings-nav-item--active {
+  border-color: rgb(250 204 21 / 17%);
+  backdrop-filter: blur(16px) saturate(135%);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
 }
 
 .settings-nav-item:focus-visible {

@@ -17,7 +17,7 @@ import { AppearanceEffectsService } from '../../../services/appearance-effects.s
   <div class="relative flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden" (touchstart)="onLayoutTouchStart($event)" (touchend)="onLayoutTouchEnd($event)">
 
     <!-- Activity bar (icon strip) -->
-    <div class="flex flex-row md:flex-col bg-zinc-900 items-center md:items-stretch md:justify-between px-2 md:ps-4 md:w-15 h-14 md:h-auto border-b md:border-b-0 md:border-r py-2 md:pt-4 md:pb-4 border-zinc-700 shrink-0 overflow-x-auto scrollbar-hide">
+    <div class="activity-navigation flex flex-row md:flex-col bg-zinc-900 items-center md:items-stretch md:justify-between px-2 md:ps-4 md:w-15 h-14 md:h-auto border-b md:border-b-0 md:border-r py-2 md:pt-4 md:pb-4 border-zinc-700 shrink-0 overflow-x-auto scrollbar-hide">
       <div class="flex flex-row md:flex-col items-center md:items-stretch min-w-max shrink-0">
         <div class="w-8 shrink-0 me-4 md:me-0 md:pr-3 md:mb-8">
           <img src="assets/lorekit-logo.png" alt="Lorekit">

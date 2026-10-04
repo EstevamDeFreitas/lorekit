@@ -36,7 +36,7 @@ import { TabManagerService } from '../../../services/tab-manager.service';
   selector: 'app-character-edit',
   imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
   template: `
-    <div [historyEntity]="{ table: 'Character', id: character.id || '' }" [historyModel]="character" class="flex flex-col relative @container">
+    <div [historyEntity]="{ table: 'Character', id: character.id || '' }" [historyModel]="character" class="character-edit-shell flex flex-col relative @container" [style.--entity-glass-color]="getPersonalizationValue(character, 'color') || 'transparent'">
       @if(getImageByUsageKey(character.Images, 'default') != null){
         @let img = getImageByUsageKey(character.Images, 'default');
         <div class="relative w-full h-[30vh] overflow-hidden">
@@ -53,7 +53,7 @@ import { TabManagerService } from '../../../services/tab-manager.service';
         <img [src]="profileImg | assetUrl" class="h-[27vh] absolute top-3 left-3 object-cover rounded-md">
       }
       <br>
-      <div class="flex flex-row flex-wrap items-center gap-y-2 sticky py-2 top-0 z-50 bg-zinc-950">
+      <div class="character-titlebar flex flex-row flex-wrap items-center gap-y-2 sticky px-3 py-2 top-0 z-50">
         @if (isRouteComponent()){
           <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/character"></app-icon-button>
         }

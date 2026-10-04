@@ -1,3 +1,45 @@
 :host {
   display: block;
 }
+
+.nav-button {
+  background-color: transparent;
+  text-decoration: none;
+  transition: color 170ms ease-out;
+}
+
+.nav-button-content {
+  transition: filter 170ms ease-out;
+}
+
+.nav-button--active {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.nav-button--active .nav-button-content {
+  filter:
+    drop-shadow(0 2px 3px rgb(0 0 0 / 30%))
+    drop-shadow(0 0 9px color-mix(in srgb, var(--nav-active-color, var(--color-yellow-400)) 38%, transparent));
+}
+
+.nav-button:hover:not(.nav-button--active) .nav-button-content {
+  filter: drop-shadow(0 2px 6px rgb(255 255 255 / 13%));
+}
+
+.nav-button:focus-visible {
+  outline: none;
+}
+
+.nav-button:focus-visible .nav-button-content {
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--nav-active-color, var(--color-yellow-400)) 45%, transparent));
+}
+
+@media (max-width: 767px) {
+  .nav-button--activity {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    justify-content: center;
+    padding: 0.35rem;
+  }
+}

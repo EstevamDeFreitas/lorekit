@@ -12,6 +12,9 @@
 .separator--vertical { flex-direction: column; justify-content: center; width: 1px; height: 100%; }
 .separator--vertical .separator-line { width: 1px; min-height: 0; height: auto; }
 .separator--vertical .separator-label { transform: rotate(90deg); white-space: nowrap; margin-block: 0.75rem; }
+
+:host-context(html[data-lorekit-glass]) .separator-line { opacity: 0.58; }
+:host-context(html[data-lorekit-glass]) .separator-label { opacity: 0.76; }
 @media (max-width: 767px) {
   .config-grid { min-width: 1080px; zoom: var(--mobile-grid-zoom, 1); }
 }
