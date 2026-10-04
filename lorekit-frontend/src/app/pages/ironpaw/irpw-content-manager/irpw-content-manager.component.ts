@@ -42,6 +42,7 @@ import {
   normalizeIrpwItemDefinition,
 } from '../../../models/irpw-item.model';
 import { ImageService } from '../../../services/image.service';
+import { SKILL, SKILL_LABEL } from '../../../models/irpw-attributes-skills.model';
 @Component({
   selector: 'irpw-content-manager',
   imports: [
@@ -89,6 +90,7 @@ export class IrpwContentManagerComponent implements OnInit, OnDestroy {
   ) as IrpwWeaponProperty[];
   readonly weaponPropertyLabel = IRPW_WEAPON_PROPERTY_LABEL;
   readonly damageLabel = IRPW_DAMAGE_LABEL;
+  readonly weaponAttackSkillOptions = [SKILL.FIGHT, SKILL.ACCURACY].map(id => ({ id, name: SKILL_LABEL[id] }));
   readonly equipmentSlots = IRPW_EQUIPMENT_SLOTS;
   readonly equipmentSlotLabel = IRPW_EQUIPMENT_SLOT_LABEL;
   items: IrpwCatalogItem[] = [];

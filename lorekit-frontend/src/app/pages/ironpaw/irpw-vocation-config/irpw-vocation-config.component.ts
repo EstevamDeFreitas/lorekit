@@ -7,7 +7,7 @@ import { InputComponent } from '../../../components/input/input.component';
 import { TextAreaComponent } from '../../../components/text-area/text-area.component';
 import { ATTRIBUTE_GROUP_LABEL, ATTRIBUTE_GROUP_SKILLS, AttributeGroupCode, SkillCode, SKILL_LABEL } from '../../../models/irpw-attributes-skills.model';
 import { createDefaultVocationSkills, IrpwVocationSkills, parseVocationSkills, serializeVocationSkills } from '../../../models/irpw-rules.model';
-import { IrpwVocation, IrpwVocationHability } from '../../../models/irpw-vocation.model';
+import { IrpwHabilityType, IrpwVocation, IrpwVocationHability } from '../../../models/irpw-vocation.model';
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { IrpwVocationService } from '../../../services/irpw-vocation.service';
 
@@ -60,6 +60,23 @@ import { IrpwVocationService } from '../../../services/irpw-vocation.service';
                 </div>
                 <div class="flex flex-col gap-2">
                   <app-input label="Nome" [(value)]="hability.name"></app-input>
+                  <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <label class="flex flex-col gap-1 text-xs text-zinc-400">Categoria
+                      <select class="rounded-md border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm text-zinc-100" [(ngModel)]="hability.type">
+                        @for (kind of habilityTypeOptions; track kind.value) {
+                          <option [ngValue]="kind.value">{{ kind.label }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label class="flex flex-col gap-1 text-xs text-zinc-400">Perícia do atalho (opcional)
+                      <select class="rounded-md border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm text-zinc-100" [(ngModel)]="hability.rollSkill">
+                        <option [ngValue]="null">Sem rolagem associada</option>
+                        @for (skill of skillShortcutOptions; track skill.id) {
+                          <option [ngValue]="skill.id">{{ skill.name }}</option>
+                        }
+                      </select>
+                    </label>
+                  </div>
                   <app-text-area label="Descrição" height="h-24" [(value)]="hability.description"></app-text-area>
                 </div>
               </div>
@@ -140,13 +157,19 @@ export class IrpwVocationConfigComponent implements OnInit {
   readonly attributeGroupEntries = Object.entries(ATTRIBUTE_GROUP_SKILLS) as [AttributeGroupCode, SkillCode[]][];
   readonly attributeGroupLabel = ATTRIBUTE_GROUP_LABEL;
   readonly skillLabel = SKILL_LABEL;
+  readonly habilityTypeOptions: { value: IrpwHabilityType; label: string }[] = [
+    { value: 'technical', label: 'Técnica' },
+    { value: 'magic', label: 'Magia' },
+    { value: 'passive', label: 'Passiva' },
+  ];
+  readonly skillShortcutOptions = Object.entries(SKILL_LABEL).map(([id, name]) => ({ id: id as SkillCode, name }));
 
   ngOnInit(): void {
     const vocationId = this.data?.id || '';
     this.currentVocation = this.vocationService.getVocation(vocationId) ?? new IrpwVocation(vocationId);
     this.baseHealthValue = this.parseInteger(this.currentVocation.basehealth);
     this.baseDefenseValue = this.parseInteger(this.currentVocation.basedefense);
-    this.passiveData = this.parseHability(this.currentVocation.passive);
+    this.passiveData = this.parseHability(this.currentVocation.passive, `vocation:${vocationId}:passive`, 'passive');
     this.habilitiesData = this.parseHabilities(this.currentVocation.habilities);
     this.attributesData = parseVocationSkills(this.currentVocation.attributes);
   }
@@ -192,18 +215,18 @@ export class IrpwVocationConfigComponent implements OnInit {
     if (!rawValue) return [];
     try {
       const parsed = JSON.parse(rawValue);
-      return Array.isArray(parsed) ? parsed.map(item => this.normalizeHability(item)).filter((item): item is IrpwVocationHability => item != null) : [];
+      return Array.isArray(parsed) ? parsed.map((item, index) => this.normalizeHability(item, `vocation:${this.data?.id || 'new'}:power:${index}`, 'technical')).filter((item): item is IrpwVocationHability => item != null) : [];
     } catch {
       return [];
     }
   }
 
-  private parseHability(rawValue: string | null | undefined): IrpwVocationHability {
-    if (!rawValue) return this.createEmptyHability();
+  private parseHability(rawValue: string | null | undefined, fallbackId: string, defaultType: IrpwHabilityType): IrpwVocationHability {
+    if (!rawValue) return { ...this.createEmptyHability(), id: fallbackId, type: defaultType };
     try {
-      return this.normalizeHability(JSON.parse(rawValue)) ?? this.createEmptyHability();
+      return this.normalizeHability(JSON.parse(rawValue), fallbackId, defaultType) ?? { ...this.createEmptyHability(), id: fallbackId, type: defaultType };
     } catch {
-      return this.createEmptyHability();
+      return { ...this.createEmptyHability(), id: fallbackId, type: defaultType };
     }
   }
 
@@ -217,17 +240,19 @@ export class IrpwVocationConfigComponent implements OnInit {
     return normalized ? JSON.stringify(normalized) : null;
   }
 
-  private normalizeHability(value: unknown): IrpwVocationHability | null {
+  private normalizeHability(value: unknown, fallbackId: string = crypto.randomUUID(), defaultType: IrpwHabilityType = 'technical'): IrpwVocationHability | null {
     if (!value || typeof value !== 'object') return null;
     const source = value as Partial<IrpwVocationHability>;
     const name = (source.name || '').trim();
     const description = (source.description || '').trim();
     if (!name && !description) return null;
-    return { ...(name ? { name } : {}), description };
+    const validType = ['technical', 'magic', 'passive'].includes(String(source.type)) ? source.type : defaultType;
+    const rollSkill = source.rollSkill && Object.hasOwn(SKILL_LABEL, source.rollSkill) ? source.rollSkill : null;
+    return { id: source.id?.trim() || fallbackId, ...(name ? { name } : {}), description, type: validType, rollSkill };
   }
 
   private createEmptyHability(): IrpwVocationHability {
-    return { name: null, description: '' };
+    return { id: crypto.randomUUID(), name: null, description: '', type: 'technical', rollSkill: null };
   }
 
   private parseInteger(value: string | null | undefined): number | null {

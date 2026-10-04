@@ -162,7 +162,7 @@ export class IrpwSpecieConfigComponent implements OnInit {
 
   onPassiveChange() {
     const normalizedPassives = this.passiveData
-      .map(passive => this.normalizeHability(passive))
+      .map((passive, index) => this.normalizeHability(passive, `species:${this.currentConfig.id}:passive:${index}`))
       .filter((passive): passive is IrpwSpecieHability => passive != null);
 
     this.currentConfig.passive = normalizedPassives.length ? JSON.stringify(normalizedPassives) : null;
@@ -181,7 +181,7 @@ export class IrpwSpecieConfigComponent implements OnInit {
 
   onWeaknessChange() {
     const normalizedWeaknesses = this.weaknessData
-      .map(weakness => this.normalizeHability(weakness))
+      .map((weakness, index) => this.normalizeHability(weakness, `species:${this.currentConfig.id}:weakness:${index}`))
       .filter((weakness): weakness is IrpwSpecieHability => weakness != null);
 
     this.currentConfig.weakness = normalizedWeaknesses.length ? JSON.stringify(normalizedWeaknesses) : null;
@@ -200,11 +200,11 @@ export class IrpwSpecieConfigComponent implements OnInit {
   private parseConfig() {
     this.baseHealthValue = this.parseInteger(this.currentConfig.basehealth);
     this.perceptionsData = this.parsePerceptions(this.currentConfig.perceptions);
-    this.passiveData = this.parsePassiveList(this.currentConfig.passive);
-    this.weaknessData = this.parsePassiveList(this.currentConfig.weakness);
+    this.passiveData = this.parsePassiveList(this.currentConfig.passive, 'passive');
+    this.weaknessData = this.parsePassiveList(this.currentConfig.weakness, 'weakness');
   }
 
-  private parsePassiveList(rawValue: string | null | undefined): IrpwSpecieHability[] {
+  private parsePassiveList(rawValue: string | null | undefined, source: 'passive' | 'weakness'): IrpwSpecieHability[] {
     if (!rawValue) return [];
 
     try {
@@ -212,11 +212,11 @@ export class IrpwSpecieConfigComponent implements OnInit {
 
       if (Array.isArray(parsed)) {
         return parsed
-          .map(item => this.normalizeHability(item))
+          .map((item, index) => this.normalizeHability(item, `species:${this.currentConfig.id}:${source}:${index}`))
           .filter((item): item is IrpwSpecieHability => item != null);
       }
 
-      const singlePassive = this.normalizeHability(parsed);
+      const singlePassive = this.normalizeHability(parsed, `species:${this.currentConfig.id}:${source}:0`);
       return singlePassive ? [singlePassive] : [];
     } catch {
       return [];
@@ -238,7 +238,7 @@ export class IrpwSpecieConfigComponent implements OnInit {
     }
   }
 
-  private normalizeHability(value: unknown): IrpwSpecieHability | null {
+  private normalizeHability(value: unknown, fallbackId: string = crypto.randomUUID()): IrpwSpecieHability | null {
     if (!value || typeof value !== 'object') return null;
 
     const source = value as Partial<IrpwSpecieHability>;
@@ -248,13 +248,14 @@ export class IrpwSpecieConfigComponent implements OnInit {
     if (!description && !name) return null;
 
     return {
+      id: source.id?.trim() || fallbackId,
       ...(name ? { name } : {}),
       description,
     };
   }
 
   private createEmptyHability(): IrpwSpecieHability {
-    return { name: null, description: '' };
+    return { id: crypto.randomUUID(), name: null, description: '' };
   }
 
   private parseInteger(value: string | null | undefined): number | null {

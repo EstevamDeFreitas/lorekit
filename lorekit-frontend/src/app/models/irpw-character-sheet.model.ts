@@ -12,6 +12,7 @@ export class IrpwCharacterSheet {
   habilities?: string | null;
   marks?: string | null;
   conditions?: string | null;
+  favoriteActions?: string | null;
 
   constructor(id: string = '') {
     this.id = id;

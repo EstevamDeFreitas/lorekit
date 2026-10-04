@@ -1,9 +1,14 @@
-import { AttributeGroupCode } from './irpw-attributes-skills.model';
+import { AttributeGroupCode, SkillCode } from './irpw-attributes-skills.model';
 import { Personalization } from './personalization.model';
 
+export type IrpwHabilityType = 'technical' | 'magic' | 'passive';
+
 export interface IrpwVocationHability {
+  id?: string | null;
   name?: string | null;
   description: string;
+  type?: IrpwHabilityType;
+  rollSkill?: SkillCode | null;
 }
 
 export interface IrpwVocationAttributeGroup {

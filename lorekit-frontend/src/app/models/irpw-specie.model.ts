@@ -1,4 +1,5 @@
 export interface IrpwSpecieHability {
+  id?: string | null;
   name?: string | null;
   description: string;
 }

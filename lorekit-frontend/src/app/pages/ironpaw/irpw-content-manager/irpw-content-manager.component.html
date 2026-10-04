@@ -388,6 +388,12 @@
                     (valueChange)="setDamageTypes(item, $event)"
                     placeholder="cortante, perfurante"
                   ></app-input
+                  ><label
+                    >Perícia de ataque<select [(ngModel)]="item.definition.weapon!.attackSkill">
+                      @for (skill of weaponAttackSkillOptions; track skill.id) {
+                        <option [ngValue]="skill.id">{{ skill.name }}</option>
+                      }
+                    </select></label
                   ><app-text-area
                     label="Propriedade específica"
                     [(value)]="item.definition.weapon!.specialProperty"

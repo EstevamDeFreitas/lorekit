@@ -182,7 +182,10 @@ export function ensureSchema(db: any) {
     db.exec(buildCreateTableSQL(t));
 
 
-    // Adiciona colunas que faltam
+    // Adiciona as colunas opcionais novas da ficha sem afetar os dados legados.
+    if (t.name === 'IRPWCharacterSheet' && !getExistingColumns(db, t.name).has('favoriteActions')) {
+      db.exec('ALTER TABLE "IRPWCharacterSheet" ADD COLUMN "favoriteActions" TEXT');
+    }
 
     // Remove colunas que não existem mais no schema
 

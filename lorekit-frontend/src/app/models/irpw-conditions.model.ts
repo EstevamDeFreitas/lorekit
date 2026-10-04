@@ -41,8 +41,7 @@ export const CONDITION = {
   DYING: 'DYING',
 } as const;
 
-export type ConditionCode =
-  (typeof CONDITION)[keyof typeof CONDITION];
+export type ConditionCode = string;
 
 export interface ConditionSeverityEffect {
   label: string;

@@ -1,3 +1,5 @@
+import { SKILL, SkillCode } from './irpw-attributes-skills.model';
+
 export const IRPW_ITEM_DEFINITION_VERSION = 1;
 export const IRPW_INVENTORY_VERSION = 1;
 export const IRPW_DEFENSEPOINTS_VERSION = 2;
@@ -87,6 +89,7 @@ export interface IrpwItemDefinition {
     damageTypes: IrpwDamageDescriptor[];
     specialProperty: string;
     severity?: string;
+    attackSkill?: SkillCode;
     hands: 1 | 2;
   };
   protection?: { tier: IrpwProtectionTier; effects: string };
@@ -108,6 +111,7 @@ export interface IrpwItemRecord {
 export interface IrpwInventorySnapshot {
   name: string;
   description: string;
+  effects?: string | null;
   definition: IrpwItemDefinition;
   icon?: string;
 }
@@ -144,7 +148,7 @@ export function createEmptyItemDefinition(category: IrpwItemCategory = 'common')
     version: 1, category, icon: 'fa-solid fa-box', imageReference: null, imageAssetSha256: null, color: null, backgroundColor: null, tags: [], rarity: null,
     stackable: true, stackLimit: 99, equipmentSlots: [], unique: false,
     uniqueBenefits: [], uniqueCosts: [],
-    ...(category === 'weapon' ? { weapon: { properties: [], damageTypes: [], specialProperty: '', hands: 1 as const } } : {}),
+    ...(category === 'weapon' ? { weapon: { properties: [], damageTypes: [], specialProperty: '', attackSkill: SKILL.FIGHT, hands: 1 as const } } : {}),
     ...(category === 'protection' ? { protection: { tier: 'light' as const, effects: '' } } : {}),
   };
 }
@@ -188,6 +192,7 @@ export function normalizeIrpwItemDefinition(value: Partial<IrpwItemDefinition>):
       properties: Array.isArray(weapon?.properties) ? weapon!.properties.filter(isWeaponProperty) : [],
       damageTypes: Array.isArray(weapon?.damageTypes) ? weapon!.damageTypes.filter(isDamageDescriptor) : [],
       specialProperty: String(weapon?.specialProperty ?? ''), severity: weapon?.severity ? String(weapon.severity) : undefined,
+      attackSkill: isSkillCode(weapon?.attackSkill) ? weapon.attackSkill : SKILL.FIGHT,
       hands: weapon?.hands === 2 ? 2 : 1,
     } : undefined,
     protection: category === 'protection' && protection && isProtectionTier(protection.tier)
@@ -259,7 +264,7 @@ export function parseIrpwDefensePoints(raw: string | null | undefined, vocationC
 
 function normalizeInventoryEntry(value: IrpwInventoryEntry): IrpwInventoryEntry {
   const definition = normalizeIrpwItemDefinition(value.snapshot?.definition ?? {});
-  return { ...value, snapshot: { name: String(value.snapshot?.name ?? ''), description: String(value.snapshot?.description ?? ''), definition, icon: value.snapshot?.icon }, quantity: Math.max(1, Math.trunc(Number(value.quantity) || 1)), notes: String(value.notes ?? ''), location: value.location === 'equipment' ? 'equipment' : 'backpack', slot: isSlot(value.slot) ? value.slot : null };
+  return { ...value, snapshot: { name: String(value.snapshot?.name ?? ''), description: String(value.snapshot?.description ?? ''), effects: typeof value.snapshot?.effects === 'string' ? value.snapshot.effects : null, definition, icon: value.snapshot?.icon }, quantity: Math.max(1, Math.trunc(Number(value.quantity) || 1)), notes: String(value.notes ?? ''), location: value.location === 'equipment' ? 'equipment' : 'backpack', slot: isSlot(value.slot) ? value.slot : null };
 }
 function isInventoryEntry(value: unknown): value is IrpwInventoryEntry { return !!value && typeof value === 'object' && typeof (value as IrpwInventoryEntry).instanceId === 'string' && !!(value as IrpwInventoryEntry).snapshot; }
 function normalizeEquipment(value: Partial<Record<IrpwEquipmentSlot, string | null>> | undefined, ids: Set<string>, entries: IrpwInventoryEntry[]): Partial<Record<IrpwEquipmentSlot, string | null>> { const result: Partial<Record<IrpwEquipmentSlot, string | null>> = {}; for (const slot of IRPW_EQUIPMENT_SLOTS) { const id = value?.[slot]; const entry = typeof id === 'string' ? entries.find(item => item.instanceId === id) : undefined; if (entry && typeof id === 'string' && ids.has(id) && entry.location === 'equipment' && entry.slot === slot) result[slot] = id; } return result; }
@@ -285,7 +290,7 @@ function isValidImageReference(value: string): boolean {
 function normalizeSlots(values: unknown): IrpwEquipmentSlot[] { return Array.isArray(values) ? values.filter(isSlot) : []; }
 function normalizeStackLimit(value: unknown): number { const n = Number(value); return Number.isInteger(n) && n > 0 ? n : 99; }
 function normalizeNumber(value: unknown): number { const n = Number(value); return Number.isFinite(n) ? Math.trunc(n) : 0; }
-function normalizeNullableNumber(value: unknown): number | null { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? Math.trunc(n) : null; }
+function normalizeNullableNumber(value: unknown): number | null { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? Math.max(0, Math.round(n * 2) / 2) : null; }
 function isItemCategory(value: unknown): value is IrpwItemCategory { return typeof value === 'string' && (IRPW_ITEM_CATEGORIES as readonly string[]).includes(value); }
 function isRarity(value: unknown): value is IrpwItemRarity { return typeof value === 'string' && (IRPW_RARITIES as readonly string[]).includes(value); }
 function isSlot(value: unknown): value is IrpwEquipmentSlot { return typeof value === 'string' && (IRPW_EQUIPMENT_SLOTS as readonly string[]).includes(value); }
@@ -293,3 +298,4 @@ function isWeaponProperty(value: unknown): value is IrpwWeaponProperty { return 
 function isDamageDescriptor(value: unknown): value is IrpwDamageDescriptor { return ['cutting', 'piercing', 'blunt'].includes(String(value)); }
 function isProtectionTier(value: unknown): value is IrpwProtectionTier { return ['light', 'medium', 'heavy'].includes(String(value)); }
 function isConsumableSubtype(value: unknown): value is 'recovery' | 'offensive' | 'utility' { return ['recovery', 'offensive', 'utility'].includes(String(value)); }
+function isSkillCode(value: unknown): value is SkillCode { return typeof value === 'string' && Object.values(SKILL).includes(value as SkillCode); }

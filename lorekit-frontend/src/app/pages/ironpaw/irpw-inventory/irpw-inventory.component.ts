@@ -175,6 +175,7 @@ export class IrpwInventoryComponent implements OnInit {
       snapshot: {
         name: item.name,
         description: item.description,
+        effects: item.effects ?? null,
         definition,
         icon: definition.icon,
       },
@@ -327,6 +328,7 @@ export class IrpwInventoryComponent implements OnInit {
       changes.push(`Nome: ${entry.snapshot.name || 'sem nome'} → ${source.name || 'sem nome'}`);
     }
     if (entry.snapshot.description !== source.description) changes.push('Descrição atualizada.');
+    if ((entry.snapshot.effects ?? null) !== (source.effects ?? null)) changes.push('Efeitos atualizados.');
     if (JSON.stringify(entry.snapshot.definition) !== JSON.stringify(nextDefinition)) {
       changes.push('Características e compatibilidade atualizadas.');
     }
@@ -352,6 +354,7 @@ export class IrpwInventoryComponent implements OnInit {
     entry.snapshot = {
       name: source.name,
       description: source.description,
+      effects: source.effects ?? null,
       definition: nextDefinition,
       icon: nextDefinition.icon,
     };
@@ -439,6 +442,7 @@ export class IrpwInventoryComponent implements OnInit {
     const effects = this.inventory.entries
       .filter((entry) => entry.location === 'equipment')
       .flatMap((entry) => [
+        entry.snapshot.effects,
         entry.snapshot.definition.protection?.effects,
         entry.snapshot.definition.weapon?.specialProperty,
         entry.snapshot.definition.narrativeEffect,

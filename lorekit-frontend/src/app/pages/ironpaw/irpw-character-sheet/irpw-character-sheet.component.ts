@@ -15,14 +15,15 @@ import { CharacterService } from '../../../services/character.service';
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { CurrentEntityPageStateService } from '../../../services/current-entity-page-state.service';
 import { IrpwCharacterSheetService } from '../../../services/irpw-character-sheet.service';
+import { IrpwItemCatalogService } from '../../../services/irpw-item-catalog.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
 import { getPersonalizationValue, getTextColorStyle } from '../../../models/personalization.model';
-import { ATTRIBUTE_GROUP_SKILLS, ATTRIBUTE_GROUP_LABEL, SKILL_LABEL, AttributeGroupCode, SkillCode } from '../../../models/irpw-attributes-skills.model';
+import { ATTRIBUTE_GROUP_SKILLS, ATTRIBUTE_GROUP_LABEL, SKILL, SKILL_LABEL, AttributeGroupCode, SkillCode } from '../../../models/irpw-attributes-skills.model';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { getImageByUsageKey } from '../../../models/image.model';
 import { Specie } from '../../../models/specie.model';
-import { IrpwVocation, IrpwVocationAttributes, IrpwVocationHability } from '../../../models/irpw-vocation.model';
+import { IrpwHabilityType, IrpwVocation, IrpwVocationAttributes, IrpwVocationHability } from '../../../models/irpw-vocation.model';
 import {
   getIronpawLifeMinimum,
   getVocationSkillMinimums,
@@ -48,6 +49,18 @@ import {
   ConditionDefinition,
   ConditionSeverityCode,
 } from '../../../models/irpw-conditions.model';
+import {
+  calculateDefensePointsMax,
+  IRPW_EQUIPMENT_SLOT_LABEL,
+  IRPW_EQUIPMENT_SLOTS,
+  IrpwDefensePointsEnvelope,
+  IrpwEquipmentSlot,
+  IrpwInventoryEntry,
+  parseIrpwDefensePoints,
+  parseIrpwInventory,
+  protectionContribution,
+} from '../../../models/irpw-item.model';
+import { IrpwConditionCatalogService } from '../../../services/irpw-condition-catalog.service';
 
 type RollBonusSourceType = 'attribute' | 'perception';
 type RollFormulaMode = 'auto' | 'manual';
@@ -102,8 +115,30 @@ interface IrpwCharacterMark {
   attributes: IrpwVocationAttributes;
 }
 
-interface InheritedCharacterHability extends IrpwVocationHability {
+interface CharacterAbilityShortcut extends IrpwVocationHability {
+  favoriteKey: string;
+  sourceLabel: string;
+  source?: 'species' | 'vocation';
+}
+
+interface InheritedCharacterHability extends CharacterAbilityShortcut {
   source: 'species' | 'vocation';
+}
+
+interface EquippedAttackShortcut {
+  favoriteKey: string;
+  entry: IrpwInventoryEntry;
+  slot: 'primary' | 'secondary';
+  slotLabel: string;
+  skillCode: SkillCode;
+  skillLabel: string;
+}
+
+interface EquippedEquipmentSummary {
+  entry: IrpwInventoryEntry;
+  slot: IrpwEquipmentSlot;
+  slotLabel: string;
+  effects: string;
 }
 
 @Component({
@@ -260,34 +295,32 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                       <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Vida</h2>
                       <span class="text-[10px] text-zinc-500">{{ formatLifeValue(lifepointsData.currentPoints) }}/{{ formatLifeValue(lifepointsData.maxPoints) }}</span>
                     </div>
-                    <button
-                      type="button"
-                      class="px-1 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
-                      cdkOverlayOrigin
-                      #lifeSettingsOrigin="cdkOverlayOrigin"
-                      (click)="toggleLifeSettingsOverlay()"
-                      aria-label="Configurar vida máxima"
-                      title="Configurar vida máxima">
-                      <i class="fa-solid fa-gear text-xs"></i>
-                    </button>
+                    <div class="flex items-center gap-2">
+                      <span class="life-status" [ngClass]="getLifeStatusClass()" [title]="getLifeStatusDescription()">{{ getLifeStatusLabel() }}</span>
+                      <button
+                        type="button"
+                        class="px-1 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
+                        cdkOverlayOrigin
+                        #lifeSettingsOrigin="cdkOverlayOrigin"
+                        (click)="toggleLifeSettingsOverlay()"
+                        aria-label="Configurar vida máxima"
+                        title="Configurar vida máxima">
+                        <i class="fa-solid fa-gear text-xs"></i>
+                      </button>
+                    </div>
                   </div>
                   <div class="flex flex-wrap gap-1.5">
                     @for (lifeSegment of lifeSegments; track lifeSegment) {
-                      <div class="life-square" [class.is-half]="getLifeFillState(lifeSegment) === 1" [class.is-full]="getLifeFillState(lifeSegment) === 2">
-                        <button
-                          type="button"
-                          class="life-square-half left"
-                          [class.is-active]="getLifeFillState(lifeSegment) >= 1"
-                          (click)="setLifePoints(lifeSegment, false)"
-                          [attr.aria-label]="'Definir vida em ' + formatLifeValue(lifeSegment - 0.5)">
-                        </button>
-                        <button
-                          type="button"
-                          class="life-square-half right"
-                          [class.is-active]="getLifeFillState(lifeSegment) === 2"
-                          (click)="setLifePoints(lifeSegment, true)"
-                          [attr.aria-label]="'Definir vida em ' + formatLifeValue(lifeSegment)">
-                        </button>
+                      <div class="life-square" [attr.aria-label]="'Caixa de vida ' + lifeSegment">
+                        @for (lifeQuarter of [1, 2, 3, 4]; track lifeQuarter) {
+                          <button
+                            type="button"
+                            class="life-square-quarter"
+                            [class.is-active]="getLifeFillQuarters(lifeSegment) >= lifeQuarter"
+                            (click)="setLifePoints(lifeSegment, lifeQuarter)"
+                            [attr.aria-label]="'Definir vida em ' + formatLifeValue(lifeSegment - 1 + lifeQuarter * 0.25)">
+                          </button>
+                        }
                       </div>
                     }
 
@@ -347,15 +380,33 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                   </ng-template>
                 </div>
                 <div class="character-resource-row flex flex-row gap-6">
-                  <div>
-                    <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Resistência</h2>
-                    <div class="flex items-center gap-2">
-                      <div class="flex flex-col items-center">
-                        <span class="text-[10px] text-zinc-500 mb-0.5">Atual</span>
-                        <input type="number" class="w-14 text-center bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5 text-sm text-white outline-none focus:border-zinc-500"
-                          [(ngModel)]="defensepointsData.currentPoints"
-                          (ngModelChange)="onDefensepointsChange()">
-                      </div>
+                  <div class="min-w-0">
+                    <div class="mb-2 flex items-center gap-2">
+                      <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Resistência</h2>
+                      <span class="text-[10px] text-zinc-500">{{ formatLifeValue(defensepointsData.currentPoints) }}/{{ formatLifeValue(getMaxDefensePoints()) }}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      @for (resistanceSegment of resistanceSegments; track resistanceSegment) {
+                        <div class="resistance-square" [attr.aria-label]="'Caixa de resistência ' + resistanceSegment">
+                          <button
+                            type="button"
+                            class="resistance-square-half left"
+                            [class.is-active]="getResistanceFillState(resistanceSegment) >= 1"
+                            (click)="setDefensePoints(resistanceSegment, false)"
+                            [attr.aria-label]="'Definir resistência em ' + formatLifeValue(resistanceSegment - 0.5)">
+                          </button>
+                          <button
+                            type="button"
+                            class="resistance-square-half right"
+                            [class.is-active]="getResistanceFillState(resistanceSegment) === 2"
+                            (click)="setDefensePoints(resistanceSegment, true)"
+                            [attr.aria-label]="'Definir resistência em ' + formatLifeValue(resistanceSegment)">
+                          </button>
+                        </div>
+                      }
+                      @if (resistanceSegments.length === 0) {
+                        <span class="text-[10px] text-zinc-500">Sem caixas disponíveis</span>
+                      }
                     </div>
                   </div>
                   @for (stat of resourceStats; track stat.key) {
@@ -378,16 +429,26 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                     <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Condições</h2>
                     <p class="text-[10px] text-zinc-500">{{ activeConditionsData.length }} ativa(s)</p>
                   </div>
-                  <button
-                    type="button"
-                    class="px-1 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
-                    cdkOverlayOrigin
-                    #conditionSettingsOrigin="cdkOverlayOrigin"
-                    (click)="toggleConditionSettingsOverlay()"
-                    aria-label="Configurar condições"
-                    title="Configurar condições">
-                    <i class="fa-solid fa-gear text-xs"></i>
-                  </button>
+                  <div class="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      class="px-1 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
+                      (click)="openConditionCatalog()"
+                      aria-label="Editar e criar condições"
+                      title="Editar e criar condições">
+                      <i class="fa-solid fa-list-check text-xs"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="px-1 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
+                      cdkOverlayOrigin
+                      #conditionSettingsOrigin="cdkOverlayOrigin"
+                      (click)="toggleConditionSettingsOverlay()"
+                      aria-label="Ativar condições"
+                      title="Ativar condições">
+                      <i class="fa-solid fa-gear text-xs"></i>
+                    </button>
+                  </div>
                 </div>
 
                 <div class="flex flex-wrap gap-2">
@@ -589,7 +650,166 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                       <div class="character-tab-content p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
                           @switch (currentTab) {
                             @case ('general') {
-                              <p>Geral</p>
+                              <div class="flex flex-col gap-4">
+                                @if (activeAbilityDetail; as detail) {
+                                  <section class="ironpaw-ability-detail" aria-live="polite">
+                                    <div class="flex items-start justify-between gap-3">
+                                      <div>
+                                        <h2>{{ detail.name }}</h2>
+                                        <p>{{ detail.description }}</p>
+                                      </div>
+                                      <button type="button" (click)="dismissAbilityDetail()" aria-label="Fechar detalhe da habilidade">
+                                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                                      </button>
+                                    </div>
+                                  </section>
+                                }
+                                <section class="ironpaw-overview-section ironpaw-overview-shortcuts" aria-labelledby="overview-shortcuts-title">
+                                  <div class="mb-3 flex items-start justify-between gap-3">
+                                    <div>
+                                      <h2 id="overview-shortcuts-title" class="text-sm font-semibold text-zinc-100">Atalhos favoritos</h2>
+                                      <p class="mt-1 text-xs text-zinc-500">Armas equipadas e habilidades favoritas ficam prontas para abrir daqui.</p>
+                                    </div>
+                                    <button type="button" class="text-xs text-yellow-300 transition hover:text-yellow-200" (click)="selectTab('skills')">Ver habilidades</button>
+                                  </div>
+                                  <div class="flex flex-wrap gap-2">
+                                    @for (attack of getFavoriteAttacks(); track attack.favoriteKey) {
+                                      <button type="button" class="ironpaw-shortcut" (click)="openAttackRoll(attack)" [title]="attack.skillLabel + ' · ' + attack.entry.snapshot.name">
+                                        <i class="fa-solid fa-burst text-rose-300" aria-hidden="true"></i>
+                                        <span>{{ attack.entry.snapshot.name }}</span>
+                                        <small>{{ attack.skillLabel }}</small>
+                                      </button>
+                                    }
+                                    @for (hability of getFavoriteHabilities(); track hability.favoriteKey) {
+                                      <button type="button" class="ironpaw-shortcut" (click)="activateAbilityShortcut(hability)" [title]="hability.description || hability.sourceLabel">
+                                        <i class="fa-solid" [ngClass]="getHabilityTypeIcon(hability.type)" aria-hidden="true"></i>
+                                        <span>{{ hability.name || 'Habilidade sem nome' }}</span>
+                                        <small>{{ hability.sourceLabel }}</small>
+                                      </button>
+                                    }
+                                    @if (getFavoriteAttacks().length === 0 && getFavoriteHabilities().length === 0) {
+                                      <p class="rounded-lg border border-dashed border-zinc-700 px-3 py-3 text-xs text-zinc-500">Use a estrela nos ataques e habilidades para montar seus atalhos.</p>
+                                    }
+                                  </div>
+                                </section>
+
+                                <section class="ironpaw-overview-section" aria-labelledby="overview-attacks-title">
+                                  <div class="mb-3 flex items-center justify-between gap-3">
+                                    <div>
+                                      <h2 id="overview-attacks-title" class="text-sm font-semibold text-zinc-100">Ataques equipados</h2>
+                                      <p class="mt-1 text-xs text-zinc-500">As armas ativas do inventário aparecem automaticamente.</p>
+                                    </div>
+                                    <button type="button" class="text-xs text-zinc-400 transition hover:text-zinc-100" (click)="selectTab('inventory')">Inventário</button>
+                                  </div>
+                                  <div class="flex flex-col gap-2">
+                                    @for (attack of getEquippedAttacks(); track attack.favoriteKey) {
+                                      <article class="ironpaw-overview-row">
+                                        <div class="min-w-0 flex-1">
+                                          <div class="flex flex-wrap items-center gap-2">
+                                            <h3 class="truncate text-sm font-medium text-zinc-100">{{ attack.entry.snapshot.name }}</h3>
+                                            <span class="rounded-full border border-zinc-700/80 px-2 py-0.5 text-[10px] text-zinc-400">{{ attack.slotLabel }}</span>
+                                            <span class="text-[10px] text-zinc-500">{{ attack.skillLabel }}</span>
+                                          </div>
+                                          <p class="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">{{ getEquipmentEffectSummary(attack.entry) || attack.entry.snapshot.definition.weapon?.specialProperty || 'Sem efeito adicional descrito.' }}</p>
+                                        </div>
+                                        <div class="flex shrink-0 items-center gap-1.5">
+                                          <button type="button" class="ironpaw-favorite-button" [class.is-favorite]="isActionFavorite(attack.favoriteKey)" [attr.aria-pressed]="isActionFavorite(attack.favoriteKey)" [attr.aria-label]="isActionFavorite(attack.favoriteKey) ? 'Remover ataque dos favoritos' : 'Adicionar ataque aos favoritos'" (click)="toggleActionFavorite(attack.favoriteKey)">
+                                            <i class="fa-solid fa-star" aria-hidden="true"></i>
+                                          </button>
+                                          <button type="button" class="ironpaw-action-button" (click)="openAttackRoll(attack)">Rolar</button>
+                                        </div>
+                                      </article>
+                                    }
+                                    @if (getEquippedAttacks().length === 0) {
+                                      <p class="rounded-lg border border-dashed border-zinc-700 px-3 py-4 text-center text-xs text-zinc-500">Equipe uma arma nos espaços primário ou secundário para criar atalhos de ataque.</p>
+                                    }
+                                  </div>
+                                </section>
+
+                                <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                                  <section class="ironpaw-overview-section" aria-labelledby="overview-species-title">
+                                    <h2 id="overview-species-title" class="text-sm font-semibold text-zinc-100">Espécie · {{ selectedCharacter.ParentSpecies?.name || 'Não definida' }}</h2>
+                                    <p class="mt-1 text-xs leading-5 text-zinc-400">{{ selectedCharacter.ParentSpecies?.description || selectedCharacter.ParentSpecies?.concept || 'Sem descrição registrada para esta espécie.' }}</p>
+                                    <div class="ironpaw-summary-facts mt-3">
+                                      <span><small>Vida base</small>{{ getSpeciesBaseHealthLabel() }}</span>
+                                      <span><small>Olfato</small>{{ getSpeciesPerceptionBase('smell') ?? '—' }}</span>
+                                      <span><small>Visão</small>{{ getSpeciesPerceptionBase('vision') ?? '—' }}</span>
+                                      <span><small>Audição</small>{{ getSpeciesPerceptionBase('hearing') ?? '—' }}</span>
+                                    </div>
+                                    <div class="mt-3 flex flex-col gap-2">
+                                      @for (hability of getInheritedHabilitiesBySource('species'); track hability.favoriteKey) {
+                                        <div class="ironpaw-summary-item">
+                                          <span class="text-xs font-medium text-zinc-200">{{ hability.name || 'Passiva da espécie' }}</span>
+                                          <p class="mt-0.5 whitespace-pre-line text-xs leading-5 text-zinc-400">{{ hability.description || 'Sem descrição.' }}</p>
+                                        </div>
+                                      }
+                                      @for (weakness of getSpeciesWeaknesses(); track weakness.id) {
+                                        <div class="ironpaw-summary-item ironpaw-summary-item--muted">
+                                          <span class="text-xs font-medium text-zinc-300">{{ weakness.name || 'Fraqueza' }}</span>
+                                          <p class="mt-0.5 whitespace-pre-line text-xs leading-5 text-zinc-500">{{ weakness.description }}</p>
+                                        </div>
+                                      }
+                                      @if (getInheritedHabilitiesBySource('species').length === 0 && getSpeciesWeaknesses().length === 0) {
+                                        <p class="text-xs text-zinc-500">Nenhuma característica cadastrada.</p>
+                                      }
+                                    </div>
+                                  </section>
+
+                                  <section class="ironpaw-overview-section" aria-labelledby="overview-vocation-title">
+                                    <h2 id="overview-vocation-title" class="text-sm font-semibold text-zinc-100">Vocação · {{ selectedCharacter.ParentIRPWVocation?.name || 'Não definida' }}</h2>
+                                    <p class="mt-1 text-xs leading-5 text-zinc-400">{{ selectedCharacter.ParentIRPWVocation?.description || 'Sem descrição registrada para esta vocação.' }}</p>
+                                    <div class="ironpaw-summary-facts mt-3">
+                                      <span><small>Vida base</small>{{ getVocationBaseHealthLabel() }}</span>
+                                      <span><small>Defesa base</small>{{ getVocationBaseDefenseLabel() }}</span>
+                                    </div>
+                                    <p class="mt-2 text-[11px] leading-5 text-zinc-400"><span class="text-zinc-500">Perícias iniciais · </span>{{ getVocationSkillMinimumSummary() }}</p>
+                                    <div class="mt-3 flex flex-col gap-2">
+                                      @for (hability of getInheritedHabilitiesBySource('vocation'); track hability.favoriteKey) {
+                                        <div class="ironpaw-summary-item">
+                                          <div class="flex items-center justify-between gap-2">
+                                            <span class="text-xs font-medium text-zinc-200">{{ hability.name || (hability.type === 'passive' ? 'Passiva da vocação' : 'Poder da vocação') }}</span>
+                                            <span class="text-[10px] text-zinc-500">{{ getHabilityTypeLabel(hability.type) }}</span>
+                                          </div>
+                                          <p class="mt-0.5 whitespace-pre-line text-xs leading-5 text-zinc-400">{{ hability.description || 'Sem descrição.' }}</p>
+                                        </div>
+                                      }
+                                      @if (getInheritedHabilitiesBySource('vocation').length === 0) {
+                                        <p class="text-xs text-zinc-500">Nenhuma característica cadastrada.</p>
+                                      }
+                                    </div>
+                                  </section>
+                                </div>
+
+                                <section class="ironpaw-overview-section" aria-labelledby="overview-equipment-title">
+                                  <div class="mb-3 flex items-center justify-between gap-3">
+                                    <div>
+                                      <h2 id="overview-equipment-title" class="text-sm font-semibold text-zinc-100">Equipamentos em uso</h2>
+                                      <p class="mt-1 text-xs text-zinc-500">Resumo dos efeitos descritos nos espaços equipados.</p>
+                                    </div>
+                                    <button type="button" class="text-xs text-zinc-400 transition hover:text-zinc-100" (click)="selectTab('inventory')">Gerenciar</button>
+                                  </div>
+                                  <div class="flex flex-col gap-2">
+                                    @for (equipment of getEquippedEquipment(); track equipment.entry.instanceId) {
+                                      <div class="ironpaw-equipment-summary">
+                                        <div class="flex shrink-0 items-center gap-2">
+                                          <i class="fa-solid fa-shield-halved text-xs text-zinc-500" aria-hidden="true"></i>
+                                          <span class="text-xs text-zinc-500">{{ equipment.slotLabel }}</span>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                          <span class="text-xs font-medium text-zinc-200">{{ equipment.entry.snapshot.name }}</span>
+                                          <p class="mt-0.5 whitespace-pre-line text-xs leading-5 text-zinc-400">{{ equipment.effects || 'Sem efeito adicional descrito.' }}</p>
+                                        </div>
+                                        @if (equipment.slot === 'reserve') {
+                                          <span class="text-[10px] text-zinc-500">Reserva</span>
+                                        }
+                                      </div>
+                                    }
+                                    @if (getEquippedEquipment().length === 0) {
+                                      <p class="rounded-lg border border-dashed border-zinc-700 px-3 py-4 text-center text-xs text-zinc-500">Nenhum equipamento está vestido ou equipado.</p>
+                                    }
+                                  </div>
+                                </section>
+                              </div>
                             }
                             @case ('marks') {
                               <div class="flex items-center justify-between gap-3 mb-4">
@@ -848,90 +1068,92 @@ interface InheritedCharacterHability extends IrpwVocationHability {
                               <div class="flex flex-col gap-4">
                                 <div class="flex items-center justify-between gap-3">
                                   <div>
-                                    <h3 class="text-sm font-semibold text-zinc-100">Habilidades do personagem</h3>
-                                    <p class="text-xs text-zinc-500">Essas habilidades ficam salvas na ficha e podem ser editadas livremente.</p>
+                                    <h3 class="text-sm font-semibold text-zinc-100">Habilidades</h3>
+                                    <p class="text-xs text-zinc-500">Técnicas, magias e passivas ficam organizadas por tipo. Favoritas aparecem nos atalhos da aba Geral.</p>
                                   </div>
                                   <button
                                     type="button"
-                                    class="rounded-md border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-500 hover:text-white"
+                                    class="ironpaw-action-button"
                                     (click)="addHability()">
                                     Adicionar habilidade
                                   </button>
                                 </div>
 
-                                <div class="flex flex-col gap-3">
-                                  @for (hability of habilitiesData; track $index; let habilityIndex = $index) {
-                                    <div class="rounded-md border border-zinc-800 bg-zinc-900/70 p-4">
-                                      <div class="flex items-center justify-between gap-3 mb-3">
-                                        <span class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Habilidade {{ habilityIndex + 1 }}</span>
-                                        <button
-                                          type="button"
-                                          class="rounded-md border border-red-900/70 bg-red-950/40 px-2 py-1 text-[11px] text-red-200 transition hover:bg-red-950/70"
-                                          (click)="removeHability(habilityIndex)">
-                                          Remover
-                                        </button>
+                                @for (type of habilityTypeOptions; track type.value) {
+                                  <section class="ironpaw-skill-section" [attr.data-skill-type]="type.value">
+                                    <header class="ironpaw-skill-section__header">
+                                      <div class="flex items-center gap-2">
+                                        <i class="fa-solid" [ngClass]="getHabilityTypeIcon(type.value)" aria-hidden="true"></i>
+                                        <h4>{{ type.label }}</h4>
                                       </div>
+                                      <span>{{ getOwnHabilitiesByType(type.value).length + getInheritedHabilitiesByType(type.value).length }}</span>
+                                    </header>
 
-                                      <div class="grid grid-cols-1 gap-3">
-                                        <label class="flex flex-col gap-1 text-xs text-zinc-400">
-                                          Nome
-                                          <input [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory"
-                                            type="text"
-                                            class="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-                                            [(ngModel)]="hability.name"
-                                            (ngModelChange)="onHabilitiesChange()"
-                                            placeholder="Ex.: Passos entre as sombras">
-                                        </label>
+                                    <div class="flex flex-col gap-3">
+                                      @for (hability of habilitiesData; track hability.id; let habilityIndex = $index) {
+                                        @if (hability.type === type.value) {
+                                          <article class="ironpaw-ability-row">
+                                            <div class="ironpaw-ability-row__toolbar">
+                                              <span>Personagem</span>
+                                              <div class="flex items-center gap-1.5">
+                                                <button type="button" class="ironpaw-favorite-button" [class.is-favorite]="isActionFavorite(getOwnedAbilityFavoriteKey(hability, habilityIndex))" [attr.aria-pressed]="isActionFavorite(getOwnedAbilityFavoriteKey(hability, habilityIndex))" [attr.aria-label]="isActionFavorite(getOwnedAbilityFavoriteKey(hability, habilityIndex)) ? 'Remover habilidade dos favoritos' : 'Adicionar habilidade aos favoritos'" (click)="toggleActionFavorite(getOwnedAbilityFavoriteKey(hability, habilityIndex))">
+                                                  <i class="fa-solid fa-star" aria-hidden="true"></i>
+                                                </button>
+                                                <button type="button" class="ironpaw-remove-button" (click)="removeHability(habilityIndex)">Remover</button>
+                                              </div>
+                                            </div>
+                                            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                              <label class="flex flex-col gap-1 text-xs text-zinc-400">
+                                                Nome
+                                                <input [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory" type="text" class="rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500" [(ngModel)]="hability.name" (ngModelChange)="onHabilitiesChange()" placeholder="Ex.: Passos entre as sombras">
+                                              </label>
+                                              <label class="flex flex-col gap-1 text-xs text-zinc-400">
+                                                Perícia para o atalho
+                                                <select class="rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500" [(ngModel)]="hability.rollSkill" (ngModelChange)="onHabilitiesChange()">
+                                                  <option [ngValue]="null">Sem rolagem associada</option>
+                                                  @for (skill of rollSkillOptions; track skill.id) { <option [ngValue]="skill.id">{{ skill.name }}</option> }
+                                                </select>
+                                              </label>
+                                              <label class="flex flex-col gap-1 text-xs text-zinc-400">
+                                                Tipo
+                                                <select class="rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500" [(ngModel)]="hability.type" (ngModelChange)="onHabilitiesChange()">
+                                                  @for (kind of habilityTypeOptions; track kind.value) { <option [ngValue]="kind.value">{{ kind.label }}</option> }
+                                                </select>
+                                              </label>
+                                              <label class="flex flex-col gap-1 text-xs text-zinc-400 md:col-span-2">
+                                                Descrição
+                                                <textarea [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory" class="min-h-20 rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500" [(ngModel)]="hability.description" (ngModelChange)="onHabilitiesChange()" placeholder="Descreva o efeito da habilidade."></textarea>
+                                              </label>
+                                            </div>
+                                          </article>
+                                        }
+                                      }
 
-                                        <label class="flex flex-col gap-1 text-xs text-zinc-400">
-                                          Descrição
-                                          <textarea [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory"
-                                            class="min-h-24 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-                                            [(ngModel)]="hability.description"
-                                            (ngModelChange)="onHabilitiesChange()"
-                                            placeholder="Descreva o efeito da habilidade."></textarea>
-                                        </label>
-                                      </div>
+                                      @for (hability of getInheritedHabilitiesByType(type.value); track hability.favoriteKey) {
+                                        <article class="ironpaw-ability-row ironpaw-ability-row--inherited">
+                                          <div class="ironpaw-ability-row__toolbar">
+                                            <div class="flex items-center gap-2">
+                                              <span>{{ hability.sourceLabel }}</span>
+                                              @if (hability.rollSkill) { <small>{{ skillLabel[hability.rollSkill] }}</small> }
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                              <button type="button" class="ironpaw-favorite-button" [class.is-favorite]="isActionFavorite(hability.favoriteKey)" [attr.aria-pressed]="isActionFavorite(hability.favoriteKey)" [attr.aria-label]="isActionFavorite(hability.favoriteKey) ? 'Remover habilidade dos favoritos' : 'Adicionar habilidade aos favoritos'" (click)="toggleActionFavorite(hability.favoriteKey)">
+                                                <i class="fa-solid fa-star" aria-hidden="true"></i>
+                                              </button>
+                                              <button type="button" class="ironpaw-action-button" (click)="activateAbilityShortcut(hability)">{{ hability.rollSkill ? 'Preparar rolagem' : 'Ver efeito' }}</button>
+                                            </div>
+                                          </div>
+                                          <h5>{{ hability.name || (hability.type === 'passive' ? 'Passiva sem nome' : 'Habilidade sem nome') }}</h5>
+                                          <p>{{ hability.description || 'Sem descrição.' }}</p>
+                                        </article>
+                                      }
+
+                                      @if (getOwnHabilitiesByType(type.value).length + getInheritedHabilitiesByType(type.value).length === 0) {
+                                        <p class="ironpaw-skill-section__empty">Nenhuma habilidade {{ type.label.toLowerCase() }} cadastrada.</p>
+                                      }
                                     </div>
-                                  }
-
-                                  @if (habilitiesData.length === 0) {
-                                    <div class="rounded-md border border-dashed border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
-                                      Nenhuma habilidade própria cadastrada para este personagem.
-                                    </div>
-                                  }
-                                </div>
-
-                                <div class="rounded-md border border-zinc-800 bg-zinc-950/40 p-4">
-                                  <div class="mb-3">
-                                    <h3 class="text-sm font-semibold text-zinc-100">Habilidades herdadas</h3>
-                                    <p class="text-xs text-zinc-500">Vindas da espécie ou da vocação. Essas entradas são apenas leitura nesta ficha.</p>
-                                  </div>
-
-                                  <div class="flex flex-col gap-3">
-                                    @for (hability of inheritedHabilitiesData; track $index) {
-                                      <div class="rounded-md border border-zinc-800 bg-zinc-900/60 p-3">
-                                        <div class="flex items-center justify-between gap-3 mb-2">
-                                          <span class="text-sm text-zinc-100">{{ hability.name || 'Habilidade sem nome' }}</span>
-                                          <span
-                                            class="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                                            [ngClass]="hability.source === 'species'
-                                              ? 'border-emerald-800/70 bg-emerald-950/40 text-emerald-200'
-                                              : 'border-sky-800/70 bg-sky-950/40 text-sky-200'">
-                                            {{ hability.source === 'species' ? 'Espécie' : 'Vocação' }}
-                                          </span>
-                                        </div>
-                                        <p class="text-sm leading-6 whitespace-pre-line text-zinc-300">{{ hability.description || 'Sem descrição.' }}</p>
-                                      </div>
-                                    }
-
-                                    @if (inheritedHabilitiesData.length === 0) {
-                                      <div class="rounded-md border border-dashed border-zinc-700 px-4 py-6 text-center text-xs text-zinc-500">
-                                        Nenhuma habilidade herdada encontrada na espécie ou vocação atual.
-                                      </div>
-                                    }
-                                  </div>
-                                </div>
+                                  </section>
+                                }
                               </div>
                             }
                           }
@@ -972,6 +1194,9 @@ interface InheritedCharacterHability extends IrpwVocationHability {
           <div>
             <p class="text-[11px] uppercase tracking-[0.24em] text-amber-300/70 mb-1">Rolagem tática</p>
             <h2 class="text-sm font-semibold text-zinc-100">d10 simultâneos</h2>
+            @if (rollShortcutLabel) {
+              <p class="mt-1 text-[11px] text-zinc-400">{{ rollShortcutLabel }}</p>
+            }
           </div>
           <button
             type="button"
@@ -1154,6 +1379,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private entityChangeService = inject(EntityChangeService);
   private currentEntityPageStateService = inject(CurrentEntityPageStateService);
   private sheetService = inject(IrpwCharacterSheetService);
+  private readonly conditionCatalog = inject(IrpwConditionCatalogService);
+  private readonly itemCatalog = inject(IrpwItemCatalogService);
 
   characterIdInput = input<string>('');
 
@@ -1197,6 +1424,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
   subspecializationsData: string[] = [''];
   habilitiesData: IrpwVocationHability[] = [];
   inheritedHabilitiesData: InheritedCharacterHability[] = [];
+  favoriteActionsData: string[] = [];
+  activeAbilityDetail: { name: string; description: string } | null = null;
   marksData: IrpwCharacterMark[] = [];
   activeConditionsData: ActiveConditionState[] = [];
   pendingConditionsData: ActiveConditionState[] = [];
@@ -1212,7 +1441,12 @@ export class IrpwCharacterSheetComponent implements OnInit {
   ];
   readonly conditionCategoryLabel = CONDITION_CATEGORY_LABEL;
   readonly conditionSeverityLabel = CONDITION_SEVERITY_LABEL;
-  readonly conditionDefinitions = Object.values(CONDITIONS).sort((left, right) => left.label.localeCompare(right.label));
+  conditionDefinitions: ConditionDefinition[] = this.conditionCatalog.getDefinitions();
+  readonly habilityTypeOptions: { value: IrpwHabilityType; label: string }[] = [
+    { value: 'technical', label: 'Técnica' },
+    { value: 'magic', label: 'Magia' },
+    { value: 'passive', label: 'Passiva' },
+  ];
   readonly rollBonusSourceOptions: RollOption<RollBonusSourceType>[] = [
     { id: 'attribute', name: 'Atributo da perícia' },
     { id: 'perception', name: 'Percepção específica' },
@@ -1233,7 +1467,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }, {} as Record<SkillCode, AttributeGroupCode>);
 
   lifepointsData: { maxPoints: number | null; currentPoints: number | null } = { maxPoints: null, currentPoints: null };
-  defensepointsData: { currentPoints: number | null } = { currentPoints: null };
+  defensepointsData: IrpwDefensePointsEnvelope = parseIrpwDefensePoints(null);
   resourceData: Record<string, { currentPoints: number | null }> = { stress: { currentPoints: null }, mana: { currentPoints: null }, vigor: { currentPoints: null } };
   readonly resourceStats: { key: string; label: string }[] = [
     { key: 'stress', label: 'Stress' },
@@ -1243,12 +1477,16 @@ export class IrpwCharacterSheetComponent implements OnInit {
   get lifeSegments(): number[] {
     return Array.from({ length: this.getMaxLifePoints() }, (_, index) => index + 1);
   }
+  get resistanceSegments(): number[] {
+    return Array.from({ length: Math.ceil(this.getMaxDefensePoints()) }, (_, index) => index + 1);
+  }
 
   public getPersonalizationValue = getPersonalizationValue;
   public getTextColorStyle = getTextColorStyle;
   public getImageByUsageKey = getImageByUsageKey;
 
   isRollPanelOpen = false;
+  rollShortcutLabel = '';
   selectedRollSkill: SkillCode | null = null;
   selectedRollBonusSource: RollBonusSourceType = 'attribute';
   selectedRollPerception: PerceptionKey | null = null;
@@ -1262,8 +1500,28 @@ export class IrpwCharacterSheetComponent implements OnInit {
   lastRollFormula = '';
 
   selectTab(tab: string): void {
+    if (tab === 'inventory') {
+      this.saveTask.flush();
+    } else if (this.currentTab === 'inventory') {
+      this.refreshSheetFromStorage();
+    }
     this.currentTab = tab;
     this.currentEntityPageStateService.setCurrentTab('CharacterSheet', this.selectedCharacterId || this.characterIdInput(), tab);
+  }
+
+  private refreshSheetFromStorage(): void {
+    if (!this.selectedCharacterId) return;
+    const latest = this.sheetService.getSheet(this.selectedCharacterId);
+    if (!latest) return;
+    this.currentSheet = latest;
+    this.parseHabilities();
+    this.parseFavoriteActions();
+    this.parseLifepoints();
+    this.parseDefensepoints();
+    this.parseResources();
+    this.parseConditions();
+    this.parseMarks();
+    this.refreshInheritedHabilities();
   }
 
   private restoreCurrentTab(characterId: string): void {
@@ -1365,8 +1623,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
   selectCharacter(characterId: string, force = false) {
     if (!force && this.selectedCharacterId === characterId) return;
+    if (this.selectedCharacterId && (force || this.selectedCharacterId !== characterId)) {
+      this.saveTask.flush();
+    }
 
     this.selectedCharacterId = characterId;
+    this.activeAbilityDetail = null;
+    this.rollShortcutLabel = '';
     this.restoreCurrentTab(characterId);
     this.selectedCharacter = this.characters.find(c => c.id === characterId) ?? null;
     if (!this.selectedCharacter) {
@@ -1399,6 +1662,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.parseAttributes();
     this.parseSubspecializations();
     this.parseHabilities();
+    this.parseFavoriteActions();
     this.parseLifepoints();
     this.parseDefensepoints();
     this.parseResources();
@@ -1406,6 +1670,17 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.parseMarks();
     this.refreshInheritedHabilities();
     this.syncRollFormula();
+  }
+
+  private parseFavoriteActions(): void {
+    try {
+      const value = this.currentSheet?.favoriteActions ? JSON.parse(this.currentSheet.favoriteActions) : [];
+      this.favoriteActionsData = Array.isArray(value)
+        ? [...new Set(value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0))]
+        : [];
+    } catch {
+      this.favoriteActionsData = [];
+    }
   }
 
   private clearSelectedCharacterState() {
@@ -1418,9 +1693,14 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.subspecializationsData = [''];
     this.habilitiesData = [];
     this.inheritedHabilitiesData = [];
+    this.favoriteActionsData = [];
+    this.activeAbilityDetail = null;
     this.activeConditionsData = [];
     this.pendingConditionsData = [];
     this.marksData = [];
+    this.lifepointsData = { maxPoints: null, currentPoints: null };
+    this.defensepointsData = parseIrpwDefensePoints(null);
+    this.rollShortcutLabel = '';
     this.expandedMarkIndexes.clear();
   }
 
@@ -1432,6 +1712,29 @@ export class IrpwCharacterSheetComponent implements OnInit {
     if (!this.selectedSpecieId) return null;
     const config = this.irpwSpecieService.getConfig(this.selectedSpecieId);
     return parseIrpwPerceptions(config?.perceptions)[key];
+  }
+
+  getSpeciesBaseHealthLabel(): string {
+    const value = this.selectedSpecieId ? this.irpwSpecieService.getConfig(this.selectedSpecieId)?.basehealth : null;
+    return value?.trim() ? `${value} CV` : 'Não definida';
+  }
+
+  getVocationBaseHealthLabel(): string {
+    const value = this.selectedCharacter?.ParentIRPWVocation?.basehealth;
+    return value?.trim() ? `${value} CV` : 'Não definida';
+  }
+
+  getVocationBaseDefenseLabel(): string {
+    const value = this.selectedCharacter?.ParentIRPWVocation?.basedefense;
+    return value?.trim() ? `${value} CR` : 'Não definida';
+  }
+
+  getVocationSkillMinimumSummary(): string {
+    const minimums = Object.values(SKILL)
+      .map(skill => ({ skill, level: this.vocationSkillMinimums[skill] ?? 0 }))
+      .filter(item => item.level > 0)
+      .map(item => `${SKILL_LABEL[item.skill]} · ${this.getSkillLevelLabel(item.level)}`);
+    return minimums.length ? minimums.join(', ') : 'Sem perícias mínimas definidas';
   }
 
   getSpeciesPerceptionTooltip(key: PerceptionKey): string {
@@ -1522,6 +1825,9 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
     dialogRef.closed.subscribe(() => {
       this.loadSpecies();
+      this.refreshInheritedHabilities();
+      this.applySpeciesPerceptionMinimums(this.selectedSpecieId);
+      this.recalculateLifeMinimum();
     });
   }
 
@@ -1554,6 +1860,30 @@ export class IrpwCharacterSheetComponent implements OnInit {
       if (latestVocation && this.selectedCharacter) {
         this.selectedCharacter = { ...this.selectedCharacter, ParentIRPWVocation: latestVocation };
       }
+      this.refreshVocationSkillMinimums();
+      this.refreshInheritedHabilities();
+      this.recalculateLifeMinimum();
+      this.parseDefensepoints();
+    });
+  }
+
+  async openConditionCatalog(): Promise<void> {
+    this.closeConditionSettingsOverlay();
+    const { IrpwConditionsComponent } = await import('../irpw-conditions/irpw-conditions.component');
+    const dialogRef = this.dialog.open(IrpwConditionsComponent, {
+      panelClass: ['screen-dialog', 'ironpaw-dialog', 'max-w-none', 'max-h-none', 'overflow-hidden'],
+      height: '86vh',
+      width: 'min(88vw, 78rem)',
+      autoFocus: false,
+      restoreFocus: false,
+    });
+
+    dialogRef.closed.subscribe(saved => {
+      if (!saved) return;
+      this.conditionDefinitions = this.conditionCatalog.getDefinitions();
+      this.activeConditionsData = this.normalizeActiveConditions(this.activeConditionsData);
+      this.pendingConditionsData = this.activeConditionsData.map(condition => ({ ...condition }));
+      this.updateRollFormulaIfAuto();
     });
   }
 
@@ -1628,6 +1958,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
       this.resetSkillsToVocationMinimums();
       this.onAttributesChange();
       this.recalculateLifeMinimum();
+      this.parseDefensepoints();
     }
 
 
@@ -1727,7 +2058,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     try {
       const parsed = JSON.parse(this.currentSheet.habilities);
       this.habilitiesData = Array.isArray(parsed)
-        ? parsed.map(hability => this.normalizeHability(hability))
+        ? parsed.map((hability, index) => this.normalizeHability(hability, `character:${this.selectedCharacterId}:ability:${index}`))
         : [];
     } catch {
       this.habilitiesData = [];
@@ -1735,7 +2066,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   onHabilitiesChange() {
-    this.habilitiesData = this.habilitiesData.map(hability => this.normalizeHability(hability));
+    this.habilitiesData = this.habilitiesData.map((hability, index) => this.normalizeHability(hability, `character:${this.selectedCharacterId}:ability:${index}`));
 
     if (this.currentSheet) {
       this.currentSheet.habilities = this.habilitiesData.length ? JSON.stringify(this.habilitiesData) : null;
@@ -1749,8 +2080,157 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   removeHability(index: number) {
+    const removed = this.habilitiesData[index];
+    if (removed) this.favoriteActionsData = this.favoriteActionsData.filter(key => key !== this.getOwnedAbilityFavoriteKey(removed, index));
     this.habilitiesData = this.habilitiesData.filter((_, currentIndex) => currentIndex !== index);
     this.onHabilitiesChange();
+  }
+
+  getOwnHabilitiesByType(type: IrpwHabilityType): Array<CharacterAbilityShortcut & { index: number }> {
+    return this.habilitiesData
+      .map((hability, index) => ({
+        ...hability,
+        type: this.normalizeHabilityType(hability.type, 'technical'),
+        favoriteKey: this.getOwnedAbilityFavoriteKey(hability, index),
+        sourceLabel: 'Personagem',
+        index,
+      }))
+      .filter(hability => hability.type === type);
+  }
+
+  getInheritedHabilitiesByType(type: IrpwHabilityType): InheritedCharacterHability[] {
+    return this.inheritedHabilitiesData.filter(hability => hability.type === type);
+  }
+
+  getInheritedHabilitiesBySource(source: 'species' | 'vocation'): InheritedCharacterHability[] {
+    return this.inheritedHabilitiesData.filter(hability => hability.source === source);
+  }
+
+  getSpeciesWeaknesses(): IrpwVocationHability[] {
+    const specieId = this.selectedCharacter?.ParentSpecies?.id;
+    const raw = specieId ? this.irpwSpecieService.getConfig(specieId)?.weakness : null;
+    return this.parseHabilityList(raw, `species:${specieId ?? 'none'}:weakness`, 'passive');
+  }
+
+  getEquippedAttacks(): EquippedAttackShortcut[] {
+    const inventory = parseIrpwInventory(this.currentSheet?.inventory);
+    if (!inventory) return [];
+    return (['primary', 'secondary'] as const).flatMap(slot => {
+      const instanceId = inventory.equipment[slot];
+      const entry = instanceId ? inventory.entries.find(candidate => candidate.instanceId === instanceId) : undefined;
+      if (!entry || entry.snapshot.definition.category !== 'weapon') return [];
+      const skillCode = entry.snapshot.definition.weapon?.attackSkill ?? SKILL.FIGHT;
+      return [{
+        favoriteKey: `attack:${entry.instanceId}`,
+        entry,
+        slot,
+        slotLabel: IRPW_EQUIPMENT_SLOT_LABEL[slot],
+        skillCode,
+        skillLabel: SKILL_LABEL[skillCode],
+      }];
+    });
+  }
+
+  getEquippedEquipment(): EquippedEquipmentSummary[] {
+    const inventory = parseIrpwInventory(this.currentSheet?.inventory);
+    if (!inventory) return [];
+    return IRPW_EQUIPMENT_SLOTS.flatMap(slot => {
+      const instanceId = inventory.equipment[slot];
+      const entry = instanceId ? inventory.entries.find(candidate => candidate.instanceId === instanceId) : undefined;
+      return entry ? [{ entry, slot, slotLabel: IRPW_EQUIPMENT_SLOT_LABEL[slot], effects: this.getEquipmentEffectSummary(entry) }] : [];
+    });
+  }
+
+  getEquipmentEffectSummary(entry: IrpwInventoryEntry): string {
+    const definition = entry.snapshot.definition;
+    const catalogEffects = !entry.snapshot.effects?.trim() && entry.sourceItemId
+      ? this.itemCatalog.getItem(entry.sourceItemId)?.effects
+      : null;
+    const values = [
+      entry.snapshot.effects || catalogEffects,
+      entry.snapshot.description,
+      definition.protection?.effects,
+      definition.weapon?.specialProperty,
+      definition.consumable?.effect,
+      definition.toolPurpose,
+      definition.narrativeEffect,
+      ...definition.uniqueBenefits,
+      ...definition.uniqueCosts,
+    ];
+    return [...new Set(values.map(value => value?.trim()).filter((value): value is string => !!value))].join(' · ');
+  }
+
+  getFavoriteAttacks(): EquippedAttackShortcut[] {
+    return this.getEquippedAttacks().filter(attack => this.isActionFavorite(attack.favoriteKey));
+  }
+
+  getFavoriteHabilities(): CharacterAbilityShortcut[] {
+    const own = this.habilitiesData.map((hability, index) => ({
+      ...hability,
+      type: this.normalizeHabilityType(hability.type, 'technical'),
+      favoriteKey: this.getOwnedAbilityFavoriteKey(hability, index),
+      sourceLabel: 'Personagem',
+    }));
+    return [...own, ...this.inheritedHabilitiesData].filter(hability => this.isActionFavorite(hability.favoriteKey));
+  }
+
+  isActionFavorite(key: string): boolean {
+    return this.favoriteActionsData.includes(key);
+  }
+
+  toggleActionFavorite(key: string): void {
+    const next = this.isActionFavorite(key)
+      ? this.favoriteActionsData.filter(value => value !== key)
+      : [...this.favoriteActionsData, key];
+    this.favoriteActionsData = [...new Set(next)];
+    if (this.currentSheet) {
+      this.currentSheet.favoriteActions = this.favoriteActionsData.length ? JSON.stringify(this.favoriteActionsData) : null;
+      this.scheduleAutoSave();
+    }
+  }
+
+  openAttackRoll(attack: EquippedAttackShortcut): void {
+    this.selectedRollSkill = attack.skillCode;
+    this.selectedRollBonusSource = 'attribute';
+    this.selectedRollPerception = null;
+    this.rollShortcutLabel = `Ataque · ${attack.entry.snapshot.name}`;
+    this.isRollPanelOpen = true;
+    this.rollResults = [];
+    this.updateRollFormulaIfAuto();
+  }
+
+  activateAbilityShortcut(hability: IrpwVocationHability & { sourceLabel?: string }): void {
+    this.activeAbilityDetail = {
+      name: hability.name || 'Habilidade sem nome',
+      description: hability.description || 'Sem descrição registrada.',
+    };
+    if (!hability.rollSkill) {
+      this.selectTab('general');
+      return;
+    }
+    this.selectedRollSkill = hability.rollSkill;
+    this.selectedRollBonusSource = 'attribute';
+    this.selectedRollPerception = null;
+    this.rollShortcutLabel = hability.name || 'Habilidade';
+    this.isRollPanelOpen = true;
+    this.rollResults = [];
+    this.updateRollFormulaIfAuto();
+  }
+
+  getHabilityTypeLabel(type: IrpwHabilityType | null | undefined): string {
+    return this.habilityTypeOptions.find(option => option.value === type)?.label ?? 'Técnica';
+  }
+
+  getHabilityTypeIcon(type: IrpwHabilityType | null | undefined): string {
+    return type === 'magic' ? 'fa-wand-magic-sparkles' : type === 'passive' ? 'fa-shield-heart' : 'fa-gears';
+  }
+
+  dismissAbilityDetail(): void {
+    this.activeAbilityDetail = null;
+  }
+
+  getOwnedAbilityFavoriteKey(hability: IrpwVocationHability, index: number): string {
+    return `ability:character:${this.selectedCharacterId}:${hability.id || `index-${index}`}`;
   }
 
   getSkillLevel(group: string, skill: string): number {
@@ -1820,25 +2300,78 @@ export class IrpwCharacterSheetComponent implements OnInit {
     }
   }
 
-  getLifeFillState(segment: number): 0 | 1 | 2 {
+  getLifeFillQuarters(segment: number): number {
     const currentPoints = this.normalizeLifeCurrentPoints(this.lifepointsData.currentPoints, this.getMaxLifePoints()) ?? 0;
-    if (currentPoints >= segment) return 2;
-    if (currentPoints >= segment - 0.5) return 1;
-    return 0;
+    const pointsWithinSegment = Math.max(0, Math.min(1, currentPoints - segment + 1));
+    return Math.max(0, Math.min(4, Math.floor(pointsWithinSegment * 4 + 0.0001)));
   }
 
-  setLifePoints(segment: number, isFullSegment: boolean) {
-    const nextValue = isFullSegment ? segment : segment - 0.5;
+  setLifePoints(segment: number, quarter: number) {
+    const nextValue = segment - 1 + quarter * 0.25;
     this.lifepointsData.currentPoints = this.normalizeLifeCurrentPoints(nextValue, this.getMaxLifePoints());
     this.onLifepointsChange();
   }
 
   formatLifeValue(value: number | null | undefined): string {
     if (value == null || Number.isNaN(Number(value))) return '0';
-    const normalizedValue = Math.round(Number(value) * 2) / 2;
-    return Number.isInteger(normalizedValue)
-      ? `${normalizedValue}`
-      : normalizedValue.toFixed(1).replace('.', ',');
+    const normalizedValue = Math.round(Number(value) * 4) / 4;
+    return Number.isInteger(normalizedValue) ? `${normalizedValue}` : `${normalizedValue}`.replace('.', ',');
+  }
+
+  getLifeStatusLabel(): string {
+    switch (this.getLifeStatus()) {
+      case 'healthy': return 'Saudável';
+      case 'injured': return 'Ferido';
+      case 'critical': return 'Crítico';
+      case 'critically-injured': return 'Criticamente ferido';
+      default: return 'Sem vida definida';
+    }
+  }
+
+  getLifeStatusClass(): string {
+    switch (this.getLifeStatus()) {
+      case 'healthy': return 'is-healthy';
+      case 'injured': return 'is-injured';
+      case 'critical': return 'is-critical';
+      case 'critically-injured': return 'is-critically-injured';
+      default: return 'is-undefined';
+    }
+  }
+
+  getLifeStatusDescription(): string {
+    switch (this.getLifeStatus()) {
+      case 'healthy': return 'Saudável: acima da metade das caixas de vida.';
+      case 'injured': return 'Ferido: com metade ou menos das caixas de vida. Recebe Exaustão Leve até sair deste estado.';
+      case 'critical': return 'Crítico: resta 1 caixa de vida. Testes para evitar uma Ferida Grave recebem -2.';
+      case 'critically-injured': return 'Criticamente ferido: sem caixas de vida. Recebe Desmaiando; três ocorrências na mesma cena levam a Morrendo.';
+      default: return 'Defina a vida atual para acompanhar o estado do personagem.';
+    }
+  }
+
+  private getLifeStatus(): 'healthy' | 'injured' | 'critical' | 'critically-injured' | 'undefined' {
+    const current = this.lifepointsData.currentPoints;
+    if (current == null || !Number.isFinite(current)) return 'undefined';
+    if (current <= 0) return 'critically-injured';
+    if (current <= 1 && current < this.getMaxLifePoints()) return 'critical';
+    if (current <= this.getMaxLifePoints() / 2) return 'injured';
+    return 'healthy';
+  }
+
+  getResistanceFillState(segment: number): 0 | 1 | 2 {
+    const current = this.defensepointsData.currentPoints ?? 0;
+    if (current >= segment) return 2;
+    if (current >= segment - 0.5) return 1;
+    return 0;
+  }
+
+  setDefensePoints(segment: number, isFullSegment: boolean): void {
+    const next = isFullSegment ? segment : segment - 0.5;
+    this.defensepointsData.currentPoints = Math.min(this.getMaxDefensePoints(), Math.max(0, next));
+    this.onDefensepointsChange();
+  }
+
+  getMaxDefensePoints(): number {
+    return calculateDefensePointsMax(this.defensepointsData);
   }
 
   toggleLifeSettingsOverlay() {
@@ -1882,8 +2415,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
     const numericValue = Number(value);
     if (!Number.isFinite(numericValue)) return null;
 
-    const roundedToHalf = Math.round(numericValue * 2) / 2;
-    const clampedValue = Math.max(0, maxPoints == null ? roundedToHalf : Math.min(roundedToHalf, maxPoints));
+    const roundedToQuarter = Math.round(numericValue * 4) / 4;
+    const clampedValue = Math.max(0, maxPoints == null ? roundedToQuarter : Math.min(roundedToQuarter, maxPoints));
     return clampedValue === 0 ? 0 : clampedValue;
   }
 
@@ -1955,7 +2488,9 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   getConditionDefinition(code: ConditionCode): ConditionDefinition {
-    return CONDITIONS[code];
+    return this.conditionDefinitions.find(definition => definition.code === code)
+      ?? CONDITIONS[code]
+      ?? { code, label: code, category: CONDITION_CATEGORY.SPECIAL };
   }
 
   getConditionDefinitionSummary(definition: ConditionDefinition): string {
@@ -2062,7 +2597,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   private createEmptyHability(): IrpwVocationHability {
-    return { name: null, description: '' };
+    return { id: crypto.randomUUID(), name: null, description: '', type: 'technical', rollSkill: null };
   }
 
   private createDefaultMarkAttributes(): IrpwVocationAttributes {
@@ -2103,16 +2638,25 @@ export class IrpwCharacterSheetComponent implements OnInit {
     };
   }
 
-  private normalizeHability(value: unknown): IrpwVocationHability {
+  private normalizeHability(value: unknown, fallbackId?: string, defaultType: IrpwHabilityType = 'technical'): IrpwVocationHability {
     if (!value || typeof value !== 'object') {
-      return this.createEmptyHability();
+      return { ...this.createEmptyHability(), id: fallbackId ?? crypto.randomUUID(), type: defaultType };
     }
 
     const source = value as Partial<IrpwVocationHability>;
+    const type = this.normalizeHabilityType(source.type, defaultType);
+    const rollSkill = source.rollSkill && Object.values(SKILL).includes(source.rollSkill) ? source.rollSkill : null;
     return {
+      id: this.normalizeOptionalText(source.id) || fallbackId || null,
       name: this.normalizeOptionalText(source.name),
       description: typeof source.description === 'string' ? source.description : '',
+      type,
+      rollSkill,
     };
+  }
+
+  private normalizeHabilityType(value: unknown, fallback: IrpwHabilityType): IrpwHabilityType {
+    return value === 'technical' || value === 'magic' || value === 'passive' ? value : fallback;
   }
 
   private normalizeMarkAttributes(value: Partial<IrpwVocationAttributes> | undefined): IrpwVocationAttributes {
@@ -2162,17 +2706,45 @@ export class IrpwCharacterSheetComponent implements OnInit {
     }
 
     const specieConfig = this.irpwSpecieService.getConfig(specieId);
-    return this.parseHabilityList(specieConfig?.passive)
-      .map(hability => ({ ...hability, source: 'species' as const }));
+    return this.parseHabilityList(specieConfig?.passive, `species:${specieId}:passive`, 'passive')
+      .map((hability, index) => ({
+        ...hability,
+        id: hability.id || `species:${specieId}:passive:${index}`,
+        type: 'passive' as const,
+        source: 'species' as const,
+        sourceLabel: 'Espécie',
+        favoriteKey: `ability:species:${specieId}:${hability.id || index}`,
+      }));
   }
 
   private getInheritedVocationHabilities(): InheritedCharacterHability[] {
-    const rawHabilities = this.selectedCharacter?.ParentIRPWVocation?.habilities;
-    return this.parseHabilityList(rawHabilities)
-      .map(hability => ({ ...hability, source: 'vocation' as const }));
+    const vocation = this.selectedCharacter?.ParentIRPWVocation;
+    if (!vocation?.id) return [];
+    const passive = this.parseSingleHability(vocation.passive, `vocation:${vocation.id}:passive`, 'passive');
+    const powers = this.parseHabilityList(vocation.habilities, `vocation:${vocation.id}:power`, 'technical');
+    return [...(passive ? [passive] : []), ...powers].map((hability, index) => {
+      const id = hability.id || `vocation:${vocation.id}:power:${index}`;
+      return {
+        ...hability,
+        id,
+        type: this.normalizeHabilityType(hability.type, 'technical'),
+        source: 'vocation' as const,
+        sourceLabel: 'Vocação',
+        favoriteKey: `ability:vocation:${vocation.id}:${id}`,
+      };
+    });
   }
 
-  private parseHabilityList(rawValue: string | null | undefined): IrpwVocationHability[] {
+  private parseSingleHability(rawValue: string | null | undefined, fallbackId: string, defaultType: IrpwHabilityType): IrpwVocationHability | null {
+    if (!rawValue?.trim()) return null;
+    try {
+      return this.normalizeHability(JSON.parse(rawValue), fallbackId, defaultType);
+    } catch {
+      return null;
+    }
+  }
+
+  private parseHabilityList(rawValue: string | null | undefined, fallbackPrefix = 'hability', defaultType: IrpwHabilityType = 'technical'): IrpwVocationHability[] {
     if (!rawValue) {
       return [];
     }
@@ -2180,11 +2752,11 @@ export class IrpwCharacterSheetComponent implements OnInit {
     try {
       const parsed = JSON.parse(rawValue);
       if (Array.isArray(parsed)) {
-        return parsed.map(item => this.normalizeHability(item));
+        return parsed.map((item, index) => this.normalizeHability(item, `${fallbackPrefix}:${index}`, defaultType));
       }
 
       return parsed && typeof parsed === 'object'
-        ? [this.normalizeHability(parsed)]
+        ? [this.normalizeHability(parsed, `${fallbackPrefix}:0`, defaultType)]
         : [];
     } catch {
       return [];
@@ -2192,15 +2764,25 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   parseDefensepoints() {
-    try {
-      this.defensepointsData = this.currentSheet?.defensepoints
-        ? JSON.parse(this.currentSheet.defensepoints)
-        : { currentPoints: null };
-    } catch { this.defensepointsData = { currentPoints: null }; }
+    const inventory = parseIrpwInventory(this.currentSheet?.inventory);
+    const vocationContribution = Math.max(0, Math.trunc(Number(this.selectedCharacter?.ParentIRPWVocation?.basedefense) || 0));
+    this.defensepointsData = parseIrpwDefensePoints(
+      this.currentSheet?.defensepoints,
+      vocationContribution,
+      inventory ? protectionContribution(inventory) : 0,
+    );
+    this.defensepointsData.vocationContribution = vocationContribution;
+    this.defensepointsData.protectionContribution = inventory ? protectionContribution(inventory) : 0;
+    if (this.defensepointsData.currentPoints !== null) {
+      this.defensepointsData.currentPoints = Math.min(this.defensepointsData.currentPoints, this.getMaxDefensePoints());
+    }
   }
 
   onDefensepointsChange() {
     if (this.currentSheet) {
+      if (this.defensepointsData.currentPoints !== null) {
+        this.defensepointsData.currentPoints = Math.min(this.getMaxDefensePoints(), Math.max(0, Math.round(this.defensepointsData.currentPoints * 2) / 2));
+      }
       this.currentSheet.defensepoints = JSON.stringify(this.defensepointsData);
       this.scheduleAutoSave();
     }
@@ -2366,6 +2948,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   onRollSkillChange() {
+    this.rollShortcutLabel = '';
     this.rollResults = [];
     this.updateRollFormulaIfAuto();
   }
@@ -2800,7 +3383,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   private isConditionCode(value: unknown): value is ConditionCode {
-    return typeof value === 'string' && Object.hasOwn(CONDITIONS, value);
+    return typeof value === 'string' && value.trim().length > 0;
   }
 
   private isConditionSeverityCode(value: unknown): value is ConditionSeverityCode {
