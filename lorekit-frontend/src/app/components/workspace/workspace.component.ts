@@ -37,7 +37,8 @@ import { WorkspaceLayout } from '../../models/workspace.model';
           }
           <app-workspace-pane
             [pane]="pane"
-            [flexRatio]="layout.splitRatios[i]" />
+            [flexRatio]="layout.splitRatios[i]"
+            [focused]="pane.id === layout.focusedPaneId" />
         }
       </div>
     }

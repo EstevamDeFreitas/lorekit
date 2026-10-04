@@ -1,0 +1,43 @@
+:host {
+  --workspace-pane-glow-position: 50%;
+  --workspace-pane-glow-color: var(--color-yellow-300);
+}
+
+.workspace-pane-content {
+  min-height: 0;
+  border-top: 1px solid rgb(113 113 122 / 34%);
+}
+
+.workspace-pane-content::before {
+  position: absolute;
+  z-index: 1;
+  inset: -1px 0 auto;
+  height: 0.65rem;
+  background: radial-gradient(
+    ellipse 34% 110% at var(--workspace-pane-glow-position) 0%,
+    color-mix(in srgb, var(--workspace-pane-glow-color) 38%, transparent),
+    transparent 100%
+  );
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease-out;
+}
+
+.workspace-pane-content--has-active-tab::before {
+  opacity: 0.42;
+}
+
+.workspace-pane-content--focused.workspace-pane-content--has-active-tab::before {
+  opacity: 0.88;
+}
+
+:host-context(html[data-lorekit-glass]) .workspace-pane-content {
+  border-top-color: rgb(161 161 170 / 24%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-pane-content::before {
+    transition: none;
+  }
+}

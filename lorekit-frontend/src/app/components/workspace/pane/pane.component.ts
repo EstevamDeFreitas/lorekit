@@ -16,6 +16,7 @@ import { EntityHistoryService } from '../../../services/entity-history.service';
   selector: 'app-workspace-pane',
   standalone: true,
   imports: [NgComponentOutlet, WorkspaceTabBarComponent],
+  styleUrl: './pane.component.css',
   host: {
     'class': 'flex flex-col min-h-0 min-w-0 md:min-w-[200px] overflow-hidden',
     '[style.flex-basis.%]': 'flexRatio()',
@@ -29,6 +30,7 @@ import { EntityHistoryService } from '../../../services/entity-history.service';
 export class WorkspacePaneComponent {
   pane = input.required<WorkspacePane>();
   flexRatio = input<number>(100);
+  focused = input(false);
 
   tabManager = inject(TabManagerService);
   readonly componentRefresh = inject(ComponentRefreshService);

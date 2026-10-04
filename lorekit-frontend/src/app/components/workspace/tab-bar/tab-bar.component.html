@@ -1,0 +1,74 @@
+<div
+  class="workspace-tab-bar flex h-9 w-full min-w-0 shrink-0 flex-row items-stretch overflow-hidden bg-zinc-925"
+  (mousedown)="tabManager.setFocusedPane(pane().id)">
+  <div
+    #tabScroll
+    class="workspace-tab-scroll flex min-w-0 flex-1 flex-row items-stretch overflow-x-auto overflow-y-hidden"
+    (scroll)="updatePaneGlow()"
+    cdkDropList
+    cdkDropListOrientation="horizontal"
+    [cdkDropListDisabled]="isMobileViewport()"
+    [cdkDropListData]="{ paneId: pane().id }"
+    [id]="'drop-' + pane().id"
+    (cdkDropListDropped)="onDrop($event)">
+    @for (tab of pane().tabs; track tab.id) {
+      <div
+        cdkDrag
+        [cdkDragData]="{ tabId: tab.id, paneId: pane().id }"
+        [cdkDragDisabled]="isMobileViewport()"
+        class="workspace-tab relative flex h-full max-w-48 min-w-20 cursor-pointer select-none flex-row items-center gap-1.5 border-0 px-2 text-xs bg-transparent rounded-full"
+        [class.workspace-tab--active]="isActiveTab(tab)"
+        [class.workspace-tab--dirty]="tab.isDirty"
+        [style.--workspace-tab-accent]="getTabAccentColor(tab) ?? 'var(--color-yellow-300)'"
+        [title]="tab.title"
+        (click)="tabManager.setActiveTab(pane().id, tab.id)"
+        (contextmenu)="openContextMenu($event, tab)">
+        <div *cdkDragPlaceholder class="workspace-tab-placeholder w-32 min-w-20 h-7 shrink-0 self-center rounded-full bg-zinc-700/60"></div>
+
+        <i [class]="tab.icon" class="workspace-tab-icon shrink-0 text-[10px] opacity-75" aria-hidden="true"></i>
+        <span class="workspace-tab-title min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">{{ tab.title }}</span>
+
+        @if (tab.isDirty) {
+          <span class="workspace-tab-dirty-indicator h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-300" title="Alterações não salvas"></span>
+        }
+
+        <button
+          type="button"
+          class="workspace-tab-close absolute end-1 top-1/2 grid h-5 w-5 -translate-y-1/2 cursor-pointer place-items-center rounded-full border-0 bg-transparent text-zinc-400 transition-colors hover:bg-white/10 hover:text-zinc-100"
+          [attr.aria-label]="'Fechar aba ' + tab.title"
+          title="Fechar aba"
+          (click)="closeTab($event, tab.id)">
+          <i class="fa-solid fa-xmark text-[9px]" aria-hidden="true"></i>
+        </button>
+      </div>
+    }
+  </div>
+
+  <div class="workspace-tab-actions hidden w-10 shrink-0 items-center justify-center border-l border-zinc-700 bg-zinc-925 md:flex">
+    <button
+      type="button"
+      class="workspace-tab-split grid h-9 w-9 place-items-center rounded-lg border-0 bg-transparent text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100"
+      aria-label="Dividir painel"
+      title="Dividir painel"
+      (click)="tabManager.splitPane(pane().id)">
+      <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+    </button>
+  </div>
+</div>
+
+@if (contextMenu()) {
+  <div
+    class="workspace-tab-context-menu context-menu fixed bg-zinc-800 border border-zinc-600 rounded-md shadow-xl py-1 text-xs text-zinc-200 min-w-44"
+    style="z-index: 2147483647"
+    [style.left.px]="contextMenu()!.x"
+    [style.top.px]="contextMenu()!.y"
+    (mouseleave)="closeContextMenu()">
+    <button type="button" class="workspace-tab-context-menu__item w-full rounded-sm px-3 py-1.5 text-left hover:bg-zinc-700" (click)="ctxClose()">Fechar aba</button>
+    <button type="button" class="workspace-tab-context-menu__item w-full rounded-sm px-3 py-1.5 text-left hover:bg-zinc-700" (click)="ctxCloseOthers()">Fechar outras abas</button>
+    <div class="workspace-tab-context-menu__divider border-t border-zinc-700 my-1"></div>
+    <button type="button" class="workspace-tab-context-menu__item w-full rounded-sm px-3 py-1.5 text-left hover:bg-zinc-700" (click)="ctxMoveToNewPane()">Mover para novo painel</button>
+    @if (canClosePane()) {
+      <button type="button" class="workspace-tab-context-menu__item w-full rounded-sm px-3 py-1.5 text-left hover:bg-zinc-700" (click)="ctxClosePane()">Fechar painel</button>
+    }
+  </div>
+}

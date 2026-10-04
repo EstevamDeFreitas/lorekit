@@ -2,7 +2,10 @@
 <app-workspace-tab-bar [pane]="pane()" />
 
 <!-- Content area -->
-<div class="flex-1 overflow-hidden relative">
+<div
+  class="workspace-pane-content flex-1 overflow-hidden relative"
+  [class.workspace-pane-content--focused]="focused()"
+  [class.workspace-pane-content--has-active-tab]="!!pane().activeTabId">
   @if (pane().tabs.length === 0) {
     <!-- Empty pane placeholder -->
     <div class="h-full flex flex-col items-center justify-center text-zinc-600 gap-3 select-none">
