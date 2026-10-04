@@ -184,7 +184,7 @@ html[data-lorekit-glass] .workspace-tab-viewport.workspace-tab-full-bleed > :is(
   0 0 20px color-mix(in srgb, var(--entity-glass-color, transparent) 8%, transparent);
 }
 
-html[data-lorekit-glass] app-character-edit .character-properties-panel {
+html[data-lorekit-glass] .entity-properties-panel {
   border: 1px solid rgb(161 161 170 / 18%);
   border-radius: 0.85rem;
   background-color: rgb(24 24 27 / 52%);
@@ -194,7 +194,7 @@ html[data-lorekit-glass] app-character-edit .character-properties-panel {
   -webkit-backdrop-filter: blur(22px) saturate(140%);
 }
 
-html[data-lorekit-glass] app-character-edit .character-properties-panel:focus-within {
+html[data-lorekit-glass] .entity-properties-panel:focus-within {
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 7%),
     0 12px 32px rgb(0 0 0 / 20%),
@@ -217,6 +217,137 @@ html[data-lorekit-glass] app-character-edit .character-properties-panel:focus-wi
   box-shadow: none !important;
   outline: 0;
   padding: 0.25rem 0.75rem;
+}
+
+.workspace-tab-viewport.workspace-tab-full-bleed > app-world-info {
+  display: block;
+  min-height: 100%;
+  width: 100%;
+}
+
+.workspace-tab-viewport.workspace-tab-full-bleed > app-world-info > [data-history-table] {
+  min-height: 100%;
+}
+
+html[data-lorekit-glass] .entity-edit-shell {
+  background-color: rgb(9 9 11 / 20%);
+  background-image:
+    radial-gradient(ellipse 46rem 33rem at 5% 4%, color-mix(in srgb, var(--entity-glass-color, transparent) 30%, transparent), transparent 76%),
+    radial-gradient(ellipse 38rem 31rem at 89% 23%, color-mix(in srgb, var(--entity-glass-color, transparent) 20%, transparent), transparent 73%),
+    radial-gradient(ellipse 50rem 35rem at 76% 96%, color-mix(in srgb, var(--entity-glass-color, transparent) 23%, transparent), transparent 78%),
+    radial-gradient(ellipse 32rem 25rem at 35% 59%, color-mix(in srgb, var(--entity-glass-color, transparent) 12%, transparent), transparent 80%),
+    linear-gradient(135deg, rgb(255 255 255 / 1.5%), transparent 38%);
+}
+
+.entity-cover {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: clamp(13rem, 30vh, 22rem);
+  overflow: hidden;
+}
+
+.entity-cover__ambient,
+.entity-cover__image,
+.entity-cover__aurora,
+.entity-cover__veil {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.entity-cover__ambient {
+  background-image:
+    radial-gradient(ellipse 48rem 22rem at 9% 2%, color-mix(in srgb, var(--entity-cover-color) 72%, transparent), transparent 72%),
+    radial-gradient(ellipse 42rem 20rem at 82% 14%, color-mix(in srgb, var(--entity-cover-color) 46%, transparent), transparent 74%),
+    radial-gradient(ellipse 36rem 17rem at 49% 48%, color-mix(in srgb, var(--entity-cover-color) 24%, transparent), transparent 78%),
+    linear-gradient(132deg, rgb(255 255 255 / 5%), transparent 44%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 52%, rgb(0 0 0 / 55%) 76%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 52%, rgb(0 0 0 / 55%) 76%, transparent 100%);
+}
+
+.entity-cover__image {
+  object-fit: cover;
+  object-position: center 42%;
+  opacity: 0.88;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 44%, rgb(0 0 0 / 82%) 63%, rgb(0 0 0 / 34%) 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 44%, rgb(0 0 0 / 82%) 63%, rgb(0 0 0 / 34%) 82%, transparent 100%);
+}
+
+.entity-cover__aurora {
+  background-image:
+    radial-gradient(ellipse 34rem 12rem at 43% 0%, rgb(255 255 255 / 9%), transparent 74%),
+    linear-gradient(118deg, color-mix(in srgb, var(--entity-cover-color) 20%, transparent), transparent 42%, color-mix(in srgb, var(--entity-cover-color) 14%, transparent));
+  opacity: 0.76;
+  mix-blend-mode: screen;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 48%, rgb(0 0 0 / 52%) 74%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 48%, rgb(0 0 0 / 52%) 74%, transparent 100%);
+}
+
+.entity-cover__veil {
+  background-image:
+    linear-gradient(90deg, rgb(9 9 11 / 24%), transparent 28%, transparent 76%, rgb(9 9 11 / 15%)),
+    linear-gradient(180deg, rgb(9 9 11 / 8%), transparent 24%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 52%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 52%, transparent 100%);
+}
+
+.entity-cover__portrait {
+  position: absolute;
+  z-index: 2;
+  inset-block-start: 0.85rem;
+  inset-inline-start: 0.85rem;
+  height: clamp(8rem, 27vh, 19rem);
+  max-width: min(42vw, 15rem);
+  border: 1px solid rgb(244 244 245 / 26%);
+  border-radius: 0.875rem;
+  object-fit: cover;
+  background-color: rgb(9 9 11 / 45%);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 38%);
+}
+
+.entity-cover__icon {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgb(250 250 250 / 72%);
+  font-size: 1.125rem;
+}
+
+.entity-titlebar {
+  margin-block-start: 0.75rem;
+}
+
+html[data-lorekit-glass] .entity-titlebar {
+  min-height: 3.5rem;
+  border: 1px solid rgb(161 161 170 / 18%);
+  border-radius: 0.85rem;
+  background-color: rgb(24 24 27 / 52%);
+  background-image: linear-gradient(140deg, rgb(255 255 255 / 4%), transparent 48%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%), 0 12px 32px rgb(0 0 0 / 18%);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+html[data-lorekit-glass] .entity-titlebar:focus-within {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 7%),
+    0 12px 32px rgb(0 0 0 / 20%),
+    0 0 20px color-mix(in srgb, var(--entity-glass-color, transparent) 8%, transparent);
+}
+
+@media (max-width: 640px) {
+  .entity-cover {
+    height: clamp(11rem, 30vh, 16rem);
+  }
+
+  .entity-cover__portrait {
+    height: clamp(7rem, 22vh, 12rem);
+    max-width: min(38vw, 10rem);
+  }
 }
 
 html[data-lorekit-glass] :where(

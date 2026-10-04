@@ -1,7 +1,7 @@
 import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { NgComponentOutlet, NgStyle } from '@angular/common';
+import { NgComponentOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { IconButtonComponent } from "../../../components/icon-button/icon-button.component";
@@ -29,90 +29,8 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
 
 @Component({
   selector: 'app-location-edit',
-  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NgStyle, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
-  template: `
-    <div [historyEntity]="{ table: 'Location', id: location.id || '' }" [historyModel]="location" class="flex flex-col @container">
-      @if(getImageByUsageKey(location.Images, 'default') != null){
-        @let img = getImageByUsageKey(location.Images, 'default');
-        <div class="relative w-full h-[30vh]  overflow-hidden">
-          <img [src]="img | assetUrl" class="w-full h-full object-cover">
-          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
-        </div>
-      }
-      @else{
-        <div class="w-full h-[30vh] object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(location, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
-      }
-      <br>
-      <div class="flex flex-row flex-wrap items-center gap-y-2 sticky py-2 top-0 z-50 bg-zinc-950">
-        @if (isRouteComponent()){
-          <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/location"></app-icon-button>
-        }
-        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveLocation()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="location.name" />
-        <div class="flex flex-row flex-wrap gap-2 ms-auto">
-          <!-- <app-entity-transfer-button [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'"></app-entity-transfer-button> -->
-          <app-ui-field-config-button
-            [entityTable]="'Location'"
-            [entityId]="location.id"
-            [parentEntityTable]="selectedWorldId ? 'World' : null"
-            [parentEntityId]="selectedWorldId || null"
-            [parentLabel]="location.ParentWorld ? ('Mundo: ' + location.ParentWorld.name) : null"
-            [backRoute]="'/app/location/edit/' + location.id">
-          </app-ui-field-config-button>
-          @if (!isLoading) {
-            <app-entity-lateral-menu-button
-              [fields]="fields"
-              (onSave)="onFieldsSave($event)"
-              entityTable="Location"
-              [entityId]="location.id">
-            </app-entity-lateral-menu-button>
-          }
-          <app-personalization-button [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'" (onClose)="getLocation()"></app-personalization-button>
-          <app-safe-delete-button [entityName]="location.name" [entityId]="location.id" [entityTable]="'Location'" [size]="'xl'"></app-safe-delete-button>
-        </div>
-      </div>
-      <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
-        <div class="flex-1 flex flex-col ">
-          <div class="flex flex-row flex-wrap gap-4 ms-1">
-            <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
-            @for (tab of fieldLayout.tabs; track tab.id) {
-              <app-nav-button [label]="tab.name" size="sm" [active]="currentTab === layoutTabStateId(tab.id)" (click)="selectTab(layoutTabStateId(tab.id))"></app-nav-button>
-            }
-            <!-- <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button> -->
-          </div>
-          <div class="p-4 pb-10 rounded-lg mt-2  flex flex-col">
-            @if (!isLoading) {
-              @switch (currentTab) {
-                @case ('details') {
-                  <div class="w-full ">
-                    <app-editor [historyField]="{ column: 'description', label: 'Descrição' }" [entityId]="location.id" docTitle="Descrição" entityTable="Location" [entityName]="location.name" [document]="location.description || ''" (saveDocument)="onDocumentSave($event)" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
-                  </div>
-                }
-                <!-- @case ('localities') {
-                  <div class="w-full ">
-                    @if (locationListComponent) {
-                      <ng-container *ngComponentOutlet="locationListComponent; inputs: { worldId: location.ParentWorld?.id, locationId: location.id }"></ng-container>
-                    }
-                    @else {
-                      <p class="text-zinc-500">Carregando localidades...</p>
-                    }
-                  </div>
-                } -->
-                @default {
-                  <app-entity-configured-fields
-                    entityTable="Location"
-                    [entity]="location"
-                    [layout]="fieldLayout"
-                    [activeTabId]="activeLayoutTabId()"
-                    (requestSave)="saveLocation()">
-                  </app-entity-configured-fields>
-                }
-              }
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
+  templateUrl: './location-edit.component.html',
   styleUrl: './location-edit.component.css',
   changeDetection: ChangeDetectionStrategy.Default
 })

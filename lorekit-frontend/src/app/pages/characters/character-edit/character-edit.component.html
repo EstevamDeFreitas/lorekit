@@ -1,26 +1,26 @@
 <div
   [historyEntity]="{ table: 'Character', id: character.id || '' }"
   [historyModel]="character"
-  class="character-edit-shell flex flex-col relative @container"
+  class="entity-edit-shell flex flex-col relative @container"
   [style.--entity-glass-color]="getPersonalizationValue(character, 'color') || 'transparent'"
   [style.--entity-cover-color]="getPersonalizationValue(character, 'color') || 'var(--color-zinc-800)'">
-  <div class="character-cover" aria-hidden="true">
-    <div class="character-cover__ambient"></div>
+  <div class="entity-cover" aria-hidden="true">
+    <div class="entity-cover__ambient"></div>
     @if (getImageByUsageKey(character.Images, 'default'); as coverImage) {
-      <img [src]="coverImage | assetUrl" class="character-cover__image" alt="" />
+      <img [src]="coverImage | assetUrl" class="entity-cover__image" alt="" />
     }
-    <div class="character-cover__aurora"></div>
-    <div class="character-cover__veil"></div>
+    <div class="entity-cover__aurora"></div>
+    <div class="entity-cover__veil"></div>
   </div>
 
   @if (getImageByUsageKey(character.Images, 'profile'); as profileImg) {
     <img
       [src]="profileImg | assetUrl"
-      class="character-cover__portrait"
+      class="entity-cover__portrait"
       [alt]="'Retrato de ' + character.name" />
   }
 
-  <div class="character-titlebar flex flex-row flex-wrap items-center gap-y-2 sticky px-3 py-2 top-0 z-50">
+  <div class="entity-titlebar flex flex-row flex-wrap items-center gap-y-2 sticky px-3 py-2 top-0 z-50">
     @if (isRouteComponent()) {
       <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/character"></app-icon-button>
     }
@@ -57,7 +57,7 @@
         }
         <app-nav-button [label]="'Backstory'" size="sm" [active]="currentTab === 'backstory'" (click)="selectTab('backstory')"></app-nav-button>
       </div>
-      <div class="character-properties-panel p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
+      <div class="entity-properties-panel p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
         @if (!isLoading) {
           @switch (currentTab) {
             @default {

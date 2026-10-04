@@ -1,0 +1,80 @@
+<div
+  [historyEntity]="{ table: 'Species', id: specie.id || '' }"
+  [historyModel]="specie"
+  class="entity-edit-shell flex flex-col relative @container"
+  [style.--entity-glass-color]="getPersonalizationValue(specie, 'color') || 'transparent'"
+  [style.--entity-cover-color]="getPersonalizationValue(specie, 'color') || 'var(--color-zinc-800)'">
+  <div class="entity-cover" aria-hidden="true">
+    <div class="entity-cover__ambient"></div>
+    @if (getImageByUsageKey(specie.Images, 'default'); as coverImage) {
+      <img [src]="coverImage | assetUrl" class="entity-cover__image" alt="" />
+    }
+    <div class="entity-cover__aurora"></div>
+    <div class="entity-cover__veil"></div>
+  </div>
+  @if (getImageByUsageKey(specie.Images, 'fullBody'); as coverPortrait) {
+    <img [src]="coverPortrait | assetUrl" class="entity-cover__portrait" [alt]="'Imagem de ' + specie.name" />
+  }
+  <div class="entity-titlebar px-3 flex flex-row flex-wrap items-center gap-y-2 sticky py-2 top-0 z-50">
+        @if (isRouteComponent()){
+          <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/specie"></app-icon-button>
+        }
+        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveSpecie()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="specie.name" />
+        <div class="flex flex-row flex-wrap gap-2 ms-auto">
+          <!-- <app-entity-transfer-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-entity-transfer-button> -->
+          <app-ui-field-config-button
+            [entityTable]="'Species'"
+            [entityId]="specie.id"
+            [parentEntityTable]="selectedWorldId ? 'World' : null"
+            [parentEntityId]="selectedWorldId"
+            [parentLabel]="specie.ParentWorld ? ('Mundo: ' + specie.ParentWorld.name) : null"
+            [backRoute]="'/app/specie/edit/' + specie.id">
+          </app-ui-field-config-button>
+          @if (!isLoading) {
+            <app-entity-lateral-menu-button
+              [fields]="fields"
+              (onSave)="onFieldsSave($event)"
+              entityTable="Species"
+              [entityId]="specie.id">
+            </app-entity-lateral-menu-button>
+          }
+          <app-icon-button buttonType="white" icon="fa-solid fa-shield-cat" [size]="'xl'" title="Configurar IRPW" (click)="openIrpwSpecieConfig()"></app-icon-button>
+          <app-personalization-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'" (onClose)="getSpecie()"></app-personalization-button>
+          <app-safe-delete-button [entityName]="specie.name" [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-safe-delete-button>
+        </div>
+      </div>
+      <div class="flex flex-col @2xl:flex-row gap-4 mt-10">
+        <div class="flex-1 flex flex-col">
+          <div class="flex flex-row flex-wrap gap-4 ms-1">
+            @for (tab of fieldLayout.tabs; track tab.id) {
+              <app-nav-button [label]="tab.name" size="sm" [active]="currentTab === layoutTabStateId(tab.id)" (click)="selectTab(layoutTabStateId(tab.id))"></app-nav-button>
+            }
+            <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
+            <app-nav-button [label]="'Variações'" size="sm" [active]="currentTab === 'subspecies'" (click)="selectTab('subspecies')"></app-nav-button>
+          </div>
+          <div class="entity-properties-panel p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
+            @if (!isLoading) {
+              @switch (currentTab) {
+                @default {
+                  <div class="w-full flex-1  p-1">
+                    <app-entity-configured-fields entityTable="Species" [entity]="specie" [layout]="fieldLayout"
+                      [activeTabId]="activeLayoutTabId()" (requestSave)="saveSpecie()"></app-entity-configured-fields>
+                  </div>
+                }
+                @case ('details') {
+                  <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
+                    <app-editor [historyField]="{ column: 'description', label: 'Descrição' }" [entityId]="specie.id" docTitle="Descrição" entityTable="Species" [entityName]="specie.name" [document]="specie.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
+                  </div>
+                }
+                @case ('subspecies') {
+                  <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
+                    <app-specie-list [specieId]="specie.id" [worldId]="specie.ParentWorld ? specie.ParentWorld.id : ''"></app-specie-list>
+                  </div>
+                }
+              }
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  

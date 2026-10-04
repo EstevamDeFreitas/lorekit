@@ -12,7 +12,6 @@ import { FormField } from '../../../components/form-overlay/form-overlay.compone
 import { getPersonalizationValue } from '../../../models/personalization.model';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { PersonalizationButtonComponent } from '../../../components/personalization-button/personalization-button.component';
-import { NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { EntityLateralMenuButtonComponent } from '../../../components/entity-lateral-menu-button/entity-lateral-menu-button.component';
@@ -31,87 +30,8 @@ import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'app-specie-edit',
-  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, SpecieListComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
-  template: `
-    <div [historyEntity]="{ table: 'Species', id: specie.id || '' }" [historyModel]="specie" class="flex flex-col relative @container">
-      @if(getImageByUsageKey(specie.Images, 'default') != null){
-        @let img = getImageByUsageKey(specie.Images, 'default');
-        <div class="relative w-full h-[30vh]  overflow-hidden">
-          <img [src]="img | assetUrl" class="w-full h-full object-cover">
-          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
-        </div>
-      }
-      @else{
-        <div class="w-full h-[30vh] object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(specie, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
-      }
-
-      @if(getImageByUsageKey(specie.Images, 'fullBody') != null){
-        @let fullBodyImg = getImageByUsageKey(specie.Images, 'fullBody');
-        <img [src]="fullBodyImg | assetUrl" class="h-[27vh] absolute top-3 left-3 object-cover rounded-md">
-      }
-      <div class="flex flex-row items-center sticky py-2 top-0 z-50 bg-zinc-950 ">
-        @if (isRouteComponent()){
-          <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/specie"></app-icon-button>
-        }
-        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveSpecie()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="specie.name" />
-        <div class="flex flex-row flex-wrap gap-2 ms-auto">
-          <!-- <app-entity-transfer-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-entity-transfer-button> -->
-          <app-ui-field-config-button
-            [entityTable]="'Species'"
-            [entityId]="specie.id"
-            [parentEntityTable]="selectedWorldId ? 'World' : null"
-            [parentEntityId]="selectedWorldId"
-            [parentLabel]="specie.ParentWorld ? ('Mundo: ' + specie.ParentWorld.name) : null"
-            [backRoute]="'/app/specie/edit/' + specie.id">
-          </app-ui-field-config-button>
-          @if (!isLoading) {
-            <app-entity-lateral-menu-button
-              [fields]="fields"
-              (onSave)="onFieldsSave($event)"
-              entityTable="Species"
-              [entityId]="specie.id">
-            </app-entity-lateral-menu-button>
-          }
-          <app-icon-button buttonType="white" icon="fa-solid fa-shield-cat" [size]="'xl'" title="Configurar IRPW" (click)="openIrpwSpecieConfig()"></app-icon-button>
-          <app-personalization-button [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'" (onClose)="getSpecie()"></app-personalization-button>
-          <app-safe-delete-button [entityName]="specie.name" [entityId]="specie.id" [entityTable]="'Species'" [size]="'xl'"></app-safe-delete-button>
-        </div>
-      </div>
-      <div class="flex flex-col @2xl:flex-row gap-4 mt-10">
-        <div class="flex-1 flex flex-col">
-          <div class="flex flex-row flex-wrap gap-4 ms-1">
-            @for (tab of fieldLayout.tabs; track tab.id) {
-              <app-nav-button [label]="tab.name" size="sm" [active]="currentTab === layoutTabStateId(tab.id)" (click)="selectTab(layoutTabStateId(tab.id))"></app-nav-button>
-            }
-            <app-nav-button [label]="'Detalhes'" size="sm" [active]="currentTab === 'details'" (click)="selectTab('details')"></app-nav-button>
-            <app-nav-button [label]="'Variações'" size="sm" [active]="currentTab === 'subspecies'" (click)="selectTab('subspecies')"></app-nav-button>
-          </div>
-          <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
-            @if (!isLoading) {
-              @switch (currentTab) {
-                @default {
-                  <div class="w-full flex-1  p-1">
-                    <app-entity-configured-fields entityTable="Species" [entity]="specie" [layout]="fieldLayout"
-                      [activeTabId]="activeLayoutTabId()" (requestSave)="saveSpecie()"></app-entity-configured-fields>
-                  </div>
-                }
-                @case ('details') {
-                  <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-editor [historyField]="{ column: 'description', label: 'Descrição' }" [entityId]="specie.id" docTitle="Descrição" entityTable="Species" [entityName]="specie.name" [document]="specie.description || ''" (saveDocument)="onEditorSave($event, 'description')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
-                  </div>
-                }
-                @case ('subspecies') {
-                  <div class="w-full flex-1 overflow-y-auto scrollbar-dark">
-                    <app-specie-list [specieId]="specie.id" [worldId]="specie.ParentWorld ? specie.ParentWorld.id : ''"></app-specie-list>
-                  </div>
-                }
-              }
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, SpecieListComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
+  templateUrl: './specie-edit.component.html',
   styleUrl: './specie-edit.component.css',
 })
 export class SpecieEditComponent implements OnInit {

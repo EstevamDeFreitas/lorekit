@@ -1,18 +1,21 @@
-<div class="world-info-page @container" [historyEntity]="{ table: 'World', id: currentWorld.id || '' }" [historyModel]="currentWorld">
-  @if (getImageByUsageKey(currentWorld.Images, 'default') != null) {
-    @let img = getImageByUsageKey(currentWorld.Images, 'default');
-    <div class="world-info-cover">
-      <img [src]="img | assetUrl" [alt]="'Imagem de ' + currentWorld.name">
-    </div>
-  } @else {
-    <div
-      class="world-info-cover world-info-cover--empty"
-      [ngStyle]="{'background-image': 'linear-gradient(145deg, ' + (getPersonalizationValue(currentWorld, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}">
-      <i class="fa" [ngClass]="getPersonalizationValue(currentWorld, 'icon') || 'fa-earth'" aria-hidden="true"></i>
-    </div>
-  }
+<div
+  class="world-info-page entity-edit-shell @container"
+  [historyEntity]="{ table: 'World', id: currentWorld.id || '' }"
+  [historyModel]="currentWorld"
+  [style.--entity-glass-color]="getPersonalizationValue(currentWorld, 'color') || 'transparent'"
+  [style.--entity-cover-color]="getPersonalizationValue(currentWorld, 'color') || 'var(--color-zinc-800)'">
+  <div class="entity-cover" aria-hidden="true">
+    <div class="entity-cover__ambient"></div>
+    @if (getImageByUsageKey(currentWorld.Images, 'default'); as coverImage) {
+      <img [src]="coverImage | assetUrl" class="entity-cover__image" alt="" />
+    } @else {
+      <i class="entity-cover__icon fa" [ngClass]="getPersonalizationValue(currentWorld, 'icon') || 'fa-earth'"></i>
+    }
+    <div class="entity-cover__aurora"></div>
+    <div class="entity-cover__veil"></div>
+  </div>
 
-  <header class="world-info-toolbar">
+  <header class="world-info-toolbar entity-titlebar sticky">
     @if (isRouteComponent()) {
       <app-icon-button class="world-info-back" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/world"></app-icon-button>
     }
@@ -59,7 +62,7 @@
       <app-nav-button [label]="'Localidades'" size="sm" [active]="currentTab === 'localities'" (click)="openLocalitiesTab()"></app-nav-button>
     </nav>
 
-    <section class="world-info-content">
+    <section class="world-info-content entity-properties-panel">
       @if (!isLoading) {
         @switch (currentTab) {
           @case ('details') {

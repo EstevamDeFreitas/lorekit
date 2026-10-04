@@ -44,7 +44,7 @@ export class WorkspacePaneComponent {
   }
 
   private readonly fullBleedEntityTypes = new Set([
-    'Character', 'Document', 'Location', 'Specie', 'Culture', 'Organization', 'Object',
+    'Character', 'Document', 'World', 'Location', 'Specie', 'Culture', 'Organization', 'Object',
   ]);
 
   usesFullBleedEditor(entityType: string): boolean {

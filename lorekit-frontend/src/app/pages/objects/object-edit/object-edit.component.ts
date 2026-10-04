@@ -14,7 +14,6 @@ import { WorldObject, ObjectType } from '../../../models/object.model';
 import { World } from '../../../models/world.model';
 import { Location } from '../../../models/location.model';
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
-import { NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { EntityLateralMenuButtonComponent } from '../../../components/entity-lateral-menu-button/entity-lateral-menu-button.component';
@@ -32,88 +31,8 @@ import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/
 
 @Component({
   selector: 'app-object-edit',
-  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
-  template: `
-    <div [historyEntity]="{ table: 'Object', id: object.id || '' }" [historyModel]="object" class="flex flex-col relative @container">
-      @if(getImageByUsageKey(object.Images, 'default') != null){
-        @let img = getImageByUsageKey(object.Images, 'default');
-        <div class="relative w-full h-[30vh] overflow-hidden">
-          <img [src]="img | assetUrl" class="w-full h-full object-cover">
-          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
-        </div>
-      }
-      @else{
-        <div class="w-full h-[30vh] object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(object, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
-      }
-      @if(getImageByUsageKey(object.Images, 'profile') != null){
-        @let profileImg = getImageByUsageKey(object.Images, 'profile');
-        <img [src]="profileImg | assetUrl" class="h-[27vh] absolute top-3 left-3 object-cover rounded-md">
-      }
-      <br>
-      <div class="flex flex-row flex-wrap items-center gap-y-2 sticky py-2 top-0 z-50 bg-zinc-950">
-        @if (isRouteComponent()){
-          <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/object"></app-icon-button>
-        }
-        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveObject()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="object.name" />
-        <div class="flex flex-row flex-wrap gap-2 ms-auto">
-          <app-ui-field-config-button
-            [entityTable]="'Object'"
-            [entityId]="object.id"
-            [parentEntityTable]="selectedWorldId ? 'World' : null"
-            [parentEntityId]="selectedWorldId"
-            [parentLabel]="object.ParentWorld ? ('Mundo: ' + object.ParentWorld.name) : null"
-            [backRoute]="'/app/object/edit/' + object.id">
-          </app-ui-field-config-button>
-          @if (!isLoading) {
-            <app-entity-lateral-menu-button
-              [fields]="getFormFields()"
-              (onSave)="onFieldsSave($event)"
-              entityTable="Object"
-              [entityId]="object.id">
-            </app-entity-lateral-menu-button>
-          }
-          <app-personalization-button [entityId]="object.id" [entityTable]="'Object'" [size]="'xl'" (onClose)="getObject()"></app-personalization-button>
-          <app-safe-delete-button [entityName]="object.name" [entityId]="object.id" [entityTable]="'Object'" [size]="'xl'"></app-safe-delete-button>
-        </div>
-      </div>
-      <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
-        <div class="flex-1 h-auto flex flex-col">
-          <div class="flex flex-row flex-wrap gap-4 ms-1">
-            <!-- <app-nav-button [label]="'Propriedades'" size="sm" [active]="currentTab === 'properties'" (click)="selectTab('properties')"></app-nav-button> -->
-            <app-nav-button [label]="'História'" size="sm" [active]="currentTab === 'history'" (click)="selectTab('history')"></app-nav-button>
-            @for (tab of fieldLayout.tabs; track tab.id) {
-              <app-nav-button [label]="tab.name" size="sm" [active]="currentTab === layoutTabStateId(tab.id)" (click)="selectTab(layoutTabStateId(tab.id))"></app-nav-button>
-            }
-          </div>
-          <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
-            @if (!isLoading) {
-              @switch (currentTab) {
-                <!-- @case ('properties') {
-                  <div class="w-full">
-                    <app-editor [historyField]="{ column: 'properties', label: 'Propriedades' }" [entityId]="object.id" docTitle="Propriedades" entityTable="Object" [entityName]="object.name" [document]="object.properties || ''" (saveDocument)="onEditorSave($event, 'properties')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
-                  </div>
-                } -->
-                @case ('history') {
-                  <div class="w-full">
-                    <app-editor [historyField]="{ column: 'history', label: 'História' }" [entityId]="object.id + '_history'" docTitle="História" entityTable="Object" [entityName]="object.name" [document]="object.history || ''" (saveDocument)="onEditorSave($event, 'history')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
-                  </div>
-                }
-                @default {
-                  <app-entity-configured-fields
-                    entityTable="Object"
-                    [entity]="object"
-                    [layout]="fieldLayout"
-                    [activeTabId]="activeLayoutTabId()"
-                    (requestSave)="saveObject()">
-                  </app-entity-configured-fields>
-                }
-              }
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
+  templateUrl: './object-edit.component.html',
   styleUrl: './object-edit.component.css',
 })
 export class ObjectEditComponent implements OnInit {
