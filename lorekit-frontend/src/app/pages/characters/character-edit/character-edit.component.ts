@@ -13,7 +13,6 @@ import { Character } from '../../../models/character.model';
 import { FormField } from '../../../components/form-overlay/form-overlay.component';
 import { World } from '../../../models/world.model';
 import { Specie } from '../../../models/specie.model';
-import { NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { EntityLateralMenuButtonComponent } from '../../../components/entity-lateral-menu-button/entity-lateral-menu-button.component';
@@ -34,82 +33,8 @@ import { TabManagerService } from '../../../services/tab-manager.service';
 
 @Component({
   selector: 'app-character-edit',
-  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, NgStyle, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
-  template: `
-    <div [historyEntity]="{ table: 'Character', id: character.id || '' }" [historyModel]="character" class="character-edit-shell flex flex-col relative @container" [style.--entity-glass-color]="getPersonalizationValue(character, 'color') || 'transparent'">
-      @if(getImageByUsageKey(character.Images, 'default') != null){
-        @let img = getImageByUsageKey(character.Images, 'default');
-        <div class="relative w-full h-[30vh] overflow-hidden">
-          <img [src]="img | assetUrl" class="w-full h-full object-cover">
-          <div class="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-950"></div>
-        </div>
-      }
-      @else{
-        <div class="w-full h-[30vh] object-cover rounded-md bg-gradient-to-b from-transparent to-zinc-950" [ngStyle]="{'background-image': 'linear-gradient(to bottom, ' + (getPersonalizationValue(character, 'color') || 'var(--color-zinc-800)') + ', var(--color-zinc-950))'}"></div>
-      }
-
-      @if(getImageByUsageKey(character.Images, 'profile') != null){
-        @let profileImg = getImageByUsageKey(character.Images, 'profile');
-        <img [src]="profileImg | assetUrl" class="h-[27vh] absolute top-3 left-3 object-cover rounded-md">
-      }
-      <br>
-      <div class="character-titlebar flex flex-row flex-wrap items-center gap-y-2 sticky px-3 py-2 top-0 z-50">
-        @if (isRouteComponent()){
-          <app-icon-button class="me-5" buttonType="whiteActive" icon="fa-solid fa-angle-left" size="2xl" title="Voltar" route="/app/character"></app-icon-button>
-        }
-        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveCharacter()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="character.name" />
-        <div class="flex flex-row flex-wrap gap-2 ms-auto">
-          <app-icon-button buttonType="secondary" icon="fa-solid fa-scroll" size="xl" title="Abrir ficha Ironpaw" (click)="openIronpawSheet()"></app-icon-button>
-          <!-- <app-entity-transfer-button [entityId]="character.id" [entityTable]="'Character'" [size]="'xl'"></app-entity-transfer-button> -->
-          <app-ui-field-config-button
-            [entityTable]="'Character'"
-            [entityId]="character.id"
-            [parentEntityTable]="selectedWorldId ? 'World' : null"
-            [parentEntityId]="selectedWorldId"
-            [parentLabel]="character.ParentWorld ? ('Mundo: ' + character.ParentWorld.name) : null"
-            [backRoute]="'/app/character/edit/' + character.id">
-          </app-ui-field-config-button>
-          @if (!isLoading) {
-            <app-entity-lateral-menu-button
-              [fields]="getFormFields()"
-              (onSave)="onFieldsSave($event)"
-              entityTable="Character"
-              [entityId]="character.id">
-            </app-entity-lateral-menu-button>
-          }
-          <app-personalization-button [entityId]="character.id" [entityTable]="'Character'" [size]="'xl'" (onClose)="getCharacter()"></app-personalization-button>
-          <app-safe-delete-button [entityName]="character.name" [entityId]="character.id" [entityTable]="'Character'" [size]="'xl'"></app-safe-delete-button>
-        </div>
-      </div>
-      <div class="flex flex-col @2xl:flex-row gap-4 flex-1 mt-10">
-        <div class="flex-1 flex flex-col">
-          <div class="flex flex-row flex-wrap gap-4 ms-1">
-            @for (tab of fieldLayout.tabs; track tab.id) {
-              <app-nav-button [label]="tab.name" size="sm" [active]="currentTab === layoutTabStateId(tab.id)" (click)="selectTab(layoutTabStateId(tab.id))"></app-nav-button>
-            }
-            <app-nav-button [label]="'Backstory'" size="sm" [active]="currentTab === 'backstory'" (click)="selectTab('backstory')"></app-nav-button>
-          </div>
-          <div class="p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
-            @if (!isLoading) {
-              @switch (currentTab) {
-                @default {
-                  <div class="w-full flex-1 p-1">
-                    <app-entity-configured-fields entityTable="Character" [entity]="character" [layout]="fieldLayout"
-                      [activeTabId]="activeLayoutTabId()" (requestSave)="saveCharacter()"></app-entity-configured-fields>
-                  </div>
-                }
-                @case ('backstory') {
-                  <div class="w-full ">
-                    <app-editor [historyField]="{ column: 'background', label: 'História' }" [entityId]="character.id" docTitle="Backstory" entityTable="Character" [entityName]="character.name" [document]="character.background || ''" (saveDocument)="onEditorSave($event, 'background')" class="w-full" style="--tiptap-toolbar-sticky-top: 5rem"></app-editor>
-                  </div>
-                }
-              }
-            }
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
+  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
+  templateUrl: './character-edit.component.html',
   styleUrl: './character-edit.component.css',
 })
 export class CharacterEditComponent implements OnInit {
