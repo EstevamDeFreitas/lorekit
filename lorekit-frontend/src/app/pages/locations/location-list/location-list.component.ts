@@ -53,6 +53,7 @@ import { SafeDeleteComponent } from '../../../components/safe-delete/safe-delete
                 />
               </div>
               <app-icon-button
+                class="entity-list-create-button"
                 size="sm"
                 buttonType="secondaryActive"
                 icon="fa-solid fa-plus"

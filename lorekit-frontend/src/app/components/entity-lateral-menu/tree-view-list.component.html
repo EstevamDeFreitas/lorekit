@@ -1,0 +1,126 @@
+
+    <div
+      class="tree-view-root"
+      [class.tree-view-root--drop-active]="isRootDropActive()"
+      [class.tree-view-root--drop-invalid]="isRootDropInvalid()"
+      [class.tree-view-root--glossy]="glossy()"
+      [attr.data-tree-root-context]="isRecursive() ? null : dragContextId()">
+      @for (item of documentArray(); track item.id) {
+        <div class="tree-view-node">
+          <div
+            class="tree-view-node__row"
+            [class.tree-view-node__row--with-detach]="allowDetach() && !isRecursive()"
+            [class.tree-view-node__row--drop-active]="isNodeDropActive(item)"
+            [class.tree-view-node__row--drop-invalid]="isNodeDropInvalid(item)"
+            [class.tree-view-node__row--dragged]="isDraggedItem(item)"
+            data-tree-node-row
+            [attr.data-tree-context]="dragContextId()"
+            [attr.data-tree-node-id]="item.id">
+            <span class="tree-view-node__expander-slot">
+              @if (hasChildren(item)) {
+                <button
+                  type="button"
+                  class="tree-view-node__expander"
+                  [attr.aria-expanded]="isOpen(item.id)"
+                  [attr.aria-label]="isOpen(item.id) ? 'Recolher ' + item.title : 'Expandir ' + item.title"
+                  [title]="isOpen(item.id) ? 'Recolher itens' : 'Expandir itens'"
+                  (click)="isOpen(item.id) ? hideSubDocuments(item.id) : showSubDocuments(item.id)">
+                  <i class="fa-solid" [class.fa-angle-down]="isOpen(item.id)" [class.fa-angle-right]="!isOpen(item.id)" aria-hidden="true"></i>
+                </button>
+              }
+              @else {
+                <span class="tree-view-node__expander-placeholder" aria-hidden="true"></span>
+              }
+            </span>
+
+            <button
+              type="button"
+              class="tree-view-node__drag-handle"
+              [class.cursor-grab]="dragEnabled()"
+              [class.cursor-not-allowed]="!dragEnabled()"
+              [disabled]="!dragEnabled()"
+              title="Arrastar para reorganizar"
+              aria-label="Arrastar para reorganizar"
+              (pointerdown)="startDrag($event, item)">
+              <i class="fa-solid fa-grip-lines" aria-hidden="true"></i>
+            </button>
+
+            <button
+              (click)="openDocument(item)"
+              appContextMenu
+              [options]="menuOptions"
+              [contextId]="item.id"
+              class="tree-view-node__select"
+              [style.color]="getTextColorStyle(getPersonalizationValue(item, 'color'))">
+              <span class="tree-view-node__icon" aria-hidden="true">
+                <i [class]="'fa-solid ' + (getPersonalizationItem(item, 'icon') || fallbackIcon())"></i>
+              </span>
+              <span [title]="item.title" class="tree-view-node__title">{{ item.title }}</span>
+            </button>
+
+            @if (allowCreate()) {
+              <app-icon-button
+                class="tree-view-node__action tree-view-node__create-action"
+                size="xss"
+                buttonType="secondaryActive"
+                icon="fa-solid fa-plus"
+                appFormOverlay
+                [title]="createTitle()"
+                [fields]="[{ key: 'name', label: createFieldLabel(), value: '' }]"
+                (onSave)="createChild(item.id, $event)">
+              </app-icon-button>
+            }
+            @else {
+              <span class="tree-view-node__action-placeholder tree-view-node__create-action" aria-hidden="true"></span>
+            }
+
+            @if (allowDetach() && !isRecursive()) {
+              <app-icon-button
+                class="tree-view-node__action tree-view-node__detach-action"
+                size="xss"
+                buttonType="secondary"
+                icon="fa-solid fa-link-slash"
+                title="Desvincular"
+                (click)="onDetach.emit(item.id)">
+              </app-icon-button>
+            }
+          </div>
+
+          @if (isOpen(item.id)) {
+            <div class="tree-view-node__children">
+              @if (hasChildren(item)) {
+                <app-tree-view-list
+                  [entityId]="entityId()"
+                  [entityTable]="entityTable()"
+                  [openInDialog]="openInDialog()"
+                  [allowCreate]="allowCreate()"
+                  [fallbackIcon]="fallbackIcon()"
+                  [emptyChildrenLabel]="emptyChildrenLabel()"
+                  [createTitle]="createTitle()"
+                  [createFieldLabel]="createFieldLabel()"
+                  [useCustomCreate]="useCustomCreate()"
+                  [dragEnabled]="dragEnabled()"
+                  [dragContextId]="dragContextId()"
+                  [canReparent]="canReparent()"
+                  [allowDetach]="allowDetach()"
+                  [glossy]="glossy()"
+                  [isRecursive]="true"
+                  (onArrayChange)="emitChange()"
+                  (onDocumentSelect)="emitDocumentSelection($event)"
+                  (onCreateChild)="emitCreateChild($event)"
+                  (onReparentRequested)="emitReparentRequested($event)"
+                  (onDetach)="onDetach.emit($event)"
+                  (onDelete)="onDelete.emit($event)"
+                  (onDocumentNewTab)="onDocumentNewTab.emit($event)"
+                  [documentArray]="item.SubDocuments || []">
+                </app-tree-view-list>
+              }
+              @else {
+                <p class="tree-view-node__empty-children">{{ emptyChildrenLabel() }}</p>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  

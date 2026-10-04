@@ -1,0 +1,271 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.tree-view-root {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-radius: 0.9rem;
+}
+
+.tree-view-root--drop-active,
+.tree-view-root--drop-invalid {
+  background: rgb(var(--tree-drop-color) / 5%);
+  box-shadow: inset 0 0 0 1px rgb(var(--tree-drop-color) / 28%), 0 8px 22px rgb(0 0 0 / 14%);
+}
+
+.tree-view-root--drop-active { --tree-drop-color: 250 204 21; }
+.tree-view-root--drop-invalid { --tree-drop-color: 248 113 113; }
+
+.tree-view-node__row {
+  display: grid;
+  min-width: 0;
+  min-height: 2.35rem;
+  grid-template-columns: 1.5rem 1.5rem minmax(0, 1fr) 1.625rem;
+  align-items: center;
+  gap: 0.15rem;
+  border-radius: 0.8rem;
+  padding: 0.1rem 0 0.1rem 0.15rem;
+  transition: background-color 150ms ease-out, box-shadow 150ms ease-out, opacity 150ms ease-out;
+}
+
+.tree-view-node__row--with-detach {
+  grid-template-columns: 1.5rem 1.5rem minmax(0, 1fr) 1.625rem 1.625rem;
+}
+
+.tree-view-node__row:hover {
+  background: rgb(255 255 255 / 3.2%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%);
+}
+
+.tree-view-node__row--drop-active,
+.tree-view-node__row--drop-invalid {
+  background: rgb(var(--tree-drop-color) / 8%);
+  box-shadow: inset 0 0 0 1px rgb(var(--tree-drop-color) / 34%), 0 5px 16px rgb(0 0 0 / 16%);
+}
+
+.tree-view-node__row--drop-active { --tree-drop-color: 250 204 21; }
+.tree-view-node__row--drop-invalid { --tree-drop-color: 248 113 113; }
+
+.tree-view-node__row--dragged {
+  opacity: 0.42;
+}
+
+.tree-view-node__expander-slot {
+  display: grid;
+  place-items: center;
+}
+
+.tree-view-node__expander,
+.tree-view-node__drag-handle {
+  display: grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border: 0;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: rgb(161 161 170 / 74%);
+  cursor: pointer;
+  transition: color 150ms ease-out, background-color 150ms ease-out;
+}
+
+.tree-view-node__expander {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.tree-view-node__expander i {
+  font-size: 0.7rem;
+}
+
+.tree-view-node__expander:hover,
+.tree-view-node__drag-handle:hover:not(:disabled) {
+  background: rgb(255 255 255 / 5%);
+  color: rgb(250 204 21 / 94%);
+}
+
+.tree-view-node__expander:focus-visible,
+.tree-view-node__drag-handle:focus-visible,
+.tree-view-node__select:focus-visible,
+:host ::ng-deep app-icon-button.tree-view-node__action button:focus-visible {
+  outline: 2px solid rgb(250 204 21 / 70%);
+  outline-offset: 1px;
+}
+
+.tree-view-node__expander-placeholder {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: rgb(161 161 170 / 36%);
+}
+
+.tree-view-node__drag-handle {
+  cursor: grab;
+  color: rgb(161 161 170 / 52%);
+}
+
+.tree-view-node__drag-handle:active:not(:disabled) {
+  cursor: grabbing;
+}
+
+.tree-view-node__drag-handle:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.tree-view-node__drag-handle i {
+  font-size: 0.68rem;
+}
+
+.tree-view-node__select {
+  display: flex;
+  min-width: 0;
+  min-height: 1.95rem;
+  align-items: center;
+  gap: 0.6rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0.65rem;
+  background: transparent;
+  padding: 0.1rem 0.4rem;
+  color: rgb(228 228 231 / 94%);
+  cursor: pointer;
+  text-align: start;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.tree-view-node__select:hover {
+  background: rgb(255 255 255 / 4%);
+  color: rgb(255 255 255 / 98%);
+}
+
+.tree-view-node__icon {
+  display: grid;
+  width: 1rem;
+  flex: 0 0 1rem;
+  place-items: center;
+  color: color-mix(in srgb, currentColor 72%, rgb(250 204 21));
+  font-size: 0.76rem;
+}
+
+.tree-view-node__title {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-view-node__action,
+.tree-view-node__action-placeholder {
+  display: grid;
+  width: 1.625rem;
+  height: 1.625rem;
+  place-items: center;
+}
+
+.tree-view-node__row--with-detach .tree-view-node__detach-action { grid-column: 4; }
+.tree-view-node__row--with-detach .tree-view-node__create-action { grid-column: 5; }
+
+:host ::ng-deep app-icon-button.tree-view-node__action button {
+  display: grid;
+  width: 1.625rem !important;
+  height: 1.625rem !important;
+  place-items: center;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: rgb(161 161 170 / 68%);
+}
+
+:host ::ng-deep app-icon-button.tree-view-node__action button:hover:not(:disabled) {
+  background: rgb(255 255 255 / 5%);
+  color: rgb(250 204 21 / 96%);
+}
+
+.tree-view-node__children {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-inline-start: 1.15rem;
+  padding: 0.25rem 0 0.2rem 0.9rem;
+}
+
+.tree-view-node__children::before {
+  position: absolute;
+  inset-block: 0.15rem 0.45rem;
+  inset-inline-start: 0.25rem;
+  width: 1px;
+  background: linear-gradient(to bottom, rgb(161 161 170 / 26%), rgb(161 161 170 / 8%));
+  content: '';
+}
+
+.tree-view-node__empty-children {
+  margin: 0.1rem 0 0.35rem;
+  color: rgb(161 161 170 / 78%);
+  font-size: 0.75rem;
+  line-height: 1.2rem;
+}
+
+@media (max-width: 767px) {
+  .tree-view-node__row,
+  .tree-view-node__row--with-detach {
+    min-height: 2.75rem;
+    grid-template-columns: 2.5rem 2.5rem minmax(0, 1fr) 2.5rem;
+    gap: 0.05rem;
+    padding: 0.05rem 0 0.05rem 0.1rem;
+  }
+
+  .tree-view-node__row--with-detach {
+    grid-template-columns: 2.5rem 2.5rem minmax(0, 1fr) 2.5rem 2.5rem;
+  }
+
+  .tree-view-node__row--with-detach .tree-view-node__detach-action { grid-column: 4; }
+  .tree-view-node__row--with-detach .tree-view-node__create-action { grid-column: 5; }
+
+  .tree-view-node__expander,
+  .tree-view-node__drag-handle,
+  .tree-view-node__action,
+  .tree-view-node__action-placeholder {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .tree-view-node__select {
+    min-height: 2.5rem;
+    gap: 0.5rem;
+    padding-inline: 0.35rem;
+  }
+
+  :host ::ng-deep app-icon-button.tree-view-node__action button {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+
+  :host ::ng-deep app-icon-button.tree-view-node__action button i {
+    font-size: 0.72rem;
+  }
+
+  .tree-view-node__children {
+    margin-inline-start: 0.65rem;
+    padding-inline-start: 0.75rem;
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-view-node__row,
+  .tree-view-node__expander,
+  .tree-view-node__drag-handle,
+  .tree-view-node__select {
+    transition: none;
+  }
+}

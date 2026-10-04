@@ -59,6 +59,7 @@ import { Dialog } from '@angular/cdk/dialog';
                   />
               </div>
               <app-icon-button
+                class="entity-list-create-button"
                 size="sm"
                 buttonType="secondaryActive"
                 icon="fa-solid fa-plus"

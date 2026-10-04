@@ -1,6 +1,5 @@
 import { inject, DestroyRef, AfterViewInit, ChangeDetectionStrategy, Component, input, OnChanges, OnInit, output, SimpleChanges } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NgClass, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { Dialog } from '@angular/cdk/dialog';
@@ -29,130 +28,9 @@ import {
 @Component({
   selector: 'app-tree-view-list',
   standalone: true,
-  imports: [OverlayModule, RouterModule, FormOverlayDirective, NgClass, NgStyle, IconButtonComponent, ContextMenuDirective],
-  template: `
-    <div
-      class="flex flex-col gap-1 transition-colors"
-      [attr.data-tree-root-context]="isRecursive() ? null : dragContextId()"
-      [ngClass]="{
-        'border-emerald-500 bg-emerald-950/40': isRootDropActive(),
-        'border-red-500 bg-red-950/30': isRootDropInvalid()
-      }">
-      @for (item of documentArray(); track item.id) {
-        <div class="flex flex-col ">
-          <div
-            class="grid items-center gap-1 py-0.5 transition-colors"
-            [style.grid-template-columns]="allowDetach() && !isRecursive() ? '1rem 1rem 1fr 1.5rem 1.5rem' : '1rem 1rem 1fr 1.5rem'"
-            data-tree-node-row
-            [attr.data-tree-context]="dragContextId()"
-            [attr.data-tree-node-id]="item.id"
-            [ngClass]="{
-              'border-zinc-800': !isDraggedItem(item) && !isNodeDropActive(item) && !isNodeDropInvalid(item),
-              'border-emerald-500 bg-emerald-950/40': isNodeDropActive(item),
-              'border-red-500 bg-red-950/30': isNodeDropInvalid(item),
-              'opacity-50': isDraggedItem(item)
-            }">
-            <span class="w-6 flex flex-row items-center">
-              @if (hasChildren(item)) {
-                @if (!isOpen(item.id)) {
-                  <app-icon-button (click)="showSubDocuments(item.id)" size="xs" buttonType="secondaryActive" icon="fa-solid fa-angle-right"></app-icon-button>
-                }
-                @else {
-                  <app-icon-button (click)="hideSubDocuments(item.id)" size="xs" buttonType="secondaryActive" icon="fa-solid fa-angle-down"></app-icon-button>
-                }
-              }
-              @else {
-                <span class="block h-5 w-5"></span>
-              }
-            </span>
-
-            <button
-              type="button"
-              class="flex  w-5 items-center justify-center rounded text-zinc-500 transition-colors hover:text-white"
-              [class.cursor-grab]="dragEnabled()"
-              [class.cursor-not-allowed]="!dragEnabled()"
-              [disabled]="!dragEnabled()"
-              title="Arrastar para reorganizar"
-              (pointerdown)="startDrag($event, item)">
-              <i class="fa-solid fa-grip-lines text-xs"></i>
-            </button>
-
-            <button
-              (click)="openDocument(item)"
-              appContextMenu
-              [options]="menuOptions"
-              [contextId]="item.id"
-              class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2"
-              [ngStyle]="{'color': getTextColorStyle(getPersonalizationValue(item, 'color'))}">
-              <div class="flex flex-row items-center">
-                <i class="fa-solid" [ngClass]="getPersonalizationItem(item, 'icon') || fallbackIcon()"></i>
-              </div>
-              <h2 [title]="item.title" class="text-xs">{{ item.title }}</h2>
-            </button>
-
-            @if (allowCreate()) {
-              <app-icon-button
-                size="xss"
-                buttonType="secondaryActive"
-                icon="fa-solid fa-plus"
-                appFormOverlay
-                [title]="createTitle()"
-                [fields]="[{ key: 'name', label: createFieldLabel(), value: '' }]"
-                (onSave)="createChild(item.id, $event)">
-              </app-icon-button>
-            }
-            @else {
-              <span></span>
-            }
-
-            @if (allowDetach() && !isRecursive()) {
-              <app-icon-button
-                size="xss"
-                buttonType="secondary"
-                icon="fa-solid fa-link-slash"
-                title="Desvincular"
-                (click)="onDetach.emit(item.id)">
-              </app-icon-button>
-            }
-          </div>
-
-          @if (isOpen(item.id)) {
-            <span class="pl-2">
-              @if (hasChildren(item)) {
-                <app-tree-view-list
-                  [entityId]="entityId()"
-                  [entityTable]="entityTable()"
-                  [openInDialog]="openInDialog()"
-                  [allowCreate]="allowCreate()"
-                  [fallbackIcon]="fallbackIcon()"
-                  [emptyChildrenLabel]="emptyChildrenLabel()"
-                  [createTitle]="createTitle()"
-                  [createFieldLabel]="createFieldLabel()"
-                  [useCustomCreate]="useCustomCreate()"
-                  [dragEnabled]="dragEnabled()"
-                  [dragContextId]="dragContextId()"
-                  [canReparent]="canReparent()"
-                  [allowDetach]="allowDetach()"
-                  [isRecursive]="true"
-                  (onArrayChange)="emitChange()"
-                  (onDocumentSelect)="emitDocumentSelection($event)"
-                  (onCreateChild)="emitCreateChild($event)"
-                  (onReparentRequested)="emitReparentRequested($event)"
-                  (onDetach)="onDetach.emit($event)"
-                  (onDelete)="onDelete.emit($event)"
-                  (onDocumentNewTab)="onDocumentNewTab.emit($event)"
-                  [documentArray]="item.SubDocuments || []">
-                </app-tree-view-list>
-              }
-              @else {
-                <p class="text-xs text-zinc-600">{{ emptyChildrenLabel() }}</p>
-              }
-            </span>
-          }
-        </div>
-      }
-    </div>
-  `,
+  imports: [OverlayModule, RouterModule, FormOverlayDirective, IconButtonComponent, ContextMenuDirective],
+  templateUrl: './tree-view-list.component.html',
+  styleUrl: './tree-view-list.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TreeViewListComponent {
@@ -186,6 +64,7 @@ export class TreeViewListComponent {
   canReparent = input<(draggedId: string, newParentId: string | null) => boolean>(() => true);
   isRecursive = input<boolean>(false);
   allowDetach = input<boolean>(false);
+  glossy = input<boolean>(false);
 
   menuOptions : ContextMenuOption[] = [
     { label: 'Abrir nova guia', action: (id: string) => this.onDocumentNewTab.emit(id), customIcon: 'fa-arrow-up-right-from-square' },

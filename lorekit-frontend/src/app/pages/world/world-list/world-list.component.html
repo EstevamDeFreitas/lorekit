@@ -38,6 +38,7 @@
                 aria-label="Pesquisar mundos" />
             </label>
             <app-icon-button
+              class="entity-list-create-button"
               size="sm"
               buttonType="secondaryActive"
               icon="fa-solid fa-plus"
@@ -53,7 +54,7 @@
           <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-1 scrollbar-dark">
             @for (world of filteredWorlds; track world.id) {
               <article
-                class="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/60 transition-colors hover:border-zinc-600 motion-reduce:transition-none"
+                class="world-listing-card overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/60 transition-colors hover:border-zinc-600 motion-reduce:transition-none"
                 [class.border-yellow-500]="selectedEntityId === world.id">
                 <div class="flex min-w-0 items-center gap-2.5 p-2.5">
                   <button
@@ -113,6 +114,7 @@
         } @else {
           <div class="min-h-0 flex-1">
             <app-tree-view-list
+              [glossy]="true"
               [openInDialog]="false"
               [allowCreate]="false"
               [dragEnabled]="false"
@@ -171,7 +173,7 @@
             @if (filteredWorlds.length > 0) {
               <div class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] items-start gap-4">
                 @for (world of filteredWorlds; track world.id) {
-                  <article class="world-card min-w-0 overflow-hidden rounded-[0.85rem] border border-zinc-800 bg-zinc-900 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-zinc-600 motion-reduce:transition-none" [class.world-card--default]="currentWorldId === world.id">
+                  <article class="world-card min-w-0 overflow-hidden rounded-[0.85rem] border border-zinc-800 bg-zinc-900 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-zinc-600 motion-reduce:transition-none" [class.world-card--default]="currentWorldId === world.id" [class.world-card--selected]="selectedEntityId === world.id">
                     <button
                       type="button"
                       class="group flex w-full flex-col border-0 bg-transparent p-0 text-left text-inherit"

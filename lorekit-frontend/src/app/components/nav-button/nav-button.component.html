@@ -1,5 +1,5 @@
 @if (route() == null) {
-  <a [ngClass]="getButtonClasses()" [style.--nav-active-color]="getActiveColorCss()" [title]="label()">
+  <button type="button" [ngClass]="getButtonClasses()" [style.--nav-active-color]="getActiveColorCss()" [attr.aria-label]="label()" [title]="label()">
     <div class="nav-button-content" [ngClass]="getContentClasses()">
       @if (icon()) {
         <div [ngClass]="getIconWrapperClasses()">
@@ -10,9 +10,9 @@
         <span>{{ label() }}</span>
       }
     </div>
-  </a>
+  </button>
 } @else {
-  <a [routerLink]="route()" [title]="label()" [queryParams]="params()" routerLinkActive="" #rla="routerLinkActive"
+  <a [routerLink]="route()" [title]="label()" [attr.aria-label]="label()" [attr.aria-current]="rla.isActive ? 'page' : null" [queryParams]="params()" routerLinkActive="" #rla="routerLinkActive"
     [ngClass]="getButtonClasses(rla.isActive)" [style.--nav-active-color]="getActiveColorCss()">
     <div class="nav-button-content" [ngClass]="getContentClasses()">
       @if (icon()) {

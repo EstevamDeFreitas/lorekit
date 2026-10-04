@@ -642,3 +642,81 @@ html[data-lorekit-glass] .screen-dialog {
 .mention-option:focus-visible { outline: 2px solid #fde047; outline-offset: -2px; }
 
 /* Mantém a toolbar do Tiptap abaixo dos cabeçalhos sticky das telas completas. */
+
+html[data-lorekit-glass] :is(.world-sidebar-panel, .timeline-browser-inner, .moodboard-browser-inner) {
+  border-color: rgb(161 161 170 / 17%);
+  background-color: rgb(24 24 27 / 50%);
+  background-image: radial-gradient(ellipse 26rem 22rem at 0% 0%, rgb(250 204 21 / 5%), transparent 75%), linear-gradient(140deg, rgb(255 255 255 / 3%), transparent 52%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%), 0 12px 30px rgb(0 0 0 / 14%);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+html[data-lorekit-glass] :is(.timeline-browser--panel .timeline-browser-inner, .moodboard-browser--panel .moodboard-browser-inner) {
+  background-color: rgb(24 24 27 / 50%);
+  background-image: linear-gradient(140deg, rgb(255 255 255 / 3%), transparent 52%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+html[data-lorekit-glass] :is(.timeline-directory, .moodboard-directory) {
+  border-color: rgb(161 161 170 / 16%);
+  background-color: rgb(9 9 11 / 60%);
+  background-image: radial-gradient(ellipse 38rem 26rem at 100% 0%, rgb(250 204 21 / 6%), transparent 75%), linear-gradient(140deg, rgb(255 255 255 / 3%), transparent 48%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%), 0 16px 40px rgb(0 0 0 / 16%);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+
+html[data-lorekit-glass] :is(.world-listing-card, .world-card, .timeline-compact-card, .timeline-card, .moodboard-compact-card, .moodboard-card) {
+  border-color: rgb(161 161 170 / 17%);
+  background-color: rgb(24 24 27 / 40%);
+  background-image: linear-gradient(140deg, rgb(255 255 255 / 4%), transparent 56%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%), 0 10px 26px rgb(0 0 0 / 14%);
+  backdrop-filter: blur(15px) saturate(135%);
+  -webkit-backdrop-filter: blur(15px) saturate(135%);
+}
+
+html[data-lorekit-glass] :is(.world-listing-card:hover, .world-card:hover, .timeline-compact-card:hover, .timeline-card:hover, .moodboard-compact-card:hover, .moodboard-card:hover) {
+  border-color: rgb(212 212 216 / 34%);
+  background-color: rgb(39 39 42 / 48%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%), 0 12px 28px rgb(0 0 0 / 18%);
+}
+
+html[data-lorekit-glass] :is(.world-listing-card.border-yellow-500, .world-card--selected, .world-card--default, .timeline-compact-card--selected, .moodboard-compact-card--selected, .moodboard-card--selected) {
+  border-color: rgb(250 204 21 / 42%);
+  background-image: linear-gradient(140deg, rgb(250 204 21 / 6%), rgb(255 255 255 / 3%) 48%, transparent 72%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%), 0 12px 28px rgb(0 0 0 / 18%), 0 0 22px rgb(250 204 21 / 7%);
+}
+
+html[data-lorekit-glass] :is(.world-listing-card > div:last-child, .timeline-compact-card-actions, .timeline-card-footer, .moodboard-compact-card-actions, .moodboard-card-footer) {
+  border-color: rgb(161 161 170 / 13%);
+}
+
+html[data-lorekit-glass] .tree-view-root--glossy .tree-view-node__row:not(.tree-view-node__row--drop-active):not(.tree-view-node__row--drop-invalid) {
+  border: 1px solid rgb(161 161 170 / 14%);
+  background-color: rgb(24 24 27 / 40%);
+  background-image: linear-gradient(140deg, rgb(255 255 255 / 3.5%), transparent 58%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%), 0 7px 18px rgb(0 0 0 / 10%);
+  backdrop-filter: blur(14px) saturate(135%);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
+}
+
+html[data-lorekit-glass] .tree-view-root--glossy .tree-view-node__row:not(.tree-view-node__row--drop-active):not(.tree-view-node__row--drop-invalid):hover {
+  background-color: rgb(39 39 42 / 48%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%), 0 9px 20px rgb(0 0 0 / 16%);
+}
+
+@media (max-width: 767px) {
+  app-icon-button.entity-list-create-button {
+    width: 2.5rem;
+    height: 2.5rem;
+    flex: 0 0 2.5rem;
+  }
+
+  app-icon-button.entity-list-create-button > button {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+}

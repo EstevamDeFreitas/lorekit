@@ -117,51 +117,8 @@ const SIDEBAR_SECTIONS: Record<string, SidebarSectionEntry> = {
   selector: 'app-sidebar-panel',
   standalone: true,
   imports: [AsyncPipe, NgComponentOutlet, NgClass],
-  template: `
-    @if (layout$ | async; as layout) {
-      @if (resolvedComponent()) {
-        @if (layout.sidebarVisible) {
-          <button
-            type="button"
-            class="absolute inset-0 z-[60] bg-black/40 md:hidden"
-            aria-label="Fechar menu lateral"
-            (click)="tabManager.setSidebarVisible(false)">
-          </button>
-        }
-        <div [ngClass]="layout.sidebarVisible ? 'transition-all duration-300 overflow-clip shrink-0 w-[min(20rem,calc(100vw-2rem))] md:w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0'" class="absolute md:relative inset-y-0 start-0 z-[70] md:z-auto flex flex-col border-r bg-zinc-925 border-zinc-700 h-full overflow-hidden shadow-2xl md:shadow-none" (touchstart)="onDrawerTouchStart($event)" (touchend)="onDrawerTouchEnd($event)">
-          <!-- Section header -->
-          <div class="flex flex-row items-center justify-between px-4 py-2  shrink-0">
-            <div class="flex flex-row items-center gap-2 p-[0.1rem] text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-              <i [class]="currentSectionIcon()" class="text-[10px]"></i>
-              <span>{{ currentSectionLabel() }}</span>
-            </div>
-            <!-- <button
-              type="button"
-              class="text-zinc-500 hover:text-zinc-300 transition-colors"
-              title="Ocultar painel"
-              (click)="tabManager.toggleSidebar()">
-              <i class="fa-solid fa-angles-left text-xs"></i>
-            </button> -->
-          </div>
-          <!-- List component rendered in panel mode -->
-          <div class="flex-1 h-full overflow-y-auto scrollbar-dark">
-            @if (componentRefresh.usePrimaryOutlet()) {
-              <ng-container
-                *ngComponentOutlet="resolvedComponent()!; inputs: { panelMode: true }">
-              </ng-container>
-            } @else {
-              <ng-container
-                *ngComponentOutlet="resolvedComponent()!; inputs: { panelMode: true }">
-              </ng-container>
-            }
-          </div>
-        </div>
-        <small class="border absolute md:fixed z-[80] md:z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-2 md:top-11 hover:bg-zinc-800 hover:cursor-pointer" [ngClass]="[layout.sidebarVisible ? 'start-[min(20rem,calc(100vw-2rem))] md:start-88' : 'start-2 md:start-12']" (click)="tabManager.toggleSidebar()">
-          <i class="fa-solid text-zinc-400" [ngClass]="[layout.sidebarVisible ? 'fa-angles-left' : 'fa-angles-right']"></i>
-        </small>
-      }
-    }
-  `,
+  templateUrl: './sidebar-panel.component.html',
+  styleUrl: './sidebar-panel.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SidebarPanelComponent implements OnInit {

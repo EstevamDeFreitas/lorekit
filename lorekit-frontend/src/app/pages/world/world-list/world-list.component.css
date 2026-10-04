@@ -17,6 +17,7 @@
 
 .world-card--default { border-color: rgb(234 179 8 / 55%); }
 .world-card--default:hover { border-color: var(--color-yellow-400); }
+.world-card--selected { box-shadow: inset 0 0 0 1px rgb(250 204 21 / 24%); }
 
 .world-card-cover::after {
   position: absolute;

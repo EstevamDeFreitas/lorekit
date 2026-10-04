@@ -1,0 +1,62 @@
+
+    @if (layout$ | async; as layout) {
+      @if (resolvedComponent()) {
+        @if (layout.sidebarVisible) {
+          <button
+            type="button"
+            class="sidebar-panel-backdrop absolute inset-0 z-[60] md:hidden"
+            aria-label="Fechar menu lateral"
+            (click)="tabManager.setSidebarVisible(false)">
+          </button>
+        }
+        <div [ngClass]="layout.sidebarVisible ? 'transition-all duration-300 overflow-clip shrink-0 w-[min(20rem,calc(100vw-2rem))] md:w-80' : 'transition-all duration-300 overflow-clip shrink-0 w-0'" class="sidebar-panel-drawer absolute md:relative inset-y-0 start-0 z-[70] md:z-auto flex flex-col h-full overflow-hidden" (touchstart)="onDrawerTouchStart($event)" (touchend)="onDrawerTouchEnd($event)">
+          <header class="sidebar-panel-header">
+            <div class="sidebar-panel-heading">
+              <i [class]="currentSectionIcon()" aria-hidden="true"></i>
+              <span>{{ currentSectionLabel() }}</span>
+            </div>
+            <div class="sidebar-panel-header-actions">
+              <button
+                type="button"
+                class="sidebar-panel-control sidebar-panel-collapse"
+                aria-label="Recolher painel lateral"
+                title="Recolher painel"
+                (click)="tabManager.toggleSidebar()">
+                <i class="fa-solid fa-angles-left" aria-hidden="true"></i>
+              </button>
+              <button
+                type="button"
+                class="sidebar-panel-control sidebar-panel-close"
+                aria-label="Fechar painel lateral"
+                title="Fechar painel"
+                (click)="tabManager.setSidebarVisible(false)">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            </div>
+          </header>
+          <div class="sidebar-panel-scroll scrollbar-dark">
+            @if (componentRefresh.usePrimaryOutlet()) {
+              <ng-container
+                *ngComponentOutlet="resolvedComponent()!; inputs: { panelMode: true }">
+              </ng-container>
+            } @else {
+              <ng-container
+                *ngComponentOutlet="resolvedComponent()!; inputs: { panelMode: true }">
+              </ng-container>
+            }
+          </div>
+        </div>
+        @if (!layout.sidebarVisible) {
+          <button
+            type="button"
+            class="sidebar-panel-toggle sidebar-panel-toggle--collapsed absolute md:fixed z-[80] md:z-[80] top-2 md:top-11 start-2 md:start-12"
+            aria-expanded="false"
+            aria-label="Expandir painel lateral"
+            title="Expandir painel lateral"
+            (click)="tabManager.toggleSidebar()">
+            <i class="fa-solid fa-angles-right" aria-hidden="true"></i>
+          </button>
+        }
+      }
+    }
+  

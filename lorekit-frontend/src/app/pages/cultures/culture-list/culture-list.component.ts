@@ -57,6 +57,7 @@ import { EntityHierarchyService } from '../../../services/entity-hierarchy.servi
                   class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10" />
               </div>
               <app-icon-button
+                class="entity-list-create-button"
                 size="sm"
                 buttonType="secondaryActive"
                 icon="fa-solid fa-plus"

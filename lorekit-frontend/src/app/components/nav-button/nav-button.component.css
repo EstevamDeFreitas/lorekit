@@ -4,6 +4,8 @@
 
 .nav-button {
   background-color: transparent;
+  border: 0;
+  font-family: inherit;
   text-decoration: none;
   transition: color 170ms ease-out;
 }
@@ -28,18 +30,23 @@
 }
 
 .nav-button:focus-visible {
-  outline: none;
+  outline: 2px solid color-mix(in srgb, var(--nav-active-color, var(--color-yellow-400)) 52%, transparent);
+  outline-offset: 2px;
+  border-radius: 0.75rem;
 }
 
 .nav-button:focus-visible .nav-button-content {
   filter: drop-shadow(0 0 8px color-mix(in srgb, var(--nav-active-color, var(--color-yellow-400)) 45%, transparent));
 }
 
-@media (max-width: 767px) {
-  .nav-button--activity {
-    min-width: 2.5rem;
-    min-height: 2.5rem;
-    justify-content: center;
-    padding: 0.35rem;
-  }
+.nav-button--activity {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  justify-content: center;
+  padding: 0;
+}
+
+.nav-button--activity .nav-button-content {
+  justify-content: center;
+  gap: 0;
 }

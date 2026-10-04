@@ -43,7 +43,7 @@ import { EntityHierarchyService } from '../../../services/entity-hierarchy.servi
                 <div class="w-8 h-5 flex flex-row justify-center items-center"><i class="fa fa-search"></i></div>
                 <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="filterObjects()" placeholder="Pesquisar..." class="w-full p-1 bg-transparent border-none outline-none placeholder:text-white/10" />
               </div>
-              <app-icon-button size="sm" buttonType="secondaryActive" icon="fa-solid fa-plus" appFormOverlay [title]="'Criar Objeto'" [fields]="getFormFields()" (onSave)="createObject($event)"></app-icon-button>
+              <app-icon-button class="entity-list-create-button" size="sm" buttonType="secondaryActive" icon="fa-solid fa-plus" appFormOverlay [title]="'Criar Objeto'" [fields]="getFormFields()" (onSave)="createObject($event)"></app-icon-button>
             </div>
 
             <app-tree-view-list
