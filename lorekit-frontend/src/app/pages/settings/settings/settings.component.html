@@ -48,7 +48,7 @@
                   <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-base text-yellow-400"><i class="fa-solid fa-sliders"></i></span>
                   <div>
                     <h3>Configurações gerais</h3>
-                    <p>Defina como o Lorekit exporta textos e abre o editor rico.</p>
+                    <p>Defina como o Lorekit exporta textos, abre o editor e apresenta sua interface.</p>
                   </div>
                 </div>
               </header>
@@ -70,6 +70,40 @@
                     <label class="flex min-w-0 items-start gap-2.5 rounded-[0.65rem] border border-zinc-700 bg-zinc-950 p-3 text-zinc-300 transition-colors duration-150 hover:border-zinc-500 hover:bg-zinc-800 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-yellow-300" [class.settings-choice--active]="exportTextFormat === 'md'" for="mdFormat">
                       <input class="mt-0.5 shrink-0 accent-yellow-400" type="radio" id="mdFormat" name="exportTextFormat" value="md" [(ngModel)]="exportTextFormat" (ngModelChange)="globalParameterService.setParameter('exportTextFormat', exportTextFormat)">
                       <span><strong class="block text-[13px] font-semibold text-zinc-100">.md</strong><small class="mt-0.5 block text-[11px] leading-4 text-zinc-400">Markdown</small></span>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="grid grid-cols-1 items-center gap-3.5 border-b border-zinc-800 p-4 last:border-b-0 md:grid-cols-[minmax(220px,0.85fr)_minmax(0,1.15fr)] md:gap-5 md:p-5">
+                  <div class="flex items-start gap-3">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-sm text-zinc-300"><i class="fa-solid fa-layer-group"></i></span>
+                    <div>
+                      <h4>Superfícies translúcidas</h4>
+                      <p>Use painéis com transparência e desfoque em todo o Lorekit.</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-950/50 px-3.5 py-3">
+                    <span class="text-xs font-medium text-zinc-300">{{ appearanceEffects.glassEnabled() ? 'Ativado' : 'Desativado' }}</span>
+                    <label class="settings-effect-switch">
+                      <input type="checkbox" role="switch" aria-label="Ativar superfícies translúcidas em todo o Lorekit" [ngModel]="appearanceEffects.glassEnabled()" (ngModelChange)="appearanceEffects.setGlassEnabled($event)">
+                      <span class="settings-effect-switch-track" aria-hidden="true"></span>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="grid grid-cols-1 items-center gap-3.5 border-b border-zinc-800 p-4 last:border-b-0 md:grid-cols-[minmax(220px,0.85fr)_minmax(0,1.15fr)] md:gap-5 md:p-5">
+                  <div class="flex items-start gap-3">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-sm text-zinc-300"><i class="fa-solid fa-grip"></i></span>
+                    <div>
+                      <h4>Ruído suave</h4>
+                      <p>Aplique uma granulação fina à interface, com ou sem transparência.</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-950/50 px-3.5 py-3">
+                    <span class="text-xs font-medium text-zinc-300">{{ appearanceEffects.noiseEnabled() ? 'Ativado' : 'Desativado' }}</span>
+                    <label class="settings-effect-switch">
+                      <input type="checkbox" role="switch" aria-label="Ativar ruído suave em todo o Lorekit" [ngModel]="appearanceEffects.noiseEnabled()" (ngModelChange)="appearanceEffects.setNoiseEnabled($event)">
+                      <span class="settings-effect-switch-track" aria-hidden="true"></span>
                     </label>
                   </div>
                 </section>

@@ -81,6 +81,67 @@
   background: rgb(250 204 21 / 6%);
 }
 
+.settings-effect-switch {
+  position: relative;
+  display: inline-flex;
+  width: 2.75rem;
+  height: 1.55rem;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.settings-effect-switch input {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.settings-effect-switch-track {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--color-zinc-600);
+  border-radius: 999px;
+  background: var(--color-zinc-800);
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.settings-effect-switch-track::after {
+  position: absolute;
+  top: 0.18rem;
+  left: 0.18rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  background: var(--color-zinc-400);
+  content: "";
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+.settings-effect-switch input:checked + .settings-effect-switch-track {
+  border-color: rgb(250 204 21 / 58%);
+  background: rgb(250 204 21 / 20%);
+}
+
+.settings-effect-switch input:checked + .settings-effect-switch-track::after {
+  transform: translateX(1.18rem);
+  background: var(--color-yellow-300);
+}
+
+.settings-effect-switch input:focus-visible + .settings-effect-switch-track {
+  outline: 2px solid var(--color-yellow-300);
+  outline-offset: 3px;
+}
+
+.settings-effect-switch input:disabled + .settings-effect-switch-track {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .settings-empty-state--compact {
   min-height: 14rem;
   border: 0;

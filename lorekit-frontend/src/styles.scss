@@ -94,6 +94,101 @@ body {
   font-size: 1rem;
 }
 
+html[data-lorekit-glass] body {
+  background-color: transparent;
+  background-image:
+    radial-gradient(ellipse 58rem 42rem at -8% -12%, rgb(250 204 21 / 8%), transparent 70%),
+    radial-gradient(ellipse 48rem 38rem at 108% 108%, rgb(79 70 229 / 9%), transparent 72%),
+    linear-gradient(145deg, rgb(9 9 11 / 32%), rgb(17 17 22 / 38%) 58%, rgb(9 9 11 / 44%));
+  background-attachment: fixed;
+}
+
+html[data-lorekit-glass] :where(
+  [class*="rounded-"][class*="bg-zinc-"],
+  .moodboard-browser-inner,
+  .timeline-browser-inner,
+  .moodboard-directory,
+  .timeline-directory,
+  .context-menu,
+  .mention-dropdown,
+  .screen-dialog,
+  .color-picker,
+  .tiptap-toolbar,
+  .tiptap-selection-tooltip,
+  .tiptap-color-picker
+) {
+  backdrop-filter: blur(14px) saturate(125%);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+}
+
+html[data-lorekit-glass] :where([class~="bg-zinc-950"]):not([style*="background"]) {
+  background-color: rgb(9 9 11 / 76%);
+}
+
+html[data-lorekit-glass] :where([class~="bg-zinc-925"]):not([style*="background"]) {
+  background-color: rgb(20 20 23 / 80%);
+}
+
+html[data-lorekit-glass] :where([class~="bg-zinc-900"]):not([style*="background"]) {
+  background-color: rgb(24 24 27 / 78%);
+}
+
+html[data-lorekit-glass] :where([class~="bg-zinc-800"]):not([style*="background"]) {
+  background-color: rgb(39 39 42 / 68%);
+}
+
+html[data-lorekit-glass] :where([class~="bg-zinc-700"]):not([style*="background"]) {
+  background-color: rgb(63 63 70 / 64%);
+}
+
+html[data-lorekit-glass] :where([class*="hover:bg-zinc-800"]:hover):not([style*="background"]) {
+  background-color: rgb(39 39 42 / 78%);
+}
+
+html[data-lorekit-glass] :where([class*="hover:bg-zinc-700"]:hover):not([style*="background"]) {
+  background-color: rgb(63 63 70 / 74%);
+}
+
+html[data-lorekit-glass] :where(
+  .moodboard-browser-inner,
+  .timeline-browser-inner,
+  .moodboard-directory,
+  .timeline-directory,
+  .moodboard-compact-card,
+  .timeline-compact-card,
+  .context-menu,
+  .mention-dropdown,
+  .screen-dialog,
+  .color-picker,
+  .tiptap-toolbar,
+  .tiptap-selection-tooltip,
+  .tiptap-color-picker
+) {
+  backdrop-filter: blur(14px) saturate(125%);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+}
+
+html[data-lorekit-glass] :where(.moodboard-browser-inner, .timeline-browser-inner) {
+  background-color: rgb(24 24 27 / 78%);
+}
+
+html[data-lorekit-glass] :where(.moodboard-directory, .timeline-directory) {
+  background-color: rgb(9 9 11 / 78%);
+}
+
+html[data-lorekit-noise] body::after {
+  position: fixed;
+  z-index: 2147483647;
+  inset: 0;
+  background-image: url("assets/background-patterns/soft-noise.png");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+  content: "";
+  opacity: 0.1;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
 @media (max-width: 767px) {
   html {
     -webkit-text-size-adjust: 100%;
@@ -203,6 +298,16 @@ select:focus {
   background-color: var(--color-zinc-950);
   border-style: var(--tw-border-style);
   border-width: 1px;
+}
+
+html[data-lorekit-glass] .screen-dialog {
+  border-color: rgb(161 161 170 / 26%);
+  background-color: rgb(18 18 22 / 98%);
+  box-shadow:
+    0 24px 64px rgb(0 0 0 / 42%),
+    inset 0 1px 0 rgb(255 255 255 / 5%);
+  backdrop-filter: blur(32px) saturate(150%);
+  -webkit-backdrop-filter: blur(32px) saturate(150%);
 }
 
 .screen-dialog.ironpaw-dialog {

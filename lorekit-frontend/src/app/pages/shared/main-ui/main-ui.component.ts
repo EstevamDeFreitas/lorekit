@@ -6,6 +6,7 @@ import { NavButtonComponent } from "../../../components/nav-button/nav-button.co
 import { WorkspaceComponent } from '../../../components/workspace/workspace.component';
 import { SidebarPanelComponent } from '../../../components/sidebar-panel/sidebar-panel.component';
 import { TabManagerService } from '../../../services/tab-manager.service';
+import { AppearanceEffectsService } from '../../../services/appearance-effects.service';
 
 @Component({
   selector: 'app-main-ui',
@@ -98,6 +99,7 @@ import { TabManagerService } from '../../../services/tab-manager.service';
 export class MainUiComponent {
   settingsDialog = inject(Dialog);
   tabManager = inject(TabManagerService);
+  private readonly appearanceEffects = inject(AppearanceEffectsService);
 
   private layoutTouchStartX: number | null = null;
 

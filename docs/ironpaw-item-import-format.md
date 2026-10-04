@@ -2,6 +2,34 @@
 
 Este documento descreve o JSON aceito pelo **Gerenciador de Conteúdo** do Lorekit. Ele foi escrito para servir de contrato para uma IA gerar vários itens genéricos de uma vez.
 
+## Prompt de geração para copiar
+
+Anexe este documento à LLM ou cole o conteúdo dele antes do prompt. Preencha os campos entre colchetes:
+
+````text
+Use o arquivo `ironpaw-item-import-format.md` como contrato obrigatório do formato de saída.
+
+Gere [QUANTIDADE] itens para o Lorekit, seguindo este pedido:
+- Tema e contexto: [TEMA, CENÁRIO OU CULTURA]
+- Categorias desejadas: [common, tool, consumable, weapon, protection, wearable]
+- Faixa de raridade: [common, uncommon, rare, unique ou sem raridade]
+- Tom e idioma: [TOM; por exemplo, português brasileiro]
+- Restrições adicionais: [LIMITES, MATERIAIS, TECNOLOGIA, ORÇAMENTO, ETC.]
+
+Regras de saída:
+1. Responda somente com um objeto JSON válido, sem introdução, explicações ou cercas Markdown.
+2. Use exatamente o envelope `format: "lorekit-ironpaw-items"`, `version: 1`, `system: "ironpaw"`, `package: { "id": "...", "name": "..." }`, `items` e `assets` descrito no arquivo. Dê ao pacote um ID estável e legível.
+3. Gere um `portableId` único e determinístico para cada item, em minúsculas e baseado no tema e no nome. Preserve o mesmo ID para o mesmo item em futuras versões. Comece com `revision: 1`.
+4. Use somente campos e valores permitidos pelo arquivo. Inclua os campos obrigatórios e os campos específicos da categoria; não acrescente propriedades próprias.
+5. Não invente regras automáticas. Dano, recuperação, condições e efeitos especiais devem ser descritos como texto narrativo quando não houver uma regra estruturada neste formato.
+6. Para ferramentas, descreva a finalidade e trate o bônus de +1 como contextual à ação, nunca permanente. Para proteções, escolha o nível leve, médio ou pesado e descreva efeitos sem aplicar dano ou condições automaticamente. Vestíveis comuns não dão dano ou defesa automaticamente.
+7. Para item único com mais de dois benefícios, inclua pelo menos um custo, limitação ou consequência em `uniqueCosts`.
+8. Não gere imagens, hashes, base64, URLs ou caminhos de arquivo. Use `imageReference: null`, `imageAssetSha256: null` e `assets: []`.
+9. Antes de responder, confira sintaxe JSON, IDs sem duplicatas, enums válidos, limites de pilha positivos e campos da categoria. Não inclua comentários JSON nem vírgulas sobrando.
+````
+
+Depois de receber o resultado, salve o objeto como `.json` em UTF-8 ou cole o texto no fluxo de importação do Gerenciador de Conteúdo.
+
 ## Envelope do arquivo
 
 O arquivo deve ser UTF-8, ter extensão `.json` e seguir este formato:
@@ -29,7 +57,7 @@ Cada objeto em `items` possui estes campos:
 | Campo | Obrigatório | Tipo | Descrição |
 |---|---:|---|---|
 | `portableId` | sim | string | Identificador estável do item no compartilhamento. Deve ser único no arquivo. Use, por exemplo, `ironpaw.generic.corda-v1`. |
-| `revision` | não | inteiro positivo | Revisão do conteúdo. Se omitido ou inválido, o Lorekit usa `1`. |
+| `revision` | recomendado | inteiro positivo | Revisão do conteúdo. Use `1` para a primeira versão e preserve o `portableId` quando atualizar o mesmo item. Se omitido ou inválido, o Lorekit usa `1`. |
 | `name` | sim | string | Nome exibido no catálogo e no inventário. |
 | `description` | sim | string | Descrição conhecida pelo personagem. Pode ser vazia. |
 | `concept` | não | string ou `null` | Conceito ou referência de design. |
@@ -69,6 +97,7 @@ Campos comuns:
 - `equipmentSlots` aceita qualquer combinação de `helmet`, `armor`, `pants`, `boots`, `gloves`, `accessory1`, `accessory2`, `accessory3`, `underwear`, `primary`, `secondary` e `reserve` (arco/arma reserva). `underwear` representa a roupa íntima inferior; os três slots `accessory` são independentes.
 - `uniqueBenefits` e `uniqueCosts` são listas narrativas. Se `unique` for `true` e houver mais de dois benefícios, informe ao menos um custo, limitação ou consequência.
 - `narrativeEffect` registra efeitos descritivos. Ele não altera atributos automaticamente.
+- `imageReference` e `imageAssetSha256` devem ser `null` quando o pacote não transportar imagem. Para itens gerados por LLM, mantenha-os assim e use `assets: []`.
 
 ### Campos por categoria
 
@@ -84,7 +113,7 @@ Armas (`category: "weapon"`):
 }
 ```
 
-`properties` aceita `light`, `heavy`, `reach`, `recoil` e `technical`. `damageTypes` aceita `cutting`, `piercing` e `blunt`. `hands` deve ser `1` ou `2`.
+`properties` aceita `light`, `heavy`, `reach`, `recoil` e `technical`. `damageTypes` aceita `cutting`, `piercing` e `blunt`. `hands` deve ser `1` ou `2`. Tipos de dano são descritores; não determine valores numéricos de dano pela raridade.
 
 Proteções (`category: "protection"`):
 
@@ -95,7 +124,7 @@ Proteções (`category: "protection"`):
 }
 ```
 
-`tier` aceita `light` (+1 PR), `medium` (+2 PR) ou `heavy` (+3 PR). A contribuição é aplicada ao PR máximo quando o item está equipado no espaço `armor`.
+`tier` aceita `light` (+1 PR), `medium` (+2 PR) ou `heavy` (+3 PR). A contribuição é aplicada ao PR máximo quando o item está equipado no espaço `armor`. O formato descreve a categoria e os efeitos; não calcula dano nem aplica condições automaticamente.
 
 Consumíveis (`category: "consumable"`):
 
@@ -107,9 +136,9 @@ Consumíveis (`category: "consumable"`):
 }
 ```
 
-`subtype` aceita `recovery`, `offensive` ou `utility`. O uso consome uma ação e uma unidade; aplicação de CV, PR ou condições continua sendo manual nesta versão. `actionCost` é mantido como `1`.
+`subtype` aceita `recovery`, `offensive` ou `utility`. O uso consome uma ação e uma unidade; aplicação de CV, PR ou condições continua sendo manual nesta versão. Informe `actionCost: 1`.
 
-Ferramentas podem preencher `toolPurpose`; itens vestíveis podem usar `equipmentSlots` e `narrativeEffect` sem exigir uma seção adicional.
+Ferramentas devem preencher `toolPurpose`; o bônus de +1 depende da adequação da ferramenta à ação e não é permanente. Itens vestíveis usam `equipmentSlots` e `narrativeEffect` sem exigir uma seção adicional. Itens vestíveis comuns não concedem dano ou defesa automaticamente.
 
 ## Exemplo com vários itens
 
@@ -202,12 +231,17 @@ Um recurso de imagem, quando necessário, tem esta forma:
 }
 ```
 
-São aceitos PNG, JPEG e WebP. O hash deve ser SHA-256 em hexadecimal, sem duplicatas; o conteúdo deve ser base64 puro, sem prefixo `data:`, URL ou caminho de arquivo. Cada imagem pode ter até 2 MiB, o conjunto até 10 MiB e cada dimensão até 4096 px. A validação já existe, mas a aplicação de pacotes que contêm imagens aguarda o staging/recovery de assets; para importar agora, mantenha `assets: []`.
+São aceitos PNG, JPEG e WebP. O hash deve ser SHA-256 em hexadecimal, sem duplicatas; o conteúdo deve ser base64 puro, sem prefixo `data:`, URL ou caminho de arquivo. Cada imagem pode ter até 2 MiB, o conjunto até 10 MiB e cada dimensão declarada deve ficar entre 1 e 4096 px. Cada item com imagem deve apontar para ela usando `definition.imageReference: "asset-sha256:<hash>"`; o hash também pode aparecer em `imageAssetSha256`. O asset correspondente precisa estar em `assets`.
+
+O importador atual faz staging dos assets antes de salvar os itens. Mesmo assim, **não peça a uma LLM para inventar imagens, base64 ou hashes**: esses valores precisam corresponder aos bytes reais da imagem e ao SHA-256 calculado sobre eles. Para gerar itens textuais, mantenha `imageReference` e `imageAssetSha256` como `null` e `assets` vazio. Não use URL, caminho local ou referência `lorekit-asset://` em um pacote.
 
 ## Validação, conflitos e geração automática
 
 - O pacote aceita até 500 itens e 20 MiB de JSON.
-- `portableId` duplicado, versão diferente de `1`, categoria inválida ou definição incompatível rejeitam o pacote inteiro antes de qualquer alteração.
+- O envelope deve usar `version: 1`, `format: "lorekit-ironpaw-items"` e `system: "ironpaw"`. O importador aceita até 500 itens e rejeita IDs vazios ou duplicados, cores inválidas, limites de pilha não positivos e referências de imagem inválidas ou ausentes do pacote.
+- O modelo normaliza alguns campos ausentes ou inválidos para valores padrão. Gere todas as propriedades descritas neste guia e dados específicos completos para cada categoria, sem depender dessa normalização silenciosa.
 - Na prévia, itens iguais aparecem como **equivalentes**, itens novos como **novos** e o mesmo `portableId` com conteúdo diferente como **conflito**.
 - Para conflitos, escolha **Atualizar conflitos** (`update`), **Manter locais** (`keep`) ou **Importar como cópia** (`copy`). A prévia é revalidada antes de salvar; se o catálogo mudou, valide o arquivo novamente.
-- Para uma IA gerar muitos itens, crie um `portableId` determinístico por item, mantenha `revision: 1`, use `null` em opcionais ausentes, respeite os enums acima e mantenha efeitos narrativos separados de bônus automáticos. Retorne somente JSON válido dentro do envelope.
+- A comparação é feita pelo `portableId`, nome, descrição e definição. O nome sozinho não identifica um item; IDs diferentes são tratados como itens diferentes, mesmo com o mesmo nome.
+- O pacote JSON pode ter até 20 MiB. Não gere mais de 500 itens em um único pacote.
+- Para geração automática, use IDs determinísticos, `revision: 1`, `null` nos opcionais ausentes, enums exatamente como descritos e efeitos narrativos separados de bônus automáticos. Retorne somente JSON válido dentro do envelope.

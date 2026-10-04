@@ -23,6 +23,7 @@ import { UiFieldTemplate } from '../../../models/ui-field-config.model';
 import { UiFieldLayoutImportDestination, UiFieldLayoutImportPlan, UiFieldLayoutPortabilityService } from '../../../services/ui-field-layout-portability.service';
 import { EventType as TimelineEventType } from '../../../models/event-type.model';
 import { EventTypeService } from '../../../services/event-type.service';
+import { AppearanceEffectsService } from '../../../services/appearance-effects.service';
 
 @Component({
   selector: 'app-settings',
@@ -33,6 +34,7 @@ import { EventTypeService } from '../../../services/event-type.service';
 export class SettingsComponent implements OnInit{
   confirm = inject<ConfirmService>(ConfirmService);
   globalParameterService = inject(GlobalParameterService);
+  appearanceEffects = inject(AppearanceEffectsService);
   organizationTypeService = inject(OrganizationTypeService);
   objectTypeService = inject(ObjectTypeService);
   eventTypeService = inject(EventTypeService);

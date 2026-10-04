@@ -460,6 +460,13 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    ...(process.platform === 'win32'
+      ? {
+          backgroundColor: '#00000000',
+          backgroundMaterial: 'acrylic',
+          transparent: true,
+        }
+      : { backgroundColor: '#09090b' }),
     webPreferences: {
       contextIsolation: true,
       webSecurity: isDev ? false : true,
