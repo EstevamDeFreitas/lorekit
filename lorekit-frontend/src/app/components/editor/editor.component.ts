@@ -22,7 +22,9 @@ import {
   DISCARD_PENDING_SAVES_EVENT,
   FLUSH_PENDING_SAVES_EVENT,
   PendingSaveEventDetail,
+  pendingSaveEventMatchesTab,
 } from '../../utils/pending-save-event';
+import { WORKSPACE_TAB_CONTEXT } from '../../models/workspace-tab-context';
 import { EditorJsAdapter, EditorJsOutputData } from './editor-js.adapter';
 import { LorekitDocumentCodec } from './lorekit-document.codec';
 import { TiptapAdapter } from './tiptap.adapter';
@@ -156,6 +158,8 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   readonly historyField = input<string | HistoryField | null>(null);
   private readonly historyContext = inject(EntityHistoryContextDirective, { optional: true });
   private readonly history = inject(EntityHistoryService);
+  private readonly tabContext = inject(WORKSPACE_TAB_CONTEXT, { optional: true });
+  private unregisterTabLifecycle?: () => void;
   private historyAddress: HistoryAddress | null = null;
   private historyPrevious = '';
   private historyCapture: Promise<void> = Promise.resolve();
@@ -190,6 +194,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   private mentionPlugin: TailwindMentionPlugin | null = null;
   private readonly onFlushPendingSaves = (event: Event): void => {
     const detail = (event as CustomEvent<PendingSaveEventDetail>).detail;
+    if (!pendingSaveEventMatchesTab(detail, this.tabContext?.tabId)) return;
     if (detail && this.isTiptap && this.tiptap && this.hasPendingChanges()) {
       detail.flushes.push(this.saveContent());
       return;
@@ -244,6 +249,13 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
 
   ngAfterViewInit() {
     this.initializeHistory();
+    this.unregisterTabLifecycle = this.tabContext?.onActiveChange(active => {
+      if (active) {
+        if (this.hasPendingChanges()) this.scheduleSave();
+      } else {
+        this.cancelScheduledSave();
+      }
+    });
     window.addEventListener(FLUSH_PENDING_SAVES_EVENT, this.onFlushPendingSaves);
     window.addEventListener(DISCARD_PENDING_SAVES_EVENT, this.onDiscardPendingSaves);
     if (this.isTiptap) {
@@ -504,6 +516,7 @@ export class EditorComponent implements AfterViewInit, OnDestroy{
   }
 
   ngOnDestroy(): void {
+    this.unregisterTabLifecycle?.();
     if (!this.discardPendingSaveOnDestroy && (this.tiptap || this.editor)) this.captureHistory();
     this.destroyed = true;
     this.cancelScheduledSave();

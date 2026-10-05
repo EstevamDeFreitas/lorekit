@@ -132,7 +132,7 @@ describe('RelationGraphComponent', () => {
     const component = createComponent({ nodes: [sourceNode, targetNode], edges: [] }) as any;
     component.setRoot = jasmine.createSpy('setRoot');
     component.makeNodeRoot(targetNode);
-    expect(component.setRoot).toHaveBeenCalledWith('Location', 'target', true);
+    expect(component.setRoot).toHaveBeenCalledWith('Location', 'target');
   });
 
   it('keeps contextual create/edit actions scoped to the selected node', () => {
@@ -153,6 +153,10 @@ describe('RelationGraphComponent', () => {
     component.currentRootId = '';
     component.currentWorldId = '';
     component.linkService = {
+      getEntitiesForScope: jasmine.createSpy('getEntitiesForScope').and.returnValue([
+        { table: 'Character', id: 'first', label: 'first' },
+        { table: 'Character', id: 'second', label: 'second' },
+      ]),
       getEntitiesByTable: jasmine.createSpy('getEntitiesByTable').and.returnValue([
         { table: 'Character', id: 'second', label: 'second' },
       ]),
@@ -167,11 +171,20 @@ describe('RelationGraphComponent', () => {
       deleteLink,
       invertLinkDirection,
     };
+    component.entityMentionService = {
+      buildMentionHref: jasmine.createSpy('buildMentionHref').and.returnValue('#/app/relations'),
+    };
     component.tabManager = { openTab: jasmine.createSpy('openTab'), openRelationsTab: jasmine.createSpy('openRelationsTab') };
 
     component.selectNode(firstNode);
     component.startNewRelation();
-    component.relationDraft.toId = 'second';
+    component.selectDraftTarget({
+      entityTable: 'Character',
+      entityId: 'second',
+      label: 'second',
+      subtitle: 'Characters',
+      href: '#/app/relations',
+    });
     component.saveDraftRelation();
 
     expect(createLink).toHaveBeenCalledWith(jasmine.objectContaining({

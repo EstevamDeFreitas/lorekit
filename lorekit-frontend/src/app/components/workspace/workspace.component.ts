@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   inject,
   OnInit,
   signal,
@@ -11,6 +12,7 @@ import { TabManagerService } from '../../services/tab-manager.service';
 import { WorkspacePaneComponent } from './pane/pane.component';
 import { PaneResizeHandleComponent } from './resize-handle/resize-handle.component';
 import { WorkspaceLayout } from '../../models/workspace.model';
+import { WorkspaceTabViewHostService } from '../../services/workspace-tab-view-host.service';
 
 @Component({
   selector: 'app-workspace',
@@ -47,7 +49,14 @@ import { WorkspaceLayout } from '../../models/workspace.model';
 })
 export class WorkspaceComponent {
   private tabManager = inject(TabManagerService);
+  private readonly tabViewHost = inject(WorkspaceTabViewHostService);
+  private readonly destroyRef = inject(DestroyRef);
   layout$ = this.tabManager.layout$;
+
+  constructor() {
+    const subscription = this.tabManager.layout$.subscribe(layout => this.tabViewHost.reconcile(layout));
+    this.destroyRef.onDestroy(() => subscription.unsubscribe());
+  }
 
   onRatioChange(layout: WorkspaceLayout, leftIndex: number, ratios: [number, number]): void {
     // Live update while dragging — update in-memory without persisting yet

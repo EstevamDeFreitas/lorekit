@@ -6,6 +6,11 @@
   class="workspace-pane-content flex-1 overflow-hidden relative"
   [class.workspace-pane-content--focused]="focused()"
   [class.workspace-pane-content--has-active-tab]="!!pane().activeTabId">
+  @if (tabManager.transitionError()) {
+    <div role="alert" class="absolute inset-x-3 top-3 z-20 rounded-md border border-red-500/40 bg-red-950/95 px-3 py-2 text-xs text-red-100 shadow-lg">
+      Não foi possível salvar as alterações antes da troca. A aba continua aberta; tente novamente.
+    </div>
+  }
   @if (pane().tabs.length === 0) {
     <!-- Empty pane placeholder -->
     <div class="h-full flex flex-col items-center justify-center text-zinc-600 gap-3 select-none">
@@ -23,26 +28,17 @@
       }
     </div>
   } @else {
-    @for (tab of pane().tabs; track tab.id) {
-      @if (tab.id === pane().activeTabId) {
-        <div
-          class="workspace-tab-viewport absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-dark"
-          [class.px-3]="!usesFullBleedEditor(tab.entityType)"
-          [class.workspace-tab-full-bleed]="usesFullBleedEditor(tab.entityType)">
-          @if (tab.resolvedComponent) {
-            @if (componentRefresh.usePrimaryOutlet()) {
-              <ng-container *ngComponentOutlet="tab.resolvedComponent; inputs: getTabInputs(tab)"></ng-container>
-            } @else {
-              <ng-container *ngComponentOutlet="tab.resolvedComponent; inputs: getTabInputs(tab)"></ng-container>
-            }
-          } @else {
-            <!-- Loading -->
-            <div class="h-full flex items-center justify-center text-zinc-500 text-sm">
-              <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Carregando...
-            </div>
-          }
+    @let activeTab = getActiveTab();
+    <div
+      class="workspace-tab-viewport absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-dark"
+      [class.px-3]="!activeTab || !usesFullBleedEditor(activeTab.entityType)"
+      [class.workspace-tab-full-bleed]="!!activeTab && usesFullBleedEditor(activeTab.entityType)">
+      @if (activeTab && !activeTab.resolvedComponent) {
+        <div class="h-full flex items-center justify-center text-zinc-500 text-sm">
+          <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Carregando...
         </div>
       }
-    }
+      <ng-container #tabViewOutlet></ng-container>
+    </div>
   }
 </div>

@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { EntityHistoryService } from './entity-history.service';
 import { BehaviorSubject } from 'rxjs';
 import {
@@ -15,6 +15,7 @@ import {
 } from '../models/workspace.model';
 import { GlobalParameterService } from './global-parameter.service';
 import { ComponentRegistryService } from './component-registry.service';
+import { flushPendingComponentSaves } from '../utils/pending-save-event';
 
 const LAYOUT_KEY = 'CurrentUILayout';
 
@@ -48,6 +49,8 @@ function emptyLayout(): WorkspaceLayout {
 export class TabManagerService {
   private readonly history = inject(EntityHistoryService);
   private readonly _layout$ = new BehaviorSubject<WorkspaceLayout>(emptyLayout());
+  private transitionQueue: Promise<void> = Promise.resolve();
+  readonly transitionError = signal(false);
   readonly layout$ = this._layout$.asObservable();
 
   constructor(
@@ -164,79 +167,71 @@ export class TabManagerService {
     entityId: string,
     title: string,
     icon: string
-  ): void {
-    const layout = this.snapshot;
-    const paneId = layout.focusedPaneId;
-    const pane = layout.panes.find(p => p.id === paneId);
-    if (!pane) return;
-
-    // If already opened anywhere, just focus/activate it. Do not replace current tab.
-    for (const p of layout.panes) {
-      const existing = p.tabs.find(
-        t => t.entityType === entityType && t.entityId === entityId
-      );
-      if (existing) {
-        this.update(l => ({
-          ...l,
-          focusedPaneId: p.id,
-          panes: l.panes.map(lp =>
-            lp.id === p.id ? { ...lp, activeTabId: existing.id } : lp
-          ),
-        }));
-        return;
-      }
-    }
-
-    const activeTab = pane.tabs.find(t => t.id === pane.activeTabId);
-    if (!activeTab) {
-      this.openTab(entityType, entityId, title, icon, paneId);
-      return;
-    }
-
-    // New id forces @for(track tab.id) to unmount old outlet and mount a fresh component tree.
+  ): Promise<boolean> {
     const replacementTabId = newTabId();
-
-    const substitutedTab: WorkspaceTab = {
-      ...activeTab,
-      id: replacementTabId,
-      title,
-      icon,
-      entityType,
-      entityId,
-      isDirty: false,
-      resolvedComponent: undefined,
-    };
-
-    // First pass: replace tab metadata and clear component reference to force teardown.
-    this.update(l => ({
-      ...l,
-      focusedPaneId: paneId,
-      panes: l.panes.map(p => {
-        if (p.id !== paneId) return p;
+    const transition = this.update(layout => {
+      const existingPane = layout.panes.find(pane => pane.tabs.some(
+        tab => tab.entityType === entityType && tab.entityId === entityId
+      ));
+      const existingTab = existingPane?.tabs.find(
+        tab => tab.entityType === entityType && tab.entityId === entityId
+      );
+      if (existingPane && existingTab) {
         return {
-          ...p,
-          tabs: p.tabs.map(t => (t.id === activeTab.id ? substitutedTab : t)),
-          activeTabId: replacementTabId,
+          ...layout,
+          focusedPaneId: existingPane.id,
+          panes: layout.panes.map(pane => pane.id === existingPane.id
+            ? { ...pane, activeTabId: existingTab.id }
+            : pane),
         };
-      }),
-    }));
+      }
 
-    // Second pass: load and attach component again, forcing a fresh instance.
-    this.registry.getComponent(entityType, entityId).then(component => {
-      if (!component) return;
-      this.update(l => ({
-        ...l,
-        panes: l.panes.map(p => ({
-          ...p,
-          tabs: p.tabs.map(t =>
-            t.id === replacementTabId &&
-            t.entityType === entityType &&
-            t.entityId === entityId
-              ? { ...t, resolvedComponent: component }
-              : t
-          ),
-        })),
-      }), false);
+      const pane = layout.panes.find(item => item.id === layout.focusedPaneId);
+      if (!pane) return layout;
+      const activeTab = pane.tabs.find(tab => tab.id === pane.activeTabId);
+      if (!activeTab) {
+        const tab: WorkspaceTab = {
+          id: replacementTabId,
+          title,
+          icon,
+          entityType,
+          entityId,
+          paneId: pane.id,
+          isDirty: false,
+        };
+        return {
+          ...layout,
+          panes: layout.panes.map(item => item.id === pane.id
+            ? { ...item, tabs: [...item.tabs, tab], activeTabId: tab.id }
+            : item),
+        };
+      }
+
+      const substitutedTab: WorkspaceTab = {
+        ...activeTab,
+        id: replacementTabId,
+        title,
+        icon,
+        entityType,
+        entityId,
+        isDirty: false,
+        resolvedComponent: undefined,
+      };
+      return {
+        ...layout,
+        focusedPaneId: pane.id,
+        panes: layout.panes.map(item => item.id !== pane.id ? item : {
+          ...item,
+          tabs: item.tabs.map(tab => tab.id === activeTab.id ? substitutedTab : tab),
+          activeTabId: replacementTabId,
+        }),
+      };
+    }, true, true);
+
+    return transition.then(async committed => {
+      if (!committed || !this.snapshot.panes.some(pane => pane.tabs.some(tab => tab.id === replacementTabId))) return committed;
+      await this.resolveTabComponent(replacementTabId, entityType, entityId);
+      return committed;
     });
   }
 
@@ -246,68 +241,71 @@ export class TabManagerService {
     title: string,
     icon: string,
     targetPaneId?: string
-  ): void {
-    const layout = this.snapshot;
-
-    // Check if tab already exists in any pane
-    for (const pane of layout.panes) {
-      const existing = pane.tabs.find(
-        t => t.entityType === entityType && t.entityId === entityId
+  ): Promise<boolean> {
+    const tabId = newTabId();
+    const transition = this.update(layout => {
+      const existingPane = layout.panes.find(pane => pane.tabs.some(
+        tab => tab.entityType === entityType && tab.entityId === entityId
+      ));
+      const existingTab = existingPane?.tabs.find(
+        tab => tab.entityType === entityType && tab.entityId === entityId
       );
-      if (existing) {
-        this.update(l => ({
-          ...l,
-          focusedPaneId: pane.id,
-          panes: l.panes.map(p =>
-            p.id === pane.id ? { ...p, activeTabId: existing.id } : p
-          ),
-        }));
-        return;
+      if (existingPane && existingTab) {
+        return {
+          ...layout,
+          focusedPaneId: existingPane.id,
+          panes: layout.panes.map(pane => pane.id === existingPane.id
+            ? { ...pane, activeTabId: existingTab.id }
+            : pane),
+        };
       }
-    }
 
-    // Determine target pane — guard against stale focusedPaneId after drag-drop removes a pane
-    const paneId = targetPaneId ?? layout.focusedPaneId;
-    const effectivePaneId = layout.panes.find(p => p.id === paneId)?.id ?? layout.panes[0]?.id;
-    if (!effectivePaneId) return;
+      const requestedPaneId = targetPaneId ?? layout.focusedPaneId;
+      const pane = layout.panes.find(item => item.id === requestedPaneId) ?? layout.panes[0];
+      if (!pane) return layout;
 
-    const tab: WorkspaceTab = {
-      id: newTabId(),
-      title,
-      icon,
-      entityType,
-      entityId,
-      paneId: effectivePaneId,
-      isDirty: false,
-    };
+      const tab: WorkspaceTab = {
+        id: tabId,
+        title,
+        icon,
+        entityType,
+        entityId,
+        paneId: pane.id,
+        isDirty: false,
+      };
+      return {
+        ...layout,
+        focusedPaneId: pane.id,
+        panes: layout.panes.map(item => item.id === pane.id
+          ? { ...item, tabs: [...item.tabs, tab], activeTabId: tab.id }
+          : item),
+      };
+    }, true, true);
 
-    // Async-load the component; update tab once resolved
-    this.registry.getComponent(entityType, entityId).then(component => {
-      if (!component) return;
-      this.update(l => ({
-        ...l,
-        panes: l.panes.map(p => ({
-          ...p,
-          tabs: p.tabs.map(t =>
-            t.id === tab.id ? { ...t, resolvedComponent: component } : t
-          ),
-        })),
-      }), false);
+    return transition.then(async committed => {
+      if (!committed || !this.snapshot.panes.some(pane => pane.tabs.some(tab => tab.id === tabId))) return committed;
+      await this.resolveTabComponent(tabId, entityType, entityId);
+      return committed;
     });
-
-    this.update(l => ({
-      ...l,
-      focusedPaneId: effectivePaneId,
-      panes: l.panes.map(p =>
-        p.id === effectivePaneId
-          ? { ...p, tabs: [...p.tabs, tab], activeTabId: tab.id }
-          : p
-      ),
-    }));
   }
 
-  closeTab(tabId: string, paneId: string): void {
-    this.update(l => {
+  private async resolveTabComponent(tabId: string, entityType: TabEntityType, entityId: string): Promise<void> {
+    try {
+      const component = await this.registry.getComponent(entityType, entityId);
+      if (!component) return;
+      await this.update(layout => ({
+        ...layout,
+        panes: layout.panes.map(pane => ({
+          ...pane,
+          tabs: pane.tabs.map(tab => tab.id === tabId ? { ...tab, resolvedComponent: component } : tab),
+        })),
+      }), false);
+    } catch (error) {
+      console.error('TabManagerService: failed to load tab component', error);
+    }
+  }
+  closeTab(tabId: string, paneId: string): Promise<boolean> {
+    return this.update(l => {
       const pane = l.panes.find(p => p.id === paneId);
       if (!pane) return l;
 
@@ -346,25 +344,25 @@ export class TabManagerService {
         ...l,
         panes: l.panes.map(p => (p.id === paneId ? updatedPane : p)),
       };
-    });
+    }, true, true);
   }
 
-  setActiveTab(paneId: string, tabId: string): void {
-    this.update(l => ({
+  setActiveTab(paneId: string, tabId: string): Promise<boolean> {
+    return this.update(l => ({
       ...l,
       focusedPaneId: paneId,
       panes: l.panes.map(p =>
         p.id === paneId ? { ...p, activeTabId: tabId } : p
       ),
-    }));
+    }), true, true);
   }
 
   setFocusedPane(paneId: string): void {
-    this.update(l => ({ ...l, focusedPaneId: paneId }));
+    this.update(l => ({ ...l, focusedPaneId: paneId }), true, true);
   }
 
-  moveTab(tabId: string, fromPaneId: string, toPaneId: string, insertIndex?: number): void {
-    this.update(l => {
+  moveTab(tabId: string, fromPaneId: string, toPaneId: string, insertIndex?: number): Promise<boolean> {
+    return this.update(l => {
       const fromPane = l.panes.find(p => p.id === fromPaneId);
       const toPane = l.panes.find(p => p.id === toPaneId);
       if (!fromPane || !toPane) return l;
@@ -420,11 +418,11 @@ export class TabManagerService {
       }
 
       return { ...l, panes: updatedPanes, focusedPaneId: toPaneId };
-    });
+    }, true, true);
   }
 
-  splitPane(sourcePaneId: string): void {
-    this.update(l => {
+  splitPane(sourcePaneId: string): Promise<boolean> {
+    return this.update(l => {
       const newPaneId = 'pane-' + crypto.randomUUID();
       const newPane: WorkspacePane = { id: newPaneId, tabs: [], activeTabId: null };
       const paneIndex = l.panes.findIndex(p => p.id === sourcePaneId);
@@ -437,11 +435,11 @@ export class TabManagerService {
         splitRatios: redistributeRatios(newPanes.length),
         focusedPaneId: newPaneId,
       };
-    });
+    }, true, true);
   }
 
-  closePane(paneId: string): void {
-    this.update(l => {
+  closePane(paneId: string): Promise<boolean> {
+    return this.update(l => {
       if (l.panes.length <= 1) return l; // never remove last pane
       const pane = l.panes.find(p => p.id === paneId);
       if (!pane) return l;
@@ -474,7 +472,7 @@ export class TabManagerService {
         splitRatios: redistributeRatios(updatedPanes.length),
         focusedPaneId: targetPane.id,
       };
-    });
+    }, true, true);
   }
 
   previewPaneRatios(ratios: number[]): void {
@@ -576,9 +574,60 @@ export class TabManagerService {
 
   private update(
     fn: (l: WorkspaceLayout) => WorkspaceLayout,
-    persist = true
-  ): void {
-    const next = fn(this.snapshot);
+    persist = true,
+    serializeTransition = false
+  ): Promise<boolean> {
+    const current = this.snapshot;
+    const next = fn(current);
+    const outgoingTabIds = this.getTransitionTabIds(current, next);
+    if (outgoingTabIds.length === 0 && !serializeTransition) {
+      this.commitLayout(next, persist);
+      return Promise.resolve(true);
+    }
+
+    const operation = this.transitionQueue.then(async () => {
+      this.transitionError.set(false);
+      const before = this.snapshot;
+      const intended = fn(before);
+      const tabIds = this.getTransitionTabIds(before, intended);
+      try {
+        await Promise.all(tabIds.map(tabId => flushPendingComponentSaves(tabId)));
+      } catch (error) {
+        console.error('TabManagerService: could not flush pending tab saves', error);
+        this.transitionError.set(true);
+        return false;
+      }
+
+      // Reapply the mutation to include unrelated focus/title/dirty changes made during the flush.
+      this.commitLayout(fn(this.snapshot), persist);
+      return true;
+    });
+    this.transitionQueue = operation.then(() => undefined, () => undefined);
+    return operation;
+  }
+
+  private getTransitionTabIds(current: WorkspaceLayout, next: WorkspaceLayout): string[] {
+    const currentTabs = new Map(current.panes.flatMap(pane => pane.tabs).map(tab => [tab.id, tab]));
+    const nextTabIds = new Set(next.panes.flatMap(pane => pane.tabs).map(tab => tab.id));
+    const outgoing = new Set<string>();
+
+    // Closing/replacing any tab must settle that tab before its runtime view is destroyed.
+    for (const tabId of currentTabs.keys()) {
+      if (!nextTabIds.has(tabId)) outgoing.add(tabId);
+    }
+
+    // A pane's previous active view must save before another view is attached there.
+    for (const pane of current.panes) {
+      const nextPane = next.panes.find(item => item.id === pane.id);
+      if (pane.activeTabId && pane.activeTabId !== nextPane?.activeTabId) {
+        outgoing.add(pane.activeTabId);
+      }
+    }
+
+    return [...outgoing];
+  }
+
+  private commitLayout(next: WorkspaceLayout, persist: boolean): void {
     this._layout$.next(next);
     if (persist) {
       this.saveLayout();

@@ -44,9 +44,12 @@ import {
 } from '../../../services/moodboard.service';
 import { TabManagerService } from '../../../services/tab-manager.service';
 import { WorldStateService } from '../../../services/world-state.service';
+import { WORKSPACE_TAB_CONTEXT, WorkspaceTabContext } from '../../../models/workspace-tab-context';
 import {
   DISCARD_PENDING_SAVES_EVENT,
   FLUSH_PENDING_SAVES_EVENT,
+  PendingSaveEventDetail,
+  pendingSaveEventMatchesTab,
 } from '../../../utils/pending-save-event';
 
 type MoodboardTool = 'select' | 'text' | 'draw' | MoodboardShapeType;
@@ -171,6 +174,8 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
   private readonly tabManager = inject(TabManagerService);
   private readonly renderer = inject(Renderer2);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly tabContext = inject(WORKSPACE_TAB_CONTEXT, { optional: true });
+  private unregisterTabLifecycle?: () => void;
 
   moodboardIdInput = input<string | null>(null);
 
@@ -307,30 +312,97 @@ export class MoodboardEditComponent implements OnInit, OnDestroy {
     this.worldId = this.worldStateService.getCurrentWorld()?.id || null;
     this.refreshEntities();
 
-    this.removeMouseMove = this.renderer.listen('window', 'mousemove', (event: MouseEvent) => this.onWindowMouseMove(event));
-    this.removeMouseUp = this.renderer.listen('window', 'mouseup', () => this.onWindowMouseUp());
-    this.removeTouchMove = this.renderer.listen('window', 'touchmove', (event: TouchEvent) => this.onWindowTouchMove(event));
-    this.removeTouchEnd = this.renderer.listen('window', 'touchend', () => this.onWindowTouchEnd());
-    this.removePendingSaveListener = this.renderer.listen('window', FLUSH_PENDING_SAVES_EVENT, () => this.flushPendingSaves());
-    this.removeDiscardPendingSaveListener = this.renderer.listen('window', DISCARD_PENDING_SAVES_EVENT, () => this.discardPendingSaves());
-    this.removeKeyDown = this.renderer.listen('window', 'keydown', (event: KeyboardEvent) => this.onWindowKeyDown(event));
-    this.removeKeyUp = this.renderer.listen('window', 'keyup', (event: KeyboardEvent) => this.onWindowKeyUp(event));
-    this.removeCopy = this.renderer.listen('window', 'copy', (event: ClipboardEvent) => this.onWindowCopy(event));
-    this.removePaste = this.renderer.listen('window', 'paste', (event: ClipboardEvent) => this.onWindowPaste(event));
+    this.removePendingSaveListener = this.renderer.listen('window', FLUSH_PENDING_SAVES_EVENT, (event: Event) => this.onFlushPendingSaves(event));
+    this.removeDiscardPendingSaveListener = this.renderer.listen('window', DISCARD_PENDING_SAVES_EVENT, (event: Event) => this.onDiscardPendingSaves(event));
+    this.unregisterTabLifecycle = this.tabContext?.onActiveChange(active => {
+      if (active) {
+        this.installInteractionListeners();
+        this.cdr.markForCheck();
+        requestAnimationFrame(() => {
+          if (this.tabContext?.active()) this.cdr.markForCheck();
+        });
+      } else {
+        if (!this.discardPendingSaveOnDestroy && this.dragState.mode !== 'none') {
+          this.onWindowMouseUp();
+        } else {
+          this.dragState = this.emptyDragState();
+        }
+        this.removeInteractionListeners();
+      }
+    });
+    if (!this.tabContext) this.installInteractionListeners();
   }
 
   ngOnDestroy(): void {
     if (!this.discardPendingSaveOnDestroy) this.flushPendingSaves();
-    this.removeMouseMove?.();
+    this.unregisterTabLifecycle?.();
+    this.removeInteractionListeners();
     this.removePendingSaveListener?.();
     this.removeDiscardPendingSaveListener?.();
+  }
+
+  private installInteractionListeners(): void {
+    if (this.removeMouseMove) return;
+    const focused = () => !this.tabContext || this.tabContext.focused();
+    this.removeMouseMove = this.renderer.listen('window', 'mousemove', (event: MouseEvent) => {
+      if (focused()) this.onWindowMouseMove(event);
+    });
+    this.removeMouseUp = this.renderer.listen('window', 'mouseup', () => {
+      if (focused()) this.onWindowMouseUp();
+    });
+    this.removeTouchMove = this.renderer.listen('window', 'touchmove', (event: TouchEvent) => {
+      if (focused()) this.onWindowTouchMove(event);
+    });
+    this.removeTouchEnd = this.renderer.listen('window', 'touchend', () => {
+      if (focused()) this.onWindowTouchEnd();
+    });
+    this.removeKeyDown = this.renderer.listen('window', 'keydown', (event: KeyboardEvent) => {
+      if (focused()) this.onWindowKeyDown(event);
+    });
+    this.removeKeyUp = this.renderer.listen('window', 'keyup', (event: KeyboardEvent) => {
+      if (focused()) this.onWindowKeyUp(event);
+    });
+    this.removeCopy = this.renderer.listen('window', 'copy', (event: ClipboardEvent) => {
+      if (focused()) this.onWindowCopy(event);
+    });
+    this.removePaste = this.renderer.listen('window', 'paste', (event: ClipboardEvent) => {
+      if (focused()) this.onWindowPaste(event);
+    });
+  }
+
+  private removeInteractionListeners(): void {
+    this.removeMouseMove?.();
+    this.removeMouseMove = undefined;
     this.removeMouseUp?.();
+    this.removeMouseUp = undefined;
     this.removeTouchMove?.();
+    this.removeTouchMove = undefined;
     this.removeTouchEnd?.();
+    this.removeTouchEnd = undefined;
     this.removeKeyDown?.();
+    this.removeKeyDown = undefined;
     this.removeKeyUp?.();
+    this.removeKeyUp = undefined;
     this.removeCopy?.();
+    this.removeCopy = undefined;
     this.removePaste?.();
+    this.removePaste = undefined;
+    this.isSpacePressed.set(false);
+  }
+
+  private onFlushPendingSaves(event: Event): void {
+    const detail = (event as CustomEvent<PendingSaveEventDetail>).detail;
+    if (!pendingSaveEventMatchesTab(detail, this.tabContext?.tabId)) return;
+    if (!detail) {
+      this.flushPendingSaves();
+      return;
+    }
+    detail.flushes.push(Promise.resolve().then(() => this.flushPendingSaves()));
+  }
+
+  private onDiscardPendingSaves(event: Event): void {
+    const detail = (event as CustomEvent<PendingSaveEventDetail>).detail;
+    if (pendingSaveEventMatchesTab(detail, this.tabContext?.tabId)) this.discardPendingSaves();
   }
 
   setTool(tool: MoodboardTool): void {

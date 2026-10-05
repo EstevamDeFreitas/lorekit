@@ -153,15 +153,15 @@ export class WorkspaceTabBarComponent implements AfterViewInit, OnChanges, OnDes
     this.closeContextMenu();
   }
 
-  ctxMoveToNewPane(): void {
+  async ctxMoveToNewPane(): Promise<void> {
     const ctx = this.contextMenu();
     if (!ctx) return;
-    this.tabManager.splitPane(this.pane().id);
+    await this.tabManager.splitPane(this.pane().id);
     // After split, move tab to the new pane (last pane)
     const newLayout = this.tabManager.snapshot;
     const newPane = newLayout.panes[newLayout.panes.length - 1];
     if (newPane) {
-      this.tabManager.moveTab(ctx.tab.id, this.pane().id, newPane.id);
+      await this.tabManager.moveTab(ctx.tab.id, this.pane().id, newPane.id);
     }
     this.closeContextMenu();
   }

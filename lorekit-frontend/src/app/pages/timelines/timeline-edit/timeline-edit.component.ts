@@ -24,6 +24,8 @@ import { EditorComponent } from '../../../components/editor/editor.component';
 import { AgeEditComponent } from '../age-edit/age-edit.component';
 import { GreatMarkEditComponent } from '../great-mark-edit/great-mark-edit.component';
 import { TimelineEventEditComponent } from '../timeline-event-edit/timeline-event-edit.component';
+import { WORKSPACE_TAB_CONTEXT } from '../../../models/workspace-tab-context';
+import { DISCARD_PENDING_SAVES_EVENT, FLUSH_PENDING_SAVES_EVENT, PendingSaveEventDetail, pendingSaveEventMatchesTab } from '../../../utils/pending-save-event';
 type DragKind = 'age-move' | 'age-start' | 'age-end' | 'mark-move' | 'event-move' | 'event-start' | 'event-end';
 type TimelineItem = Age | GreatMark | TimelineEvent;
 interface TimelineDrag {
@@ -69,6 +71,8 @@ export class TimelineEditComponent implements OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 500);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly tabContext = inject(WORKSPACE_TAB_CONTEXT, { optional: true });
+  private unregisterTabLifecycle?: () => void;
   @ViewChild('canvas') private canvas?: ElementRef<HTMLElement>;
   @ViewChild('viewport') private viewport?: ElementRef<HTMLElement>;
   dialogRef = inject<DialogRef<any>>(DialogRef<any>, { optional: true });
@@ -93,7 +97,23 @@ export class TimelineEditComponent implements OnDestroy {
   private drag: TimelineDrag | null = null;
   private readonly pointerMove = (event: PointerEvent) => this.moveDrag(event);
   private readonly pointerUp = (event: PointerEvent) => this.endDrag(event);
+  private readonly flushPendingSaves = (event: Event): void => {
+    const detail = (event as CustomEvent<PendingSaveEventDetail>).detail;
+    if (!pendingSaveEventMatchesTab(detail, this.tabContext?.tabId) || !this.drag) return;
+    const flush = this.endDrag(undefined, true);
+    if (detail) detail.flushes.push(flush);
+    else void flush;
+  };
+  private readonly discardPendingSaves = (event: Event): void => {
+    const detail = (event as CustomEvent<PendingSaveEventDetail>).detail;
+    if (pendingSaveEventMatchesTab(detail, this.tabContext?.tabId)) this.cancelDrag();
+  };
   constructor() {
+    window.addEventListener(FLUSH_PENDING_SAVES_EVENT, this.flushPendingSaves);
+    window.addEventListener(DISCARD_PENDING_SAVES_EVENT, this.discardPendingSaves);
+    this.unregisterTabLifecycle = this.tabContext?.onActiveChange(active => {
+      if (!active && this.drag) this.cancelDrag();
+    });
     effect(() => {
       if (this.timelineId() && this.timeline.id !== this.timelineId()) this.loadTimeline();
     });
@@ -108,6 +128,10 @@ export class TimelineEditComponent implements OnDestroy {
   ngOnDestroy(): void {
     window.removeEventListener('pointermove', this.pointerMove);
     window.removeEventListener('pointerup', this.pointerUp);
+    window.removeEventListener(FLUSH_PENDING_SAVES_EVENT, this.flushPendingSaves);
+    window.removeEventListener(DISCARD_PENDING_SAVES_EVENT, this.discardPendingSaves);
+    this.unregisterTabLifecycle?.();
+    this.cancelDrag();
   }
   loadTimeline(): void {
     const id = this.timelineId();
@@ -319,7 +343,7 @@ export class TimelineEditComponent implements OnDestroy {
     this.cdr.markForCheck();
   };
 
-  private endDrag = async (event?: PointerEvent): Promise<void> => {
+  private endDrag = async (event?: PointerEvent, suppressClickAction = false): Promise<void> => {
     const drag = this.drag;
     if (!drag || (event && event.pointerId !== drag.pointerId)) return;
 
@@ -331,12 +355,14 @@ export class TimelineEditComponent implements OnDestroy {
     }
 
     if (!drag.moved) {
-      if (drag.kind === 'mark-move') {
-        this.openGreatMarkDialog((drag.item as GreatMark).date, (drag.item as GreatMark).id);
-      } else if (drag.kind === 'event-move' || drag.kind === 'event-start' || drag.kind === 'event-end') {
-        this.openEventDialog((drag.item as TimelineEvent).startDate, (drag.item as TimelineEvent).id);
-      } else {
-        this.openAgeDialog((drag.item as Age).startDate, (drag.item as Age).id);
+      if (!suppressClickAction) {
+        if (drag.kind === 'mark-move') {
+          this.openGreatMarkDialog((drag.item as GreatMark).date, (drag.item as GreatMark).id);
+        } else if (drag.kind === 'event-move' || drag.kind === 'event-start' || drag.kind === 'event-end') {
+          this.openEventDialog((drag.item as TimelineEvent).startDate, (drag.item as TimelineEvent).id);
+        } else {
+          this.openAgeDialog((drag.item as Age).startDate, (drag.item as Age).id);
+        }
       }
       return;
     }
@@ -357,6 +383,16 @@ export class TimelineEditComponent implements OnDestroy {
     this.refreshLayout();
     this.cdr.markForCheck();
   };
+
+  private cancelDrag(): void {
+    const drag = this.drag;
+    this.drag = null;
+    window.removeEventListener('pointermove', this.pointerMove);
+    window.removeEventListener('pointerup', this.pointerUp);
+    if (drag?.pointerTarget?.hasPointerCapture(drag.pointerId)) {
+      drag.pointerTarget.releasePointerCapture(drag.pointerId);
+    }
+  }
 
   private async persistEventPlacement(event: TimelineEvent): Promise<void> {
     await this.eventService.saveEventPlacement(event.id, event.startDate, event.endDate, event.lane);
