@@ -3,6 +3,7 @@ export class IrpwCharacterSheet {
   perceptions?: string | null;
   attributes?: string | null;
   lifepoints?: string | null;
+  seriousWoundCount?: number | null;
   defensepoints?: string | null;
   stress?: string | null;
   mana?: string | null;

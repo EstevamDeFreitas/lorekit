@@ -206,7 +206,7 @@
 
 .character-overview-card {
   min-width: 0;
-  border-radius: 0.65rem;
+  border-radius: 0.9rem;
   background: var(--color-zinc-925, #141417);
   border-color: #27272a;
 }
@@ -253,13 +253,14 @@
 .character-tabs {
   min-width: 0;
   padding: 0 0.35rem;
-  border-bottom: 1px solid #27272a;
+  border-bottom: 1px solid rgb(161 161 170 / 14%);
+  gap: 0.35rem;
 }
 
 .character-tab-content {
   background: var(--color-zinc-925, #141417);
   border: 1px solid #27272a;
-  border-radius: 0.65rem;
+  border-radius: 0.9rem;
 }
 
 .character-stats-column > div,
@@ -320,8 +321,99 @@
   }
 }
 .irpw-sheet :is(button, input, textarea, select):focus-visible {
-  outline: 2px solid #facc15;
+  outline: 2px solid var(--irpw-accent, #a1a1aa);
   outline-offset: 2px;
+}
+
+.irpw-sheet {
+  --irpw-accent: var(--entity-glass-color, #a1a1aa);
+}
+
+.irpw-sheet :is(input, textarea, select) {
+  caret-color: var(--irpw-accent);
+}
+
+.irpw-sheet ::selection {
+  background: color-mix(in srgb, var(--irpw-accent) 34%, transparent);
+  color: #fff;
+}
+
+.life-controls {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.life-zero-button,
+.serious-wound-add,
+.serious-wound-remove {
+  display: inline-flex;
+  min-height: 1.8rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid rgb(161 161 170 / 28%);
+  border-radius: 0.55rem;
+  padding: 0.2rem 0.5rem;
+  background: rgb(39 39 42 / 48%);
+  color: #e4e4e7;
+  font-size: 0.65rem;
+  line-height: 1rem;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.life-zero-button:hover:not(:disabled) {
+  border-color: var(--irpw-accent);
+  color: #fafafa;
+}
+
+.serious-wound-add,
+.serious-wound-remove {
+  border-color: rgb(244 63 94 / 28%);
+  background: rgb(136 19 55 / 16%);
+  color: #fecdd3;
+}
+
+.serious-wound-add:hover:not(:disabled),
+.serious-wound-remove:hover:not(:disabled) {
+  border-color: rgb(244 63 94 / 48%);
+  background: rgb(136 19 55 / 28%);
+  color: #fff1f2;
+}
+
+.life-zero-button:disabled,
+.serious-wound-add:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.serious-wound-count {
+  display: inline-flex;
+  min-height: 1.7rem;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid rgb(161 161 170 / 25%);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  color: #d4d4d8;
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.serious-wound-count.has-wounds {
+  border-color: rgb(244 63 94 / 34%);
+  background: rgb(136 19 55 / 16%);
+  color: #fecdd3;
+}
+
+.irpw-sheet .text-yellow-200,
+.irpw-sheet .text-yellow-300,
+.irpw-sheet .text-yellow-400 {
+  color: var(--irpw-accent) !important;
+}
+
+.irpw-sheet .border-yellow-500,
+.irpw-sheet .border-yellow-700 {
+  border-color: color-mix(in srgb, var(--irpw-accent) 48%, transparent);
 }
 
 .character-tabs app-nav-button {
@@ -331,13 +423,9 @@
 .ironpaw-overview-section {
   min-width: 0;
   padding: 1rem;
-  border: 1px solid rgba(161, 161, 170, 0.12);
+  border: 1px solid #27272a;
   border-radius: 0.9rem;
-  background:
-    radial-gradient(ellipse at 4% 0%, rgba(250, 204, 21, 0.045), transparent 52%),
-    linear-gradient(145deg, rgba(39, 39, 42, 0.56), rgba(20, 20, 23, 0.6));
-  backdrop-filter: blur(18px) saturate(122%);
-  -webkit-backdrop-filter: blur(18px) saturate(122%);
+  background: var(--color-zinc-925, #141417);
 }
 
 .ironpaw-overview-row,
@@ -384,7 +472,7 @@
 
 .ironpaw-shortcut:hover {
   transform: translateY(-1px);
-  border-color: rgba(250, 204, 21, 0.4);
+  border-color: color-mix(in srgb, var(--irpw-accent) 44%, transparent);
   background: rgba(39, 39, 42, 0.68);
 }
 
@@ -417,9 +505,9 @@
 
 .ironpaw-favorite-button:hover,
 .ironpaw-favorite-button.is-favorite {
-  border-color: rgba(250, 204, 21, 0.22);
-  background: rgba(250, 204, 21, 0.1);
-  color: #facc15;
+  border-color: color-mix(in srgb, var(--irpw-accent) 36%, transparent);
+  background: color-mix(in srgb, var(--irpw-accent) 13%, transparent);
+  color: var(--irpw-accent);
 }
 
 .ironpaw-action-button,
@@ -438,9 +526,9 @@
 }
 
 .ironpaw-action-button:hover {
-  border-color: rgba(250, 204, 21, 0.4);
-  background: rgba(250, 204, 21, 0.08);
-  color: #fde68a;
+  border-color: color-mix(in srgb, var(--irpw-accent) 44%, transparent);
+  background: color-mix(in srgb, var(--irpw-accent) 10%, transparent);
+  color: #fafafa;
 }
 
 .ironpaw-remove-button {
@@ -475,7 +563,7 @@
 }
 
 .ironpaw-skill-section__header > div > i {
-  color: #facc15;
+  color: var(--irpw-accent);
   font-size: 0.75rem;
 }
 

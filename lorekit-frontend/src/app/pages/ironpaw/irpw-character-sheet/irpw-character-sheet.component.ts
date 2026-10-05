@@ -39,6 +39,7 @@ import { IrpwInventoryComponent } from '../irpw-inventory/irpw-inventory.compone
 import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 import {
   ActiveConditionState,
+  CONDITION,
   CONDITION_CATEGORY,
   CONDITION_CATEGORY_LABEL,
   CONDITION_SEVERITY,
@@ -145,14 +146,15 @@ interface EquippedEquipmentSummary {
   selector: 'irpw-character-sheet',
   imports: [EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent],
   template: `
-    <div [historyEntity]="{ table: 'IRPWCharacterSheet', id: selectedCharacterId }" [historyModel]="currentSheet" (historyRestored)="restoreSheetHistory()" class="irpw-sheet flex flex-col relative">
+    <div [historyEntity]="{ table: 'IRPWCharacterSheet', id: selectedCharacterId }" [historyModel]="currentSheet" (historyRestored)="restoreSheetHistory()" class="irpw-sheet entity-edit-shell flex flex-col relative"
+      [style.--entity-glass-color]="selectedCharacter ? (getPersonalizationValue(selectedCharacter, 'color') || '#a1a1aa') : '#a1a1aa'">
       <div class="irpw-sheet-row flex flex-row gap-4 relative">
 
         @if (!characterIdInput()) {
 
         <!-- Sidebar -->
         <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showSidebar ? 'w-80' : 'w-0'">
-          <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
+          <div class="w-80 entity-properties-panel bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
             <h2 class="text-base mb-4">Ficha de Personagem</h2>
 
             <!-- World filter -->
@@ -212,7 +214,7 @@ interface EquippedEquipmentSummary {
         <div class="irpw-sheet-view flex-1 min-h-[60vh] p-4 flex flex-col">
           @if (selectedCharacter) {
             <div class="character-overview">
-              <div class="character-overview-card character-identity-card rounded-md bg-zinc-925 border border-zinc-800 p-3">
+              <div class="character-overview-card character-identity-card entity-properties-panel rounded-md bg-zinc-925 border border-zinc-800 p-3">
                 <div class="character-identity-body flex flex-row gap-3">
                   @if(getImageByUsageKey(selectedCharacter.Images, 'profile') != null){
                     @let profileImg = getImageByUsageKey(selectedCharacter.Images, 'profile');
@@ -288,15 +290,46 @@ interface EquippedEquipmentSummary {
 
               </div>
               <!-- Lifepoints & Defensepoints -->
-              <div class="character-overview-card character-resources-card rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
+              <div class="character-overview-card character-resources-card entity-properties-panel rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
                 <div>
                   <div class="flex items-center justify-between gap-3 mb-2">
                     <div class="flex items-center gap-2">
                       <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Vida</h2>
                       <span class="text-[10px] text-zinc-500">{{ formatLifeValue(lifepointsData.currentPoints) }}/{{ formatLifeValue(lifepointsData.maxPoints) }}</span>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="life-controls flex items-center gap-2">
                       <span class="life-status" [ngClass]="getLifeStatusClass()" [title]="getLifeStatusDescription()">{{ getLifeStatusLabel() }}</span>
+                      <button
+                        type="button"
+                        class="life-zero-button"
+                        [disabled]="lifepointsData.currentPoints === 0"
+                        (click)="setLifePointsToZero()"
+                        aria-label="Definir vida em zero"
+                        title="Definir vida em zero">0 CV</button>
+                      <span class="serious-wound-count" [class.has-wounds]="seriousWoundCount > 0" [attr.aria-label]="'Feridas graves: ' + seriousWoundCount + ' de 3'">
+                        <i class="fa-solid fa-heart-crack" aria-hidden="true"></i>
+                        {{ seriousWoundCount }}/3
+                      </span>
+                      <button
+                        type="button"
+                        class="serious-wound-add"
+                        [disabled]="seriousWoundCount >= 3"
+                        (click)="addSeriousWound()"
+                        aria-label="Adicionar Ferida Grave"
+                        title="Adicionar Ferida Grave">
+                        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                        <span>Ferida Grave</span>
+                      </button>
+                      @if (seriousWoundCount > 0) {
+                        <button
+                          type="button"
+                          class="serious-wound-remove"
+                          (click)="removeSeriousWound()"
+                          aria-label="Remover uma Ferida Grave"
+                          title="Remover uma Ferida Grave">
+                          <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                        </button>
+                      }
                       <button
                         type="button"
                         class="px-1 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
@@ -423,7 +456,7 @@ interface EquippedEquipmentSummary {
                 </div>
               </div>
               <!-- Condições -->
-              <div class="character-overview-card character-conditions-card rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
+              <div class="character-overview-card character-conditions-card entity-properties-panel rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
                 <div class="flex items-center justify-between gap-3">
                   <div>
                     <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Condições</h2>
@@ -554,7 +587,7 @@ interface EquippedEquipmentSummary {
             </div>
             <div class="character-workspace">
                   <div class="character-stats-column flex flex-col h-full">
-                    <div class="flex flex-col rounded-md bg-zinc-925 border border-zinc-800 p-3 mb-2">
+                    <div class="entity-properties-panel flex flex-col rounded-md bg-zinc-925 border border-zinc-800 p-3 mb-2">
                       <h1 class="text-center mb-2">Percepções</h1>
                       <div class="flex flex-row justify-center gap-6">
                         <div class="flex flex-col items-center gap-1">
@@ -642,12 +675,12 @@ interface EquippedEquipmentSummary {
                   <div class="character-tabs-column p-3">
                     <div class="flex-4 flex flex-col">
                       <div class="character-tabs flex flex-row flex-wrap items-end gap-1 ms-1">
-                        <app-nav-button buttonType="pink" [label]="'Geral'" size="sm" [active]="currentTab === 'general'" (click)="selectTab('general')"></app-nav-button>
-                        <app-nav-button buttonType="pink" [label]="'Marcos'" size="sm" [active]="currentTab === 'marks'" (click)="selectTab('marks')"></app-nav-button>
-                        <app-nav-button buttonType="pink" [label]="'Inventário'" size="sm" [active]="currentTab === 'inventory'" (click)="selectTab('inventory')"></app-nav-button>
-                        <app-nav-button buttonType="pink" [label]="'Habilidades'" size="sm" [active]="currentTab === 'skills'" (click)="selectTab('skills')"></app-nav-button>
+                        <app-nav-button [label]="'Geral'" size="sm" [active]="currentTab === 'general'" (click)="selectTab('general')"></app-nav-button>
+                        <app-nav-button [label]="'Marcos'" size="sm" [active]="currentTab === 'marks'" (click)="selectTab('marks')"></app-nav-button>
+                        <app-nav-button [label]="'Inventário'" size="sm" [active]="currentTab === 'inventory'" (click)="selectTab('inventory')"></app-nav-button>
+                        <app-nav-button [label]="'Poderes'" size="sm" [active]="currentTab === 'skills'" (click)="selectTab('skills')"></app-nav-button>
                       </div>
-                      <div class="character-tab-content p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
+                      <div class="character-tab-content entity-properties-panel p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
                           @switch (currentTab) {
                             @case ('general') {
                               <div class="flex flex-col gap-4">
@@ -668,9 +701,9 @@ interface EquippedEquipmentSummary {
                                   <div class="mb-3 flex items-start justify-between gap-3">
                                     <div>
                                       <h2 id="overview-shortcuts-title" class="text-sm font-semibold text-zinc-100">Atalhos favoritos</h2>
-                                      <p class="mt-1 text-xs text-zinc-500">Armas equipadas e habilidades favoritas ficam prontas para abrir daqui.</p>
+                                      <p class="mt-1 text-xs text-zinc-500">Armas equipadas e poderes favoritos ficam prontos para abrir daqui.</p>
                                     </div>
-                                    <button type="button" class="text-xs text-yellow-300 transition hover:text-yellow-200" (click)="selectTab('skills')">Ver habilidades</button>
+                                    <button type="button" class="text-xs text-yellow-300 transition hover:text-yellow-200" (click)="selectTab('skills')">Ver poderes</button>
                                   </div>
                                   <div class="flex flex-wrap gap-2">
                                     @for (attack of getFavoriteAttacks(); track attack.favoriteKey) {
@@ -1068,8 +1101,8 @@ interface EquippedEquipmentSummary {
                               <div class="flex flex-col gap-4">
                                 <div class="flex items-center justify-between gap-3">
                                   <div>
-                                    <h3 class="text-sm font-semibold text-zinc-100">Habilidades</h3>
-                                    <p class="text-xs text-zinc-500">Técnicas, magias e passivas ficam organizadas por tipo. Favoritas aparecem nos atalhos da aba Geral.</p>
+                                    <h3 class="text-sm font-semibold text-zinc-100">Poderes</h3>
+                                    <p class="text-xs text-zinc-500">Poderes, magias e passivas ficam organizados por tipo. Favoritos aparecem nos atalhos da aba Geral.</p>
                                   </div>
                                   <button
                                     type="button"
@@ -1367,7 +1400,14 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private readonly entityHistory = inject(EntityHistoryService);
   readonly readSubspecializationHistory = (): string => this.currentSheet?.subspecialization || '';
   readonly readHabilitiesHistory = (): string => this.currentSheet?.habilities || '';
-  restoreSheetHistory(): void { this.parseSubspecializations(); this.parseHabilities(); this.parseMarks(); }
+  restoreSheetHistory(): void {
+    this.parseSubspecializations();
+    this.parseHabilities();
+    this.parseLifepoints();
+    this.parseSeriousWounds();
+    this.parseConditions();
+    this.parseMarks();
+  }
   private readonly destroyRef = inject(DestroyRef);
   private dialog = inject(Dialog);
   private characterService = inject(CharacterService);
@@ -1429,6 +1469,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   marksData: IrpwCharacterMark[] = [];
   activeConditionsData: ActiveConditionState[] = [];
   pendingConditionsData: ActiveConditionState[] = [];
+  seriousWoundCount = 0;
   expandedMarkIndexes = new Set<number>();
   readonly attributeGroupEntries = Object.entries(ATTRIBUTE_GROUP_SKILLS) as [AttributeGroupCode, SkillCode[]][];
   readonly attributeGroupLabel = ATTRIBUTE_GROUP_LABEL;
@@ -1443,7 +1484,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   readonly conditionSeverityLabel = CONDITION_SEVERITY_LABEL;
   conditionDefinitions: ConditionDefinition[] = this.conditionCatalog.getDefinitions();
   readonly habilityTypeOptions: { value: IrpwHabilityType; label: string }[] = [
-    { value: 'technical', label: 'Técnica' },
+    { value: 'technical', label: 'Poder' },
     { value: 'magic', label: 'Magia' },
     { value: 'passive', label: 'Passiva' },
   ];
@@ -1517,6 +1558,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.parseHabilities();
     this.parseFavoriteActions();
     this.parseLifepoints();
+    this.parseSeriousWounds();
     this.parseDefensepoints();
     this.parseResources();
     this.parseConditions();
@@ -1664,6 +1706,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.parseHabilities();
     this.parseFavoriteActions();
     this.parseLifepoints();
+    this.parseSeriousWounds();
     this.parseDefensepoints();
     this.parseResources();
     this.parseConditions();
@@ -1697,6 +1740,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.activeAbilityDetail = null;
     this.activeConditionsData = [];
     this.pendingConditionsData = [];
+    this.seriousWoundCount = 0;
     this.marksData = [];
     this.lifepointsData = { maxPoints: null, currentPoints: null };
     this.defensepointsData = parseIrpwDefensePoints(null);
@@ -2218,7 +2262,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   getHabilityTypeLabel(type: IrpwHabilityType | null | undefined): string {
-    return this.habilityTypeOptions.find(option => option.value === type)?.label ?? 'Técnica';
+    return this.habilityTypeOptions.find(option => option.value === type)?.label ?? 'Poder';
   }
 
   getHabilityTypeIcon(type: IrpwHabilityType | null | undefined): string {
@@ -2290,12 +2334,52 @@ export class IrpwCharacterSheetComponent implements OnInit {
     }
   }
 
+  private parseSeriousWounds(): void {
+    const value = Number(this.currentSheet?.seriousWoundCount ?? 0);
+    this.seriousWoundCount = Number.isFinite(value)
+      ? Math.min(3, Math.max(0, Math.trunc(value)))
+      : 0;
+  }
+
+  addSeriousWound(): void {
+    if (!this.currentSheet || this.seriousWoundCount >= 3) {
+      return;
+    }
+
+    this.seriousWoundCount += 1;
+    this.onSeriousWoundCountChange();
+  }
+
+  removeSeriousWound(): void {
+    if (!this.currentSheet || this.seriousWoundCount <= 0) {
+      return;
+    }
+
+    this.seriousWoundCount -= 1;
+    this.onSeriousWoundCountChange();
+  }
+
+  private onSeriousWoundCountChange(): void {
+    if (!this.currentSheet) {
+      return;
+    }
+
+    this.currentSheet.seriousWoundCount = this.seriousWoundCount;
+    if (this.syncLifeCriticalConditionState()) {
+      this.updateRollFormulaIfAuto();
+    }
+    this.scheduleAutoSave();
+  }
+
   onLifepointsChange() {
     if (this.currentSheet) {
       const maxPoints = Math.max(this.normalizeLifeMaxPoints(this.lifepointsData.maxPoints) ?? 0, this.getLifeMinimum());
       this.lifepointsData.maxPoints = maxPoints;
       this.lifepointsData.currentPoints = this.normalizeLifeCurrentPoints(this.lifepointsData.currentPoints, maxPoints);
       this.currentSheet.lifepoints = JSON.stringify(this.lifepointsData);
+      if (this.syncLifeCriticalConditionState()) {
+        this.updateRollFormulaIfAuto();
+      }
       this.scheduleAutoSave();
     }
   }
@@ -2309,6 +2393,11 @@ export class IrpwCharacterSheetComponent implements OnInit {
   setLifePoints(segment: number, quarter: number) {
     const nextValue = segment - 1 + quarter * 0.25;
     this.lifepointsData.currentPoints = this.normalizeLifeCurrentPoints(nextValue, this.getMaxLifePoints());
+    this.onLifepointsChange();
+  }
+
+  setLifePointsToZero(): void {
+    this.lifepointsData.currentPoints = 0;
     this.onLifepointsChange();
   }
 
@@ -2343,7 +2432,9 @@ export class IrpwCharacterSheetComponent implements OnInit {
       case 'healthy': return 'Saudável: acima da metade das caixas de vida.';
       case 'injured': return 'Ferido: com metade ou menos das caixas de vida. Recebe Exaustão Leve até sair deste estado.';
       case 'critical': return 'Crítico: resta 1 caixa de vida. Testes para evitar uma Ferida Grave recebem -2.';
-      case 'critically-injured': return 'Criticamente ferido: sem caixas de vida. Recebe Desmaiando; três ocorrências na mesma cena levam a Morrendo.';
+      case 'critically-injured': return this.seriousWoundCount > 0
+        ? 'Sem caixas de vida e com Ferida Grave: recebe Morrendo.'
+        : 'Sem caixas de vida e sem Ferida Grave: recebe Desmaiando.';
       default: return 'Defina a vida atual para acompanhar o estado do personagem.';
     }
   }
@@ -2447,21 +2538,26 @@ export class IrpwCharacterSheetComponent implements OnInit {
   parseConditions() {
     if (!this.currentSheet?.conditions) {
       this.activeConditionsData = [];
-      this.pendingConditionsData = [];
-      return;
+    } else {
+      try {
+        this.activeConditionsData = this.normalizeActiveConditions(JSON.parse(this.currentSheet.conditions));
+      } catch {
+        this.activeConditionsData = [];
+      }
     }
 
-    try {
-      this.activeConditionsData = this.normalizeActiveConditions(JSON.parse(this.currentSheet.conditions));
-    } catch {
-      this.activeConditionsData = [];
-    }
-
+    const changed = this.syncLifeCriticalConditionState();
     this.pendingConditionsData = this.activeConditionsData.map(condition => ({ ...condition }));
+    if (changed && this.currentSheet) {
+      this.currentSheet.conditions = JSON.stringify(this.activeConditionsData);
+      this.scheduleAutoSave();
+      this.updateRollFormulaIfAuto();
+    }
   }
 
   onConditionsChange() {
     this.activeConditionsData = this.normalizeActiveConditions(this.activeConditionsData);
+    this.syncLifeCriticalConditionState();
     this.pendingConditionsData = this.activeConditionsData.map(condition => ({ ...condition }));
     this.rollResults = [];
 
@@ -3371,8 +3467,9 @@ export class IrpwCharacterSheetComponent implements OnInit {
       const severity = this.isConditionSeverityCode(rawSeverity) && availableSeverities.includes(rawSeverity)
         ? rawSeverity
         : availableSeverities[0];
+      const source: 'life' | undefined = (entry as { source?: unknown }).source === 'life' ? 'life' : undefined;
 
-      normalizedConditions.set(rawCode, { code: rawCode, severity });
+      normalizedConditions.set(rawCode, { code: rawCode, severity, ...(source ? { source } : {}) });
     }
 
     return [...normalizedConditions.values()].sort((left, right) => {
@@ -3380,6 +3477,40 @@ export class IrpwCharacterSheetComponent implements OnInit {
       const rightDefinition = this.getConditionDefinition(right.code);
       return leftDefinition.label.localeCompare(rightDefinition.label);
     });
+  }
+
+  private syncLifeCriticalConditionState(): boolean {
+    const currentPoints = this.lifepointsData.currentPoints;
+    const isAtZero = currentPoints !== null && currentPoints <= 0;
+    const targetCode = this.seriousWoundCount >= 3
+      ? CONDITION.DYING
+      : isAtZero
+        ? this.seriousWoundCount > 0 ? CONDITION.DYING : CONDITION.FAINTING
+        : null;
+
+    const nextConditions = targetCode
+      ? this.activeConditionsData.filter(condition =>
+          condition.source !== 'life' && condition.code !== CONDITION.FAINTING && condition.code !== CONDITION.DYING)
+      : this.activeConditionsData.filter(condition => condition.source !== 'life');
+
+    if (targetCode) {
+      nextConditions.push({
+        code: targetCode,
+        severity: CONDITION_SEVERITY.LIGHT,
+        source: 'life',
+      });
+    }
+
+    const normalized = this.normalizeActiveConditions(nextConditions);
+    const changed = JSON.stringify(normalized) !== JSON.stringify(this.activeConditionsData);
+    this.activeConditionsData = normalized;
+    if (changed) {
+      this.pendingConditionsData = normalized.map(condition => ({ ...condition }));
+    }
+    if (changed && this.currentSheet) {
+      this.currentSheet.conditions = normalized.length ? JSON.stringify(normalized) : null;
+    }
+    return changed;
   }
 
   private isConditionCode(value: unknown): value is ConditionCode {

@@ -158,7 +158,7 @@ export class IrpwVocationConfigComponent implements OnInit {
   readonly attributeGroupLabel = ATTRIBUTE_GROUP_LABEL;
   readonly skillLabel = SKILL_LABEL;
   readonly habilityTypeOptions: { value: IrpwHabilityType; label: string }[] = [
-    { value: 'technical', label: 'Técnica' },
+    { value: 'technical', label: 'Poder' },
     { value: 'magic', label: 'Magia' },
     { value: 'passive', label: 'Passiva' },
   ];

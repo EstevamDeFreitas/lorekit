@@ -182,9 +182,14 @@ export function ensureSchema(db: any) {
     db.exec(buildCreateTableSQL(t));
 
 
-    // Adiciona as colunas opcionais novas da ficha sem afetar os dados legados.
-    if (t.name === 'IRPWCharacterSheet' && !getExistingColumns(db, t.name).has('favoriteActions')) {
-      db.exec('ALTER TABLE "IRPWCharacterSheet" ADD COLUMN "favoriteActions" TEXT');
+    // Adiciona colunas opcionais novas da ficha sem afetar os dados legados.
+    if (t.name === 'IRPWCharacterSheet') {
+      if (!getExistingColumns(db, t.name).has('favoriteActions')) {
+        db.exec('ALTER TABLE "IRPWCharacterSheet" ADD COLUMN "favoriteActions" TEXT');
+      }
+      if (!getExistingColumns(db, t.name).has('seriousWoundCount')) {
+        db.exec('ALTER TABLE "IRPWCharacterSheet" ADD COLUMN "seriousWoundCount" INTEGER DEFAULT 0');
+      }
     }
 
     // Remove colunas que não existem mais no schema

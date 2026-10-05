@@ -332,6 +332,7 @@ export const schema: TableDef[] = [
       { name: "perceptions", def: `"perceptions" TEXT` },
       { name: "attributes", def: `"attributes" TEXT` },
       { name: "lifepoints", def: `"lifepoints" TEXT` },
+      { name: "seriousWoundCount", def: `"seriousWoundCount" INTEGER DEFAULT 0` },
       { name: "defensepoints", def: `"defensepoints" TEXT` },
       { name: "stress", def: `"stress" TEXT` },
       { name: "mana", def: `"mana" TEXT` },

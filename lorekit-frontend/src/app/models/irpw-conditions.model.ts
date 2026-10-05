@@ -61,6 +61,7 @@ export interface ConditionDefinition {
 export interface ActiveConditionState {
   code: ConditionCode;
   severity: ConditionSeverityCode;
+  source?: 'life';
 }
 
 export const CONDITION_CATEGORY_LABEL: Record<ConditionCategoryCode, string> = {

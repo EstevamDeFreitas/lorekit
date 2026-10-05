@@ -1,7 +1,6 @@
-<div class="content-manager">
-  <header class="page-header">
+<div class="content-manager entity-edit-shell">
+  <header class="page-header entity-titlebar">
     <div>
-      <p class="eyebrow">IRONPAW</p>
       <h1>Gerenciador de Conteúdo</h1>
       <p class="muted">
         Cadastre itens reutilizáveis para as fichas e mantenha seus efeitos
@@ -98,7 +97,7 @@
   }
 
   <div class="manager-grid" [class.show-editor]="selectedItem">
-    <aside class="catalog-panel">
+    <aside class="catalog-panel entity-properties-panel">
       <div class="catalog-heading">
         <h2>Itens do catálogo</h2>
         <span class="count">{{ filteredItems.length }}</span>
@@ -138,7 +137,7 @@
         />
         Mostrar arquivados</label
       >
-      <div class="catalog-list">
+      <div class="catalog-list scrollbar-dark">
         @for (item of filteredItems; track item.id) {
           <button
             type="button"
@@ -184,16 +183,13 @@
         }
       </div>
     </aside>
-    <main class="editor-panel">
+    <main class="editor-panel entity-properties-panel">
       @if (selectedItem; as item) {
         <div class="editor-header">
           <button type="button" class="back-link" (click)="selectedItem = null">
             <i class="fa-solid fa-arrow-left"></i> Catálogo
           </button>
           <div>
-            <p class="eyebrow">
-              {{ item.id ? "EDITANDO ITEM" : "NOVO ITEM" }}
-            </p>
             <h2>{{ item.name || "Novo item" }}</h2>
           </div>
           <div class="actions">

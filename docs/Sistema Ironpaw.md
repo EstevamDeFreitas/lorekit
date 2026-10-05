@@ -872,9 +872,9 @@ Estados de Vida representam o quão bem um personagem está em um combate ou Cen
   Quando um personagem atinge **metade das suas CV** ele passa a ser considerado Ferido. Ao atingir o estado Ferido, personagem ganha **Exaustão Leve** até o personagem sair desse estado.  
 * **Crítico:**  
   Esse personagem está por um fio, tendo apenas **um CV restante** antes de começar a desmaiar. Quando nesse estado é recomendado recuar e fugir do perigo, já que **seus testes para evitar uma Ferida Grave passam a receber \-2**.  
-* **Criticamente Ferido (0 MV restante):**  
-  Quando um personagem não tem mais **nenhum CV restante**, o personagem ganha a condição [**Desmaiando**](#desmaiando). Ele ainda pode agir, mas de forma debilitada. Curar remove a condição.   
-  * Se ele chegar neste estado **três vezes em uma mesma cena de confronto**, as próximas vezes que ele entrará em no estado **Morrendo** ao invés de **Desmaiando** perdendo a capacidade de agir.
+* **Criticamente Ferido (0 CV restante):**
+  Quando um personagem não tem mais **nenhum CV restante**, ele recebe [**Desmaiando**](#desmaiando) se não tiver uma Ferida Grave, ou [**Morrendo**](#morrendo) se tiver ao menos uma. Curar remove a condição.
+  * Se ele chegar a zero CV **três vezes em uma mesma cena de confronto**, as próximas vezes entrará em **Morrendo** ao invés de **Desmaiando**, perdendo a capacidade de agir.
 
 #### **🖤Ferida Grave** {#🖤ferida-grave}
 
