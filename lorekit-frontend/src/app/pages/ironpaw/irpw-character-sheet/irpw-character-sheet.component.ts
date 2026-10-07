@@ -142,13 +142,31 @@ interface EquippedEquipmentSummary {
   effects: string;
 }
 
+type ResourceKey = 'stress' | 'mana' | 'vigor';
+type ReserveResourceKey = 'mana' | 'vigor';
+type StressThresholdKey = 'anxious' | 'troubled' | 'disturbed' | 'lost';
+type StressStateKey = 'calm' | StressThresholdKey;
+
+interface StressThresholdConfig {
+  anxious: number;
+  troubled: number;
+  disturbed: number;
+  lost: number;
+}
+
+interface ResourceValueState {
+  currentPoints: number | null;
+  maxPoints: number | null;
+  stressThresholds?: StressThresholdConfig;
+}
+
 @Component({
   selector: 'irpw-character-sheet',
   imports: [EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent],
   template: `
     <div [historyEntity]="{ table: 'IRPWCharacterSheet', id: selectedCharacterId }" [historyModel]="currentSheet" (historyRestored)="restoreSheetHistory()" class="irpw-sheet entity-edit-shell flex flex-col relative"
       [style.--entity-glass-color]="selectedCharacter ? (getPersonalizationValue(selectedCharacter, 'color') || '#a1a1aa') : '#a1a1aa'">
-      <div class="irpw-sheet-row flex flex-row gap-4 relative">
+      <div class="irpw-sheet-row flex flex-row gap-2 relative">
 
         @if (!characterIdInput()) {
 
@@ -211,8 +229,13 @@ interface EquippedEquipmentSummary {
         }
 
         <!-- Sheet view -->
-        <div class="irpw-sheet-view flex-1 min-h-[60vh] p-4 flex flex-col">
+        <div class="irpw-sheet-view flex-1 min-h-[60vh] p-2 flex flex-col">
           @if (selectedCharacter) {
+            <header class="character-sheet-title">
+              <h1>
+                <button type="button" (click)="openCharacterEditor()">{{ selectedCharacter.name }}</button>
+              </h1>
+            </header>
             <div class="character-overview">
               <div class="character-overview-card character-identity-card entity-properties-panel rounded-md bg-zinc-925 border border-zinc-800 p-3">
                 <div class="character-identity-body flex flex-row gap-3">
@@ -226,12 +249,6 @@ interface EquippedEquipmentSummary {
                     </div>
                   }
                   <div class="flex-1 flex flex-col gap-2">
-                    <button
-                      type="button"
-                      class="w-fit text-sm mb-1 text-left transition hover:text-yellow-300 hover:underline cursor-pointer"
-                      (click)="openCharacterEditor()">
-                      {{ selectedCharacter.name }}
-                    </button>
                     <div class="flex items-end gap-2">
                       <app-combo-box
                         class="min-w-0 flex-1"
@@ -290,7 +307,7 @@ interface EquippedEquipmentSummary {
 
               </div>
               <!-- Lifepoints & Defensepoints -->
-              <div class="character-overview-card character-resources-card entity-properties-panel rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
+              <div class="character-overview-card character-vitality-card entity-properties-panel rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
                 <div>
                   <div class="flex items-center justify-between gap-3 mb-2">
                     <div class="flex items-center gap-2">
@@ -412,47 +429,34 @@ interface EquippedEquipmentSummary {
                     </div>
                   </ng-template>
                 </div>
-                <div class="character-resource-row flex flex-row gap-6">
-                  <div class="min-w-0">
-                    <div class="mb-2 flex items-center gap-2">
-                      <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Resistência</h2>
-                      <span class="text-[10px] text-zinc-500">{{ formatLifeValue(defensepointsData.currentPoints) }}/{{ formatLifeValue(getMaxDefensePoints()) }}</span>
-                    </div>
-                    <div class="flex flex-wrap gap-1.5">
-                      @for (resistanceSegment of resistanceSegments; track resistanceSegment) {
-                        <div class="resistance-square" [attr.aria-label]="'Caixa de resistência ' + resistanceSegment">
-                          <button
-                            type="button"
-                            class="resistance-square-half left"
-                            [class.is-active]="getResistanceFillState(resistanceSegment) >= 1"
-                            (click)="setDefensePoints(resistanceSegment, false)"
-                            [attr.aria-label]="'Definir resistência em ' + formatLifeValue(resistanceSegment - 0.5)">
-                          </button>
-                          <button
-                            type="button"
-                            class="resistance-square-half right"
-                            [class.is-active]="getResistanceFillState(resistanceSegment) === 2"
-                            (click)="setDefensePoints(resistanceSegment, true)"
-                            [attr.aria-label]="'Definir resistência em ' + formatLifeValue(resistanceSegment)">
-                          </button>
-                        </div>
-                      }
-                      @if (resistanceSegments.length === 0) {
-                        <span class="text-[10px] text-zinc-500">Sem caixas disponíveis</span>
-                      }
-                    </div>
+                <div class="resistance-resource">
+                  <div class="resistance-heading">
+                    <h2>Resistência</h2>
+                    <span>{{ formatLifeValue(defensepointsData.currentPoints) }}/{{ formatLifeValue(getMaxDefensePoints()) }}</span>
                   </div>
-                  @for (stat of resourceStats; track stat.key) {
-                    <div>
-                      <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">{{ stat.label }}</h2>
-                      <div class="flex flex-col items-center w-fit">
-                        <span class="text-[10px] text-zinc-500 mb-0.5">Atual</span>
-                        <input type="number" class="w-14 text-center bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5 text-sm text-white outline-none focus:border-zinc-500"
-                          [(ngModel)]="resourceData[stat.key].currentPoints"
-                          (ngModelChange)="onResourceChange()">
+                  <div class="flex flex-wrap gap-1.5">
+                    @for (resistanceSegment of resistanceSegments; track resistanceSegment) {
+                      <div class="resistance-square" [attr.aria-label]="'Caixa de resistência ' + resistanceSegment">
+                        <button
+                          type="button"
+                          class="resistance-square-half left"
+                          [class.is-active]="getResistanceFillState(resistanceSegment) >= 1"
+                          (click)="setDefensePoints(resistanceSegment, false)"
+                          [attr.aria-label]="'Definir resistência em ' + formatLifeValue(resistanceSegment - 0.5)">
+                        </button>
+                        <button
+                          type="button"
+                          class="resistance-square-half right"
+                          [class.is-active]="getResistanceFillState(resistanceSegment) === 2"
+                          (click)="setDefensePoints(resistanceSegment, true)"
+                          [attr.aria-label]="'Definir resistência em ' + formatLifeValue(resistanceSegment)">
+                        </button>
                       </div>
-                    </div>
-                  }
+                    }
+                    @if (resistanceSegments.length === 0) {
+                      <span class="text-[10px] text-zinc-500">Sem caixas disponíveis</span>
+                    }
+                  </div>
                 </div>
               </div>
               <!-- Condições -->
@@ -584,6 +588,235 @@ interface EquippedEquipmentSummary {
                   </div>
                 </ng-template>
               </div>
+              <section
+                class="character-overview-card resource-card stress-resource-card entity-properties-panel"
+                [ngClass]="getStressCardClass()"
+                aria-label="Estresse">
+                <div class="resource-card-heading">
+                  <div class="resource-card-name">
+                    <i class="fa-solid fa-brain" aria-hidden="true"></i>
+                    <h2>Estresse</h2>
+                    <span class="stress-state-label">{{ getStressStateLabel() }}</span>
+                  </div>
+                  <div class="resource-card-controls">
+                    <span class="resource-current-value">{{ resourceData.stress.currentPoints ?? 0 }}/{{ getStressMaximum() }}</span>
+                    <button
+                      type="button"
+                      class="resource-step-button resource-step-button--compact"
+                      (click)="adjustResource('stress', -1)"
+                      [disabled]="!canAdjustResource('stress', -1)"
+                      aria-label="Reduzir Estresse em 1">
+                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      class="resource-current-input resource-current-input--compact"
+                      aria-label="Estresse atual"
+                      [(ngModel)]="resourceData.stress.currentPoints"
+                      (ngModelChange)="onResourceChange()">
+                    <button
+                      type="button"
+                      class="resource-step-button resource-step-button--compact"
+                      (click)="adjustResource('stress', 1)"
+                      aria-label="Aumentar Estresse em 1">
+                      <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                    </button>
+                    <button
+                      type="button"
+                      class="resource-settings-button"
+                      cdkOverlayOrigin
+                      #stressSettingsOrigin="cdkOverlayOrigin"
+                      (click)="toggleStressSettingsOverlay()"
+                      aria-label="Configurar limites de Estresse"
+                      title="Configurar limites de Estresse">
+                      <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+                <div
+                  class="resource-meter stress-meter"
+                  role="progressbar"
+                  aria-label="Estresse acumulado"
+                  aria-valuemin="0"
+                  [attr.aria-valuemax]="getStressMaximum()"
+                  [attr.aria-valuenow]="getStressTrackValue()"
+                  [attr.aria-valuetext]="getStressProgressText()">
+                  <span class="resource-meter-fill" [ngClass]="getStressToneClass()" [style.width.%]="getStressFillPercentage()"></span>
+                  @for (threshold of stressThresholds; track threshold.value) {
+                    <span class="stress-meter-marker" [style.left.%]="threshold.position" [title]="threshold.value + ' · ' + threshold.label" aria-hidden="true"></span>
+                  }
+                </div>
+                <ng-template
+                  cdkConnectedOverlay
+                  [cdkConnectedOverlayOrigin]="stressSettingsOrigin"
+                  [cdkConnectedOverlayOpen]="isStressSettingsOpen"
+                  [cdkConnectedOverlayHasBackdrop]="true"
+                  [cdkConnectedOverlayOffsetY]="8"
+                  (backdropClick)="closeStressSettingsOverlay()"
+                  (overlayOutsideClick)="closeStressSettingsOverlay()">
+                  <div class="stress-settings-panel rounded-md border border-zinc-700 bg-zinc-900 p-3 shadow-xl">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                      <div>
+                        <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Limites de Estresse</h3>
+                        <p class="text-[11px] text-zinc-500">Defina o mínimo de cada estado para este personagem.</p>
+                      </div>
+                      <button
+                        type="button"
+                        class="text-zinc-500 transition hover:text-zinc-200"
+                        (click)="closeStressSettingsOverlay()"
+                        aria-label="Fechar">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                    <div class="stress-threshold-fields">
+                      <label>Ansioso<input type="number" min="1" step="1" [(ngModel)]="pendingStressThresholds.anxious"></label>
+                      <label>Transtornado<input type="number" min="2" step="1" [(ngModel)]="pendingStressThresholds.troubled"></label>
+                      <label>Perturbado<input type="number" min="3" step="1" [(ngModel)]="pendingStressThresholds.disturbed"></label>
+                      <label>Perdido<input type="number" min="4" step="1" [(ngModel)]="pendingStressThresholds.lost"></label>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-3">
+                      <button
+                        type="button"
+                        class="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
+                        (click)="closeStressSettingsOverlay()">
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        class="rounded-md border border-yellow-700 bg-yellow-500/10 px-2 py-1 text-xs text-yellow-200 transition hover:bg-yellow-500/20"
+                        (click)="saveStressThresholds()">
+                        Salvar
+                      </button>
+                    </div>
+                  </div>
+                </ng-template>
+              </section>
+
+              <section class="character-overview-card resource-card entity-properties-panel" aria-label="Vigor">
+                <div class="resource-card-heading">
+                  <div class="resource-card-name">
+                    <i class="fa-solid fa-person-running" aria-hidden="true"></i>
+                    <h2>Vigor</h2>
+                  </div>
+                  <div class="resource-card-controls">
+                    <button
+                      type="button"
+                      class="resource-step-button resource-step-button--compact"
+                      (click)="adjustResource('vigor', -1)"
+                      [disabled]="!canAdjustResource('vigor', -1)"
+                      aria-label="Reduzir Vigor em 1">
+                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      class="resource-current-input resource-current-input--compact"
+                      [attr.max]="getReserveMaximum('vigor')"
+                      aria-label="Vigor atual"
+                      [(ngModel)]="resourceData.vigor.currentPoints"
+                      (ngModelChange)="onResourceChange()">
+                    <span class="resource-value-divider" aria-hidden="true">/</span>
+                    <label class="sr-only" for="vigor-maximum">Máximo de Vigor</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      class="resource-maximum-input resource-maximum-input--compact"
+                      id="vigor-maximum"
+                      placeholder="máx."
+                      title="Máximo base: 3 + o maior valor entre Corpo e Técnica. Ajuste para incluir modificadores."
+                      [ngModel]="getReserveMaximum('vigor')"
+                      (ngModelChange)="setResourceMaximum('vigor', $event)">
+                    <button
+                      type="button"
+                      class="resource-step-button resource-step-button--compact"
+                      (click)="adjustResource('vigor', 1)"
+                      [disabled]="!canAdjustResource('vigor', 1)"
+                      aria-label="Aumentar Vigor em 1">
+                      <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+                @if ((getReserveMaximum('vigor') ?? 0) > 0) {
+                  <div
+                    class="resource-meter reserve-meter"
+                    role="progressbar"
+                    aria-label="Vigor disponível"
+                    aria-valuemin="0"
+                    [attr.aria-valuemax]="getReserveMaximum('vigor')"
+                    [attr.aria-valuenow]="getReserveTrackValue('vigor')"
+                    [attr.aria-valuetext]="getReserveProgressText('vigor')">
+                    <span class="resource-meter-fill" [style.width.%]="getReserveFillPercentage('vigor')"></span>
+                  </div>
+                } @else {
+                  <div class="resource-meter resource-meter-unconfigured" title="Defina o máximo de Vigor para acompanhar a reserva." aria-hidden="true"></div>
+                }
+              </section>
+
+              <section class="character-overview-card resource-card entity-properties-panel" aria-label="Mana">
+                <div class="resource-card-heading">
+                  <div class="resource-card-name">
+                    <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+                    <h2>Mana</h2>
+                  </div>
+                  <div class="resource-card-controls">
+                    <button
+                      type="button"
+                      class="resource-step-button resource-step-button--compact"
+                      (click)="adjustResource('mana', -1)"
+                      [disabled]="!canAdjustResource('mana', -1)"
+                      aria-label="Reduzir Mana em 1">
+                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
+                    </button>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      class="resource-current-input resource-current-input--compact"
+                      [attr.max]="getReserveMaximum('mana')"
+                      aria-label="Mana atual"
+                      [(ngModel)]="resourceData.mana.currentPoints"
+                      (ngModelChange)="onResourceChange()">
+                    <span class="resource-value-divider" aria-hidden="true">/</span>
+                    <label class="sr-only" for="mana-maximum">Máximo de Mana</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      class="resource-maximum-input resource-maximum-input--compact"
+                      id="mana-maximum"
+                      placeholder="máx."
+                      title="Defina o máximo conforme o nível de Conjuração e os modificadores."
+                      [ngModel]="getReserveMaximum('mana')"
+                      (ngModelChange)="setResourceMaximum('mana', $event)">
+                    <button
+                      type="button"
+                      class="resource-step-button resource-step-button--compact"
+                      (click)="adjustResource('mana', 1)"
+                      [disabled]="!canAdjustResource('mana', 1)"
+                      aria-label="Aumentar Mana em 1">
+                      <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+                @if ((getReserveMaximum('mana') ?? 0) > 0) {
+                  <div
+                    class="resource-meter reserve-meter"
+                    role="progressbar"
+                    aria-label="Mana disponível"
+                    aria-valuemin="0"
+                    [attr.aria-valuemax]="getReserveMaximum('mana')"
+                    [attr.aria-valuenow]="getReserveTrackValue('mana')"
+                    [attr.aria-valuetext]="getReserveProgressText('mana')">
+                    <span class="resource-meter-fill" [style.width.%]="getReserveFillPercentage('mana')"></span>
+                  </div>
+                } @else {
+                  <div class="resource-meter resource-meter-unconfigured" title="Defina o máximo de Mana para acompanhar a reserva." aria-hidden="true"></div>
+                }
+              </section>
             </div>
             <div class="character-workspace">
                   <div class="character-stats-column flex flex-col h-full">
@@ -1455,6 +1688,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 600);
   isLifeSettingsOpen = false;
   pendingLifeMaxPoints: number | null = null;
+  isStressSettingsOpen = false;
+  pendingStressThresholds: StressThresholdConfig = { anxious: 10, troubled: 20, disturbed: 30, lost: 40 };
   isConditionSettingsOpen = false;
 
   perceptionsData: IrpwPerceptions = { smell: null, vision: null, hearing: null };
@@ -1509,12 +1744,23 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
   lifepointsData: { maxPoints: number | null; currentPoints: number | null } = { maxPoints: null, currentPoints: null };
   defensepointsData: IrpwDefensePointsEnvelope = parseIrpwDefensePoints(null);
-  resourceData: Record<string, { currentPoints: number | null }> = { stress: { currentPoints: null }, mana: { currentPoints: null }, vigor: { currentPoints: null } };
-  readonly resourceStats: { key: string; label: string }[] = [
-    { key: 'stress', label: 'Stress' },
-    { key: 'mana', label: 'Mana' },
-    { key: 'vigor', label: 'Vigor' },
-  ];
+  resourceData: Record<ResourceKey, ResourceValueState> = {
+    stress: { currentPoints: 0, maxPoints: null },
+    mana: { currentPoints: null, maxPoints: null },
+    vigor: { currentPoints: null, maxPoints: null },
+  };
+  readonly defaultStressThresholds: StressThresholdConfig = { anxious: 10, troubled: 20, disturbed: 30, lost: 40 };
+
+  get stressThresholds(): Array<{ key: StressThresholdKey; value: number; label: string; position: number }> {
+    const thresholds = this.getStressThresholdConfig();
+    const maximum = Math.max(1, thresholds.lost);
+    return [
+      { key: 'anxious', value: thresholds.anxious, label: 'Ansioso', position: thresholds.anxious / maximum * 100 },
+      { key: 'troubled', value: thresholds.troubled, label: 'Transtornado', position: thresholds.troubled / maximum * 100 },
+      { key: 'disturbed', value: thresholds.disturbed, label: 'Perturbado', position: thresholds.disturbed / maximum * 100 },
+      { key: 'lost', value: thresholds.lost, label: 'Perdido', position: 100 },
+    ];
+  }
   get lifeSegments(): number[] {
     return Array.from({ length: this.getMaxLifePoints() }, (_, index) => index + 1);
   }
@@ -1687,6 +1933,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
       return;
     }
 
+    this.closeStressSettingsOverlay();
     this.selectedSpecieId = this.selectedCharacter?.ParentSpecies?.id ?? '';
     if (this.selectedSpecieId) {
       this.irpwSpecieService.ensureConfig(this.selectedSpecieId);
@@ -1744,6 +1991,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.marksData = [];
     this.lifepointsData = { maxPoints: null, currentPoints: null };
     this.defensepointsData = parseIrpwDefensePoints(null);
+    this.closeStressSettingsOverlay();
     this.rollShortcutLabel = '';
     this.expandedMarkIndexes.clear();
   }
@@ -2490,6 +2738,35 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.closeLifeSettingsOverlay();
   }
 
+  toggleStressSettingsOverlay(): void {
+    if (this.isStressSettingsOpen) {
+      this.closeStressSettingsOverlay();
+      return;
+    }
+    this.openStressSettingsOverlay();
+  }
+
+  openStressSettingsOverlay(): void {
+    this.pendingStressThresholds = { ...this.getStressThresholdConfig() };
+    this.isStressSettingsOpen = true;
+  }
+
+  closeStressSettingsOverlay(): void {
+    this.isStressSettingsOpen = false;
+  }
+
+  saveStressThresholds(): void {
+    const thresholds = this.normalizeStressThresholds(this.pendingStressThresholds, null);
+    this.resourceData.stress.stressThresholds = thresholds;
+    this.resourceData.stress.maxPoints = thresholds.lost;
+    this.resourceData.stress.currentPoints = Math.min(
+      this.resourceData.stress.currentPoints ?? 0,
+      thresholds.lost,
+    );
+    this.onResourceChange();
+    this.closeStressSettingsOverlay();
+  }
+
   private getMaxLifePoints(): number {
     return Math.max(this.normalizeLifeMaxPoints(this.lifepointsData.maxPoints) ?? 0, this.getLifeMinimum());
   }
@@ -2885,25 +3162,185 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   parseResources() {
-    const keys: Array<{ key: keyof IrpwCharacterSheet }> = [
-      { key: 'stress' }, { key: 'mana' }, { key: 'vigor' },
-    ];
-    for (const { key } of keys) {
+    const keys: ResourceKey[] = ['stress', 'mana', 'vigor'];
+    for (const key of keys) {
+      const defaultCurrent = key === 'stress' ? 0 : null;
+      let parsed: Partial<ResourceValueState> | null = null;
       try {
-        this.resourceData[key] = this.currentSheet?.[key]
+        parsed = this.currentSheet?.[key]
           ? JSON.parse(this.currentSheet[key] as string)
-          : { currentPoints: null };
-      } catch { this.resourceData[key] = { currentPoints: null }; }
+          : null;
+      } catch {
+        parsed = null;
+      }
+
+      const currentPoints = this.normalizeResourcePoints(parsed?.currentPoints) ?? defaultCurrent;
+      const configuredMaximum = this.normalizeResourcePoints(parsed?.maxPoints);
+      const stressThresholds = key === 'stress'
+        ? this.normalizeStressThresholds(parsed?.stressThresholds, configuredMaximum)
+        : undefined;
+      const maxPoints = key === 'stress' ? stressThresholds?.lost ?? null : configuredMaximum;
+      this.resourceData[key] = {
+        currentPoints: currentPoints !== null && maxPoints !== null
+          ? Math.min(currentPoints, maxPoints)
+          : currentPoints,
+        maxPoints,
+        stressThresholds,
+      };
     }
   }
 
   onResourceChange() {
     if (this.currentSheet) {
+      for (const key of ['stress', 'mana', 'vigor'] as const) {
+        const resource = this.resourceData[key];
+        resource.currentPoints = this.normalizeResourcePoints(resource.currentPoints);
+        if (key === 'stress') {
+          resource.stressThresholds = this.normalizeStressThresholds(resource.stressThresholds, resource.maxPoints);
+          resource.maxPoints = resource.stressThresholds.lost;
+        } else {
+          resource.maxPoints = this.normalizeResourcePoints(resource.maxPoints);
+        }
+        const maximum = key === 'stress' ? resource.maxPoints : this.getReserveMaximum(key);
+        if (resource.currentPoints !== null && maximum !== null) {
+          resource.currentPoints = Math.min(resource.currentPoints, maximum);
+        }
+      }
       this.currentSheet.stress = JSON.stringify(this.resourceData['stress']);
       this.currentSheet.mana = JSON.stringify(this.resourceData['mana']);
       this.currentSheet.vigor = JSON.stringify(this.resourceData['vigor']);
       this.scheduleAutoSave();
     }
+  }
+
+  setResourceMaximum(key: ReserveResourceKey, value: unknown): void {
+    this.resourceData[key].maxPoints = this.normalizeResourcePoints(value);
+    this.onResourceChange();
+  }
+
+  adjustResource(key: ResourceKey, amount: number): void {
+    const resource = this.resourceData[key];
+    const current = resource.currentPoints ?? 0;
+    const maximum = key === 'stress' ? this.getStressMaximum() : this.getReserveMaximum(key);
+    const next = Math.max(0, current + amount);
+    resource.currentPoints = maximum === null ? next : Math.min(maximum, next);
+    this.onResourceChange();
+  }
+
+  canAdjustResource(key: ResourceKey, amount: number): boolean {
+    const resource = this.resourceData[key];
+    const current = resource.currentPoints ?? 0;
+    if (amount < 0) return current > 0;
+    const maximum = key === 'stress' ? this.getStressMaximum() : this.getReserveMaximum(key);
+    return maximum === null || current < maximum;
+  }
+
+  getStressTrackValue(): number {
+    return Math.min(this.getStressMaximum(), this.resourceData.stress.currentPoints ?? 0);
+  }
+
+  getStressMaximum(): number {
+    return this.getStressThresholdConfig().lost;
+  }
+
+  getStressFillPercentage(): number {
+    const maximum = this.getStressMaximum();
+    return maximum <= 0 ? 0 : Math.min(100, this.getStressTrackValue() / maximum * 100);
+  }
+
+  getStressProgressText(): string {
+    const current = this.resourceData.stress.currentPoints ?? 0;
+    return `${current} de ${this.getStressMaximum()} pontos de Estresse; estado ${this.getStressStateLabel()}.`;
+  }
+
+  getStressToneClass(): string {
+    return `resource-meter-fill--stress-${this.getStressStateKey()}`;
+  }
+
+  getStressCardClass(): string {
+    return `stress-card--${this.getStressStateKey()}`;
+  }
+
+  getStressStateKey(): StressStateKey {
+    const current = this.resourceData.stress.currentPoints ?? 0;
+    const thresholds = this.getStressThresholdConfig();
+    if (current >= thresholds.lost) return 'lost';
+    if (current >= thresholds.disturbed) return 'disturbed';
+    if (current >= thresholds.troubled) return 'troubled';
+    if (current >= thresholds.anxious) return 'anxious';
+    return 'calm';
+  }
+
+  getStressStateLabel(): string {
+    const labels: Record<StressStateKey, string> = {
+      calm: 'Calmo',
+      anxious: 'Ansioso',
+      troubled: 'Transtornado',
+      disturbed: 'Perturbado',
+      lost: 'Perdido',
+    };
+    return labels[this.getStressStateKey()];
+  }
+
+  private getStressThresholdConfig(): StressThresholdConfig {
+    return this.normalizeStressThresholds(
+      this.resourceData.stress.stressThresholds,
+      this.resourceData.stress.maxPoints,
+    );
+  }
+
+  private normalizeStressThresholds(value: unknown, configuredMaximum: number | null): StressThresholdConfig {
+    const source = value && typeof value === 'object'
+      ? value as Partial<StressThresholdConfig>
+      : {};
+    const fallback = this.defaultStressThresholds;
+    const anxiousCandidate = this.normalizeResourcePoints(source.anxious) ?? fallback.anxious;
+    const troubledCandidate = this.normalizeResourcePoints(source.troubled) ?? fallback.troubled;
+    const disturbedCandidate = this.normalizeResourcePoints(source.disturbed) ?? fallback.disturbed;
+    const lostCandidate = this.normalizeResourcePoints(source.lost) ?? configuredMaximum ?? fallback.lost;
+    const lost = Math.max(4, lostCandidate);
+    const disturbed = Math.max(3, Math.min(disturbedCandidate, lost - 1));
+    const troubled = Math.max(2, Math.min(troubledCandidate, disturbed - 1));
+    const anxious = Math.max(1, Math.min(anxiousCandidate, troubled - 1));
+    return { anxious, troubled, disturbed, lost };
+  }
+
+  getReserveFillPercentage(key: ReserveResourceKey): number {
+    const { currentPoints } = this.resourceData[key];
+    const maxPoints = this.getReserveMaximum(key);
+    if (maxPoints === null || maxPoints <= 0) return 0;
+    return Math.max(0, Math.min(100, (currentPoints ?? 0) / maxPoints * 100));
+  }
+
+  getReserveTrackValue(key: ReserveResourceKey): number {
+    const { currentPoints } = this.resourceData[key];
+    const maxPoints = this.getReserveMaximum(key);
+    return maxPoints === null ? 0 : Math.max(0, Math.min(maxPoints, currentPoints ?? 0));
+  }
+
+  getReserveProgressText(key: ReserveResourceKey): string {
+    const { currentPoints } = this.resourceData[key];
+    const maxPoints = this.getReserveMaximum(key);
+    return `${currentPoints ?? 0} de ${maxPoints ?? 0} pontos de ${key === 'vigor' ? 'Vigor' : 'Mana'}.`;
+  }
+
+  getReserveMaximum(key: ReserveResourceKey): number | null {
+    const configuredMaximum = this.resourceData[key].maxPoints;
+    if (configuredMaximum !== null) return configuredMaximum;
+    if (key !== 'vigor') return null;
+
+    const body = Number(this.attributesData['BODY']?.value ?? 0);
+    const technique = Number(this.attributesData['TECHNIQUE']?.value ?? 0);
+    const bodyValue = Number.isFinite(body) ? Math.trunc(body) : 0;
+    const techniqueValue = Number.isFinite(technique) ? Math.trunc(technique) : 0;
+    return 3 + Math.max(bodyValue, techniqueValue);
+  }
+
+  private normalizeResourcePoints(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return null;
+    return Math.max(0, Math.trunc(numericValue));
   }
 
   parseMarks() {
