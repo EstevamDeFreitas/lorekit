@@ -28,6 +28,21 @@ import { WORKSPACE_TAB_CONTEXT } from '../../../models/workspace-tab-context';
 import { DISCARD_PENDING_SAVES_EVENT, FLUSH_PENDING_SAVES_EVENT, PendingSaveEventDetail, pendingSaveEventMatchesTab } from '../../../utils/pending-save-event';
 type DragKind = 'age-move' | 'age-start' | 'age-end' | 'mark-move' | 'event-move' | 'event-start' | 'event-end';
 type TimelineItem = Age | GreatMark | TimelineEvent;
+type TimelineIndexKind = 'age' | 'mark' | 'event';
+
+interface TimelineIndexItem {
+  kind: TimelineIndexKind;
+  id: string;
+  label: string;
+  typeLabel: string;
+  dateLabel: string;
+  summary: string;
+  color: string;
+  icon: string;
+  date: number;
+  endDate: number;
+}
+
 interface TimelineDrag {
   kind: DragKind;
   item: TimelineItem;
@@ -94,6 +109,16 @@ export class TimelineEditComponent implements OnDestroy {
   canvasWidth = 1400;
   canvasHeight = 520;
   yearTicks: number[] = [0];
+  timelineIndexItems: TimelineIndexItem[] = [];
+  filteredTimelineIndexItems: TimelineIndexItem[] = [];
+  timelineIndexSearch = '';
+  timelineIndexFilter: TimelineIndexKind | 'all' = 'all';
+  showTimelineIndex = true;
+  selectedTimelineItemKey = '';
+  quickAddDate: number | null = null;
+  quickAddLeft = 0;
+  quickAddTop = 0;
+  saveState: 'saved' | 'saving' | 'error' = 'saved';
   private drag: TimelineDrag | null = null;
   private readonly pointerMove = (event: PointerEvent) => this.moveDrag(event);
   private readonly pointerUp = (event: PointerEvent) => this.endDrag(event);
@@ -136,20 +161,39 @@ export class TimelineEditComponent implements OnDestroy {
   loadTimeline(): void {
     const id = this.timelineId();
     if (!id) return;
-    this.timeline = this.timelineService.getTimelineById(id);
+    const loadedTimeline = this.timelineService.getTimelineById(id);
+    if (!loadedTimeline) {
+      this.timeline = new Timeline();
+      this.ages = [];
+      this.greatMarks = [];
+      this.events = [];
+      this.timelineIndexItems = [];
+      this.filteredTimelineIndexItems = [];
+      if (this.dialogRef) {
+        this.dialogRef.close({ deleted: true });
+      } else if (this.isRouteComponent()) {
+        void this.router.navigate(['/app/timeline']);
+      }
+      return;
+    }
+
+    this.timeline = loadedTimeline;
     this.timeline.timeUnitName ||= 'Anos';
     this.ages = this.ageService.getAgesByTimelineId(id);
     this.greatMarks = this.greatMarkService.getGreatMarksByTimelineId(id);
     this.events = this.eventService.getEventsByTimelineId(id);
+    this.saveState = 'saved';
     this.refreshLayout();
   }
   onTimelineWheel(event: WheelEvent): void {
     const viewport = this.viewport?.nativeElement;
     if (!viewport) return;
-    event.preventDefault();
 
     if (!event.ctrlKey) {
-      viewport.scrollLeft += event.deltaX || event.deltaY;
+      if (event.shiftKey && event.deltaY) {
+        event.preventDefault();
+        viewport.scrollLeft += event.deltaY;
+      }
       return;
     }
 
@@ -163,6 +207,87 @@ export class TimelineEditComponent implements OnDestroy {
     viewport.scrollLeft = Math.max(0, this.dateToX(dateAtPointer) - pointerOffset);
     this.cdr.markForCheck();
   }
+  zoomIn(): void {
+    this.setZoom(this.zoomFactor * 1.2);
+  }
+  zoomOut(): void {
+    this.setZoom(this.zoomFactor * .82);
+  }
+  resetZoom(): void {
+    this.setZoom(1);
+  }
+  zoomLabel(): string {
+    return `${Math.round(this.zoomFactor * 100)}%`;
+  }
+  onCanvasClick(event: MouseEvent): void {
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (target?.closest('.timeline-interactive-item, button, .timeline-tooltip, .timeline-quick-add')) return;
+
+    const canvas = this.canvas?.nativeElement;
+    if (!canvas) return;
+    const bounds = canvas.getBoundingClientRect();
+    const localX = event.clientX - bounds.left;
+    const localY = event.clientY - bounds.top;
+    const date = Math.round(this.minDate + (localX - 54) / this.pixelsPerYear);
+
+    this.quickAddDate = date;
+    this.quickAddLeft = Math.max(12, Math.min(this.canvasWidth - 210, localX - 72));
+    this.quickAddTop = Math.max(58, Math.min(this.canvasHeight - 96, localY - 18));
+    this.cdr.markForCheck();
+  }
+  closeQuickAdd(): void {
+    this.quickAddDate = null;
+  }
+  onTimelineItemKeydown(event: KeyboardEvent, kind: TimelineIndexKind, item: TimelineItem): void {
+    if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
+    event.preventDefault();
+    if (kind === 'age') this.openAgeDialog((item as Age).startDate, item.id);
+    if (kind === 'mark') this.openGreatMarkDialog((item as GreatMark).date, item.id);
+    if (kind === 'event') this.openEventDialog((item as TimelineEvent).startDate, item.id);
+  }
+  quickCreate(kind: TimelineIndexKind): void {
+    const date = this.quickAddDate ?? this.defaultDate();
+    this.closeQuickAdd();
+    if (kind === 'age') this.openAgeDialog(date);
+    if (kind === 'mark') this.openGreatMarkDialog(date);
+    if (kind === 'event') this.openEventDialog(date);
+  }
+  filterTimelineIndex(): void {
+    const term = this.timelineIndexSearch.trim().toLocaleLowerCase();
+    this.filteredTimelineIndexItems = this.timelineIndexItems.filter(item => {
+      const matchesType = this.timelineIndexFilter === 'all' || item.kind === this.timelineIndexFilter;
+      const matchesTerm = !term || `${item.label} ${item.typeLabel} ${item.summary} ${item.dateLabel}`.toLocaleLowerCase().includes(term);
+      return matchesType && matchesTerm;
+    });
+  }
+  setTimelineIndexFilter(filter: TimelineIndexKind | 'all'): void {
+    this.timelineIndexFilter = filter;
+    this.filterTimelineIndex();
+  }
+  selectTimelineIndex(item: TimelineIndexItem): void {
+    this.selectedTimelineItemKey = this.timelineItemKey(item.kind, item.id);
+    this.focusTimelineItem(item);
+    this.cdr.markForCheck();
+  }
+  openTimelineIndexItem(item: TimelineIndexItem): void {
+    this.selectTimelineIndex(item);
+    if (item.kind === 'age') this.openAgeDialog(item.date, item.id);
+    if (item.kind === 'mark') this.openGreatMarkDialog(item.date, item.id);
+    if (item.kind === 'event') this.openEventDialog(item.date, item.id);
+  }
+  isTimelineIndexSelected(item: TimelineIndexItem): boolean {
+    return this.selectedTimelineItemKey === this.timelineItemKey(item.kind, item.id);
+  }
+  private setZoom(nextZoom: number): void {
+    const viewport = this.viewport?.nativeElement;
+    const centerDate = viewport
+      ? this.minDate + (viewport.scrollLeft + viewport.clientWidth / 2 - 54) / this.pixelsPerYear
+      : this.defaultDate();
+    this.zoomFactor = Math.max(.25, Math.min(8, nextZoom));
+    this.refreshLayout();
+    if (viewport) viewport.scrollLeft = Math.max(0, this.dateToX(centerDate) - viewport.clientWidth / 2);
+    this.cdr.markForCheck();
+  }
   timelineDescriptionChange(value: unknown): void {
     this.timeline.description = JSON.stringify(value);
     this.saveTimeline();
@@ -170,9 +295,16 @@ export class TimelineEditComponent implements OnDestroy {
   saveTimeline(): void {
     if (!this.timeline.id || !this.timeline.name.trim()) return;
     this.timeline.timeUnitName = this.timeline.timeUnitName?.trim() || 'Anos';
+    this.saveState = 'saving';
     this.saveTask.schedule(() => {
-      this.timelineService.saveTimeline(this.timeline, this.timeline.ParentWorld?.id || null);
-      this.entityChangeService.notifySave('Timeline', this.timeline.id);
+      try {
+        this.timelineService.saveTimeline(this.timeline, this.timeline.ParentWorld?.id || null);
+        this.entityChangeService.notifySave('Timeline', this.timeline.id);
+        this.saveState = 'saved';
+      } catch {
+        this.saveState = 'error';
+      }
+      this.zone.run(() => this.cdr.markForCheck());
     });
   }
   defaultDate(): number {
@@ -268,6 +400,7 @@ export class TimelineEditComponent implements OnDestroy {
 
     const isMark = kind === 'mark-move';
     const isEvent = kind === 'event-move' || kind === 'event-start' || kind === 'event-end';
+    const indexKind: TimelineIndexKind = isMark ? 'mark' : isEvent ? 'event' : 'age';
     const hasLane = isMark || isEvent;
     const range = item as Age | TimelineEvent;
     const eventStartTop = isMark ? this.markTop(item as GreatMark) : isEvent ? this.eventTop(item as TimelineEvent) : 0;
@@ -275,6 +408,8 @@ export class TimelineEditComponent implements OnDestroy {
 
     const pointerTarget = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
     pointerTarget?.setPointerCapture?.(event.pointerId);
+    this.selectedTimelineItemKey = this.timelineItemKey(indexKind, item.id);
+    this.closeQuickAdd();
 
     this.drag = {
       kind,
@@ -419,16 +554,15 @@ export class TimelineEditComponent implements OnDestroy {
     if (table === 'Timeline') return id === this.timelineId();
     if (table === 'Age') return this.ages.some(item => item.id === id);
     if (table === 'GreatMark') return this.greatMarks.some(item => item.id === id);
+    if (table === 'Event') return this.events.some(item => item.id === id);
     return false;
   }
   private refreshLayout(): void {
-    const primaryDates = [
+    const dates = [
       ...this.ages.flatMap(age => [age.startDate, age.endDate]),
       ...this.events.flatMap(event => [event.startDate, event.endDate]),
+      ...this.greatMarks.flatMap(mark => [mark.startDate, mark.endDate, mark.date]),
     ].map(value => Math.round(Number(value) || 0));
-    const dates = primaryDates.length
-      ? primaryDates
-      : this.greatMarks.map(mark => Math.round(Number(mark.date) || 0));
     const firstContentDate = dates.length ? Math.min(...dates) : 0;
     this.lastContentDate = dates.length ? Math.max(...dates) : 0;
     const contentSpan = Math.max(1, this.lastContentDate - firstContentDate);
@@ -447,6 +581,63 @@ export class TimelineEditComponent implements OnDestroy {
     this.eventTopBase = this.axisTop + 72 + maxMarkLane * this.MARK_ROW_HEIGHT;
     this.canvasHeight = Math.max(520, this.eventTopBase + (maxEventLane + 1) * this.EVENT_ROW_HEIGHT + 72);
     this.yearTicks = this.buildYearTicks();
+    this.rebuildTimelineIndex();
+  }
+  private rebuildTimelineIndex(): void {
+    const unit = this.timeline.timeUnitName || 'Anos';
+    this.timelineIndexItems = [
+      ...this.ages.map(age => ({
+        kind: 'age' as const,
+        id: age.id,
+        label: this.formatText(age.name || 'Era sem nome', age.startDate, age.endDate),
+        typeLabel: 'Era',
+        dateLabel: `${this.formatYear(age.startDate)} — ${this.formatYear(age.endDate)} ${unit}`,
+        summary: this.formatText(age.description, age.startDate, age.endDate),
+        color: this.colorOf(age),
+        icon: this.itemIconClass(age),
+        date: age.startDate,
+        endDate: age.endDate,
+      })),
+      ...this.greatMarks.map(mark => ({
+        kind: 'mark' as const,
+        id: mark.id,
+        label: this.formatText(mark.name || 'Marco sem nome', mark.startDate, mark.endDate),
+        typeLabel: 'Marco',
+        dateLabel: `${this.formatText(mark.displayDate || '{AutoGenDate}', mark.startDate, mark.endDate)} ${unit}`,
+        summary: this.formatText(mark.description, mark.startDate, mark.endDate),
+        color: this.colorOf(mark),
+        icon: this.greatMarkIconClass(mark),
+        date: mark.date,
+        endDate: mark.endDate,
+      })),
+      ...this.events.map(event => ({
+        kind: 'event' as const,
+        id: event.id,
+        label: this.formatText(event.name || 'Evento sem nome', event.startDate, event.endDate),
+        typeLabel: 'Evento',
+        dateLabel: `${this.formatText(event.date || '{AutoGenDate}', event.startDate, event.endDate)} ${unit}`,
+        summary: this.formatText(event.description, event.startDate, event.endDate),
+        color: this.colorOf(event),
+        icon: this.itemIconClass(event),
+        date: event.startDate,
+        endDate: event.endDate,
+      })),
+    ].sort((a, b) => a.date - b.date || a.typeLabel.localeCompare(b.typeLabel));
+    this.filterTimelineIndex();
+  }
+  private focusTimelineItem(item: TimelineIndexItem): void {
+    const viewport = this.viewport?.nativeElement;
+    if (!viewport) return;
+    const itemTop = item.kind === 'age'
+      ? this.ageTop(this.ages.find(age => age.id === item.id) || this.ages[0])
+      : item.kind === 'mark'
+        ? this.markTop(this.greatMarks.find(mark => mark.id === item.id) || this.greatMarks[0])
+        : this.eventTop(this.events.find(event => event.id === item.id) || this.events[0]);
+    viewport.scrollLeft = Math.max(0, this.dateToX(item.date) - viewport.clientWidth * .38);
+    viewport.scrollTop = Math.max(0, itemTop - viewport.clientHeight * .36);
+  }
+  private timelineItemKey(kind: TimelineIndexKind, id: string): string {
+    return `${kind}:${id}`;
   }
   private assignAgeLanes(): void {
     const laneEnds: number[] = [];

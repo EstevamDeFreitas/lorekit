@@ -1,4 +1,4 @@
-    <div [historyEntity]="{ table: 'Timeline', id: timeline.id || '' }" [historyModel]="timeline" class="timeline-page">
+    <div [historyEntity]="{ table: 'Timeline', id: timeline.id || '' }" [historyModel]="timeline" class="timeline-page" (keydown.escape)="closeQuickAdd()">
       <header class="timeline-toolbar">
         <div class="timeline-heading">
           @if (isRouteComponent()) {
@@ -16,24 +16,50 @@
                 Unidade de tempo
                 <input [historyField]="{ column: 'timeUnitName', label: 'Unidade de tempo' }" [(ngModel)]="timeline.timeUnitName" (blur)="saveTimeline()" aria-label="Nome da unidade de tempo">
               </label>
-              <p class="timeline-help">Arraste para posicionar e mova eventos verticalmente para organizar em faixas. Ctrl: 10, Shift: 100, ambos: 1000.</p>
+              <p class="timeline-help">Clique no espaço vazio para criar no ponto escolhido. Arraste para posicionar; Ctrl + roda aproxima e Shift + roda move na horizontal.</p>
             </div>
           </div>
         </div>
         <div class="timeline-actions" aria-label="Ações da linha do tempo">
-          <app-icon-button title="Nova era" icon="fa-solid fa-layer-group" buttonType="secondary" size="xl" (click)="openAgeDialog(defaultDate())"></app-icon-button>
-          <app-icon-button title="Novo marco" icon="fa-solid fa-location-dot" buttonType="secondary" size="xl" (click)="openGreatMarkDialog(defaultDate())"></app-icon-button>
-          <app-icon-button title="Novo evento" icon="fa-solid fa-plus" buttonType="primary" size="xl" (click)="openEventDialog(defaultDate())"></app-icon-button>
+          <button type="button" class="timeline-action-button" (click)="openAgeDialog(defaultDate())" title="Criar uma nova era">
+            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+            <span>Era</span>
+          </button>
+          <button type="button" class="timeline-action-button" (click)="openGreatMarkDialog(defaultDate())" title="Criar um novo marco">
+            <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+            <span>Marco</span>
+          </button>
+          <button type="button" class="timeline-action-button timeline-action-button--primary" (click)="openEventDialog(defaultDate())" title="Criar um novo evento">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            <span>Evento</span>
+          </button>
+          <div class="timeline-zoom-controls" aria-label="Controles de zoom">
+            <button type="button" title="Reduzir zoom" aria-label="Reduzir zoom" (click)="zoomOut()">−</button>
+            <button type="button" class="timeline-zoom-value" title="Restaurar zoom" (click)="resetZoom()">{{ zoomLabel() }}</button>
+            <button type="button" title="Aumentar zoom" aria-label="Aumentar zoom" (click)="zoomIn()">+</button>
+          </div>
+          <app-icon-button
+            [title]="showTimelineIndex ? 'Ocultar índice narrativo' : 'Mostrar índice narrativo'"
+            [icon]="showTimelineIndex ? 'fa-solid fa-table-columns' : 'fa-solid fa-list-ul'"
+            buttonType="secondary"
+            size="xl"
+            (click)="showTimelineIndex = !showTimelineIndex">
+          </app-icon-button>
           <app-personalization-button [entityId]="timeline.id" [entityTable]="'Timeline'" [size]="'xl'"></app-personalization-button>
           <app-safe-delete-button [entityName]="timeline.name" [entityId]="timeline.id" [entityTable]="'Timeline'" [size]="'xl'"></app-safe-delete-button>
         </div>
       </header>
+      <div class="timeline-save-state" [class.timeline-save-state--saving]="saveState === 'saving'" [class.timeline-save-state--error]="saveState === 'error'" role="status" aria-live="polite">
+        <i class="fa-solid" [class.fa-cloud-arrow-up]="saveState === 'saving'" [class.fa-circle-check]="saveState === 'saved'" [class.fa-triangle-exclamation]="saveState === 'error'" aria-hidden="true"></i>
+        <span>{{ saveState === 'saving' ? 'Salvando alterações…' : saveState === 'error' ? 'Não foi possível salvar' : 'Alterações salvas' }}</span>
+      </div>
       <details class="timeline-summary">
         <summary>Resumo da linha do tempo</summary>
         <app-editor [historyField]="{ column: 'description', label: 'Descrição' }" [entityId]="timeline.id" docTitle="Descrição" entityTable="Timeline" [entityName]="timeline.name" [document]="timeline.description || ''" (saveDocument)="timelineDescriptionChange($event)"></app-editor>
       </details>
-      <section #viewport class="timeline-viewport scrollbar-dark" (wheel)="onTimelineWheel($event)">
-        <div #canvas class="timeline-canvas" [style.width.px]="canvasWidth" [style.height.px]="canvasHeight">
+      <div class="timeline-workspace">
+        <section #viewport class="timeline-viewport scrollbar-dark" (wheel)="onTimelineWheel($event)">
+          <div #canvas class="timeline-canvas" [style.width.px]="canvasWidth" [style.height.px]="canvasHeight" (click)="onCanvasClick($event)">
           <div class="timeline-ruler">
             <div class="timeline-ruler-title">{{ timeline.timeUnitName || 'Anos' }}</div>
             @for (year of yearTicks; track year) {
@@ -42,6 +68,17 @@
               </div>
             }
           </div>
+          @if (quickAddDate !== null) {
+            <div class="timeline-quick-add" [style.left.px]="quickAddLeft" [style.top.px]="quickAddTop" (click)="$event.stopPropagation()">
+              <span class="timeline-quick-add-date">{{ formatYear(quickAddDate) }} {{ timeline.timeUnitName || 'Anos' }}</span>
+              <span class="timeline-quick-add-label">Adicionar neste ponto</span>
+              <div class="timeline-quick-add-actions">
+                <button type="button" (click)="quickCreate('age')"><i class="fa-solid fa-layer-group" aria-hidden="true"></i><span>Era</span></button>
+                <button type="button" (click)="quickCreate('mark')"><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span>Marco</span></button>
+                <button type="button" class="timeline-quick-add-event" (click)="quickCreate('event')"><i class="fa-solid fa-plus" aria-hidden="true"></i><span>Evento</span></button>
+              </div>
+            </div>
+          }
           @for (age of ages; track age.id) {
             <div
               class="age-context"
@@ -51,11 +88,16 @@
               [style.background-image]="ageBackgroundImage(age)">
             </div>
             <article
-              class="age-bar"
+              class="age-bar timeline-interactive-item"
+              role="group"
+              tabindex="0"
+              [attr.aria-label]="'Editar era ' + formatText(age.name || 'Era sem nome', age.startDate, age.endDate)"
+              [class.timeline-interactive-item--selected]="selectedTimelineItemKey === 'age:' + age.id"
               [style.left.px]="dateToX(age.startDate)"
               [style.top.px]="ageTop(age)"
               [style.width.px]="ageRangeWidth(age.startDate, age.endDate)"
               [style.--age-color]="colorOf(age)"
+              (keydown)="onTimelineItemKeydown($event, 'age', age)"
               (pointerdown)="startDrag($event, 'age-move', age)">
               <button class="range-handle start" aria-label="Alterar início da era" (pointerdown)="startDrag($event, 'age-start', age)"></button>
               <div class="age-content">
@@ -77,10 +119,13 @@
           </div>
           <div class="marks-layer">
             @for (mark of greatMarks; track mark.id) {
-              <article class="great-mark" role="button" tabindex="0"
+              <article class="great-mark timeline-interactive-item" role="button" tabindex="0"
+                [attr.aria-label]="'Editar marco ' + formatText(mark.name || 'Marco sem nome', mark.startDate, mark.endDate)"
+                [class.timeline-interactive-item--selected]="selectedTimelineItemKey === 'mark:' + mark.id"
                 [style.left.px]="dateToX(mark.date)"
                 [style.top.px]="markTop(mark)"
                 [style.--mark-color]="colorOf(mark)"
+                (keydown)="onTimelineItemKeydown($event, 'mark', mark)"
                 (pointerdown)="startDrag($event, 'mark-move', mark)">
                 <span class="great-mark-dot" [style.background-image]="markBackgroundImage(mark)"><i [class]="greatMarkIconClass(mark)"></i></span>
                 <span class="great-mark-name">{{ formatText(mark.name, mark.startDate, mark.endDate) }}</span>
@@ -95,7 +140,11 @@
           </div>
           @for (event of events; track event.id) {
             <article
-              class="event-bar"
+              class="event-bar timeline-interactive-item"
+              role="group"
+              tabindex="0"
+              [attr.aria-label]="'Editar evento ' + formatText(event.name || 'Evento sem nome', event.startDate, event.endDate)"
+              [class.timeline-interactive-item--selected]="selectedTimelineItemKey === 'event:' + event.id"
               [style.left.px]="eventLeft(event)"
               [style.top.px]="eventTop(event)"
               [style.width.px]="eventWidth(event)"
@@ -103,6 +152,7 @@
               [class]="getTextClass(colorOf(event))"
               [class.compact-event]="isCompactEvent(event)"
               [style.background-image]="isCompactEvent(event) ? null : eventBackgroundImage(event)"
+              (keydown)="onTimelineItemKeydown($event, 'event', event)"
               (pointerdown)="startDrag($event, 'event-move', event)">
               <button class="range-handle start" aria-label="Alterar início do evento" (pointerdown)="startDrag($event, 'event-start', event)"></button>
               <div class="event-content">
@@ -128,9 +178,65 @@
             <div class="timeline-empty">
               <i class="fa-solid fa-timeline text-3xl"></i>
               <span>Comece criando uma era, um marco ou um evento.</span>
+              <div class="timeline-empty-actions">
+                <button type="button" (click)="openAgeDialog(defaultDate())"><i class="fa-solid fa-layer-group" aria-hidden="true"></i><span>Era</span></button>
+                <button type="button" (click)="openGreatMarkDialog(defaultDate())"><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span>Marco</span></button>
+                <button type="button" class="timeline-empty-event" (click)="openEventDialog(defaultDate())"><i class="fa-solid fa-plus" aria-hidden="true"></i><span>Evento</span></button>
+              </div>
             </div>
           }
-        </div>
-      </section>
+          </div>
+        </section>
+        @if (showTimelineIndex) {
+          <aside class="timeline-index" aria-label="Índice narrativo da linha do tempo">
+            <header class="timeline-index-heading">
+              <div>
+                <p class="timeline-index-kicker">Índice narrativo</p>
+                <h2>História em sequência</h2>
+                <p>{{ filteredTimelineIndexItems.length }} de {{ timelineIndexItems.length }} itens visíveis</p>
+              </div>
+              <button type="button" class="timeline-index-close" aria-label="Ocultar índice narrativo" title="Ocultar índice narrativo" (click)="showTimelineIndex = false">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            </header>
+            <div class="timeline-index-controls">
+              <label class="timeline-index-search">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" [(ngModel)]="timelineIndexSearch" (ngModelChange)="filterTimelineIndex()" placeholder="Buscar na timeline" aria-label="Buscar na timeline" />
+              </label>
+            <div class="timeline-index-filters" role="group" aria-label="Filtrar itens da timeline">
+                <button type="button" [class.is-active]="timelineIndexFilter === 'all'" [attr.aria-pressed]="timelineIndexFilter === 'all'" (click)="setTimelineIndexFilter('all')">Todos</button>
+                <button type="button" [class.is-active]="timelineIndexFilter === 'age'" [attr.aria-pressed]="timelineIndexFilter === 'age'" (click)="setTimelineIndexFilter('age')">Eras</button>
+                <button type="button" [class.is-active]="timelineIndexFilter === 'mark'" [attr.aria-pressed]="timelineIndexFilter === 'mark'" (click)="setTimelineIndexFilter('mark')">Marcos</button>
+                <button type="button" [class.is-active]="timelineIndexFilter === 'event'" [attr.aria-pressed]="timelineIndexFilter === 'event'" (click)="setTimelineIndexFilter('event')">Eventos</button>
+              </div>
+            </div>
+            <div class="timeline-index-list scrollbar-dark">
+              @for (item of filteredTimelineIndexItems; track item.kind + '-' + item.id) {
+                <article class="timeline-index-item" [class.timeline-index-item--selected]="isTimelineIndexSelected(item)" [style.--item-color]="item.color">
+                  <button type="button" class="timeline-index-item-main" [attr.aria-label]="'Focar ' + item.typeLabel.toLocaleLowerCase() + ' ' + item.label" (click)="selectTimelineIndex(item)">
+                    <span class="timeline-index-glyph"><i [class]="item.icon" aria-hidden="true"></i></span>
+                    <span class="timeline-index-item-copy">
+                      <span class="timeline-index-item-type">{{ item.typeLabel }}</span>
+                      <strong>{{ item.label }}</strong>
+                      <small>{{ item.dateLabel }}</small>
+                      @if (item.summary) { <span class="timeline-index-item-summary">{{ item.summary }}</span> }
+                    </span>
+                  </button>
+                  <button type="button" class="timeline-index-item-edit" [attr.aria-label]="'Editar ' + item.label" title="Editar item" (click)="openTimelineIndexItem(item)">
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                  </button>
+                </article>
+              } @empty {
+                <div class="timeline-index-empty">
+                  <i class="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i>
+                  <strong>Nenhum item encontrado</strong>
+                  <span>Ajuste a busca ou o filtro para continuar explorando.</span>
+                </div>
+              }
+            </div>
+          </aside>
+        }
+      </div>
     </div>
   

@@ -81,8 +81,12 @@ export class TimelineListComponent implements OnInit {
 
   deleteTimeline(timelineId: string) {
     const timeline = this.timelineService.getTimelineById(timelineId);
+    if (!timeline) {
+      this.loadTimelines();
+      return;
+    }
 
-    this.safeDeleteDialog.open(SafeDeleteComponent, {
+    const dialogRef = this.safeDeleteDialog.open(SafeDeleteComponent, {
       data: {
         entityName: timeline.name,
         entityTable: 'Timeline',
@@ -90,6 +94,9 @@ export class TimelineListComponent implements OnInit {
       },
       panelClass: 'screen-dialog',
       width: '400px',
+    });
+    dialogRef.closed.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(deleted => {
+      if (deleted) this.loadTimelines();
     });
   }
 
@@ -106,7 +113,10 @@ export class TimelineListComponent implements OnInit {
       return;
     }
 
-    this.timelineService.saveTimeline(new Timeline('', name, ''), this.selectedWorldId || formData['world'] || null);
+    const worldId = Object.prototype.hasOwnProperty.call(formData, 'world')
+      ? formData['world'] || null
+      : this.selectedWorldId || null;
+    this.timelineService.saveTimeline(new Timeline('', name, ''), worldId);
     this.loadTimelines();
   }
 
