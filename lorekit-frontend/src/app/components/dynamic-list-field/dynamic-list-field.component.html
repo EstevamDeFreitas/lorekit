@@ -1,0 +1,103 @@
+<section class="dynamic-list flex h-full min-h-0 flex-col gap-2 rounded-lg bg-zinc-950/20 p-2" [attr.aria-label]="label()">
+      <div class="flex items-center justify-between gap-2">
+        <h3 class="truncate text-xs font-medium" [style.color]="labelColor() || null">{{ label() }}</h3>
+        @if (mode() === 'table') {
+          <span class="text-[10px] text-zinc-500">{{ tableRows.length }} {{ tableRows.length === 1 ? 'linha' : 'linhas' }}</span>
+        } @else {
+          <span class="text-[10px] text-zinc-500">{{ headlessItems.length }} {{ headlessItems.length === 1 ? 'item' : 'itens' }}</span>
+        }
+      </div>
+
+      @if (mode() === 'table') {
+        @if (tableRows.length) {
+          <div class="list-scroll-region scrollbar-dark rounded-md border border-zinc-800" tabindex="0" role="region" [attr.aria-label]="label() + ': tabela'">
+            <table class="w-full min-w-max text-xs">
+              <thead class="bg-zinc-900 text-left text-zinc-400">
+                <tr>
+                  @for (column of columns(); track column.id) { <th class="px-2 py-1.5 font-medium">{{ column.label }}</th> }
+                  <th class="w-28 px-2 py-1.5 text-right font-medium">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of tableRows; track $index) {
+                  <tr class="border-t border-zinc-800 text-zinc-200">
+                    @for (column of columns(); track column.id) { <td class="max-w-48 truncate px-2 py-1.5">{{ displayValue(row[column.id], column.type) }}</td> }
+                    <td class="px-2 py-1.5"><div class="flex justify-end gap-1">
+                      <button type="button" class="list-action" [disabled]="$index === 0" (click)="moveRow($index, -1)" aria-label="Mover linha para cima">↑</button>
+                      <button type="button" class="list-action" [disabled]="$index === tableRows.length - 1" (click)="moveRow($index, 1)" aria-label="Mover linha para baixo">↓</button>
+                      <button type="button" class="list-action" cdkOverlayOrigin #editRowOrigin="cdkOverlayOrigin" (click)="editRow($index, editRowOrigin)" aria-haspopup="dialog">Editar</button>
+                      <button type="button" class="list-action list-action--danger" (click)="removeRow($index)">×</button>
+                    </div></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="empty-list">Nenhuma linha adicionada.</div>
+        }
+
+        <button type="button" class="list-button self-start" cdkOverlayOrigin #addRowOrigin="cdkOverlayOrigin" (click)="startNewRow(addRowOrigin)" aria-haspopup="dialog">+ Adicionar linha</button>
+      } @else {
+        @if (headlessItems.length) {
+          <ol class="list-scroll-region scrollbar-dark rounded-md border border-zinc-800" tabindex="0" [attr.aria-label]="label() + ': listagem'">
+            @for (item of headlessItems; track $index) {
+              <li class="flex items-center gap-2 border-b border-zinc-800 px-2 py-1.5 last:border-b-0">
+                <span class="min-w-0 flex-1 truncate text-xs text-zinc-200">{{ item }}</span>
+                <button type="button" class="list-action" [disabled]="$index === 0" (click)="moveRow($index, -1)" aria-label="Mover item para cima">↑</button>
+                <button type="button" class="list-action" [disabled]="$index === headlessItems.length - 1" (click)="moveRow($index, 1)" aria-label="Mover item para baixo">↓</button>
+                <button type="button" class="list-action" (click)="editHeadlessItem($index)">Editar</button>
+                <button type="button" class="list-action list-action--danger" (click)="removeRow($index)">×</button>
+              </li>
+            }
+          </ol>
+        } @else {
+          <div class="empty-list">Nenhum item adicionado.</div>
+        }
+        @if (editingIndex !== null) {
+          <div class="flex gap-2">
+            <input class="list-input min-w-0 flex-1" [ngModel]="draftItem" (ngModelChange)="draftItem = $event" (keydown.enter)="saveHeadlessItem()" placeholder="Novo item" />
+            <button type="button" class="list-button" (click)="saveHeadlessItem()">Salvar</button>
+            <button type="button" class="list-button list-button--secondary" (click)="cancelEdit()">×</button>
+          </div>
+        } @else {
+          <button type="button" class="list-button self-start" (click)="startNewHeadlessItem()">+ Adicionar item</button>
+        }
+        @if (errorMessage) { <p class="text-xs text-red-300" role="alert">{{ errorMessage }}</p> }
+      }
+    </section>
+
+<ng-template cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="editorOrigin"
+  [cdkConnectedOverlayOpen]="mode() === 'table' && editingIndex !== null && !!draftRow"
+  [cdkConnectedOverlayPositions]="editorPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="16"
+  [cdkConnectedOverlayScrollStrategy]="editorScrollStrategy"
+  (backdropClick)="cancelEdit()"
+  (overlayKeydown)="onEditorKeydown($event)"
+  (detach)="cancelEdit()">
+          <form class="list-row-popover" role="dialog" aria-modal="true" [attr.aria-label]="editingIndex === -1 ? 'Adicionar linha' : 'Editar linha'" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (ngSubmit)="saveRow()">
+            <h4 class="mb-3 text-sm font-medium text-zinc-100">{{ editingIndex === -1 ? 'Adicionar linha' : 'Editar linha' }}</h4>
+            <div class="list-row-fields">
+              @for (column of columns(); track column.id) {
+                <label class="flex flex-col gap-1 text-[11px] text-zinc-400">
+                  {{ column.label }}
+                  @if (column.type === 'boolean') {
+                    <input class="h-4 w-4 accent-yellow-400" type="checkbox" [ngModelOptions]="{standalone: true}" [ngModel]="draftBooleanValue(column)" (ngModelChange)="setDraftValue(column, $event)" />
+                  } @else {
+                    <input class="list-input" [type]="inputType(column.type)" [ngModelOptions]="{standalone: true}" [ngModel]="draftInputValue(column)" (ngModelChange)="setDraftValue(column, $event)" />
+                  }
+                </label>
+              }
+            </div>
+            @if (errorMessage) { <p class="mt-2 text-xs text-red-300" role="alert">{{ errorMessage }}</p> }
+            <div class="mt-2 flex justify-end gap-2">
+              <button type="button" class="list-button list-button--secondary" (click)="cancelEdit()">Cancelar</button>
+              <button type="submit" class="list-button">Salvar linha</button>
+            </div>
+          </form>
+</ng-template>
+

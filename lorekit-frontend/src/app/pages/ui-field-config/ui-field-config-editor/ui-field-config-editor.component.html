@@ -228,6 +228,47 @@
                 <app-combo-box label="Proporção da imagem" [items]="imageAspectRatioItems" compareProp="value" displayProp="label" [(comboValue)]="newFieldImageAspectRatio"></app-combo-box>
               }
 
+              @if (newFieldType === 'slider') {
+                <div class="grid grid-cols-3 gap-2">
+                  <app-input label="Minimo" type="number" [(value)]="newSliderMin"></app-input>
+                  <app-input label="Maximo" type="number" [(value)]="newSliderMax"></app-input>
+                  <app-input label="Passo" type="number" [(value)]="newSliderStep"></app-input>
+                </div>
+                <app-input label="Unidade (opcional)" placeholder="Ex.: % ou pontos" [(value)]="newSliderUnit"></app-input>
+              }
+              @if (newFieldType === 'list') {
+                <app-combo-box label="Modo da listagem" [items]="listModeItems" compareProp="value" displayProp="label" [(comboValue)]="newListMode"></app-combo-box>
+                @if (newListMode === 'table') {
+                  <div class="relative">
+                    <label class="mb-1 block text-xs text-white">Colunas</label>
+                    <input class="dynamic-column-input" [value]="newListColumns" (input)="onNewListColumnsInput($event)" (focus)="onNewListColumnsFocus()" (blur)="closeListColumnSuggestions()" placeholder="Nome; Quantidade:number; Ativo:boolean" autocomplete="off" spellcheck="false" />
+                    @if (newListColumnSuggestionsOpen) {
+                      <div class="column-suggestions">
+                        @for (type of listColumnSuggestions(newListColumns); track type) {
+                          <button type="button" class="column-suggestion" (mousedown)="$event.preventDefault(); chooseNewListColumnType(type)">
+                            <span>{{ type }}</span><span class="text-zinc-500">{{ listColumnTypeLabel(type) }}</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <p class="text-[11px] text-zinc-500">Digite o nome da coluna; ao usar <code>:</code>, escolha o tipo sugerido. Texto é o padrão.</p>
+                }
+              }
+              @if (newFieldType === 'chart') {
+                <app-combo-box label="Tipo de grafico" [items]="chartTypeItems" compareProp="value" displayProp="label" [(comboValue)]="newChartType"></app-combo-box>
+                <app-input label="Titulo (opcional)" [(value)]="newChartTitle"></app-input>
+                <app-input label="Legenda (opcional)" [(value)]="newChartLegend"></app-input>
+                @if (newChartType === 'radar') {
+                  <app-input label="Categorias fixas" placeholder="Força; Agilidade; Magia" [(value)]="newChartCategories"></app-input>
+                  <p class="text-[11px] text-zinc-500">Defina de 3 a 12 categorias, separadas por ponto e vírgula. Elas sempre aparecerão na ficha, com um valor cada.</p>
+                } @else {
+                  <app-input label="Series" placeholder="Atual; Meta" [(value)]="newChartSeries"></app-input>
+                  <p class="text-[11px] text-zinc-500">Separe as series por ponto e virgula. Cada serie tera uma cor distinta.</p>
+                }
+                <app-hex-color-picker [label]="newChartType === 'radar' ? 'Cor do gráfico' : 'Cor da serie'" [value]="newChartColor" (valueChange)="newChartColor = $event || '#facc15'"></app-hex-color-picker>
+              }
+
               <div class="flex justify-end pt-1">
                 <app-icon-button title="Adicionar campo dinâmico" icon="fa-solid fa-plus" buttonType="primary" size="base" [disabled]="creatingDynamicField || !newFieldName.trim()" (click)="createDynamicField()"></app-icon-button>
               </div>
@@ -280,6 +321,46 @@
                       }
                       @if (field.fieldType === 'image') {
                         <app-combo-box label="Proporção da imagem" [items]="imageAspectRatioItems" compareProp="value" displayProp="label" [comboValue]="field.options ?? '1'" (comboValueChange)="field.options = $event"></app-combo-box>
+                      }
+                      @if (field.fieldType === 'slider') {
+                        <div class="grid grid-cols-3 gap-2">
+                          <app-input label="Minimo" type="number" [value]="numberText(sliderConfig(field).min)" (valueChange)="updateSliderConfig(field, 'min', $event)"></app-input>
+                          <app-input label="Maximo" type="number" [value]="numberText(sliderConfig(field).max)" (valueChange)="updateSliderConfig(field, 'max', $event)"></app-input>
+                          <app-input label="Passo" type="number" [value]="numberText(sliderConfig(field).step)" (valueChange)="updateSliderConfig(field, 'step', $event)"></app-input>
+                        </div>
+                        <app-input label="Unidade (opcional)" [value]="sliderConfig(field).unit || ''" (valueChange)="updateSliderConfig(field, 'unit', $event)"></app-input>
+                      }
+                      @if (field.fieldType === 'list') {
+                        <app-combo-box label="Modo da listagem" [items]="listModeItems" compareProp="value" displayProp="label" [comboValue]="listConfig(field).mode" (comboValueChange)="updateListMode(field, $event)"></app-combo-box>
+                        @if (listConfig(field).mode === 'table') {
+                          <div class="relative">
+                            <label class="mb-1 block text-xs text-white">Colunas</label>
+                            <input class="dynamic-column-input" [value]="listColumnsText(field)" (input)="onListColumnsInput(field, $event)" (focus)="onListColumnsFocus(field)" (blur)="closeListColumnSuggestions()" placeholder="Nome; Quantidade:number; Ativo:boolean" autocomplete="off" spellcheck="false" />
+                            @if (activeListColumnSuggestionFieldId === field.id) {
+                              <div class="column-suggestions">
+                                @for (type of listColumnSuggestions(listColumnsText(field)); track type) {
+                                  <button type="button" class="column-suggestion" (mousedown)="$event.preventDefault(); chooseListColumnType(field, type)">
+                                    <span>{{ type }}</span><span class="text-zinc-500">{{ listColumnTypeLabel(type) }}</span>
+                                  </button>
+                                }
+                              </div>
+                            }
+                          </div>
+                          <p class="text-[11px] text-zinc-500">Digite o nome da coluna; ao usar <code>:</code>, escolha o tipo sugerido. Texto é o padrão.</p>
+                        }
+                      }
+                      @if (field.fieldType === 'chart') {
+                        <app-combo-box label="Tipo de grafico" [items]="chartTypeItems" compareProp="value" displayProp="label" [comboValue]="chartConfig(field).chartType" (comboValueChange)="updateChartConfig(field, 'chartType', $event)"></app-combo-box>
+                        <app-input label="Titulo (opcional)" [value]="chartConfig(field).title" (valueChange)="updateChartConfig(field, 'title', $event)"></app-input>
+                        <app-input label="Legenda (opcional)" [value]="chartConfig(field).legend" (valueChange)="updateChartConfig(field, 'legend', $event)"></app-input>
+                        @if (chartConfig(field).chartType === 'radar') {
+                          <app-input label="Categorias fixas" placeholder="Força; Agilidade; Magia" [value]="chartCategoriesText(field)" (valueChange)="updateChartCategories(field, $event)"></app-input>
+                          <p class="text-[11px] text-zinc-500">Defina de 3 a 12 categorias, separadas por ponto e vírgula. Na ficha, apenas os valores serão editáveis.</p>
+                        } @else {
+                          <app-input label="Series" [value]="chartSeriesText(field)" (valueChange)="updateChartSeries(field, $event)"></app-input>
+                          <p class="text-[11px] text-zinc-500">Separe as series por ponto e virgula.</p>
+                        }
+                        <app-hex-color-picker [label]="chartConfig(field).chartType === 'radar' ? 'Cor do gráfico' : 'Cor da serie'" [value]="chartConfig(field).color" (valueChange)="updateChartConfig(field, 'color', $event)"></app-hex-color-picker>
                       }
                       <div class="flex justify-end gap-2">
                         <app-icon-button [title]="'Salvar campo ' + field.name" icon="fa-solid fa-check" buttonType="primary" size="sm" (click)="saveDynamicField(field)"></app-icon-button>

@@ -1,0 +1,128 @@
+<section class="dynamic-chart flex h-full min-h-0 flex-col gap-2 rounded-lg bg-zinc-950/20 p-2" [attr.aria-label]="accessibleLabel()">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h3 class="truncate text-xs font-medium" [style.color]="config().color">{{ config().title || label() }}</h3>
+          @if (config().legend) { <p class="truncate text-[10px] text-zinc-500">{{ config().legend }}</p> }
+          @if (config().chartType !== 'radar') {
+          <div class="mt-1 flex min-w-0 flex-wrap gap-x-2 gap-y-1">
+            @for (series of chartSeries(); track series.id) {
+              <span class="flex min-w-0 items-center gap-1 text-[10px] text-zinc-400"><i class="h-1.5 w-1.5 shrink-0 rounded-full" [style.background-color]="series.color"></i><span class="truncate">{{ series.label }}</span></span>
+            }
+          </div>
+          }
+        </div>
+        <div class="chart-header-actions">
+          <span class="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-zinc-400">{{ chartTypeLabel() }}</span>
+          <button type="button" class="chart-edit-button" cdkOverlayOrigin #editorOrigin="cdkOverlayOrigin" (click)="openEditor()" aria-haspopup="dialog" [attr.aria-expanded]="editorOpen()">Alterar valores</button>
+        </div>
+      </div>
+
+      <div class="chart-visual min-h-0 flex-1 rounded-md border border-zinc-800 bg-zinc-950/30 p-1">
+        @if (draftRows.length) {
+          <svg class="chart-svg h-full w-full" viewBox="0 0 520 300" role="img" [attr.aria-label]="accessibleLabel()">
+            @if (config().chartType === 'radar') {
+              <g class="chart-grid">
+                @if (draftRows.length >= 3) {
+                  @for (level of radarLevels(); track level) { <polygon [attr.points]="radarGridPoints(level)" /> }
+                  @for (row of draftRows; track $index) { <line [attr.x1]="radarCenterX" [attr.y1]="radarCenterY" [attr.x2]="radarAxisX($index)" [attr.y2]="radarAxisY($index)" /> }
+                } @else {
+                  @for (level of radarLevels(); track level) { <circle [attr.cx]="radarCenterX" [attr.cy]="radarCenterY" [attr.r]="radarGridCircleRadius(level)" /> }
+                }
+              </g>
+              @for (series of chartSeries(); track series.id; let seriesIndex = $index) {
+                @if (draftRows.length >= 3) { <polygon class="chart-area" [attr.points]="radarDataPoints(seriesIndex)" [style.fill]="series.color" [style.stroke]="series.color" /> }
+                @for (row of draftRows; track $index) {
+                  <circle class="chart-point" [attr.cx]="radarDataX($index, seriesIndex)" [attr.cy]="radarDataY($index, seriesIndex)" r="3.5" [style.fill]="series.color" />
+                }
+              }
+              @for (row of draftRows; track $index) {
+                <text class="chart-label" [attr.x]="radarLabelX($index)" [attr.y]="radarLabelY($index)" [attr.text-anchor]="radarTextAnchor($index)">{{ shortLabel(row.label) }}</text>
+              }
+            } @else if (config().chartType === 'bar') {
+              <line class="chart-axis" x1="48" y1="235" x2="490" y2="235" />
+              <line class="chart-axis" x1="48" y1="25" x2="48" y2="235" />
+              @for (row of draftRows; track $index; let rowIndex = $index) {
+                @for (series of chartSeries(); track series.id; let seriesIndex = $index) {
+                  <rect [attr.x]="barX(rowIndex, seriesIndex)" [attr.y]="barY(row.values[seriesIndex] || 0)" [attr.width]="barWidth()" [attr.height]="barHeight(row.values[seriesIndex] || 0)" rx="3" [style.fill]="series.color" />
+                }
+                <text class="chart-label" [attr.x]="barCenterX(rowIndex)" y="254" text-anchor="middle">{{ shortLabel(row.label) }}</text>
+              }
+            } @else {
+              <line class="chart-axis" x1="48" y1="235" x2="490" y2="235" />
+              <line class="chart-axis" x1="48" y1="25" x2="48" y2="235" />
+              @for (series of chartSeries(); track series.id; let seriesIndex = $index) {
+                @if (draftRows.length > 1) { <polyline class="chart-line" [attr.points]="linePoints(seriesIndex)" [style.stroke]="series.color" /> }
+                @for (row of draftRows; track $index) {
+                  <circle class="chart-point" [attr.cx]="lineX($index)" [attr.cy]="lineY(row.values[seriesIndex] || 0)" r="4" [style.fill]="series.color" />
+                }
+              }
+              @for (row of draftRows; track $index) {
+                <text class="chart-label" [attr.x]="lineX($index)" y="254" text-anchor="middle">{{ shortLabel(row.label) }}</text>
+              }
+            }
+          </svg>
+          @if (config().chartType === 'radar' && draftRows.length < 3) {
+            <p class="chart-note">O Radar precisa de pelo menos 3 categorias para formar uma area.</p>
+          } @else if (config().chartType === 'line' && draftRows.length < 2) {
+            <p class="chart-note">Adicione mais uma categoria para conectar os pontos.</p>
+          }
+        } @else {
+          <div class="flex h-full items-center justify-center text-xs text-zinc-500">Adicione dados para visualizar o gráfico.</div>
+        }
+      </div>
+
+    </section>
+
+<ng-template cdkConnectedOverlay
+  [cdkConnectedOverlayOrigin]="editorOrigin"
+  [cdkConnectedOverlayOpen]="editorOpen()"
+  [cdkConnectedOverlayPositions]="editorPositions"
+  [cdkConnectedOverlayHasBackdrop]="true"
+  cdkConnectedOverlayBackdropClass="cdk-overlay-transparent-backdrop"
+  [cdkConnectedOverlayPush]="true"
+  [cdkConnectedOverlayViewportMargin]="16"
+  [cdkConnectedOverlayScrollStrategy]="editorScrollStrategy"
+  (backdropClick)="cancelEditor()"
+  (overlayKeydown)="onEditorKeydown($event)"
+  (detach)="cancelEditor()">
+  <section class="chart-edit-popover scrollbar-dark" role="dialog" aria-modal="true" [attr.aria-label]="'Alterar valores: ' + label()" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+    <h4 class="mb-3 text-sm font-medium text-zinc-100">Alterar valores · {{ config().title || label() }}</h4>
+      @if (config().chartType === 'radar') {
+        <div class="radar-editor">
+          <p class="chart-editor-hint">Categorias definidas na configuração. Edite os valores abaixo.</p>
+          @for (row of draftRows; track row.label; let rowIndex = $index) {
+            <label class="radar-value-row">
+              <span class="radar-category">{{ row.label }}</span>
+              <input class="chart-input chart-input--value" type="number" min="0" [ngModel]="row.values[0]" (ngModelChange)="setValue(rowIndex, 0, $event)" [attr.aria-label]="'Valor de ' + row.label" />
+            </label>
+          }
+        </div>
+      } @else {
+      <div class="chart-editor flex min-w-0 flex-col gap-1.5 overflow-x-auto" [style.--series-count]="chartSeries().length">
+        <p class="chart-editor-hint">Cada linha representa uma categoria; cada coluna representa uma serie.</p>
+        <div class="chart-row chart-row--header">
+          <span>Categoria</span>
+          @for (series of chartSeries(); track series.id) { <span [style.color]="series.color">{{ series.label }}</span> }
+          <span></span>
+        </div>
+        @for (row of draftRows; track $index; let rowIndex = $index) {
+          <div class="chart-row">
+            <input class="chart-input chart-input--label" [ngModel]="row.label" (ngModelChange)="setLabel(rowIndex, $event)" placeholder="Categoria" aria-label="Categoria" />
+            @for (series of chartSeries(); track series.id; let seriesIndex = $index) {
+              <input class="chart-input chart-input--value" type="number" [ngModel]="row.values[seriesIndex] || 0" (ngModelChange)="setValue(rowIndex, seriesIndex, $event)" [placeholder]="series.label" [attr.aria-label]="'Valor ' + series.label" />
+            }
+            <button type="button" class="chart-remove" (click)="removeRow(rowIndex)" aria-label="Remover dado">×</button>
+          </div>
+        }
+        @if (errorMessage) { <p class="text-xs text-red-300" role="alert">{{ errorMessage }}</p> }
+        <button type="button" class="chart-button self-start" (click)="addRow()">+ Adicionar dado</button>
+      </div>
+      }
+
+    <div class="chart-edit-footer">
+      <button type="button" class="chart-edit-button" (click)="cancelEditor()">Cancelar</button>
+      <button type="button" class="chart-button" (click)="saveEditor()">Salvar valores</button>
+    </div>
+  </section>
+</ng-template>
+

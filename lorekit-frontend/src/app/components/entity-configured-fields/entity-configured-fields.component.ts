@@ -7,11 +7,14 @@ import { EditorComponent } from '../editor/editor.component';
 import { InputComponent } from '../input/input.component';
 import { TextAreaComponent } from '../text-area/text-area.component';
 import { MobilePinchZoomDirective } from '../../directives/mobile-pinch-zoom.directive';
-import { DynamicField, DynamicFieldValue } from '../../models/dynamicfields.model';
+import { ChartFieldOptions, DynamicField, DynamicFieldValue, ListFieldOptions, parseDynamicFieldOptions, serializeSliderValue, SliderFieldOptions } from '../../models/dynamicfields.model';
 import { UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutFieldItem, UiFieldLayoutItem } from '../../models/ui-field-config.model';
 import { DynamicFieldService } from '../../services/dynamic-field.service';
 import { UiFieldConfigService } from '../../services/ui-field-config.service';
 import { FlushableDebounce } from '../../utils/flushable-debounce';
+import { DynamicSliderFieldComponent } from '../dynamic-slider-field/dynamic-slider-field.component';
+import { DynamicListFieldComponent } from '../dynamic-list-field/dynamic-list-field.component';
+import { DynamicChartFieldComponent } from '../dynamic-chart-field/dynamic-chart-field.component';
 
 export interface ConfigurableEntity {
   id: string;
@@ -25,7 +28,7 @@ export interface NativeFieldChange {
 
 @Component({
   selector: 'app-entity-configured-fields',
-  imports: [FormsModule, MobilePinchZoomDirective, InputComponent, TextAreaComponent, EditorComponent, ComboBoxComponent, DynamicImageFieldComponent],
+  imports: [FormsModule, MobilePinchZoomDirective, InputComponent, TextAreaComponent, EditorComponent, ComboBoxComponent, DynamicImageFieldComponent, DynamicSliderFieldComponent, DynamicListFieldComponent, DynamicChartFieldComponent],
   templateUrl: './entity-configured-fields.component.html',
   styleUrl: './entity-configured-fields.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -104,6 +107,18 @@ export class EntityConfiguredFieldsComponent {
     return (field.options ?? '').split(';').map(option => option.trim()).filter(Boolean);
   }
 
+  dynamicSliderConfig(field: DynamicField): SliderFieldOptions {
+    return parseDynamicFieldOptions('slider', field.options) as SliderFieldOptions;
+  }
+
+  dynamicChartConfig(field: DynamicField): ChartFieldOptions {
+    return parseDynamicFieldOptions('chart', field.options) as ChartFieldOptions;
+  }
+
+  parseDynamicListConfig(field: DynamicField): ListFieldOptions {
+    return parseDynamicFieldOptions('list', field.options) as ListFieldOptions;
+  }
+
   getDynamicFieldValue(fieldId: string): DynamicFieldValue {
     if (!this.dynamicValuesByFieldId[fieldId]) {
       const value = new DynamicFieldValue('', '');
@@ -115,6 +130,13 @@ export class EntityConfiguredFieldsComponent {
 
   onDynamicValueChange(fieldId: string, value: string): void {
     this.getDynamicFieldValue(fieldId).value = value;
+    this.saveDynamicValues();
+  }
+
+  onDynamicSliderValueChange(fieldId: string, value: number): void {
+    const field = this.dynamicTemplatesById[fieldId];
+    if (!field) return;
+    this.getDynamicFieldValue(fieldId).value = serializeSliderValue(value, this.dynamicSliderConfig(field));
     this.saveDynamicValues();
   }
 

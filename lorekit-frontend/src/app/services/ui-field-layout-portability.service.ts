@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { DbProvider } from '../app.config';
 import { CrudHelper } from '../database/database.helper';
 import { schema } from '../database/schema';
-import { DynamicField, DynamicFieldType } from '../models/dynamicfields.model';
+import { DynamicField, DynamicFieldType, isValidDynamicFieldOptions } from '../models/dynamicfields.model';
 import { normalizeUiConfigPayload, PortableDynamicFieldDefinition, UiConfigPayload, UiFieldConfig, UiFieldLayoutExportDocument, UiFieldLayoutFieldItem, UiFieldTemplate, UI_FIELD_LAYOUT_EXPORT_FORMAT, UI_FIELD_LAYOUT_EXPORT_VERSION } from '../models/ui-field-config.model';
 import { DynamicFieldService } from './dynamic-field.service';
 import { getSystemCatalog, UiFieldConfigService } from './ui-field-config.service';
@@ -113,6 +113,7 @@ export class UiFieldLayoutPortabilityService {
     for (const field of document.dynamicFields) {
       const name = normalize(field.name);
       if (!name || field.key !== dynamicKey(field.name) || seenNames.has(name) || !isFieldType(field.fieldType)) throw new Error('A definicao de um campo dinamico e invalida.');
+      if ((field.fieldType === 'slider' || field.fieldType === 'list' || field.fieldType === 'chart') && !isValidDynamicFieldOptions(field.fieldType, field.options)) throw new Error('A configuracao de um campo dinamico e invalida.');
       if (field.fieldType === 'entity' && (!field.targetEntityTable || !schema.some(table => table.name === field.targetEntityTable))) throw new Error('A entidade relacionada de um campo dinamico e invalida.');
       seenNames.add(name);
     }
@@ -133,5 +134,5 @@ function portableField(field: DynamicField, key: string): PortableDynamicFieldDe
 function sameDefinition(existing: DynamicField, imported: PortableDynamicFieldDefinition): boolean { return (existing.fieldType || 'text') === imported.fieldType && (existing.options ?? '') === (imported.options ?? '') && !!existing.isEditorField === imported.isEditorField && (existing.targetEntityTable ?? '') === (imported.targetEntityTable ?? ''); }
 function dynamicKey(name: string): string { return normalize(name); }
 function normalize(name: string): string { return name.trim().toLocaleLowerCase(); }
-function isFieldType(value: string): value is DynamicFieldType { return ['text', 'options', 'editor', 'entity', 'image'].includes(value); }
+function isFieldType(value: string): value is DynamicFieldType { return ['text', 'options', 'editor', 'entity', 'image', 'slider', 'list', 'chart'].includes(value); }
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }

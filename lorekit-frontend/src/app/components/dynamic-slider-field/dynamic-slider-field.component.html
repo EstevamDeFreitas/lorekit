@@ -1,0 +1,28 @@
+<div class="slider-field scrollbar-dark">
+      <div class="flex items-center justify-between gap-3">
+        <label class="truncate text-xs" [style.color]="labelColor() || null" [attr.for]="inputId">{{ label() }}</label>
+        <span class="shrink-0 text-sm font-semibold text-zinc-100" [attr.aria-live]="'polite'">
+          {{ currentValue }}{{ config().unit ? ' ' + config().unit : '' }}
+        </span>
+      </div>
+      <input
+        class="dynamic-slider w-full accent-yellow-400"
+        [id]="inputId"
+        type="range"
+        [min]="config().min"
+        [max]="config().max"
+        [step]="config().step"
+        [value]="currentValue"
+        [attr.aria-label]="label()"
+        [attr.aria-valuemin]="config().min"
+        [attr.aria-valuemax]="config().max"
+        [attr.aria-valuenow]="currentValue"
+        [attr.aria-valuetext]="valueDescription()"
+        (input)="onInput($event)"
+        (change)="onInput($event)"
+      />
+      <div class="slider-limits">
+        <span [class.slider-limit--active]="currentValue === config().min">Mín. {{ config().min }}{{ config().unit ? ' ' + config().unit : '' }}</span>
+        <span [class.slider-limit--active]="currentValue === config().max">Máx. {{ config().max }}{{ config().unit ? ' ' + config().unit : '' }}</span>
+      </div>
+    </div>

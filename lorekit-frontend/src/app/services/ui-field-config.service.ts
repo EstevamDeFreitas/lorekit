@@ -363,5 +363,6 @@ function systemField(key: string, label: string, control: UiFieldControl): UiFie
 
 function dynamicControl(field: DynamicField): UiFieldControl {
   if (field.fieldType === 'image' || field.fieldType === 'entity' || field.fieldType === 'options') return field.fieldType;
+  if (field.fieldType === 'slider' || field.fieldType === 'list' || field.fieldType === 'chart') return field.fieldType;
   return field.isEditorField || field.fieldType === 'editor' ? 'editor' : 'input';
 }

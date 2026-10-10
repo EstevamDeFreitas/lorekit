@@ -1,0 +1,20 @@
+:host { display: block; box-sizing: border-box; height: 100%; min-width: 0; min-height: 0; max-width: 100%; overflow: hidden; }
+.dynamic-list { box-sizing: border-box; height: 100%; max-width: 100%; overflow-x: hidden; overflow-y: auto; }
+.dynamic-list > :not(.list-scroll-region) { flex-shrink: 0; }
+.list-scroll-region { flex: 1 1 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.list-scroll-region thead { position: sticky; top: 0; z-index: 1; }
+.list-input { min-width: 0; border-radius: 0.5rem; background: rgb(24 24 27); padding: 0.4rem 0.55rem; color: rgb(228 228 231); outline: 1px solid rgb(39 39 42); }
+.list-input:focus { outline: 1px solid rgb(250 204 21); }
+.list-row-popover { box-sizing: border-box; width: min(26rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow-y: auto; border-radius: 0.5rem; background: rgb(24 24 27); padding: 1rem; color: rgb(228 228 231); box-shadow: 0 8px 24px rgb(0 0 0 / 0.4); }
+.list-row-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: 0.75rem; }
+.list-row-fields label { min-width: 0; overflow-wrap: anywhere; }
+.list-row-popover .list-input { background: rgb(39 39 42); width: 100%; box-sizing: border-box; }
+.list-row-popover button:focus-visible { outline: 2px solid rgb(250 204 21); outline-offset: 2px; }
+.list-action { border-radius: 0.3rem; padding: 0.15rem 0.3rem; color: rgb(161 161 170); font-size: 0.7rem; }
+.list-action:hover:not(:disabled) { background: rgb(63 63 70); color: white; }
+.list-action:disabled { cursor: not-allowed; opacity: 0.35; }
+.list-action--danger:hover:not(:disabled) { background: rgb(127 29 29); color: white; }
+.list-button { border-radius: 0.4rem; background: rgb(250 204 21); padding: 0.35rem 0.65rem; color: rgb(24 24 27); font-size: 0.7rem; font-weight: 600; }
+.list-button:hover { filter: brightness(0.9); }
+.list-button--secondary { background: rgb(63 63 70); color: rgb(228 228 231); }
+.empty-list { border: 1px dashed rgb(63 63 70); border-radius: 0.4rem; padding: 0.85rem; color: rgb(113 113 122); font-size: 0.7rem; text-align: center; }

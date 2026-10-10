@@ -67,6 +67,21 @@
                     [comboValue]="getDynamicFieldValue(dynamicTemplate.id).value"
                     (comboValueChange)="onDynamicValueChange(dynamicTemplate.id, $event)"></app-combo-box>
                 }
+                @case ('slider') {
+                  <app-dynamic-slider-field [label]="dynamicTemplate.name" [labelColor]="item.color || null"
+                    [config]="dynamicSliderConfig(dynamicTemplate)" [value]="getDynamicFieldValue(dynamicTemplate.id).value"
+                    (valueChange)="onDynamicSliderValueChange(dynamicTemplate.id, $event)"></app-dynamic-slider-field>
+                }
+                @case ('list') {
+                  <app-dynamic-list-field [label]="dynamicTemplate.name" [labelColor]="item.color || null"
+                    [config]="parseDynamicListConfig(dynamicTemplate)" [value]="getDynamicFieldValue(dynamicTemplate.id).value"
+                    (valueChange)="onDynamicValueChange(dynamicTemplate.id, $event)"></app-dynamic-list-field>
+                }
+                @case ('chart') {
+                  <app-dynamic-chart-field [label]="dynamicTemplate.name" [labelColor]="item.color || null"
+                    [config]="dynamicChartConfig(dynamicTemplate)" [value]="getDynamicFieldValue(dynamicTemplate.id).value"
+                    (valueChange)="onDynamicValueChange(dynamicTemplate.id, $event)"></app-dynamic-chart-field>
+                }
                 @default {
                   <app-input [historyField]="{ column: 'value', dynamicId: dynamicTemplate.id, label: dynamicTemplate.name }" [label]="dynamicTemplate.name" [labelColor]="item.color || null" size="xs" [value]="getDynamicFieldValue(dynamicTemplate.id).value"
                     (valueChange)="onDynamicValueChange(dynamicTemplate.id, $event)"></app-input>

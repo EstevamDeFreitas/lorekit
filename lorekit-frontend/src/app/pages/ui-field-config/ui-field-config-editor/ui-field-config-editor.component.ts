@@ -5,7 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { createFieldLayoutItem, UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem, UiFieldLayoutTab, UiFieldTemplate, validateUiConfigPayload } from '../../../models/ui-field-config.model';
 import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
 import { UiFieldLayoutPortabilityService } from '../../../services/ui-field-layout-portability.service';
-import { DynamicField, DynamicFieldType } from '../../../models/dynamicfields.model';
+import { CHART_SERIES_COLORS, ChartFieldOptions, ChartType, defaultChartFieldOptions, defaultListFieldOptions, defaultSliderFieldOptions, DynamicField, DynamicFieldType, ListColumn, ListColumnType, ListFieldOptions, parseDynamicFieldOptions, serializeDynamicFieldOptions, SliderFieldOptions } from '../../../models/dynamicfields.model';
 import { DynamicFieldService } from '../../../services/dynamic-field.service';
 import { DbProvider } from '../../../database/db-provider.service';
 import { schema } from '../../../database/schema';
@@ -81,9 +81,25 @@ export class UiFieldConfigEditorComponent {
   newFieldName = '';
   newFieldOptions = '';
   newFieldIsEditorField = false;
-  newFieldType: 'text' | 'options' | 'editor' | 'entity' | 'image' = 'text';
+  newFieldType: DynamicFieldType = 'text';
   newFieldTargetEntityTable = '';
   newFieldImageAspectRatio = '1';
+  newSliderMin = '0';
+  newSliderMax = '100';
+  newSliderStep = '1';
+  newSliderUnit = '';
+  newListMode: 'table' | 'headless' = 'table';
+  newListColumns = 'Item';
+  newChartType: ChartType = 'radar';
+  newChartTitle = '';
+  newChartLegend = '';
+  newChartColor = '#facc15';
+  newChartSeries = 'Serie 1';
+  newChartCategories = 'Categoria 1; Categoria 2; Categoria 3';
+  private chartCategoryDrafts = new WeakMap<DynamicField, string>();
+  newListColumnSuggestionsOpen = false;
+  activeListColumnSuggestionFieldId = '';
+  private listColumnDrafts: Record<string, string> = {};
   creatingDynamicField = false;
 
   readonly fieldTypeItems = [
@@ -92,6 +108,9 @@ export class UiFieldConfigEditorComponent {
     { value: 'editor', label: 'Editor de texto' },
     { value: 'entity', label: 'Entidade relacionada' },
     { value: 'image', label: 'Imagem' },
+    { value: 'slider', label: 'Slider numerico' },
+    { value: 'list', label: 'Listagem' },
+    { value: 'chart', label: 'Grafico' },
   ];
   readonly imageAspectRatioItems = [
     { value: '1', label: 'Quadrada (1:1)' },
@@ -100,6 +119,21 @@ export class UiFieldConfigEditorComponent {
     { value: '1.3333333333', label: 'Paisagem (4:3)' },
     { value: '1.7777777778', label: 'Paisagem (16:9)' },
     { value: '5', label: 'Banner (5:1)' },
+  ];
+  readonly listModeItems = [
+    { value: 'table', label: 'Tabela com colunas' },
+    { value: 'headless', label: 'Lista simples (headless)' },
+  ];
+  readonly listColumnTypeItems = [
+    { value: 'text', label: 'Texto' },
+    { value: 'number', label: 'Numero' },
+    { value: 'boolean', label: 'Booleano' },
+    { value: 'date', label: 'Data' },
+  ];
+  readonly chartTypeItems = [
+    { value: 'radar', label: 'Radar' },
+    { value: 'bar', label: 'Barra' },
+    { value: 'line', label: 'Linha' },
   ];
 
 
@@ -912,16 +946,17 @@ export class UiFieldConfigEditorComponent {
       return;
     }
 
+    if (this.newFieldType === 'chart' && this.newChartType === 'radar' && this.parseChartCategories(this.newChartCategories).length < 3) {
+      this.showNotice('Defina pelo menos 3 categorias distintas para o Radar.');
+      return;
+    }
+
     this.creatingDynamicField = true;
     try {
       const dynamicField = new DynamicField('', name, this.entityTable, '');
       dynamicField.fieldType = this.newFieldType;
       dynamicField.isEditorField = this.newFieldType === 'editor';
-      dynamicField.options = this.newFieldType === 'options'
-        ? this.newFieldOptions.trim()
-        : this.newFieldType === 'image'
-          ? this.newFieldImageAspectRatio
-          : undefined;
+      dynamicField.options = this.newFieldOptionsForType();
       dynamicField.targetEntityTable = this.newFieldType === 'entity' ? this.newFieldTargetEntityTable : undefined;
 
       this.uiFieldConfigService.saveDynamicField(dynamicField);
@@ -932,6 +967,7 @@ export class UiFieldConfigEditorComponent {
       this.newFieldOptions = '';
       this.newFieldType = 'text';
       this.newFieldTargetEntityTable = '';
+      this.resetNewStructuredFieldConfig();
       this.showNotice('Campo dinamico criado.');
       this.newFieldImageAspectRatio = '1';
     } finally {
@@ -951,31 +987,46 @@ export class UiFieldConfigEditorComponent {
       if (!confirmed) return;
     }
 
+    this.listColumnDrafts = {};
+    this.closeListColumnSuggestions();
     this.loadDynamicFields();
     this.editingDynamicFieldId = field.id;
+    const editableField = this.dynamicFields.find(item => item.id === field.id);
+    if (editableField?.fieldType === 'list') this.listColumnDrafts[editableField.id] = this.formatListColumns(editableField);
   }
 
   cancelEditDynamicField(): void {
     this.loadDynamicFields();
     this.editingDynamicFieldId = '';
+    this.listColumnDrafts = {};
+    this.closeListColumnSuggestions();
   }
 
   setDynamicFieldType(field: DynamicField, value: string): void {
-    if (!['text', 'options', 'editor', 'entity', 'image'].includes(value)) return;
+    if (!['text', 'options', 'editor', 'entity', 'image', 'slider', 'list', 'chart'].includes(value)) return;
 
     field.fieldType = value as DynamicFieldType;
     field.isEditorField = field.fieldType === 'editor';
-    if (field.fieldType !== 'options' && field.fieldType !== 'image') field.options = undefined;
+    if (field.fieldType === 'slider' && !field.options) field.options = serializeDynamicFieldOptions(defaultSliderFieldOptions());
+    if (field.fieldType === 'list' && !field.options) field.options = serializeDynamicFieldOptions(defaultListFieldOptions());
+    if (field.fieldType === 'chart' && !field.options) field.options = serializeDynamicFieldOptions(defaultChartFieldOptions());
+    if (field.fieldType !== 'options' && field.fieldType !== 'image' && field.fieldType !== 'slider' && field.fieldType !== 'list' && field.fieldType !== 'chart') field.options = undefined;
     if (field.fieldType === 'image' && !this.imageAspectRatioItems.some((option) => option.value === field.options)) {
       field.options = '1';
     }
     if (field.fieldType !== 'entity') field.targetEntityTable = undefined;
+    if (field.fieldType !== 'list') delete this.listColumnDrafts[field.id];
   }
 
   saveDynamicField(field: DynamicField): void {
     const name = field.name.trim();
     if (!name) {
       this.showNotice('Informe um nome para o campo dinâmico.');
+      return;
+    }
+
+    if (field.fieldType === 'chart' && this.chartConfig(field).chartType === 'radar' && (this.chartConfig(field).categories?.length ?? 0) < 3) {
+      this.showNotice('Defina pelo menos 3 categorias distintas para o Radar.');
       return;
     }
 
@@ -991,6 +1042,9 @@ export class UiFieldConfigEditorComponent {
     field.isEditorField = field.fieldType === 'editor';
     if (field.fieldType === 'options' || field.fieldType === 'image') {
       field.options = field.options?.trim() || undefined;
+    } else if (field.fieldType === 'slider' || field.fieldType === 'list' || field.fieldType === 'chart') {
+      const config = parseDynamicFieldOptions(field.fieldType, field.options);
+      field.options = config ? serializeDynamicFieldOptions(config) : undefined;
     } else {
       field.options = undefined;
     }
@@ -1000,6 +1054,8 @@ export class UiFieldConfigEditorComponent {
     this.loadDynamicFields();
     this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
     this.editingDynamicFieldId = '';
+    delete this.listColumnDrafts[field.id];
+    this.closeListColumnSuggestions();
     this.showNotice('Campo dinâmico atualizado.');
   }
 
@@ -1013,6 +1069,8 @@ export class UiFieldConfigEditorComponent {
     this.loadDynamicFields();
     this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
     if (this.editingDynamicFieldId === field.id) this.editingDynamicFieldId = '';
+    delete this.listColumnDrafts[field.id];
+    this.closeListColumnSuggestions();
     this.showNotice('Campo dinâmico excluído.');
   }
 
@@ -1022,9 +1080,222 @@ export class UiFieldConfigEditorComponent {
       case 'editor': return 'Editor de texto';
       case 'entity': return `Entidade relacionada${field.targetEntityTable ? `: ${field.targetEntityTable}` : ''}`;
       case 'image': return 'Imagem';
+      case 'slider': {
+        const config = this.sliderConfig(field);
+        return `Slider${config.unit ? ` (${config.unit})` : ''}: ${config.min}-${config.max}`;
+      }
+      case 'list': {
+        const config = this.listConfig(field);
+        return config.mode === 'headless' ? 'Listagem headless' : `Listagem: ${config.columns.length} coluna(s)`;
+      }
+      case 'chart': return `Grafico ${this.chartConfig(field).chartType}`;
       default: return 'Texto';
     }
   }
+
+  sliderConfig(field: DynamicField): SliderFieldOptions {
+    return parseDynamicFieldOptions('slider', field.options) as SliderFieldOptions;
+  }
+
+  listConfig(field: DynamicField): ListFieldOptions {
+    return parseDynamicFieldOptions('list', field.options) as ListFieldOptions;
+  }
+
+  chartConfig(field: DynamicField): ChartFieldOptions {
+    return parseDynamicFieldOptions('chart', field.options) as ChartFieldOptions;
+  }
+
+  updateSliderConfig(field: DynamicField, key: 'min' | 'max' | 'step' | 'unit', value: string): void {
+    const current = this.sliderConfig(field);
+    if (key === 'unit') current.unit = value;
+    else {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return;
+      current[key] = numeric;
+    }
+    field.options = serializeDynamicFieldOptions(current);
+  }
+
+  updateListMode(field: DynamicField, mode: string): void {
+    const current = this.listConfig(field);
+    current.mode = mode === 'headless' ? 'headless' : 'table';
+    field.options = serializeDynamicFieldOptions(current);
+  }
+
+  updateListColumns(field: DynamicField, value: string): void {
+    this.listColumnDrafts[field.id] = value;
+    const current = this.listConfig(field);
+    current.columns = this.parseListColumns(value);
+    field.options = serializeDynamicFieldOptions(current);
+  }
+
+  listColumnsText(field: DynamicField): string {
+    return this.listColumnDrafts[field.id] ?? this.formatListColumns(field);
+  }
+
+  listColumnSuggestions(value: string): ListColumnType[] {
+    const entries = value.split(';');
+    const current = entries[entries.length - 1]?.trim() ?? '';
+    const colonIndex = current.lastIndexOf(':');
+    if (colonIndex < 0) return [];
+    const query = current.slice(colonIndex + 1).trim().toLowerCase();
+    return this.listColumnTypeItems
+      .map(item => item.value as ListColumnType)
+      .filter(type => !query || type.startsWith(query));
+  }
+
+  listColumnTypeLabel(type: ListColumnType): string {
+    return this.listColumnTypeItems.find(item => item.value === type)?.label ?? type;
+  }
+
+  onNewListColumnsInput(event: Event): void {
+    this.newListColumns = (event.target as HTMLInputElement).value;
+    this.newListColumnSuggestionsOpen = this.listColumnSuggestions(this.newListColumns).length > 0;
+  }
+
+  onNewListColumnsFocus(): void {
+    this.newListColumnSuggestionsOpen = this.listColumnSuggestions(this.newListColumns).length > 0;
+  }
+
+  chooseNewListColumnType(type: ListColumnType): void {
+    this.newListColumns = this.replaceActiveListColumnType(this.newListColumns, type);
+    this.newListColumnSuggestionsOpen = false;
+  }
+
+  onListColumnsInput(field: DynamicField, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.updateListColumns(field, value);
+    this.activeListColumnSuggestionFieldId = this.listColumnSuggestions(value).length > 0 ? field.id : '';
+  }
+
+  onListColumnsFocus(field: DynamicField): void {
+    this.activeListColumnSuggestionFieldId = this.listColumnSuggestions(this.listColumnsText(field)).length > 0 ? field.id : '';
+  }
+
+  chooseListColumnType(field: DynamicField, type: ListColumnType): void {
+    const value = this.replaceActiveListColumnType(this.listColumnsText(field), type);
+    this.updateListColumns(field, value);
+    this.activeListColumnSuggestionFieldId = '';
+  }
+
+  closeListColumnSuggestions(): void {
+    this.newListColumnSuggestionsOpen = false;
+    this.activeListColumnSuggestionFieldId = '';
+  }
+
+  updateChartConfig(field: DynamicField, key: 'chartType' | 'title' | 'legend' | 'color', value: string | undefined): void {
+    const current = this.chartConfig(field);
+    if (key === 'chartType') current.chartType = value === 'bar' || value === 'line' ? value : 'radar';
+    else if (key === 'color') {
+      current.color = value && /^#[0-9a-f]{6}$/i.test(value) ? value : current.color;
+      if (current.series[0]) current.series[0].color = current.color;
+    }
+    else current[key] = value ?? '';
+    field.options = serializeDynamicFieldOptions(current);
+  }
+
+  chartSeriesText(field: DynamicField): string {
+    return this.chartConfig(field).series.map(series => series.label).join('; ');
+  }
+
+  chartCategoriesText(field: DynamicField): string {
+    return this.chartCategoryDrafts.get(field) ?? (this.chartConfig(field).categories ?? []).join('; ');
+  }
+
+  updateChartCategories(field: DynamicField, value: string): void {
+    this.chartCategoryDrafts.set(field, value);
+    const current = this.chartConfig(field);
+    current.categories = this.parseChartCategories(value);
+    field.options = serializeDynamicFieldOptions(current);
+  }
+
+  private parseChartCategories(value: string): string[] {
+    return [...new Set(value.split(';').map(item => item.trim()).filter(Boolean))].slice(0, 12);
+  }
+
+  updateChartSeries(field: DynamicField, value: string): void {
+    const current = this.chartConfig(field);
+    current.series = this.parseChartSeries(value, current.color, current.series);
+    field.options = serializeDynamicFieldOptions(current);
+  }
+
+  private newFieldOptionsForType(): string | undefined {
+    if (this.newFieldType === 'options') return this.newFieldOptions.trim();
+    if (this.newFieldType === 'image') return this.newFieldImageAspectRatio;
+    if (this.newFieldType === 'slider') {
+      const fallback = defaultSliderFieldOptions();
+      const min = this.numericOr(this.newSliderMin, fallback.min);
+      const max = Math.max(min, this.numericOr(this.newSliderMax, fallback.max));
+      const step = Math.max(Number.EPSILON, this.numericOr(this.newSliderStep, fallback.step));
+      return serializeDynamicFieldOptions({ version: 1, kind: 'slider', min, max, step, unit: this.newSliderUnit.trim(), defaultValue: min });
+    }
+    if (this.newFieldType === 'list') {
+      return serializeDynamicFieldOptions({ version: 1, kind: 'list', mode: this.newListMode, columns: this.parseListColumns(this.newListColumns) });
+    }
+    if (this.newFieldType === 'chart') {
+      const color = /^#[0-9a-f]{6}$/i.test(this.newChartColor) ? this.newChartColor : '#facc15';
+      return serializeDynamicFieldOptions({ version: 1, kind: 'chart', chartType: this.newChartType, title: this.newChartTitle.trim(), legend: this.newChartLegend.trim(), color, categories: this.parseChartCategories(this.newChartCategories), series: this.parseChartSeries(this.newChartSeries, color) });
+    }
+    return undefined;
+  }
+
+  private resetNewStructuredFieldConfig(): void {
+    this.newSliderMin = '0';
+    this.newSliderMax = '100';
+    this.newSliderStep = '1';
+    this.newSliderUnit = '';
+    this.newListMode = 'table';
+    this.newListColumns = 'Item';
+    this.newChartType = 'radar';
+    this.newChartTitle = '';
+    this.newChartLegend = '';
+    this.newChartColor = '#facc15';
+    this.newChartSeries = 'Serie 1';
+    this.newChartCategories = 'Categoria 1; Categoria 2; Categoria 3';
+  }
+
+  private parseListColumns(value: string): ListColumn[] {
+    const columns = value.split(';').map((entry, index) => {
+      const [rawLabel, rawType] = entry.split(':');
+      const label = (rawLabel ?? '').trim();
+      if (!label) return null;
+      const type: ListColumnType = rawType?.trim() === 'number' || rawType?.trim() === 'boolean' || rawType?.trim() === 'date' ? rawType.trim() as ListColumnType : 'text';
+      const id = label.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `column-${index + 1}`;
+      return { id, label, type };
+    }).filter((column): column is ListColumn => !!column);
+    return columns.length ? columns : defaultListFieldOptions().columns;
+  }
+
+  private replaceActiveListColumnType(value: string, type: ListColumnType): string {
+    const entries = value.split(';');
+    const index = entries.length - 1;
+    const current = entries[index]?.trim() ?? '';
+    const colonIndex = current.lastIndexOf(':');
+    if (colonIndex < 0) return value;
+    entries[index] = `${current.slice(0, colonIndex).trim()}:${type}`;
+    return entries.join('; ');
+  }
+
+  private formatListColumns(field: DynamicField): string {
+    return this.listConfig(field).columns.map(column => column.type === 'text' ? column.label : `${column.label}:${column.type}`).join('; ');
+  }
+
+  private parseChartSeries(value: string, fallbackColor: string, previous: Array<{ id: string; label: string; color: string }> = []): Array<{ id: string; label: string; color: string }> {
+    const labels = value.split(';').map(item => item.trim()).filter(Boolean).slice(0, 8);
+    if (!labels.length) labels.push('Serie 1');
+    return labels.map((label, index) => ({
+      id: previous[index]?.id || `series-${index + 1}`,
+      label,
+      color: previous[index]?.color || (index === 0 ? fallbackColor : CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length]),
+    }));
+  }
+
+  private numericOr(value: string, fallback: number): number {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  numberText(value: number): string { return String(value); }
 
   async deleteActiveTemplate(): Promise<void> {
     if (!this.activeTemplateId) return;
@@ -1052,6 +1323,7 @@ export class UiFieldConfigEditorComponent {
     const catalogItem = this.catalog.find((item) => item.token === token);
     if (!catalogItem) return 4;
     if (catalogItem.fieldType === 'image') return 4;
+    if (catalogItem.fieldType === 'chart' || catalogItem.fieldType === 'list') return 6;
     return catalogItem.isEditorField ? 6 : 4;
   }
 
@@ -1059,6 +1331,9 @@ export class UiFieldConfigEditorComponent {
     const catalogItem = this.catalog.find((item) => item.token === token);
     if (!catalogItem) return 1;
     if (catalogItem.fieldType === 'image') return 6;
+    if (catalogItem.fieldType === 'slider') return 2;
+    if (catalogItem.fieldType === 'chart') return 6;
+    if (catalogItem.fieldType === 'list') return 4;
     return catalogItem.isEditorField ? 6 : 1;
   }
 

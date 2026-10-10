@@ -128,6 +128,26 @@ describe('UiFieldLayoutPortabilityService', () => {
     expect(saveConfig).not.toHaveBeenCalled();
     expect(saveTemplate).not.toHaveBeenCalled();
   });
+
+  it('exports and imports structured dynamic field definitions', () => {
+    const options = JSON.stringify({ version: 1, kind: 'chart', chartType: 'radar', title: 'Atributos', legend: 'Base', color: '#facc15' });
+    fields = [{ id: 'chart-id', name: 'Atributos', entityTable: 'Character', fieldType: 'chart', options, isEditorField: false }];
+
+    const exported = service.exportLayout('Character', v2Layout('dynamic:chart-id'));
+    expect(exported.dynamicFields[0]).toEqual(jasmine.objectContaining({ fieldType: 'chart', options }));
+
+    const plan = service.prepareLayoutImport(JSON.stringify(exported));
+    expect(plan.reusedFields.map(field => field.id)).toEqual(['chart-id']);
+    expect(plan.fieldsToCreate).toEqual([]);
+  });
+
+  it('rejects invalid structured options during import before writing', () => {
+    const document = validDocument([{ key: 'score', name: 'Score', fieldType: 'slider', options: '{"version":1,"kind":"chart"}', isEditorField: false }], ['score']);
+
+    expect(() => service.prepareLayoutImport(JSON.stringify(document))).toThrowError('A configuracao de um campo dinamico e invalida.');
+    expect(saveDynamicField).not.toHaveBeenCalled();
+    expect(saveConfig).not.toHaveBeenCalled();
+  });
 });
 
 function validDocument(dynamicFields: any[], dynamicKeys: string[]) {

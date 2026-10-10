@@ -1,5 +1,5 @@
 export type UiFieldSource = 'schema' | 'dynamic';
-export type UiFieldControl = 'input' | 'textarea' | 'editor' | 'options' | 'entity' | 'image';
+export type UiFieldControl = 'input' | 'textarea' | 'editor' | 'options' | 'entity' | 'image' | 'slider' | 'list' | 'chart';
 
 export interface UiFieldCatalogItem {
   token: string;
