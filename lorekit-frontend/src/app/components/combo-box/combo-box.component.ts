@@ -3,88 +3,25 @@ import {
   Component,
   computed,
   ElementRef,
-  HostListener,
+  inject,
   input,
   model,
   signal,
   ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgClass } from '@angular/common';
+import { DOCUMENT } from '@angular/common';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { fromEvent } from 'rxjs';
 
 @Component({
-  imports: [FormsModule, NgClass],
+  imports: [FormsModule, OverlayModule],
   selector: 'app-combo-box',
-  template: `
-    <div class="flex flex-col relative" #container>
-      <label class="mb-1 text-xs" [style.color]="labelColor() || null">{{ label() }}</label>
-
-      <!-- Trigger input -->
-      <div
-        class="rounded-lg px-3 py-2 text-sm bg-zinc-940 ring-1 ring-zinc-900 focus:outline-none transition focus:ring-zinc-100 focus:ring-1 focus-within:bg-zinc-940 cursor-pointer flex items-center gap-2"
-        (click)="openDropdown()"
-      >
-        <input
-          #searchInput
-          type="text"
-          class="flex-1 bg-transparent outline-none text-xs placeholder-zinc-500 cursor-pointer"
-          [placeholder]="displaySelected() || placeholder()"
-          [ngClass]="displaySelected() ? 'text-white' : 'text-zinc-400'"
-          [ngModel]="searchTerm()"
-          (ngModelChange)="searchTerm.set($event)"
-          (focus)="openDropdown()"
-          (keydown.escape)="closeDropdown()"
-          (keydown.arrowDown)="moveFocus(1)"
-          (keydown.arrowUp)="moveFocus(-1)"
-          (keydown.enter)="selectFocused()"
-        />
-        @if (displaySelected()) {
-          <button
-            type="button"
-            class="text-zinc-500 hover:text-white transition text-xs leading-none"
-            (click)="clearSelection($event)"
-          >✕</button>
-        }
-        <button
-          type="button"
-          class="text-zinc-500 text-xs transition-transform duration-150"
-          [ngClass]="isOpen() ? 'rotate-180' : ''"
-          (click)="$event.stopPropagation(); toggleDropdown()"
-        >▾</button>
-      </div>
-
-      <!-- Dropdown -->
-      @if (isOpen()) {
-        <div class="absolute top-full left-0 right-0 z-50 mt-1 rounded-lg bg-zinc-900 border border-zinc-700 shadow-xl max-h-56 overflow-y-auto scrollbar-dark">
-          <!-- None option -->
-          <div
-            class="px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-800 cursor-pointer transition"
-            [ngClass]="focusedIndex() === 0 ? 'bg-zinc-800' : ''"
-            (mouseenter)="focusedIndex.set(0)"
-            (click)="selectItem(null)"
-          >-- Nenhum --</div>
-
-          @for (item of filteredItems(); track $index) {
-            <div
-              class="px-3 py-2 text-sm hover:bg-zinc-800 cursor-pointer transition"
-              [ngClass]="{
-                'bg-zinc-700': isSelected(item),
-                'bg-zinc-800': focusedIndex() === $index + 1 && !isSelected(item)
-              }"
-              (mouseenter)="focusedIndex.set($index + 1)"
-              (click)="selectItem(item)"
-            >{{ getDisplay(item) }}</div>
-          }
-
-          @if (filteredItems().length === 0) {
-            <div class="px-3 py-2 text-sm text-zinc-500 italic">Nenhuma opção encontrada</div>
-          }
-        </div>
-      }
-    </div>
-  `,
+  templateUrl: './combo-box.component.html',
   styleUrl: './combo-box.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(window:resize)': 'closeDropdown()' },
 })
 export class ComboBoxComponent {
   label = input.required<string>();
@@ -99,6 +36,24 @@ export class ComboBoxComponent {
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
   @ViewChild('container') container!: ElementRef<HTMLElement>;
+
+  // Render above cards and outside ancestor overflow/stacking contexts.
+  readonly dropdownPositions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 4 },
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -4 },
+  ];
+
+  constructor() {
+    // Native scrolling containers are not necessarily registered with CDK.
+    fromEvent(inject(DOCUMENT), 'scroll', { capture: true })
+      .pipe(takeUntilDestroyed())
+      .subscribe(event => {
+        const target = event.target as Node | null;
+        if (this.isOpen() && target?.contains(this.container.nativeElement)) {
+          this.closeDropdown();
+        }
+      });
+  }
 
   isOpen = signal(false);
   searchTerm = signal('');
@@ -123,8 +78,7 @@ export class ComboBoxComponent {
     return this.getDisplay(found);
   });
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent) {
+  onOutsideClick(event: MouseEvent) {
     if (this.container && !this.container.nativeElement.contains(event.target as Node)) {
       this.closeDropdown();
     }
