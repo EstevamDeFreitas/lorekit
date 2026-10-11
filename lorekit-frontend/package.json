@@ -7,7 +7,8 @@
     "build": "ng build",
     "build:web": "ng build --configuration production,web",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "test:entity-portability": "tsc --noEmit -p tsconfig.entity-portability.json && node ../scripts/entity-portability-qa.cjs"
   },
   "browser": {
     "fs": false,
