@@ -1,0 +1,59 @@
+<div class="config-shell">
+<header class="config-header"><div><h2>{{ currentVocation.name || 'Configurar vocação' }}</h2><p>Base, atributos e repertório da vocação.</p></div><button class="config-close" type="button" aria-label="Fechar configuração da vocação" (click)="close()"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></header>
+<nav class="config-tabs" aria-label="Seções da vocação"><button type="button" [class.active]="editorTab() === 'base'" [attr.aria-pressed]="editorTab() === 'base'" (click)="editorTab.set('base')"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Base</button><button type="button" [class.active]="editorTab() === 'attributes'" [attr.aria-pressed]="editorTab() === 'attributes'" (click)="editorTab.set('attributes')"><i class="fa-solid fa-dice-d10" aria-hidden="true"></i> Atributos e perícias</button><button type="button" [class.active]="editorTab() === 'repertoire'" [attr.aria-pressed]="editorTab() === 'repertoire'" (click)="editorTab.set('repertoire')"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Repertório <span>{{ habilitiesData.length }}</span></button></nav>
+<div class="config-body scrollbar-dark"><div class="config-content entity-properties-panel">
+@if (editorTab() === 'base') { <div class="config-base-layout"><section class="config-section"><h3>Base da vocação</h3><p class="section-hint">Vida e resistência se somam às outras fontes da ficha.</p>
+      <div class="config-fields"><app-input label="Nome da vocação" [(value)]="currentVocation.name"></app-input><app-input label="Caixas de vida base" type="number" [(value)]="baseHealthValue"></app-input><app-input label="Caixas de resistência base" type="number" [(value)]="baseDefenseValue"></app-input></div>
+      <app-text-area label="Descrição da vocação" height="h-24" [(value)]="currentVocation.description"></app-text-area>
+    </section>
+    <section class="config-section"><h3>Passiva da vocação</h3><p class="section-hint">Um efeito que acompanha o personagem sem ativação.</p><div class="config-fields"><app-input label="Nome da passiva" [(value)]="passiveData.name"></app-input><app-text-area label="Efeito passivo" height="h-24" [(value)]="passiveData.description"></app-text-area></div></section>
+    </div> }
+@if (editorTab() === 'attributes') { <section class="vocation-skills-section config-section" aria-labelledby="vocation-skills-title">
+        <div class="skill-section-header">
+          <div>
+            <h3 id="vocation-skills-title" class="skill-section-title">Atributos e perícias</h3>
+            <p class="skill-section-hint">Os valores dos atributos servem de referência. Os modificadores do personagem são definidos na ficha.</p>
+          </div>
+          <div class="skill-level-legend" aria-label="Níveis de perícia">
+            @for (level of [0,1,2,3]; track level) {
+              <span class="skill-legend-item">
+                <span class="skill-legend-dot level-{{level}}" aria-hidden="true"></span>
+                {{ getSkillLevelLabel(level) }}
+              </span>
+            }
+          </div>
+        </div>
+
+        <div class="skill-groups">
+          @for (entry of attributeGroupEntries; track entry[0]) {
+            <section class="skill-group" [attr.aria-labelledby]="'vocation-skill-group-' + entry[0]">
+              <div class="attribute-editor-heading"><h4 class="skill-group-title" [id]="'vocation-skill-group-' + entry[0]"><i [class]="'fa-solid ' + attributeGroupIcon[entry[0]]" aria-hidden="true"></i>{{ attributeGroupLabel[entry[0]] }}</h4><label class="attribute-reference">Referência<input type="number" min="-1" max="3" [attr.aria-label]="'Valor de referência de ' + attributeGroupLabel[entry[0]]" [(ngModel)]="attributesData[entry[0]].value"></label></div>
+              <div class="skill-list">
+                @for (skill of entry[1]; track skill) {
+                  <div class="skill-row">
+                    <span class="skill-label">{{ skillLabel[skill] }}</span>
+                    <div class="skill-control">
+                      <span class="skill-level-summary">{{ getSkillLevelLabel(getSkillLevel(entry[0], skill)) }}</span>
+                      <div class="skill-levels" role="group" [attr.aria-label]="'Nível mínimo de ' + skillLabel[skill]">
+                        @for (level of [0,1,2,3]; track level) {
+                          <input
+                            type="checkbox"
+                            class="circle-checkbox level-{{level}}"
+                            [checked]="getSkillLevel(entry[0], skill) >= level"
+                            [title]="getSkillLevelLabel(level)"
+                            [attr.aria-label]="'Nível ' + getSkillLevelLabel(level) + ' para ' + skillLabel[skill]"
+                            (click)="onCircleClick($event, entry[0], skill, level)">
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </section>
+          }
+        </div>
+      </section> }
+@if (editorTab() === 'repertoire') { <irpw-repertoire-editor [abilities]="habilitiesData" (changed)="updateRepertoire($event)"></irpw-repertoire-editor> }
+</div></div>
+<footer class="config-footer"><p>As alterações são aplicadas ao salvar.</p><div class="section-actions"><app-button label="Cancelar" buttonType="secondary" size="sm" (click)="close()"></app-button><app-button label="Salvar vocação" size="sm" (click)="saveNow()"></app-button></div></footer>
+</div>

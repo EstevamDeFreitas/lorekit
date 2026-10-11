@@ -139,6 +139,8 @@ export interface IrpwDefensePointsEnvelope {
   version: 2;
   currentPoints: number | null;
   manualAdjustment: number;
+  temporaryPoints?: number;
+  temporaryCurrentPoints?: number;
   vocationContribution: number;
   protectionContribution: number;
 }
@@ -252,7 +254,9 @@ export function parseIrpwDefensePoints(raw: string | null | undefined, vocationC
   try {
     const value = raw ? JSON.parse(raw) as Partial<IrpwDefensePointsEnvelope> : {};
     if (value.version === IRPW_DEFENSEPOINTS_VERSION) {
-      return { version: 2, currentPoints: normalizeNullableNumber(value.currentPoints), manualAdjustment: normalizeNumber(value.manualAdjustment), vocationContribution: normalizeNumber(value.vocationContribution), protectionContribution: normalizeNumber(value.protectionContribution) };
+      const temporaryPoints = Math.min(100, Math.max(0, Math.trunc(normalizeNumber(value.temporaryPoints))));
+      const temporaryCurrentPoints = Math.min(temporaryPoints, Math.max(0, normalizeNullableNumber(value.temporaryCurrentPoints) ?? 0));
+      return { version: 2, temporaryPoints, temporaryCurrentPoints, currentPoints: normalizeNullableNumber(value.currentPoints), manualAdjustment: normalizeNumber(value.manualAdjustment), vocationContribution: normalizeNumber(value.vocationContribution), protectionContribution: normalizeNumber(value.protectionContribution) };
     }
     const current = normalizeNullableNumber(value.currentPoints);
     const manualAdjustment = current === null ? 0 : Math.max(0, current - vocationContribution - protection);

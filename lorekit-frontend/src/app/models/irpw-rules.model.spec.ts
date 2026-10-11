@@ -8,7 +8,7 @@ import {
 } from './irpw-rules.model';
 
 describe('Ironpaw rules helpers', () => {
-  it('reads legacy vocation values but serializes only skills', () => {
+  it('preserves attribute reference values and skill minimums across saves', () => {
     const raw = JSON.stringify({
       [ATTRIBUTE_GROUP.BODY]: {
         value: 3,
@@ -20,7 +20,8 @@ describe('Ironpaw rules helpers', () => {
     const serialized = JSON.parse(serializeVocationSkills(parsed));
 
     expect(parsed.BODY.skills[SKILL.ATHLETICS]).toBe(2);
-    expect(serialized.BODY.value).toBeUndefined();
+    expect(serialized.BODY.value).toBe(3);
+    expect(parseVocationSkills(JSON.stringify(serialized)).BODY.value).toBe(3);
     expect(serialized.BODY.skills[SKILL.ATHLETICS]).toBe(2);
   });
 

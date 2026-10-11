@@ -45,6 +45,20 @@ describe('Ironpaw item and inventory models', () => {
     expect(calculateDefensePointsMax(defense)).toBe(5);
   });
 
+  it('keeps temporary resistance separate when equipment contributions change', () => {
+    const defense = parseIrpwDefensePoints(JSON.stringify({ version: 2, currentPoints: 1.5, manualAdjustment: 1, vocationContribution: 2, protectionContribution: 3, temporaryPoints: 3, temporaryCurrentPoints: 2.5 }));
+    defense.protectionContribution = 0;
+    expect(calculateDefensePointsMax(defense)).toBe(3);
+    const restored = parseIrpwDefensePoints(JSON.stringify(defense));
+    expect(restored.temporaryPoints).toBe(3);
+    expect(restored.temporaryCurrentPoints).toBe(2.5);
+  });
+
+  it('clamps temporary resistance to its capacity and half-box states', () => {
+    const defense = parseIrpwDefensePoints(JSON.stringify({ version: 2, temporaryPoints: 2, temporaryCurrentPoints: 4.25 }));
+    expect(defense.temporaryCurrentPoints).toBe(2);
+  });
+
   it('rejects unknown inventory versions without mutating the input', () => {
     const raw = JSON.stringify({ version: 99, entries: [], backpackOrder: [] });
     expect(parseIrpwInventory(raw)).toBeNull();

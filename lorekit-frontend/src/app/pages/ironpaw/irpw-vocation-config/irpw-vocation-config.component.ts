@@ -1,144 +1,22 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { InputComponent } from '../../../components/input/input.component';
 import { TextAreaComponent } from '../../../components/text-area/text-area.component';
-import { ATTRIBUTE_GROUP_LABEL, ATTRIBUTE_GROUP_SKILLS, AttributeGroupCode, SkillCode, SKILL_LABEL } from '../../../models/irpw-attributes-skills.model';
+import { ATTRIBUTE_GROUP_LABEL, ATTRIBUTE_GROUP_ICON, ATTRIBUTE_GROUP_SKILLS, AttributeGroupCode, SkillCode, SKILL_LABEL } from '../../../models/irpw-attributes-skills.model';
 import { createDefaultVocationSkills, IrpwVocationSkills, parseVocationSkills, serializeVocationSkills } from '../../../models/irpw-rules.model';
 import { IrpwHabilityType, IrpwVocation, IrpwVocationHability } from '../../../models/irpw-vocation.model';
+import { IrpwRepertoireEditorComponent } from '../irpw-repertoire-editor/irpw-repertoire-editor.component';
+import { normalizeAbilityMechanics, changeAbilityType } from '../../../models/irpw-ability.model';
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { IrpwVocationService } from '../../../services/irpw-vocation.service';
 
 @Component({
   selector: 'irpw-vocation-config',
-  imports: [CommonModule, FormsModule, ButtonComponent, InputComponent, TextAreaComponent],
-  template: `
-    <div class="w-full h-full min-h-0 box-border overflow-y-auto scrollbar-dark bg-zinc-950 p-5 text-white">
-      <div class="flex items-start justify-between gap-4 mb-4">
-        <div>
-          <h2 class="text-lg font-semibold">Configuração IRPW da Vocação</h2>
-          <p class="text-xs text-zinc-500">Configure poderes, vida base, defesa base e as perícias mínimas.</p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 gap-4">
-        <div class="rounded-md border border-zinc-800 bg-zinc-925 p-3 col-span-2">
-          <div class="grid grid-cols-2 gap-3">
-            <app-input label="Nome" [(value)]="currentVocation.name"></app-input>
-            <app-input label="Vida base" type="number" [(value)]="baseHealthValue"></app-input>
-            <app-input label="Defesa base" type="number" [(value)]="baseDefenseValue"></app-input>
-            <div></div>
-            <div class="col-span-2">
-              <app-text-area label="Descrição" height="h-24" [(value)]="currentVocation.description"></app-text-area>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-md border border-zinc-800 bg-zinc-925 p-3">
-          <div class="flex items-center justify-between gap-2 mb-3">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-400">Passiva</h3>
-          </div>
-          <div class="flex flex-col gap-3">
-            <app-input label="Nome" [(value)]="passiveData.name"></app-input>
-            <app-text-area label="Descrição" height="h-32" [(value)]="passiveData.description"></app-text-area>
-          </div>
-        </div>
-
-        <div class="rounded-md border border-zinc-800 bg-zinc-925 p-3">
-          <div class="flex items-center justify-between gap-2 mb-3">
-            <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-400">Poderes</h3>
-            <app-button label="Adicionar" buttonType="secondary" size="xs" (click)="addHability()"></app-button>
-          </div>
-          <div class="flex flex-col gap-3">
-            @for (hability of habilitiesData; track $index) {
-              <div class="rounded-md border border-zinc-800 bg-zinc-900/60 p-3">
-                <div class="flex items-center justify-between gap-2 mb-2">
-                  <span class="text-xs text-zinc-300">Poder {{ $index + 1 }}</span>
-                  <app-button label="Remover" buttonType="danger" size="xs" (click)="removeHability($index)"></app-button>
-                </div>
-                <div class="flex flex-col gap-2">
-                  <app-input label="Nome" [(value)]="hability.name"></app-input>
-                  <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <label class="flex flex-col gap-1 text-xs text-zinc-400">Categoria
-                      <select class="rounded-md border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm text-zinc-100" [(ngModel)]="hability.type">
-                        @for (kind of habilityTypeOptions; track kind.value) {
-                          <option [ngValue]="kind.value">{{ kind.label }}</option>
-                        }
-                      </select>
-                    </label>
-                    <label class="flex flex-col gap-1 text-xs text-zinc-400">Perícia do atalho (opcional)
-                      <select class="rounded-md border border-zinc-700 bg-zinc-950 px-2 py-2 text-sm text-zinc-100" [(ngModel)]="hability.rollSkill">
-                        <option [ngValue]="null">Sem rolagem associada</option>
-                        @for (skill of skillShortcutOptions; track skill.id) {
-                          <option [ngValue]="skill.id">{{ skill.name }}</option>
-                        }
-                      </select>
-                    </label>
-                  </div>
-                  <app-text-area label="Descrição" height="h-24" [(value)]="hability.description"></app-text-area>
-                </div>
-              </div>
-            }
-            @if (habilitiesData.length === 0) {
-              <span class="text-xs text-zinc-500">Nenhum poder cadastrado.</span>
-            }
-          </div>
-        </div>
-      </div>
-
-              <section class="vocation-skills-section rounded-md border border-zinc-800 bg-zinc-925 p-3 mt-4" aria-labelledby="vocation-skills-title">
-        <div class="skill-section-header">
-          <div>
-            <h3 id="vocation-skills-title" class="skill-section-title">Perícias mínimas</h3>
-            <p class="skill-section-hint">Defina o nível inicial exigido por cada perícia.</p>
-          </div>
-          <div class="skill-level-legend" aria-label="Níveis de perícia">
-            @for (level of [0,1,2,3]; track level) {
-              <span class="skill-legend-item">
-                <span class="skill-legend-dot level-{{level}}" aria-hidden="true"></span>
-                {{ getSkillLevelLabel(level) }}
-              </span>
-            }
-          </div>
-        </div>
-
-        <div class="skill-groups">
-          @for (entry of attributeGroupEntries; track entry[0]) {
-            <section class="skill-group" [attr.aria-labelledby]="'vocation-skill-group-' + entry[0]">
-              <h4 class="skill-group-title" [id]="'vocation-skill-group-' + entry[0]">{{ attributeGroupLabel[entry[0]] }}</h4>
-              <div class="skill-list">
-                @for (skill of entry[1]; track skill) {
-                  <div class="skill-row">
-                    <span class="skill-label">{{ skillLabel[skill] }}</span>
-                    <div class="skill-control">
-                      <span class="skill-level-summary">{{ getSkillLevelLabel(getSkillLevel(entry[0], skill)) }}</span>
-                      <div class="skill-levels" role="group" [attr.aria-label]="'Nível mínimo de ' + skillLabel[skill]">
-                        @for (level of [0,1,2,3]; track level) {
-                          <input
-                            type="checkbox"
-                            class="circle-checkbox level-{{level}}"
-                            [checked]="getSkillLevel(entry[0], skill) >= level"
-                            [title]="getSkillLevelLabel(level)"
-                            [attr.aria-label]="'Nível ' + getSkillLevelLabel(level) + ' para ' + skillLabel[skill]"
-                            (click)="onCircleClick($event, entry[0], skill, level)">
-                        }
-                      </div>
-                    </div>
-                  </div>
-                }
-              </div>
-            </section>
-          }
-        </div>
-      </section>
-      <div class="mt-4 flex justify-end gap-2">
-        <app-button label="Fechar" buttonType="secondary" size="sm" (click)="close()"></app-button>
-        <app-button label="Salvar" size="sm" (click)="saveNow()"></app-button>
-      </div>
-    </div>
-  `,
+  imports: [CommonModule, FormsModule, ButtonComponent, InputComponent, TextAreaComponent, IrpwRepertoireEditorComponent],
+  templateUrl: './irpw-vocation-config.component.html',
   styleUrl: './irpw-vocation-config.component.css',
 })
 export class IrpwVocationConfigComponent implements OnInit {
@@ -148,6 +26,11 @@ export class IrpwVocationConfigComponent implements OnInit {
   private readonly entityChangeService = inject(EntityChangeService);
 
   currentVocation: IrpwVocation = new IrpwVocation();
+  readonly editorTab = signal<'base' | 'attributes' | 'repertoire'>('base');
+  updateRepertoire(abilities: IrpwVocationHability[]): void {
+    this.habilitiesData = abilities;
+  }
+
   baseHealthValue: number | null = null;
   baseDefenseValue: number | null = null;
   passiveData: IrpwVocationHability = this.createEmptyHability();
@@ -156,6 +39,7 @@ export class IrpwVocationConfigComponent implements OnInit {
 
   readonly attributeGroupEntries = Object.entries(ATTRIBUTE_GROUP_SKILLS) as [AttributeGroupCode, SkillCode[]][];
   readonly attributeGroupLabel = ATTRIBUTE_GROUP_LABEL;
+  readonly attributeGroupIcon = ATTRIBUTE_GROUP_ICON;
   readonly skillLabel = SKILL_LABEL;
   readonly habilityTypeOptions: { value: IrpwHabilityType; label: string }[] = [
     { value: 'technical', label: 'Poder' },
@@ -174,8 +58,15 @@ export class IrpwVocationConfigComponent implements OnInit {
     this.attributesData = parseVocationSkills(this.currentVocation.attributes);
   }
 
-  addHability(): void {
-    this.habilitiesData = [...this.habilitiesData, this.createEmptyHability()];
+  getHabilityLabel(type: IrpwHabilityType | undefined): string { return this.habilityTypeOptions.find(kind => kind.value === type)?.label ?? 'Poder'; }
+
+  addHability(type: IrpwHabilityType = 'technical'): void {
+    this.habilitiesData = [...this.habilitiesData, { ...this.createEmptyHability(), type, ...(type === 'magic' ? { rollSkill: 'CONJURATION' as SkillCode } : {}) }];
+  }
+
+  setHabilityType(index: number, type: IrpwHabilityType): void {
+    this.habilitiesData = this.habilitiesData.map((ability, i) => i === index ? changeAbilityType(ability, type) : ability);
+
   }
 
   removeHability(index: number): void {
@@ -193,7 +84,7 @@ export class IrpwVocationConfigComponent implements OnInit {
   }
 
   getSkillLevelLabel(level: number): string {
-    return ['Sem habilidade', 'Treinado', 'Intermediario', 'Mestre'][this.normalizeSkillLevel(level)];
+    return ['Sem habilidade', 'Treinado', 'Intermediário', 'Mestre'][this.normalizeSkillLevel(level)];
   }
 
   saveNow(): void {
@@ -248,7 +139,7 @@ export class IrpwVocationConfigComponent implements OnInit {
     if (!name && !description) return null;
     const validType = ['technical', 'magic', 'passive'].includes(String(source.type)) ? source.type : defaultType;
     const rollSkill = source.rollSkill && Object.hasOwn(SKILL_LABEL, source.rollSkill) ? source.rollSkill : null;
-    return { id: source.id?.trim() || fallbackId, ...(name ? { name } : {}), description, type: validType, rollSkill };
+    return { id: source.id?.trim() || fallbackId, ...(name ? { name } : {}), description, type: validType, rollSkill, ...normalizeAbilityMechanics({ ...source, description, type: validType }) };
   }
 
   private createEmptyHability(): IrpwVocationHability {
