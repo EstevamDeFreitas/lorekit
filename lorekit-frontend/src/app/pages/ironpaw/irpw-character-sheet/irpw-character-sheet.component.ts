@@ -18,7 +18,7 @@ import { IrpwCharacterSheetService } from '../../../services/irpw-character-shee
 import { IrpwItemCatalogService } from '../../../services/irpw-item-catalog.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
-import { getPersonalizationValue, getTextColorStyle } from '../../../models/personalization.model';
+import { getPersonalizationValue, getTextColorStyle, getTextClass } from '../../../models/personalization.model';
 import { ATTRIBUTE_GROUP_SKILLS, ATTRIBUTE_GROUP_LABEL, ATTRIBUTE_GROUP_ICON, SKILL, SKILL_LABEL, AttributeGroupCode, SkillCode } from '../../../models/irpw-attributes-skills.model';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { getImageByUsageKey } from '../../../models/image.model';
@@ -86,6 +86,7 @@ interface RollModifier {
 
 interface RollPreview {
   attempts: number;
+  sides: number;
   modifiers: RollModifier[];
   totalModifier: number;
   resolutionMode: RollResolutionMode;
@@ -327,6 +328,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
   public getPersonalizationValue = getPersonalizationValue;
   public getTextColorStyle = getTextColorStyle;
+  public getTextClass = getTextClass;
   public getImageByUsageKey = getImageByUsageKey;
 
   isRollPanelOpen = false;
@@ -339,7 +341,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   rollFormula = '1d10';
   rollFormulaMode: RollFormulaMode = 'auto';
   rollFormulaError = '';
-  rollPreview: RollPreview = { attempts: 1, modifiers: [], totalModifier: 0, resolutionMode: 'normal' };
+  rollPreview: RollPreview = { attempts: 1, sides: 10, modifiers: [], totalModifier: 0, resolutionMode: 'normal' };
   rollResults: RollResult[] = [];
   lastRollFormula = '';
 
@@ -2197,13 +2199,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
     const parsedFormula = this.parseRollFormula(this.rollFormula);
     if (!parsedFormula) {
-      this.rollFormulaError = 'Use o formato Xd10+Y, por exemplo 3d10+3.';
+      this.rollFormulaError = 'Use de 1 a 50 dados d4, d6, d10 ou d20 e um ajuste inteiro. Ex.: 2d6+3.';
       this.rollResults = [];
       return;
     }
 
     this.rollResults = Array.from({ length: parsedFormula.attempts }, (_, index) => {
-      const dieValue = this.rollDie(10);
+      const dieValue = this.rollDie(parsedFormula.sides);
       const total = dieValue + parsedFormula.modifier;
       return {
         index: index + 1,
@@ -2212,7 +2214,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
         modifier: parsedFormula.modifier,
         total,
         status: this.getRollStatus(total),
-        resolutionLabel: '1d10',
+        resolutionLabel: `1d${parsedFormula.sides}`,
       };
     });
     this.lastRollFormula = this.rollFormula;
@@ -2223,23 +2225,20 @@ export class IrpwCharacterSheetComponent implements OnInit {
       return `1 tentativa com desvantagem e modificador total ${this.formatSignedValue(this.rollPreview.totalModifier)}`;
     }
 
-    return `${this.rollPreview.attempts} tentativa(s) com modificador total ${this.formatSignedValue(this.rollPreview.totalModifier)}`;
+    const { attempts, sides, totalModifier } = this.rollPreview;
+    return `${attempts} ${attempts === 1 ? 'tentativa' : 'tentativas'} de d${sides}, cada uma ${this.formatSignedValue(totalModifier)}`;
   }
 
   formatSignedValue(value: number): string {
     return value >= 0 ? `+${value}` : `${value}`;
   }
 
-  getRollResultCardClass(status: RollStatus): string {
+  getRollStatusLabel(status: RollStatus): string {
     switch (status) {
-      case 'success':
-        return 'border-emerald-500/45 bg-emerald-950/40 text-emerald-100';
-      case 'near':
-        return 'border-amber-400/45 bg-amber-950/30 text-amber-100';
-      case 'fail':
-        return 'border-red-500/40 bg-red-950/35 text-red-100';
-      default:
-        return 'border-zinc-700 bg-zinc-900/70 text-zinc-200';
+      case 'success': return 'Sucesso';
+      case 'near': return 'Por pouco';
+      case 'fail': return 'Falha';
+      default: return 'Sem alvo';
     }
   }
 
@@ -2254,8 +2253,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   private updateRollFormulaIfAuto() {
-    this.rollPreview = this.buildAutoRollPreview();
     if (this.rollFormulaMode === 'auto') {
+      this.rollPreview = this.buildAutoRollPreview();
       this.rollFormula = this.buildRollFormula(this.rollPreview);
       this.rollFormulaError = '';
     }
@@ -2264,13 +2263,14 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private refreshRollPreviewFromFormula() {
     const parsedFormula = this.parseRollFormula(this.rollFormula);
     if (!parsedFormula) {
-      this.rollPreview = { attempts: 1, modifiers: [], totalModifier: 0, resolutionMode: 'normal' };
-      this.rollFormulaError = 'Use o formato Xd10+Y, por exemplo 3d10+3.';
+      this.rollPreview = { attempts: 1, sides: 10, modifiers: [], totalModifier: 0, resolutionMode: 'normal' };
+      this.rollFormulaError = 'Use de 1 a 50 dados d4, d6, d10 ou d20 e um ajuste inteiro. Ex.: 2d6+3.';
       return;
     }
 
     this.rollPreview = {
       attempts: parsedFormula.attempts,
+      sides: parsedFormula.sides,
       modifiers: [{ key: 'manual-formula', label: 'Fórmula manual', value: parsedFormula.modifier, category: 'manual' }],
       totalModifier: parsedFormula.modifier,
       resolutionMode: 'normal',
@@ -2351,7 +2351,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     }
 
     const totalModifier = modifiers.reduce((sum, modifier) => sum + modifier.value, 0);
-    return { attempts, modifiers, totalModifier, resolutionMode };
+    return { attempts, sides: 10, modifiers, totalModifier, resolutionMode };
   }
 
   private buildRollFormula(preview: RollPreview): string {
@@ -2497,17 +2497,18 @@ export class IrpwCharacterSheetComponent implements OnInit {
     return this.selectedRollBonusSource === 'perception' && target === 'PERCEPTION';
   }
 
-  private parseRollFormula(formula: string): { attempts: number; modifier: number } | null {
-    const match = formula.trim().match(/^(\d+)\s*d\s*10\s*([+-]\s*\d+)?$/i);
+  private parseRollFormula(formula: string): { attempts: number; sides: number; modifier: number } | null {
+    const match = formula.trim().match(/^(\d+)\s*d\s*(4|6|10|20)\s*([+-]\s*\d+)?$/i);
     if (!match) return null;
 
     const attempts = Number(match[1]);
     if (!Number.isInteger(attempts) || attempts < 1 || attempts > 50) return null;
 
-    const modifier = match[2] ? Number(match[2].replace(/\s+/g, '')) : 0;
-    if (!Number.isFinite(modifier)) return null;
+    const sides = Number(match[2]);
+    const modifier = match[3] ? Number(match[3].replace(/\s+/g, '')) : 0;
+    if (!Number.isSafeInteger(modifier)) return null;
 
-    return { attempts, modifier };
+    return { attempts, sides, modifier };
   }
 
   private normalizeIntegerValue(value: number | null | undefined): number {

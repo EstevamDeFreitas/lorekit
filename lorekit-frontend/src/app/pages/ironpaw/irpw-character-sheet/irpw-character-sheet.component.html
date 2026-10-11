@@ -1309,190 +1309,121 @@
       </div>
     </div>
 
+    <div class="roll-tools"
+      [style.--irpw-accent]="selectedCharacter ? (getPersonalizationValue(selectedCharacter, 'color') || '#a1a1aa') : '#a1a1aa'"
+      [style.--roll-accent-foreground]="getTextClass(selectedCharacter ? (getPersonalizationValue(selectedCharacter, 'color') || '#a1a1aa') : '#a1a1aa') === 'text-white' ? '#ffffff' : '#000000'">
     <button
+      #rollPanelTrigger
       type="button"
-      class="fixed cursor-pointer right-4 bottom-4 z-40 inline-flex items-center gap-1 rounded-md border px-1 py-0.5 text-sm shadow-2xl transition-all duration-200 hover:-translate-y-0.5 md:right-6 md:bottom-6"
-      [ngClass]="isRollPanelOpen
-        ? 'border-rose-500/40 bg-zinc-950 '
-        : 'border-zinc-800 bg-zinc-925  hover:border-white '"
+      class="roll-panel-trigger"
+      [class.is-open]="isRollPanelOpen"
       (click)="toggleRollPanel()"
       [attr.aria-expanded]="isRollPanelOpen"
-      aria-label="Abrir painel de rolagem">
-      <span class="flex h-9 w-9 items-center justify-center">
-        <i class="fa-solid text-sm" [ngClass]="isRollPanelOpen ? 'fa-xmark' : 'fa-dice'"></i>
-      </span>
-      <span class="text-xs font-semibold uppercase tracking-[0.22em]">Rolagens</span>
+      [attr.aria-label]="isRollPanelOpen ? 'Fechar painel de rolagem' : 'Abrir painel de rolagem'"
+      aria-controls="tactical-roll-panel">
+      <i class="fa-solid" [class.fa-xmark]="isRollPanelOpen" [class.fa-dice]="!isRollPanelOpen" aria-hidden="true"></i>
+      Rolagens
     </button>
 
     @if (isRollPanelOpen) {
-      <section class="fixed right-4 bottom-[5.5rem] z-[39] w-[calc(100vw-2rem)] max-h-[calc(100vh-6.5rem)] overflow-y-auto rounded-md border border-zinc-800 bg-zinc-925 p-4 shadow-2xl backdrop-blur md:right-6 md:bottom-[6.25rem] md:w-[min(32rem,calc(100vw-3rem))] md:max-h-[calc(100vh-7.5rem)]">
-        <div class="flex items-start justify-between gap-3 mb-4">
+      <section id="tactical-roll-panel" class="roll-panel scrollbar-dark" aria-labelledby="roll-panel-title"
+        (keydown.escape)="toggleRollPanel(); rollPanelTrigger.focus(); $event.stopPropagation()">
+        <header class="roll-panel-heading">
           <div>
-            <p class="text-[11px] uppercase tracking-[0.24em] text-amber-300/70 mb-1">Rolagem tática</p>
-            <h2 class="text-sm font-semibold text-zinc-100">d10 simultâneos</h2>
+            <h2 id="roll-panel-title"><i class="fa-solid fa-dice" aria-hidden="true"></i> Rolagem tática</h2>
             @if (rollShortcutLabel) {
-              <p class="mt-1 text-[11px] text-zinc-400">{{ rollShortcutLabel }}</p>
+              <p>{{ rollShortcutLabel }}</p>
+            } @else {
+              <p>Use a ficha ou escreva sua fórmula.</p>
             }
           </div>
-          <button
-            type="button"
-            class="text-zinc-500 transition hover:text-zinc-100"
-            (click)="toggleRollPanel()"
-            aria-label="Fechar painel de rolagem">
-            <i class="fa-solid fa-xmark"></i>
+          <button type="button" class="roll-close" (click)="toggleRollPanel(); rollPanelTrigger.focus()" aria-label="Fechar painel de rolagem">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           </button>
-        </div>
+        </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-          <app-combo-box
-            class="w-full"
-            label="Perícia"
-            [items]="rollSkillOptions"
-            compareProp="id"
-            displayProp="name"
-            [clearable]="true"
-            [(comboValue)]="selectedRollSkill"
-            (comboValueChange)="onRollSkillChange()">
-          </app-combo-box>
-
-          <app-combo-box
-            class="w-full"
-            label="Bônus base"
-            [items]="rollBonusSourceOptions"
-            compareProp="id"
-            displayProp="name"
-            [(comboValue)]="selectedRollBonusSource"
-            (comboValueChange)="onRollBonusSourceChange()">
-          </app-combo-box>
-        </div>
-
-        @if (selectedRollBonusSource === 'perception') {
-          <div class="mb-3">
-            <app-combo-box
-              class="w-full"
-              label="Percepção usada no bônus"
-              [items]="rollPerceptionOptions"
-              compareProp="id"
-              displayProp="name"
-              [clearable]="true"
-              [(comboValue)]="selectedRollPerception"
-              (comboValueChange)="onRollPerceptionChange()">
+        <div class="roll-panel-body">
+          <div class="roll-fields">
+            <app-combo-box class="min-w-0" label="Perícia" [items]="rollSkillOptions" compareProp="id" displayProp="name"
+              [clearable]="true" [(comboValue)]="selectedRollSkill" (comboValueChange)="onRollSkillChange()">
+            </app-combo-box>
+            <app-combo-box class="min-w-0" label="Bônus base" [items]="rollBonusSourceOptions" compareProp="id" displayProp="name"
+              [(comboValue)]="selectedRollBonusSource" (comboValueChange)="onRollBonusSourceChange()">
             </app-combo-box>
           </div>
-        }
+          @if (selectedRollBonusSource === 'perception') {
+            <app-combo-box class="block mt-3" label="Percepção usada no bônus" [items]="rollPerceptionOptions" compareProp="id" displayProp="name"
+              [clearable]="true" [(comboValue)]="selectedRollPerception" (comboValueChange)="onRollPerceptionChange()">
+            </app-combo-box>
+          }
+          <div class="roll-fields roll-adjustments">
+            <label class="roll-field">
+              Ajuste manual
+              <input type="number" step="1" [(ngModel)]="rollManualModifier" (ngModelChange)="onRollManualModifierChange()">
+            </label>
+            <label class="roll-field">
+              Valor para passar
+              <input type="number" step="1" placeholder="Sem alvo" [(ngModel)]="rollTargetValue">
+            </label>
+          </div>
 
-        <div class="grid grid-cols-2 gap-3 mb-3">
-          <label class="flex flex-col gap-1 text-xs text-zinc-400">
-            Ajuste manual
-            <input
-              type="number"
-              class="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-              [(ngModel)]="rollManualModifier"
-              (ngModelChange)="onRollManualModifierChange()">
-          </label>
-          <label class="flex flex-col gap-1 text-xs text-zinc-400">
-            Valor para passar
-            <input
-              type="number"
-              class="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-              [(ngModel)]="rollTargetValue">
-          </label>
-        </div>
-
-        <div class="mb-3 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3">
-          <div class="flex items-center justify-between gap-3 mb-2">
-            <div>
-              <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Fórmula</h3>
-              <p class="text-[11px] text-zinc-500">Formato: <span class="font-mono">3d10+3</span></p>
+          <div class="roll-formula-section">
+            <div class="roll-formula-heading">
+              <label for="tactical-roll-formula">Fórmula</label>
+              <button type="button" class="roll-auto-button" [class.is-active]="rollFormulaMode === 'auto'" (click)="resetRollFormulaToAuto()">
+                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                {{ rollFormulaMode === 'auto' ? 'Automática ativa' : 'Usar automática' }}
+              </button>
             </div>
-            <button
-              type="button"
-              class="rounded-full border px-2.5 py-1 text-[11px] transition"
-              [ngClass]="rollFormulaMode === 'auto'
-                ? 'border-amber-500/50 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
-                : 'border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100'"
-              (click)="resetRollFormulaToAuto()">
-              {{ rollFormulaMode === 'auto' ? 'Automática ativa' : 'Usar automática' }}
+            <input id="tactical-roll-formula" class="roll-formula-input" type="text" spellcheck="false" autocomplete="off"
+              [ngModel]="rollFormula" (ngModelChange)="onRollFormulaInputChange($event)"
+              (keydown.enter)="rollDice()" [attr.aria-invalid]="!!rollFormulaError"
+              aria-describedby="roll-formula-help roll-formula-feedback" placeholder="2d6+3">
+            <p id="roll-formula-help" class="roll-hint">d4, d6, d10 ou d20 · Ex.: <span class="font-mono">2d6+3</span></p>
+            <div id="roll-formula-feedback" aria-live="polite">
+              @if (rollFormulaError) {
+                <p class="roll-error">{{ rollFormulaError }}</p>
+              } @else {
+                <dl class="roll-modifiers">
+                  @for (modifier of rollPreview.modifiers; track modifier.key) {
+                    <div><dt>{{ modifier.label }}</dt><dd>{{ modifier.displayValue ?? formatSignedValue(modifier.value) }}</dd></div>
+                  }
+                </dl>
+              }
+            </div>
+          </div>
+
+          <div class="roll-action-row">
+            <p class="roll-hint">{{ rollFormulaError ? 'Revise a fórmula para rolar.' : getRollPreviewDescription() }}</p>
+            <button type="button" class="roll-submit" [disabled]="!!rollFormulaError" (click)="rollDice()">
+              <i class="fa-solid fa-dice" aria-hidden="true"></i> Rolar agora
             </button>
           </div>
+        </div>
 
-          <input
-            type="text"
-            class="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500 font-mono"
-            [ngModel]="rollFormula"
-            (ngModelChange)="onRollFormulaInputChange($event)"
-            placeholder="1d10+0">
-
-          @if (rollFormulaError) {
-            <p class="mt-2 text-[11px] text-red-300">{{ rollFormulaError }}</p>
+        <div class="roll-results-section" aria-live="polite" aria-atomic="true">
+          @if (lastRollFormula) {
+            <div class="roll-results-heading"><h3>Última rolagem</h3><span>{{ lastRollFormula }}</span></div>
+          }
+          @if (rollResults.length > 0) {
+            <ol class="roll-results">
+              @for (result of rollResults; track result.index) {
+                <li class="roll-result" [class.is-success]="result.status === 'success'" [class.is-near]="result.status === 'near'" [class.is-fail]="result.status === 'fail'">
+                  <div class="roll-result-detail">
+                    <span class="roll-result-name">Rolagem {{ result.index }} <span>· {{ result.resolutionLabel }}</span></span>
+                    <span class="roll-result-calculation">Dado {{ result.dieValue }} {{ formatSignedValue(result.modifier) }}
+                      @if (result.rolls.length > 1) { <span> · dados {{ result.rolls.join(', ') }}</span> }
+                    </span>
+                  </div>
+                  <span class="roll-result-status">{{ getRollStatusLabel(result.status) }}</span>
+                  <div class="roll-result-total"><span>Total</span><strong>{{ result.total }}</strong></div>
+                </li>
+              }
+            </ol>
           } @else {
-            <div class="mt-3 flex flex-wrap gap-2">
-              @for (modifier of rollPreview.modifiers; track modifier.key) {
-                <span class="rounded-full border border-zinc-700 bg-zinc-900/80 px-2.5 py-1 text-[11px] text-zinc-300">
-                  {{ modifier.label }}: {{ modifier.displayValue ?? formatSignedValue(modifier.value) }}
-                </span>
-              }
-
-              @if (rollPreview.modifiers.length === 0) {
-                <span class="rounded-full border border-dashed border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-500">
-                  Sem bônus configurado
-                </span>
-              }
-            </div>
-          }
-        </div>
-
-        <div class="flex items-center justify-between gap-3 mb-3">
-          <div class="text-[11px] text-zinc-500">
-            {{ getRollPreviewDescription() }}
-          </div>
-          <button
-            type="button"
-            class="rounded-xl border border-emerald-700 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
-            (click)="rollDice()">
-            Rolar agora
-          </button>
-        </div>
-
-        @if (lastRollFormula) {
-          <div class="mb-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-xs text-zinc-400">
-            Última rolagem: <span class="font-mono text-zinc-200">{{ lastRollFormula }}</span>
-            @if (rollTargetValue != null) {
-              <span class="text-zinc-500"> · alvo {{ rollTargetValue }}</span>
-            }
-          </div>
-        }
-
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-3">
-          @for (result of rollResults; track result.index) {
-            <article
-              class="rounded-2xl border p-3 text-zinc-200"
-              [ngClass]="getRollResultCardClass(result.status)">
-              <div class="flex items-center justify-between gap-2 mb-2">
-                <span class="text-[11px] uppercase tracking-wide opacity-80">Rolagem {{ result.index }}</span>
-                <span class="text-[11px] opacity-70">{{ result.resolutionLabel }} {{ formatSignedValue(result.modifier) }}</span>
-              </div>
-              <div class="flex items-end justify-between gap-3">
-                <div>
-                  <p class="text-[11px] opacity-75">Dado</p>
-                  <p class="text-xl font-semibold leading-none">{{ result.dieValue }}</p>
-                </div>
-                <div class="text-right">
-                  <p class="text-[11px] opacity-75">Total</p>
-                  <p class="text-2xl font-bold leading-none">{{ result.total }}</p>
-                </div>
-              </div>
-              @if (result.rolls.length > 1) {
-                <p class="mt-2 text-[11px] opacity-70">Dados: {{ result.rolls.join(', ') }}</p>
-              }
-            </article>
-          }
-
-          @if (rollResults.length === 0) {
-            <div class="rounded-2xl border border-dashed border-zinc-800 px-4 py-6 text-center text-xs text-zinc-500">
-              Configure a rolagem e execute para ver os resultados aqui.
-            </div>
+            <p class="roll-empty">{{ rollFormulaError ? 'Corrija a fórmula e role novamente.' : 'Os resultados de cada tentativa aparecem aqui.' }}</p>
           }
         </div>
       </section>
     }
+    </div>
