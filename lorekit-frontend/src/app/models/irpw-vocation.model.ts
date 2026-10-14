@@ -9,6 +9,28 @@ export interface IrpwVocationHability {
   description: string;
   type?: IrpwHabilityType;
   rollSkill?: SkillCode | null;
+  grade?: string | null;
+  cost?: number | null;
+  spellKind?: 'key' | 'trick';
+  core?: string;
+  tags?: string;
+  variations?: IrpwAbilityVariation[];
+  remodelings?: IrpwSpellRemodeling[];
+}
+
+export interface IrpwAbilityVariation {
+  grade: string;
+  cost: number;
+  description: string;
+}
+
+export type IrpwRemodelingKind = 'empower' | 'adjacent' | 'potential';
+export interface IrpwSpellRemodeling {
+  id: string;
+  name: string;
+  kind: IrpwRemodelingKind;
+  grade: string;
+  description: string;
 }
 
 export interface IrpwVocationAttributeGroup {

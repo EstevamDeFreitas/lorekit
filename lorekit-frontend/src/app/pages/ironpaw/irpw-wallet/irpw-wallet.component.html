@@ -1,0 +1,16 @@
+<section class="wallet" aria-label="Dinheiro da ficha">
+  <div class="wallet-heading"><h3><i class="fa-solid fa-coins" aria-hidden="true"></i> Dinheiro</h3><app-button label="Configurar" icon="fa-solid fa-gear" size="xs" buttonType="secondary" (click)="configuring.set(!configuring())"></app-button></div>
+  @if (configuring() && wallet()) {
+    <div class="wallet-settings"><app-combo-box label="Configuração de dinheiro" [items]="availableCurrencies()" compareProp="id" displayProp="name" [(comboValue)]="selectedCurrency" placeholder="Escolher configuração"></app-combo-box><app-button label="Adicionar" size="xs" [disabled]="!selectedCurrency" (click)="add()"></app-button></div>
+  }
+  @if (wallet(); as money) {
+    @for (account of money.accounts; track account.currencyId) {
+      @if (currency(account.currencyId); as currency) {
+        <div class="account"><div class="account-heading"><span>{{ currency.name }}</span>@if (configuring()) { <app-button label="Converter" size="xs" buttonType="secondary" (click)="convert(currency.id)"></app-button><app-button label="Remover" size="xs" buttonType="secondary" (click)="remove(currency.id)"></app-button> }</div>
+          <div class="balances">@for (unit of currency.units; track unit.id) { <app-input [label]="unit.name" type="number" size="sm" [value]="account.balances[unit.id] || 0" (change)="setBalance(currency.id, unit.id, $any($event.target).value)"></app-input> }</div>
+        </div>
+      } @else { <p class="wallet-note">Configuração indisponível. Os saldos foram preservados.</p> }
+    } @empty { <p class="wallet-note">{{ currencies().length ? 'Nenhum dinheiro configurado.' : 'Crie uma moeda no Gerenciador de Conteúdo.' }}</p> }
+  } @else { <p class="wallet-note">Formato incompatível. Os saldos foram preservados.</p> }
+  @if (notice()) { <p class="wallet-note" role="status">{{ notice() }}</p> }
+</section>

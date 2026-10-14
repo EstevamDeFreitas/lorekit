@@ -15,6 +15,7 @@ export type AttributeGroupCode =
  * Códigos estáveis das perícias
  */
 export const SKILL = {
+  CONJURATION: 'CONJURATION',
   ATHLETICS: 'ATHLETICS',
   BRUTE_STRENGTH: 'BRUTE_STRENGTH',
   FORTITUDE: 'FORTITUDE',
@@ -54,7 +55,15 @@ export const ATTRIBUTE_GROUP_LABEL: Record<AttributeGroupCode, string> = {
   TECHNIQUE: 'Técnica',
 };
 
+export const ATTRIBUTE_GROUP_ICON: Record<AttributeGroupCode, string> = {
+  BODY: 'fa-dumbbell',
+  MIND: 'fa-brain',
+  PRESENCE: 'fa-masks-theater',
+  TECHNIQUE: 'fa-gears',
+};
+
 export const SKILL_LABEL: Record<SkillCode, string> = {
+  CONJURATION: 'Conjuração',
   ATHLETICS: 'Atletismo',
   BRUTE_STRENGTH: 'Força Bruta',
   FORTITUDE: 'Fortitude',

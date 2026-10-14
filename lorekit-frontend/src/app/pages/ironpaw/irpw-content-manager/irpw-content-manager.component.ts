@@ -1,3 +1,5 @@
+import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
+import { IrpwCurrenciesComponent } from '../irpw-currencies/irpw-currencies.component';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { InputComponent } from '../../../components/input/input.component';
@@ -47,6 +49,8 @@ import { SKILL, SKILL_LABEL } from '../../../models/irpw-attributes-skills.model
   selector: 'irpw-content-manager',
   imports: [
     FormsModule,
+    NavButtonComponent,
+    IrpwCurrenciesComponent,
     ButtonComponent,
     InputComponent,
     TextAreaComponent,
@@ -62,7 +66,8 @@ import { SKILL, SKILL_LABEL } from '../../../models/irpw-attributes-skills.model
 })
 export class IrpwContentManagerComponent implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
-  editorSection: 'general' | 'rules' = 'general';
+  contentTab: 'items' | 'money' = 'items';
+  editorSection: 'general' | 'appearance' | 'equipment' | 'rules' = 'general';
   readonly categoryOptions = IRPW_ITEM_CATEGORIES.map((value) => ({
     value,
     label: IRPW_ITEM_CATEGORY_LABEL[value],
@@ -106,7 +111,7 @@ export class IrpwContentManagerComponent implements OnInit, OnDestroy {
   importChoice: 'keep' | 'update' | 'copy' = 'update';
   private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
   ngOnDestroy(): void {
-    this.clearAutoSave();
+    this.flushAutoSave();
   }
   ngOnInit(): void {
     this.reload();
@@ -130,7 +135,7 @@ export class IrpwContentManagerComponent implements OnInit, OnDestroy {
     );
   }
   selectItem(item: IrpwCatalogItem): void {
-    this.clearAutoSave();
+    this.flushAutoSave();
     this.selectedItem = {
       ...item,
       definition: structuredClone(normalizeIrpwItemDefinition(item.definition)),
@@ -138,7 +143,7 @@ export class IrpwContentManagerComponent implements OnInit, OnDestroy {
     this.notice = '';
   }
   newItem(): void {
-    this.clearAutoSave();
+    this.flushAutoSave();
     this.editorSection = 'general';
     this.selectedItem = this.catalog.createDraft();
     this.notice = '';
@@ -363,6 +368,9 @@ export class IrpwContentManagerComponent implements OnInit, OnDestroy {
       this.autoSaveTimer = null;
       this.save(false);
     }, 300);
+  }
+  private flushAutoSave(): void {
+    if (this.autoSaveTimer !== null) this.save(false);
   }
   private clearAutoSave(): void {
     if (this.autoSaveTimer !== null) {

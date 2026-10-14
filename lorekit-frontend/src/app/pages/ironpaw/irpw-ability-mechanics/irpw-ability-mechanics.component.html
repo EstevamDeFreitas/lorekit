@@ -1,0 +1,56 @@
+@if (ability().type !== 'passive') {
+  <div class="mechanics">
+    <p class="mechanics-summary">{{ summary(ability()) }}</p>
+    @if (!readonly()) {
+      <div class="mechanics-fields">
+        @if (ability().type === 'magic') {
+          <label>Tipo de magia<select [ngModel]="ability().spellKind || 'key'" (ngModelChange)="setSpellKind($event)"><option value="key">Magia-chave</option><option value="trick">Truque</option></select></label>
+        }
+        @if (ability().spellKind !== 'trick' || ability().type !== 'magic') {
+          <label>Grau<select [ngModel]="ability().grade || grades(ability())[0].value" (ngModelChange)="setGrade($event)">@for (grade of grades(ability()); track grade.value) { <option [value]="grade.value">{{ grade.label }}</option> }</select></label>
+          <label>Custo de {{ ability().type === 'magic' ? 'Essência' : 'Vigor' }}<input type="number" min="0" step="1" [ngModel]="cost(ability())" (ngModelChange)="ability().cost = $event; changed.emit()"></label>
+        }
+        @if (ability().type === 'magic') {
+          @if (ability().spellKind !== 'trick') { <label>Núcleo<input type="text" [(ngModel)]="ability().core" (ngModelChange)="changed.emit()" placeholder="Propósito central da magia"></label> }
+          <label>Tags<input type="text" [(ngModel)]="ability().tags" (ngModelChange)="changed.emit()" placeholder="Ex.: fogo, proteção"></label>
+        }
+      </div>
+    }
+    @if (ability().type === 'magic' && ability().spellKind === 'trick') {
+      <p class="hint">Truques custam 0 Essência e não podem ser remodelados.</p>
+    } @else {
+      <div class="subsection-heading"><h5>Variações por grau</h5>@if (!readonly()) { <button type="button" [disabled]="(ability().variations?.length ?? 0) >= 3" (click)="addVariation()">Adicionar variação</button> }</div>
+      @for (variation of ability().variations; track $index; let index = $index) {
+        <div class="mechanics-entry">
+          @if (readonly()) {
+            <p>{{ gradeLabel(variation.grade) }} · {{ variation.cost }} {{ ability().type === 'magic' ? 'Essência' : 'Vigor' }}</p>
+          } @else {
+            <div class="mechanics-fields">
+              <label>Grau<select [ngModel]="variation.grade" (ngModelChange)="setVariationGrade(index, $event)">@for (grade of grades(ability()); track grade.value) { <option [value]="grade.value">{{ grade.label }}</option> }</select></label>
+              <label>Custo<input type="number" min="0" step="1" [(ngModel)]="variation.cost" (ngModelChange)="changed.emit()"></label>
+            </div>
+          }
+          @if (readonly()) { <p>{{ variation.description }}</p> } @else { <label>Efeito neste grau<textarea rows="2" [(ngModel)]="variation.description" (ngModelChange)="changed.emit()"></textarea></label><button type="button" class="remove" (click)="removeVariation(index)">Remover variação</button> }
+        </div>
+      } @empty { @if (!readonly()) { <p class="hint">Cadastre os efeitos e custos da habilidade nos outros graus.</p> } }
+      @if (ability().type === 'magic') {
+        <div class="subsection-heading"><h5>Remodelações</h5>@if (!readonly()) { <button type="button" (click)="addRemodeling()">Cadastrar remodelação</button> }</div>
+        @for (remodeling of ability().remodelings; track remodeling.id; let index = $index) {
+          <div class="mechanics-entry">
+            <div class="entry-heading"><strong>{{ remodeling.name || kindLabel(remodeling) }}</strong><span>{{ remodelingCost(remodeling) }} Essência no total</span></div>
+            @if (readonly()) { <p>{{ kindLabel(remodeling) }} · {{ remodeling.description }}</p> } @else {
+              <div class="mechanics-fields">
+                <label>Nome<input type="text" [(ngModel)]="remodeling.name" (ngModelChange)="changed.emit()" placeholder="Nome desta remodelação"></label>
+                <label>Remodelação<select [(ngModel)]="remodeling.kind" (ngModelChange)="changeRemodeling(remodeling)">@for (kind of kinds; track kind.value) { <option [value]="kind.value">{{ kind.label }} · +{{ kind.cost }} Essência · {{ kind.level }}</option> }</select></label>
+                <label>Grau da magia<select [(ngModel)]="remodeling.grade" (ngModelChange)="changed.emit()">@for (grade of remodelingGrades(remodeling); track grade.value) { <option [value]="grade.value">{{ grade.label }}</option> }</select></label>
+              </div>
+              <label>Efeito remodelado<textarea rows="2" [(ngModel)]="remodeling.description" (ngModelChange)="changed.emit()"></textarea></label>
+              @if (remodeling.kind === 'potential') { <p class="hint">Moldar Potencial exige grau Médio ou Maior. Falha na conjuração causa 1d4 de Estresse.</p> }
+              <button type="button" class="remove" (click)="removeRemodeling(index)">Remover remodelação</button>
+            }
+          </div>
+        } @empty { @if (!readonly()) { <p class="hint">Uma magia-chave pode ser remodelada uma vez por rodada.</p> } }
+      }
+    }
+  </div>
+}

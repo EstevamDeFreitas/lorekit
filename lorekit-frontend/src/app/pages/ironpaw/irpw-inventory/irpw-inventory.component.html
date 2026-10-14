@@ -1,4 +1,4 @@
-<section class="inventory-view">
+<section class="inventory-view" [style.--inventory-accent]="accentColor()">
   <div class="inventory-header">
     <div>
       <h3>Inventário</h3>
@@ -10,11 +10,33 @@
       size="xs"
       buttonType="primary"
       label="+ Adicionar item"
-      (click)="showAdd = !showAdd"
+      [disabled]="invalidInventory"
+      (click)="openAdd()"
     ></app-button>
   </div>
-  @if (showAdd) {
-    <div class="add-panel">
+  <ng-template #addModal>
+    <div class="add-panel" [style.--inventory-accent]="accentColor()">
+      <div class="details-heading"><h3>Adicionar item</h3><app-button label="Fechar" size="xs" buttonType="secondary" (click)="closeAdd()"></app-button></div>
+      <nav class="add-tabs" aria-label="Adicionar item">
+        <app-nav-button label="Do catálogo" icon="fa-solid fa-book" size="sm" [accentColor]="accentColor()" [active]="addMode === 'catalog'" (click)="addMode = 'catalog'"></app-nav-button>
+        <app-nav-button label="Criar item" icon="fa-solid fa-plus" size="sm" [accentColor]="accentColor()" [active]="addMode === 'create'" (click)="addMode = 'create'"></app-nav-button>
+      </nav>
+      @if (addMode === 'create') {
+        <div class="quick-create">
+          <app-input label="Nome do item" [(value)]="quickItem.name" placeholder="Ex.: Espada de ferro"></app-input>
+          <app-combo-box label="Categoria" [items]="categoryOptions" compareProp="value" displayProp="label" [comboValue]="quickItem.definition.category" (comboValueChange)="changeQuickCategory($event)"></app-combo-box>
+          @if (quickItem.definition.protection; as protection) { <app-combo-box label="Proteção" [items]="protectionOptions" compareProp="value" displayProp="label" [(comboValue)]="protection.tier"></app-combo-box> }
+          @if (quickItem.definition.weapon; as weapon) { <app-combo-box label="Mãos" [items]="handOptions" compareProp="value" displayProp="label" [(comboValue)]="weapon.hands"></app-combo-box> }
+          <app-text-area label="Descrição" [(value)]="quickItem.description" height="h-24"></app-text-area>
+          <app-text-area label="Efeito" [(value)]="quickItem.effects" height="h-24"></app-text-area>
+          <details><summary>Equipamento e pilhas</summary><div class="quick-options"><label>Limite da pilha<input type="number" min="1" [(ngModel)]="quickItem.definition.stackLimit" /></label>
+            @for (slot of slots; track slot) { <label><input type="checkbox" [checked]="quickItem.definition.equipmentSlots.includes(slot)" (change)="toggleQuickSlot(slot, $any($event.target).checked)" />{{ slotLabel[slot] }}</label> }
+          </div></details>
+          <p class="hint">O item ficará disponível no catálogo e nesta ficha.</p>
+          <app-button label="Criar e adicionar" size="sm" [disabled]="!quickItem.name.trim()" (click)="createQuickItem()"></app-button>
+          @if (quickError) { <p class="warning" role="alert">{{ quickError }}</p> }
+        </div>
+      } @else {
       <app-input
         type="search"
         [(value)]="catalogSearch"
@@ -35,8 +57,9 @@
           </button>
         }
       </div>
+      }
     </div>
-  }
+  </ng-template>
   @if (invalidInventory) {
     <div class="warning">
       O inventário desta ficha usa um formato incompatível e foi preservado.
@@ -46,7 +69,8 @@
   @if (!invalidInventory) {
     <div class="inventory-layout" cdkDropListGroup>
       <div class="equipment-panel">
-        <h4>Equipamentos</h4>
+        <irpw-wallet [characterId]="characterId()"></irpw-wallet>
+        <h4><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Equipamentos</h4>
         <p class="drag-hint">Arraste um item da mochila para equipá-lo. Arraste um equipado de volta para guardar. Os espaços compatíveis ficam destacados durante o arraste.</p>
         <div class="equipment-grid">
           <div class="equipment-group-label">
@@ -84,8 +108,11 @@
                   [cdkDragData]="entry"
                   (cdkDragStarted)="startDrag(entry)"
                   (cdkDragEnded)="endDrag()"
-                  (click)="unequip(slot)"
-                  [title]="'Desequipar ' + entry.snapshot.name"
+                  cdkOverlayOrigin #itemOrigin="cdkOverlayOrigin"
+                  (mouseenter)="hoveredEntry = entry.instanceId" (mouseleave)="hoveredEntry = null"
+                  (focus)="hoveredEntry = entry.instanceId" (blur)="hoveredEntry = null" (keydown.escape)="hoveredEntry = null"
+                  (click)="selectedEntry = entry; itemDetails.showPopover()"
+                  [attr.aria-label]="'Ações de ' + entry.snapshot.name"
                 >
                   <span class="equipped-icon" aria-hidden="true">
                     @if ((entry.snapshot.definition.imageReference | assetUrl); as imageUrl) {
@@ -96,6 +123,9 @@
                   </span
                   ><span>{{ entry.snapshot.name }}</span>
                 </button>
+                <ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="itemOrigin" [cdkConnectedOverlayOpen]="hoveredEntry === entry.instanceId" [cdkConnectedOverlayOffsetY]="8" [cdkConnectedOverlayPush]="true">
+                  <div class="item-tooltip" role="tooltip"><strong>{{ entry.snapshot.name }}</strong><p>{{ itemEffects(entry) }}</p></div>
+                </ng-template>
               } @else {
                 <button
                   type="button"
@@ -140,7 +170,7 @@
       </div>
       <div class="backpack-panel">
         <div class="backpack-header">
-          <h4>Mochila</h4>
+          <h4><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i> Mochila</h4>
           <app-input
             type="search"
             [(value)]="backpackSearch"
@@ -158,10 +188,10 @@
               (cdkDragEnded)="endDrag()"
               tabindex="0"
               [attr.aria-label]="'Selecionar item ' + entry.snapshot.name"
-              (keydown.enter)="selectedEntry = entry"
-              (keydown.space)="$event.preventDefault(); selectedEntry = entry"
+              (keydown.enter)="selectedEntry = entry; itemDetails.showPopover()"
+              (keydown.space)="$event.preventDefault(); selectedEntry = entry; itemDetails.showPopover()"
               [class.selected]="selectedEntry?.instanceId === entry.instanceId"
-              (click)="selectedEntry = entry"
+              (click)="selectedEntry = entry; itemDetails.showPopover()"
             >
               <div class="item-card-icon" [style.background-color]="entry.snapshot.definition.backgroundColor || null"
               [style.border-color]="entry.snapshot.definition.color || null">
@@ -176,20 +206,7 @@
                 <span class="quantity">x{{ entry.quantity }}</span>
               }
               <div class="item-actions">
-                <button
-                  type="button"
-                  (click)="useEntry(entry); $event.stopPropagation()"
-                  [disabled]="
-                    entry.snapshot.definition.category !== 'consumable'
-                  "
-                >
-                  Usar</button
-                ><button
-                  type="button"
-                  (click)="removeEntry(entry); $event.stopPropagation()"
-                >
-                  Remover
-                </button>
+                <button type="button" (click)="selectedEntry = entry; itemDetails.showPopover(); $event.stopPropagation()" [attr.aria-label]="'Ações de ' + entry.snapshot.name"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i> Ações</button>
               </div>
             </article>
           }
@@ -205,105 +222,36 @@
         </div>
       </div>
     </div>
-    @if (selectedEntry; as entry) {
-      <div class="details">
-        <div>
-          <h4 class="details-heading">Item selecionado</h4>
-          <app-input label="Nome" [(value)]="entry.snapshot.name"></app-input
-          ><app-text-area
-            label="Descrição"
-            [(value)]="entry.snapshot.description"
-            height="h-24"
-          ></app-text-area
-          ><app-text-area
-            label="Anotações"
-            [(value)]="entry.notes"
-            height="h-24"
-          ></app-text-area
-          ><label
-            >Quantidade<input
-              type="number"
-              min="1"
-              [max]="entry.snapshot.definition.stackLimit"
-              [disabled]="entry.location === 'equipment'"
-              [(ngModel)]="entry.quantity" /></label
-          ><small
-            >{{ categoryLabel(entry) }} · origem:
-            {{ entry.sourceItemId ? "Catálogo" : "Cópia independente" }}</small
-          >
-        </div>
-        <div class="detail-actions">
-          @for (slot of compatibleSlots(entry); track slot) {
-            <button
-              type="button"
-              class="secondary"
-              (click)="equip(entry, slot)"
-            >
-              Equipar em {{ slotLabel[slot] }}
-            </button>
-          }
-          @if (entry.slot === "reserve") {
-            <app-button
-              size="xs"
-              buttonType="secondary"
-              label="Ativar reserva"
-              (click)="activateReserve(entry)"
-            ></app-button>
-          }
-          <app-button
-            size="xs"
-            buttonType="secondary"
-            label="Dividir pilha"
-            (click)="splitEntry(entry)"
-            [disabled]="entry.quantity <= 1 || entry.location === 'equipment'"
-          ></app-button
-          ><app-button
-            size="xs"
-            buttonType="secondary"
-            label="Combinar equivalentes"
-            (click)="combineEntry(entry)"
-            [disabled]="entry.location === 'equipment'"
-          ></app-button
-          ><app-button
-            size="xs"
-            buttonType="primary"
-            label="Salvar cópia"
-            (click)="saveEntry(entry)"
-          ></app-button
-          ><app-button
-            size="xs"
-            buttonType="secondary"
-            label="Mover para o fim"
-            (click)="moveEntry(entry)"
-          ></app-button>
-          @if (hasCatalogUpdate(entry)) {
-            <app-button
-              size="xs"
-              buttonType="secondary"
-              label="Atualizar da origem"
-              (click)="previewCatalogUpdate(entry)"
-            ></app-button>
-            @if (catalogUpdatePreview?.entryId === entry.instanceId) {
-              <div class="update-preview" role="dialog" aria-label="Prévia da atualização do item">
-                <strong>Revisar atualização</strong>
-                @if (catalogUpdatePreview!.changes.length) {
-                  <ul>
-                    @for (change of catalogUpdatePreview!.changes; track change) {
-                      <li>{{ change }}</li>
-                    }
-                  </ul>
-                } @else {
-                  <p>Não há mudanças visíveis além da revisão da origem.</p>
-                }
-                <div class="detail-actions">
-                  <app-button size="xs" buttonType="secondary" label="Cancelar" (click)="catalogUpdatePreview = null"></app-button>
-                  <app-button size="xs" buttonType="primary" label="Aplicar atualização" (click)="applyCatalogUpdate(entry)"></app-button>
-                </div>
-              </div>
+    <div #itemDetails popover="auto" class="item-details-popover" (keydown.escape)="itemDetails.hidePopover()">
+      @if (selectedEntry; as entry) {
+        <div class="details">
+          <div class="details-heading"><h4>{{ entry.snapshot.name }}</h4><button type="button" autofocus (click)="itemDetails.hidePopover()" aria-label="Fechar ações do item"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+          <small>{{ categoryLabel(entry) }} · {{ entry.sourceItemId ? 'Catálogo compartilhado' : 'Item local' }}</small>
+          <p class="item-effect-description">{{ itemEffects(entry) }}</p>
+          <label class="entry-quantity">Quantidade<input type="number" min="1" [max]="entry.snapshot.definition.stackable ? entry.snapshot.definition.stackLimit : 1" [disabled]="entry.location === 'equipment'" [(ngModel)]="entry.quantity" (change)="saveQuantity(entry)" /></label>
+          <div class="detail-actions">
+            @if (compatibleSlots(entry).length) {
+              @for (slot of compatibleSlots(entry); track slot) { <app-button [label]="'Equipar · ' + slotLabel[slot]" size="xs" buttonType="secondary" (click)="equipTo(entry, slot)"></app-button> }
             }
+            @if (entry.location === 'equipment' && entry.slot) { <button type="button" (click)="unequip(entry.slot)">Guardar na mochila</button> }
+            @if (entry.slot === 'reserve') { <button type="button" (click)="activateReserve(entry)">Ativar reserva</button> }
+            @if (entry.snapshot.definition.category === 'consumable') { <button type="button" (click)="useEntry(entry); ifEmptyClose(itemDetails)">Usar uma unidade</button> }
+            <button type="button" (click)="removeEntry(entry); itemDetails.hidePopover()">Remover da ficha</button>
+          </div>
+          <details><summary>Anotações da ficha</summary><app-text-area label="Anotações" [(value)]="entry.notes" height="h-24"></app-text-area><button type="button" (click)="saveQuantity(entry)">Salvar anotações</button></details>
+          @if (entry.location === 'backpack') {
+            <details><summary>Organizar pilhas</summary><div class="detail-actions"><button type="button" (click)="splitEntry(entry)" [disabled]="entry.quantity <= 1">Separar uma unidade</button><button type="button" (click)="combineEntry(entry)" [disabled]="!entry.snapshot.definition.stackable">Combinar equivalentes</button><button type="button" (click)="moveEntry(entry)">Mover para o fim</button></div></details>
           }
+          <details><summary>Editar definição do item</summary>
+            <p class="hint">{{ entry.sourceItemId ? 'As alterações de nome, descrição e efeito serão aplicadas ao catálogo e a todas as fichas que usam este item.' : 'Este item não tem uma origem disponível no catálogo.' }}</p>
+            <app-input label="Nome" [(value)]="entry.snapshot.name"></app-input>
+            <app-text-area label="Descrição" [(value)]="entry.snapshot.description" height="h-24"></app-text-area>
+            <app-text-area label="Efeito" [(value)]="entry.snapshot.effects" height="h-24"></app-text-area>
+            <button type="button" class="primary" (click)="saveEntry(entry)">Salvar definição</button>
+            @if (quickError) { <p class="warning" role="alert">{{ quickError }}</p> }
+          </details>
         </div>
-      </div>
-    }
+      }
+    </div>
   }
 </section>

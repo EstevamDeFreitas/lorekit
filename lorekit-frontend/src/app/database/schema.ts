@@ -324,6 +324,15 @@ export const schema: TableDef[] = [
     ]
   },
 
+  {
+    name: 'IRPWCurrency',
+    columns: [
+      { name: 'id', def: '"id" TEXT NOT NULL PRIMARY KEY' },
+      { name: 'name', def: '"name" TEXT NOT NULL' },
+      { name: 'description', def: '"description" TEXT' },
+      { name: 'unitsJson', def: '"unitsJson" TEXT NOT NULL' },
+    ],
+  },
   /////////////////////////////////////// IRONPAW INTEGRATION ///////////////////////////////////////
   {
     name:"IRPWCharacterSheet",
@@ -339,6 +348,7 @@ export const schema: TableDef[] = [
       { name: "vigor", def: `"vigor" TEXT` },
       { name: "subspecialization", def: `"subspecialization" TEXT` },
       { name: "inventory", def: `"inventory" TEXT` },
+      { name: "wallet", def: `"wallet" TEXT` },
       { name: "habilities", def: `"habilities" TEXT` },
       { name: "marks", def: `"marks" TEXT` },
       { name: "conditions", def: `"conditions" TEXT` },

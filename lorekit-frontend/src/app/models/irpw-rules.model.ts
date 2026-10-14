@@ -1,6 +1,7 @@
 import { ATTRIBUTE_GROUP_SKILLS, AttributeGroupCode, SkillCode } from './irpw-attributes-skills.model';
 
 export interface IrpwVocationSkillGroup {
+  value?: number | null;
   skills: Record<SkillCode, number>;
 }
 
@@ -40,14 +41,14 @@ export function createDefaultVocationSkills(): IrpwVocationSkills {
     for (const skill of ATTRIBUTE_GROUP_SKILLS[group]) {
       skills[skill] = 0;
     }
-    result[group] = { skills };
+    result[group] = { value: null, skills };
   }
 
   return result;
 }
 
 export function parseVocationSkills(rawValue: string | null | undefined): IrpwVocationSkills {
-  let parsed: Record<string, { skills?: Record<string, unknown> }> = {};
+  let parsed: Record<string, { value?: unknown; skills?: Record<string, unknown> }> = {};
 
   if (rawValue) {
     try {
@@ -62,6 +63,7 @@ export function parseVocationSkills(rawValue: string | null | undefined): IrpwVo
 
   const skills = createDefaultVocationSkills();
   for (const group of Object.keys(ATTRIBUTE_GROUP_SKILLS) as AttributeGroupCode[]) {
+    skills[group].value = normalizeIrpwInteger(parsed[group]?.value);
     for (const skill of ATTRIBUTE_GROUP_SKILLS[group]) {
       skills[group].skills[skill] = normalizeIrpwSkillLevel(parsed[group]?.skills?.[skill]);
     }
@@ -74,6 +76,7 @@ export function serializeVocationSkills(value: IrpwVocationSkills): string {
   const normalized = createDefaultVocationSkills();
 
   for (const group of Object.keys(ATTRIBUTE_GROUP_SKILLS) as AttributeGroupCode[]) {
+    normalized[group].value = normalizeIrpwInteger(value[group]?.value);
     for (const skill of ATTRIBUTE_GROUP_SKILLS[group]) {
       normalized[group].skills[skill] = normalizeIrpwSkillLevel(value[group]?.skills?.[skill]);
     }

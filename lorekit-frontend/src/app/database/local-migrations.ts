@@ -2,7 +2,7 @@ import type { BindParams, SqlValue } from 'sql.js';
 import { schema, TableDef } from './schema';
 import { SYNC_ENTITIES } from './sync-entity-registry';
 
-export const LOCAL_SCHEMA_VERSION = 8;
+export const LOCAL_SCHEMA_VERSION = 9;
 
 interface SqlDatabase {
   exec(sql: string, params?: BindParams): Array<{
@@ -116,6 +116,16 @@ const migrations: readonly LocalMigration[] = [
     name: 'operacoes-de-assets-do-catalogo',
     up: db => {
       createAssetOperationTable(db);
+      createSyncTables(db);
+      createSyncTriggers(db);
+    },
+  },
+  {
+    version: 9,
+    name: 'dinheiro-configuravel-nas-fichas',
+    up: db => {
+      const sheetTable = schema.find(table => table.name === 'IRPWCharacterSheet');
+      if (sheetTable) addMissingColumns(db, sheetTable);
       createSyncTables(db);
       createSyncTriggers(db);
     },

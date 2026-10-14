@@ -1,13 +1,17 @@
+import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
+import { IrpwRepertoireEditorComponent } from '../irpw-repertoire-editor/irpw-repertoire-editor.component';
+import { normalizeAbilityMechanics, changeAbilityType } from '../../../models/irpw-ability.model';
+import { IrpwHabilityType } from '../../../models/irpw-vocation.model';
 import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { CommonModule, NgClass } from '@angular/common';
-import { inject, DestroyRef, Component, effect, input, OnDestroy, OnInit } from '@angular/core';
+import { inject, DestroyRef, Component, effect, input, signal, OnDestroy, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { FormsModule } from '@angular/forms';
 import { FormField, FormOverlayDirective } from '../../../components/form-overlay/form-overlay.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import {
-  ATTRIBUTE_GROUP_LABEL,
+  ATTRIBUTE_GROUP_LABEL, ATTRIBUTE_GROUP_ICON,
   ATTRIBUTE_GROUP_SKILLS,
   SKILL_LABEL,
   AttributeGroupCode,
@@ -18,7 +22,6 @@ import {
   IrpwVocationHability,
 } from '../../../models/irpw-vocation.model';
 import { createDefaultVocationSkills, IrpwVocationSkills, parseVocationSkills, serializeVocationSkills } from '../../../models/irpw-rules.model';
-import { ButtonComponent } from '../../../components/button/button.component';
 import { InputComponent } from '../../../components/input/input.component';
 import { TextAreaComponent } from '../../../components/text-area/text-area.component';
 import { IrpwVocationService } from '../../../services/irpw-vocation.service';
@@ -29,245 +32,8 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
 
 @Component({
   selector: 'irpw-vocations',
-  imports: [EntityHistoryContextDirective, CommonModule, NgClass, FormsModule, ButtonComponent, InputComponent, TextAreaComponent, SafeDeleteButtonComponent, PersonalizationButtonComponent, IconButtonComponent, FormOverlayDirective],
-  template: `
-    <div [historyEntity]="{ table: 'IRPWVocation', id: selectedVocationId }" [historyModel]="currentVocation" (historyRestored)="restoreVocationHistory()" class="flex flex-col relative">
-      <div class="flex flex-row gap-4 relative">
-        @if (!vocationIdInput()) {
-          <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showSidebar ? 'w-80' : 'w-0'">
-            <div class="w-80 bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
-              <div class="flex items-center justify-between gap-2 mb-4">
-                <h2 class="text-base">Vocações</h2>
-                <app-icon-button
-                  size="sm"
-                  buttonType="secondary"
-                  icon="fa-solid fa-plus"
-                  appFormOverlay
-                  [title]="'Criar Vocação'"
-                  [fields]="getFormFields()"
-                  (onSave)="createVocation($event)">
-                </app-icon-button>
-              </div>
-
-              <div class="mb-4">
-                <app-input
-                  placeholder="Buscar vocação..."
-                  [(value)]="searchTerm"
-                  (valueChange)="onSearch()">
-                </app-input>
-              </div>
-
-              <div class="flex flex-col gap-3 w-full">
-                @for (vocation of filteredVocations; track vocation.id) {
-                  <button
-                    type="button"
-                    class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
-                    [ngClass]="selectedVocationId === vocation.id ? 'text-yellow-300' : 'text-zinc-400'"
-                    [ngStyle]="{'color': getTextColorStyle(getPersonalizationValue(vocation, 'color'))}"
-                    (click)="selectVocation(vocation.id)">
-                    <div class="flex flex-row items-center">
-                      <i class="fa-solid" [ngClass]="getPersonalizationValue(vocation, 'icon') || 'fa-hat-wizard'"></i>
-                    </div>
-                    <h2 [title]="vocation.name || 'Vocação sem nome'" class="text-xs truncate">{{ vocation.name || 'Vocação sem nome' }}</h2>
-                  </button>
-                }
-
-                @if (filteredVocations.length === 0) {
-                  <p class="text-xs text-zinc-500">Nenhuma vocação encontrada.</p>
-                }
-              </div>
-            </div>
-          </div>
-
-          <small
-            class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer"
-            [ngClass]="showSidebar ? 'start-92' : 'start-12'"
-            (click)="showSidebar = !showSidebar">
-            <i class="fa-solid text-zinc-400" [ngClass]="showSidebar ? 'fa-angles-left' : 'fa-angles-right'"></i>
-          </small>
-        }
-
-        <div class="flex-1 min-h-[60vh] p-4 flex flex-col">
-          @if (currentVocation) {
-            <div class="flex items-center justify-between gap-3 mb-4">
-              <div>
-                <h1 class="text-lg">{{ currentVocation.name || 'Nova vocação' }}</h1>
-                <p class="text-xs text-zinc-500">Edite os campos sem lidar com JSON bruto.</p>
-              </div>
-              <div class="flex items-center gap-2">
-                @if (isSaving) {
-                  <span class="text-xs text-zinc-500">Salvando...</span>
-                }
-                <div class="flex flex-row gap-2">
-                  <app-personalization-button [entityId]="currentVocation.id" [entityTable]="'IRPWVocation'" [size]="'xl'" (onClose)="onPersonalizationClose()"></app-personalization-button>
-                  <app-safe-delete-button [entityName]="currentVocation.name ?? ''" [entityId]="currentVocation.id" [entityTable]="'IRPWVocation'" [size]="'xl'"></app-safe-delete-button>
-                </div>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2">
-              <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3 col-span-2">
-                <div class="grid grid-cols-2 gap-3">
-                  <div class="col-span-2">
-                    <app-input [historyField]="{ column: 'name', label: 'Nome' }"
-                      label="Nome"
-                      placeholder="Ex.: Guardião da Aurora"
-                      [(value)]="currentVocation.name"
-                      (valueChange)="onMainFieldsChange()">
-                    </app-input>
-                  </div>
-
-                  <div class="col-span-2">
-                    <app-text-area [historyField]="{ column: 'description', label: 'Descrição' }"
-                      label="Descrição"
-                      placeholder="Resumo da proposta da vocação."
-                      height="h-28"
-                      [(value)]="currentVocation.description"
-                      (valueChange)="onMainFieldsChange()">
-                    </app-text-area>
-                  </div>
-
-                  <app-input [historyField]="{ column: 'passive', label: 'Habilidade passiva' }" [historyRead]="readPassiveHistory"
-                    label="Vida base"
-                    type="number"
-                    [(value)]="baseHealthValue"
-                    (valueChange)="onBaseStatsChange()">
-                  </app-input>
-
-                  <app-input
-                    label="Defesa base"
-                    type="number"
-                    [(value)]="baseDefenseValue"
-                    (valueChange)="onBaseStatsChange()">
-                  </app-input>
-                </div>
-              </div>
-
-              <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3">
-                <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-3">Passive</h2>
-                <div class="flex flex-col gap-2">
-                  <app-input
-                    label="Nome"
-                    placeholder="Opcional"
-                    [(value)]="passiveData.name"
-                    (valueChange)="onPassiveChange()">
-                  </app-input>
-                  <app-text-area [historyField]="{ column: 'passive', label: 'Habilidade passiva' }" [historyRead]="readPassiveHistory"
-                    label="Descrição"
-                    placeholder="Descreva o efeito passivo."
-                    height="h-36"
-                    [(value)]="passiveData.description"
-                    (valueChange)="onPassiveChange()">
-                  </app-text-area>
-                </div>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2 mt-2 flex-1">
-              <div class="col-span-2 rounded-md bg-zinc-925 border border-zinc-800 p-3 overflow-y-auto">
-                <div class="flex items-center justify-between gap-3 mb-3">
-                  <h2 class="text-sm">Poderes</h2>
-                  <div class="w-36">
-                    <app-button label="Adicionar poder" buttonType="secondary" size="xs" (click)="addHability()"></app-button>
-                  </div>
-                </div>
-
-                <div class="flex flex-col gap-3">
-                  @for (hability of habilitiesData; track $index) {
-                    <div class="rounded-md border border-zinc-800 bg-zinc-900/60 p-3">
-                      <div class="flex items-center justify-between gap-2 mb-3">
-                        <span class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Poder {{ $index + 1 }}</span>
-                        <div class="w-24">
-                          <app-button label="Remover" buttonType="danger" size="xs" (click)="removeHability($index)"></app-button>
-                        </div>
-                      </div>
-
-                      <div class="grid grid-cols-2 gap-3">
-                        <app-input [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory"
-                          label="Nome"
-                          placeholder="Opcional"
-                          [(value)]="hability.name"
-                          (valueChange)="onHabilitiesChange()">
-                        </app-input>
-
-                        <div></div>
-
-                        <div class="col-span-2">
-                          <app-text-area [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory"
-                            label="Descrição"
-                            placeholder="Efeito do poder."
-                            height="h-28"
-                            [(value)]="hability.description"
-                            (valueChange)="onHabilitiesChange()">
-                          </app-text-area>
-                        </div>
-                      </div>
-                    </div>
-                  }
-
-                  @if (habilitiesData.length === 0) {
-                    <div class="rounded-md border border-dashed border-zinc-700 p-4 text-sm text-zinc-500">
-                      Nenhum poder cadastrado.
-                    </div>
-                  }
-                </div>
-              </div>
-
-              <section class="vocation-skills-section rounded-md bg-zinc-925 border border-zinc-800 p-3 overflow-y-auto" aria-labelledby="vocation-page-skills-title">
-                <div class="skill-section-header">
-                  <div>
-                    <h2 id="vocation-page-skills-title" class="skill-section-title">Perícias</h2>
-                    <p class="skill-section-hint">Defina os níveis mínimos da vocação.</p>
-                  </div>
-                  <div class="skill-level-legend" aria-label="Níveis de perícia">
-                    @for (level of [0,1,2,3]; track level) {
-                      <span class="skill-legend-item">
-                        <span class="skill-legend-dot level-{{level}}" aria-hidden="true"></span>
-                        {{ getSkillLevelLabel(level) }}
-                      </span>
-                    }
-                  </div>
-                </div>
-
-                <div class="skill-groups">
-                  @for (entry of attributeGroupEntries; track entry[0]) {
-                    <section class="skill-group" [attr.aria-labelledby]="'vocation-page-skill-group-' + entry[0]">
-                      <h3 class="skill-group-title" [id]="'vocation-page-skill-group-' + entry[0]">{{ attributeGroupLabel[entry[0]] }}</h3>
-                      <div class="skill-list">
-                        @for (skill of entry[1]; track skill) {
-                          <div class="skill-row">
-                            <span class="skill-label">{{ skillLabel[skill] }}</span>
-                            <div class="skill-control">
-                              <span class="skill-level-summary">{{ getSkillLevelLabel(getSkillLevel(entry[0], skill)) }}</span>
-                              <div class="skill-levels" role="group" [attr.aria-label]="'Nível mínimo de ' + skillLabel[skill]">
-                                @for (level of [0,1,2,3]; track level) {
-                                  <input
-                                    type="checkbox"
-                                    class="circle-checkbox level-{{level}}"
-                                    [checked]="getSkillLevel(entry[0], skill) >= level"
-                                    [title]="getSkillLevelLabel(level)"
-                                    [attr.aria-label]="'Nível ' + getSkillLevelLabel(level) + ' para ' + skillLabel[skill]"
-                                    (click)="onCircleClick($event, entry[0], skill, level)">
-                                }
-                              </div>
-                            </div>
-                          </div>
-                        }
-                      </div>
-                    </section>
-                  }
-                </div>
-              </section>
-            </div>
-          } @else {
-            <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
-              Selecione uma vocação para editar
-            </div>
-          }
-        </div>
-      </div>
-    </div>
-  `,
+  imports: [NavButtonComponent, EntityHistoryContextDirective, CommonModule, NgClass, FormsModule, InputComponent, TextAreaComponent, SafeDeleteButtonComponent, PersonalizationButtonComponent, IconButtonComponent, FormOverlayDirective, IrpwRepertoireEditorComponent],
+  templateUrl: './irpw-vocations.component.html',
   styleUrl: './irpw-vocations.component.css',
 })
 export class IrpwVocationsComponent implements OnInit, OnDestroy {
@@ -298,6 +64,12 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
   isSaving = false;
   private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 600);
 
+  readonly editorTab = signal<'base' | 'attributes' | 'repertoire'>('base');
+  updateRepertoire(abilities: IrpwVocationHability[]): void {
+    this.habilitiesData = abilities;
+    this.onHabilitiesChange();
+  }
+
   baseHealthValue: number | null = null;
   baseDefenseValue: number | null = null;
   passiveData: IrpwVocationHability = this.createEmptyHability();
@@ -306,6 +78,7 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
 
   readonly attributeGroupEntries = Object.entries(ATTRIBUTE_GROUP_SKILLS) as [AttributeGroupCode, SkillCode[]][];
   readonly attributeGroupLabel = ATTRIBUTE_GROUP_LABEL;
+  readonly attributeGroupIcon = ATTRIBUTE_GROUP_ICON;
   readonly skillLabel = SKILL_LABEL;
   public getPersonalizationValue = getPersonalizationValue;
   public getTextColorStyle = getTextColorStyle;
@@ -429,8 +202,16 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
     this.scheduleAutoSave();
   }
 
-  addHability() {
-    this.habilitiesData = [...this.habilitiesData, this.createEmptyHability()];
+  readonly habilityTypeOptions = [{ value: 'technical', label: 'Poder' }, { value: 'magic', label: 'Magia' }, { value: 'passive', label: 'Passiva' }];
+  readonly skillShortcutOptions = Object.entries(SKILL_LABEL).map(([id, name]) => ({ id: id as SkillCode, name }));
+
+  addHability(type: IrpwHabilityType = 'technical') {
+    this.habilitiesData = [...this.habilitiesData, { ...this.createEmptyHability(), type, rollSkill: type === 'magic' ? 'CONJURATION' : null }];
+    this.onHabilitiesChange();
+  }
+
+  setHabilityType(index: number, type: IrpwHabilityType): void {
+    this.habilitiesData = this.habilitiesData.map((ability, i) => i === index ? changeAbilityType(ability, type) : ability);
     this.onHabilitiesChange();
   }
 
@@ -469,7 +250,7 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
   }
 
   getSkillLevelLabel(level: number): string {
-    return ['Sem habilidade', 'Treinado', 'Intermediario', 'Mestre'][this.normalizeSkillLevel(level)];
+    return ['Sem habilidade', 'Treinado', 'Intermediário', 'Mestre'][this.normalizeSkillLevel(level)];
   }
 
   private parseSelectedVocation() {
@@ -528,8 +309,12 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
     if (!description && !name) return null;
 
     return {
+      id: source.id || crypto.randomUUID(),
       ...(name ? { name } : {}),
       description,
+      type: source.type || 'technical',
+      rollSkill: source.rollSkill && Object.hasOwn(SKILL_LABEL, source.rollSkill) ? source.rollSkill : null,
+      ...normalizeAbilityMechanics({ ...source, description, type: source.type || 'technical' }),
     };
   }
 
@@ -561,7 +346,7 @@ export class IrpwVocationsComponent implements OnInit, OnDestroy {
   }
 
   private createEmptyHability(): IrpwVocationHability {
-    return { name: null, description: '' };
+    return { id: crypto.randomUUID(), name: null, description: '', type: 'technical', rollSkill: null };
   }
 
   private syncCurrentVocationListEntry() {

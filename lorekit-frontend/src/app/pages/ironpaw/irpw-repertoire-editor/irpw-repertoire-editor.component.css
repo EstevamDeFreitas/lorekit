@@ -1,0 +1,25 @@
+@import "../irpw-config.shared.css";
+.repertoire-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap: .75rem; margin-bottom:1rem; }
+.repertoire-search { flex:1 1 12rem; max-width:24rem; }
+.repertoire-search input { width:100%; min-width:0; padding:.55rem .75rem; border:1px solid rgb(161 161 170 / 28%); border-radius:.55rem; background:rgb(24 24 27 / 65%); color:#f4f4f5; font-size:.8rem; }
+.repertoire-search input::placeholder { color:#a1a1aa; opacity:1; }
+.repertoire-filters { display:flex; flex-wrap:wrap; gap:.35rem; margin-bottom:1rem; }
+.repertoire-filters button { display:flex; align-items:center; gap:.5rem; border-radius:.6rem; padding:.45rem .65rem; font-size:.75rem; color:#a1a1aa; cursor:pointer; }
+.repertoire-filters button:hover { background:rgb(63 63 70 / 35%); color:#f4f4f5; }
+.repertoire-filters button.active { color:#f4f4f5; background:color-mix(in srgb,var(--entity-glass-color,#a1a1aa) 14%,transparent); }
+.repertoire-filters span { font-variant-numeric:tabular-nums; font-size:.65rem; }
+.repertoire-layout { display:grid; grid-template-columns:minmax(11rem,.65fr) minmax(0,2fr); gap:1.25rem; min-height:22rem; }
+.repertoire-catalog { min-width:0; max-height:34rem; overflow-y:auto; padding-right:.75rem; border-right:1px solid rgb(161 161 170 / 18%); }
+.repertoire-row { display:flex; width:100%; text-align:left; align-items:center; gap:.7rem; border:1px solid transparent; border-radius:.7rem; padding:.75rem .65rem; margin-bottom:.3rem; color:#a1a1aa; cursor:pointer; }
+.repertoire-row:hover { background:rgb(63 63 70 / 30%); }
+.repertoire-row.selected { border-color:color-mix(in srgb,var(--entity-glass-color,#a1a1aa) 40%,transparent); background:color-mix(in srgb,var(--entity-glass-color,#a1a1aa) 9%,transparent); color:#f4f4f5; }
+.repertoire-row > i { flex:0 0 1rem; }
+.repertoire-row span { min-width:0; }
+.repertoire-row strong { display:block; font-size:.78rem; font-weight:600; overflow-wrap:anywhere; }
+.repertoire-row small { display:block; color:#a1a1aa; font-size:.68rem; margin-top:.3rem; }
+.repertoire-detail { min-width:0; }
+.repertoire-detail-heading { padding-bottom:.85rem; border-bottom:1px solid rgb(161 161 170 / 18%); }
+.repertoire-detail-heading h3 { font-size:.95rem; font-weight:600; overflow-wrap:anywhere; }
+.repertoire-detail-heading .section-hint { margin-top:.25rem; }
+.catalog-empty { padding:.75rem; color:#a1a1aa; font-size:.75rem; line-height:1.6; }
+@container (max-width:650px) { .repertoire-layout { grid-template-columns:minmax(0,1fr); gap:1rem; } .repertoire-catalog { max-height:12rem; padding:0 0 .75rem; border-right:0; border-bottom:1px solid rgb(161 161 170 / 18%); } }

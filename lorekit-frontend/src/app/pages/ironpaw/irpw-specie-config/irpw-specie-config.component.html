@@ -1,0 +1,19 @@
+<div class="config-shell">
+  <header class="config-header"><div><h2>Configurar espécie</h2><p>Sentidos, vitalidade e traços herdados pelo personagem.</p></div><button class="config-close" type="button" aria-label="Fechar configuração da espécie" (click)="close()"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></header>
+  <nav class="config-tabs" aria-label="Seções da espécie">
+    <app-nav-button label="Base" icon="fa-solid fa-sliders" size="sm" [active]="editorTab() === 'base'" (click)="editorTab.set('base')"></app-nav-button>
+    <app-nav-button [label]="'Passivas (' + passiveData.length + ')'" icon="fa-solid fa-leaf" size="sm" [active]="editorTab() === 'passives'" (click)="editorTab.set('passives')"></app-nav-button>
+    <app-nav-button [label]="'Fraquezas (' + weaknessData.length + ')'" icon="fa-solid fa-triangle-exclamation" size="sm" [active]="editorTab() === 'weaknesses'" (click)="editorTab.set('weaknesses')"></app-nav-button>
+  </nav>
+  <div class="config-body scrollbar-dark"><div class="config-content entity-properties-panel">
+    @if (editorTab() === 'base') {
+      <div class="config-base-layout">
+        <section class="config-section"><h3>Percepções</h3><p class="section-hint">Valores mínimos dos sentidos na ficha.</p><div class="config-fields"><app-input label="Olfato" type="number" [(value)]="perceptionsData.smell" (valueChange)="onPerceptionsChange()"></app-input><app-input label="Visão" type="number" [(value)]="perceptionsData.vision" (valueChange)="onPerceptionsChange()"></app-input><app-input label="Audição" type="number" [(value)]="perceptionsData.hearing" (valueChange)="onPerceptionsChange()"></app-input></div></section>
+        <section class="config-section"><h3>Vitalidade</h3><p class="section-hint">Caixas de vida fornecidas pela espécie.</p><div class="config-fields"><app-input label="Vida base" type="number" [(value)]="baseHealthValue" (valueChange)="onBaseHealthChange()"></app-input></div></section>
+      </div>
+    }
+    @if (editorTab() === 'passives') { <irpw-repertoire-editor mode="passives" [abilities]="passiveData" (changed)="updatePassives($event)"></irpw-repertoire-editor> }
+    @if (editorTab() === 'weaknesses') { <irpw-repertoire-editor mode="weaknesses" [abilities]="weaknessData" (changed)="updateWeaknesses($event)"></irpw-repertoire-editor> }
+  </div></div>
+  <footer class="config-footer"><p role="status">{{ isSaving ? 'Salvando alterações…' : 'Alterações salvas automaticamente.' }}</p><div class="section-actions"><app-button label="Fechar" buttonType="secondary" size="sm" (click)="close()"></app-button><app-button label="Salvar espécie" size="sm" (click)="saveNow()"></app-button></div></footer>
+</div>

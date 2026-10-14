@@ -1,3 +1,4 @@
+@import "../irpw-config.shared.css";
 :host {
   display: block;
   width: 100%;
@@ -206,3 +207,13 @@
     transition: none;
   }
 }
+
+.skill-groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(22rem,100%),1fr)); gap:1.5rem; }
+.skill-group + .skill-group { border-top:0; }
+.skill-group-title { display:flex; align-items:center; gap:.55rem; font-size:.95rem; text-transform:none; letter-spacing:-.015em; margin:0; }
+.skill-group-title i { width:1rem; text-align:center; font-size:.85rem; color:#a1a1aa; }
+.skill-section-hint,.skill-level-summary,.skill-level-legend { color:#a1a1aa; }
+.vocation-page .config-header { margin-bottom:.5rem; }
+.vocation-editor-layout { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:1.5rem; }
+.vocation-editor-layout .config-section + .config-section { margin:0; padding:0 0 0 1.5rem; border-top:0; border-left:1px solid rgb(161 161 170 / 18%); }
+@container (max-width:700px) { .vocation-editor-layout { grid-template-columns:minmax(0,1fr); } .vocation-editor-layout .config-section + .config-section { border-left:0; padding:1.25rem 0 0; border-top:1px solid rgb(161 161 170 / 18%); } }

@@ -1,3 +1,4 @@
+import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { EntityHistoryService } from '../../../services/entity-history.service';
@@ -18,11 +19,13 @@ import { IrpwCharacterSheetService } from '../../../services/irpw-character-shee
 import { IrpwItemCatalogService } from '../../../services/irpw-item-catalog.service';
 import { WorldService } from '../../../services/world.service';
 import { WorldStateService } from '../../../services/world-state.service';
-import { getPersonalizationValue, getTextColorStyle } from '../../../models/personalization.model';
-import { ATTRIBUTE_GROUP_SKILLS, ATTRIBUTE_GROUP_LABEL, SKILL, SKILL_LABEL, AttributeGroupCode, SkillCode } from '../../../models/irpw-attributes-skills.model';
+import { getPersonalizationValue, getTextColorStyle, getTextClass } from '../../../models/personalization.model';
+import { ATTRIBUTE_GROUP_SKILLS, ATTRIBUTE_GROUP_LABEL, ATTRIBUTE_GROUP_ICON, SKILL, SKILL_LABEL, AttributeGroupCode, SkillCode } from '../../../models/irpw-attributes-skills.model';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { getImageByUsageKey } from '../../../models/image.model';
 import { Specie } from '../../../models/specie.model';
+import { IrpwAbilityMechanicsComponent } from '../irpw-ability-mechanics/irpw-ability-mechanics.component';
+import { normalizeAbilityMechanics, abilitySummary, changeAbilityType } from '../../../models/irpw-ability.model';
 import { IrpwHabilityType, IrpwVocation, IrpwVocationAttributes, IrpwVocationHability } from '../../../models/irpw-vocation.model';
 import {
   getIronpawLifeMinimum,
@@ -84,6 +87,7 @@ interface RollModifier {
 
 interface RollPreview {
   attempts: number;
+  sides: number;
   modifiers: RollModifier[];
   totalModifier: number;
   resolutionMode: RollResolutionMode;
@@ -162,1471 +166,8 @@ interface ResourceValueState {
 
 @Component({
   selector: 'irpw-character-sheet',
-  imports: [EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent],
-  template: `
-    <div [historyEntity]="{ table: 'IRPWCharacterSheet', id: selectedCharacterId }" [historyModel]="currentSheet" (historyRestored)="restoreSheetHistory()" class="irpw-sheet entity-edit-shell flex flex-col relative"
-      [style.--entity-glass-color]="selectedCharacter ? (getPersonalizationValue(selectedCharacter, 'color') || '#a1a1aa') : '#a1a1aa'">
-      <div class="irpw-sheet-row flex flex-row gap-2 relative">
-
-        @if (!characterIdInput()) {
-
-        <!-- Sidebar -->
-        <div class="transition-all duration-300 overflow-clip shrink-0" [ngClass]="showSidebar ? 'w-80' : 'w-0'">
-          <div class="w-80 entity-properties-panel bg-zinc-925 p-3 sticky top-0 h-[calc(100vh-2.5rem)] overflow-y-auto scrollbar-dark border-r border-zinc-800">
-            <h2 class="text-base mb-4">Ficha de Personagem</h2>
-
-            <!-- World filter -->
-            <div class="mb-3">
-              <app-combo-box
-                class="w-full"
-                label="Filtro de mundo"
-                [items]="availableWorlds"
-                compareProp="id"
-                displayProp="name"
-                [(comboValue)]="selectedWorldId"
-                (comboValueChange)="onWorldSelect()">
-              </app-combo-box>
-            </div>
-
-            <!-- Search -->
-            <div class="mb-4">
-              <input
-                type="text"
-                class="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none focus:border-zinc-500"
-                placeholder="Buscar personagem..."
-                [(ngModel)]="searchTerm"
-                (ngModelChange)="onSearch()">
-            </div>
-
-            <!-- Character list -->
-            <div class="flex flex-col gap-3 w-full">
-              @for (character of filteredCharacters; track character.id) {
-                <button
-                  type="button"
-                  class="cursor-pointer whitespace-nowrap overflow-hidden overflow-ellipsis flex flex-row hover:font-bold items-center gap-2 text-left"
-                  [ngClass]="selectedCharacterId === character.id ? 'text-yellow-300' : 'text-zinc-400'"
-                  [ngStyle]="{'color': getTextColorStyle(getPersonalizationValue(character, 'color'))}"
-                  (click)="selectCharacter(character.id)">
-                  <i class="fa-solid" [ngClass]="getPersonalizationValue(character, 'icon') || 'fa-user'"></i>
-                  <h2 [title]="character.name" class="text-xs truncate">{{ character.name }}</h2>
-                </button>
-              }
-
-              @if (filteredCharacters.length === 0) {
-                <p class="text-xs text-zinc-500">Nenhum personagem encontrado.</p>
-              }
-            </div>
-          </div>
-        </div>
-
-        <!-- Toggle sidebar button -->
-        <small
-          class="border fixed z-10 rounded-2xl transition-all duration-300 border-zinc-700 bg-zinc-900 px-1 py-0.25 top-12 hover:bg-zinc-800 hover:cursor-pointer"
-          [ngClass]="showSidebar ? 'start-92' : 'start-12'"
-          (click)="showSidebar = !showSidebar">
-          <i class="fa-solid text-zinc-400" [ngClass]="showSidebar ? 'fa-angles-left' : 'fa-angles-right'"></i>
-        </small>
-        }
-
-        <!-- Sheet view -->
-        <div class="irpw-sheet-view flex-1 min-h-[60vh] p-2 flex flex-col">
-          @if (selectedCharacter) {
-            <header class="character-sheet-title">
-              <h1>
-                <button type="button" (click)="openCharacterEditor()">{{ selectedCharacter.name }}</button>
-              </h1>
-            </header>
-            <div class="character-overview">
-              <div class="character-overview-card character-identity-card entity-properties-panel rounded-md bg-zinc-925 border border-zinc-800 p-3">
-                <div class="character-identity-body flex flex-row gap-3">
-                  @if(getImageByUsageKey(selectedCharacter.Images, 'profile') != null){
-                    @let profileImg = getImageByUsageKey(selectedCharacter.Images, 'profile');
-                    <img [src]="profileImg | assetUrl" class="character-profile-image h-[12vh] object-cover rounded-md">
-                  }
-                  @else {
-                    <div class="character-profile-image h-[12vh] w-[12vh] bg-zinc-800 rounded-md flex items-center justify-center text-zinc-500">
-                      <i class="fa-solid fa-user text-2xl"></i>
-                    </div>
-                  }
-                  <div class="flex-1 flex flex-col gap-2">
-                    <div class="flex items-end gap-2">
-                      <app-combo-box
-                        class="min-w-0 flex-1"
-                        label="Espécie"
-                        [items]="availableSpecies"
-                        compareProp="id"
-                        displayProp="name"
-                        [clearable]="true"
-                        [(comboValue)]="selectedSpecieId"
-                        (comboValueChange)="onSpecieSelect()">
-                      </app-combo-box>
-                      @if (selectedSpecieId) {
-                        <button
-                          type="button"
-                          class="mb-0.5 h-8 w-8 shrink-0 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
-                          title="Configurar espécie Ironpaw"
-                          aria-label="Configurar espécie Ironpaw"
-                          (click)="openSpeciesConfig()">
-                          <i class="fa-solid fa-gear text-xs"></i>
-                        </button>
-                      }
-                    </div>
-                    <div class="flex items-end gap-2">
-                      <app-combo-box
-                        class="min-w-0 flex-1"
-                        label="Vocação"
-                        [items]="availableVocations"
-                        compareProp="id"
-                        displayProp="name"
-                        [clearable]="true"
-                        [(comboValue)]="selectedVocationId"
-                        (comboValueChange)="onVocationSelect()">
-                      </app-combo-box>
-                      @if (selectedVocationId) {
-                        <button
-                          type="button"
-                          class="mb-0.5 h-8 w-8 shrink-0 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-yellow-500 hover:text-yellow-300"
-                          title="Configurar vocação Ironpaw"
-                          aria-label="Configurar vocação Ironpaw"
-                          (click)="openVocationConfig()">
-                          <i class="fa-solid fa-gear text-xs"></i>
-                        </button>
-                      } @else {
-                        <button
-                          type="button"
-                          class="mb-0.5 h-8 w-8 shrink-0 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-yellow-500 hover:text-yellow-300"
-                          title="Criar nova vocação"
-                          aria-label="Criar nova vocação"
-                          (click)="createVocationForCharacter()">
-                          <i class="fa-solid fa-plus text-xs"></i>
-                        </button>
-                      }
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-              <!-- Lifepoints & Defensepoints -->
-              <div class="character-overview-card character-vitality-card entity-properties-panel rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
-                <div>
-                  <div class="flex items-center justify-between gap-3 mb-2">
-                    <div class="flex items-center gap-2">
-                      <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Vida</h2>
-                      <span class="text-[10px] text-zinc-500">{{ formatLifeValue(lifepointsData.currentPoints) }}/{{ formatLifeValue(lifepointsData.maxPoints) }}</span>
-                    </div>
-                    <div class="life-controls flex items-center gap-2">
-                      <span class="life-status" [ngClass]="getLifeStatusClass()" [title]="getLifeStatusDescription()">{{ getLifeStatusLabel() }}</span>
-                      <button
-                        type="button"
-                        class="life-zero-button"
-                        [disabled]="lifepointsData.currentPoints === 0"
-                        (click)="setLifePointsToZero()"
-                        aria-label="Definir vida em zero"
-                        title="Definir vida em zero">0 CV</button>
-                      <span class="serious-wound-count" [class.has-wounds]="seriousWoundCount > 0" [attr.aria-label]="'Feridas graves: ' + seriousWoundCount + ' de 3'">
-                        <i class="fa-solid fa-heart-crack" aria-hidden="true"></i>
-                        {{ seriousWoundCount }}/3
-                      </span>
-                      <button
-                        type="button"
-                        class="serious-wound-add"
-                        [disabled]="seriousWoundCount >= 3"
-                        (click)="addSeriousWound()"
-                        aria-label="Adicionar Ferida Grave"
-                        title="Adicionar Ferida Grave">
-                        <i class="fa-solid fa-plus" aria-hidden="true"></i>
-                        <span>Ferida Grave</span>
-                      </button>
-                      @if (seriousWoundCount > 0) {
-                        <button
-                          type="button"
-                          class="serious-wound-remove"
-                          (click)="removeSeriousWound()"
-                          aria-label="Remover uma Ferida Grave"
-                          title="Remover uma Ferida Grave">
-                          <i class="fa-solid fa-minus" aria-hidden="true"></i>
-                        </button>
-                      }
-                      <button
-                        type="button"
-                        class="px-1 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
-                        cdkOverlayOrigin
-                        #lifeSettingsOrigin="cdkOverlayOrigin"
-                        (click)="toggleLifeSettingsOverlay()"
-                        aria-label="Configurar vida máxima"
-                        title="Configurar vida máxima">
-                        <i class="fa-solid fa-gear text-xs"></i>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="flex flex-wrap gap-1.5">
-                    @for (lifeSegment of lifeSegments; track lifeSegment) {
-                      <div class="life-square" [attr.aria-label]="'Caixa de vida ' + lifeSegment">
-                        @for (lifeQuarter of [1, 2, 3, 4]; track lifeQuarter) {
-                          <button
-                            type="button"
-                            class="life-square-quarter"
-                            [class.is-active]="getLifeFillQuarters(lifeSegment) >= lifeQuarter"
-                            (click)="setLifePoints(lifeSegment, lifeQuarter)"
-                            [attr.aria-label]="'Definir vida em ' + formatLifeValue(lifeSegment - 1 + lifeQuarter * 0.25)">
-                          </button>
-                        }
-                      </div>
-                    }
-
-                    @if (lifeSegments.length === 0) {
-                      <button
-                        type="button"
-                        class="text-[11px] text-zinc-500 hover:text-zinc-300"
-                        (click)="openLifeSettingsOverlay()">
-                        Defina a vida máxima para exibir a barra.
-                      </button>
-                    }
-                  </div>
-
-                  <ng-template
-                    cdkConnectedOverlay
-                    [cdkConnectedOverlayOrigin]="lifeSettingsOrigin"
-                    [cdkConnectedOverlayOpen]="isLifeSettingsOpen"
-                    [cdkConnectedOverlayHasBackdrop]="true"
-                    [cdkConnectedOverlayOffsetY]="8"
-                    (backdropClick)="closeLifeSettingsOverlay()"
-                    (overlayOutsideClick)="closeLifeSettingsOverlay()">
-                    <div class="w-56 rounded-md border border-zinc-700 bg-zinc-900 p-3 shadow-xl">
-                      <div class="flex items-center justify-between gap-2 mb-3">
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Vida máxima</h3>
-                        <button
-                          type="button"
-                          class="text-zinc-500 transition hover:text-zinc-200"
-                          (click)="closeLifeSettingsOverlay()"
-                          aria-label="Fechar">
-                          <i class="fa-solid fa-xmark"></i>
-                        </button>
-                      </div>
-                      <label class="flex flex-col gap-1 text-[11px] text-zinc-500 mb-3">
-                        Quantidade de quadrados
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          class="w-full rounded-md border border-zinc-700 bg-zinc-800 px-2 py-1 text-sm text-white outline-none focus:border-zinc-500"
-                          [(ngModel)]="pendingLifeMaxPoints">
-                      </label>
-                      <div class="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          class="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
-                          (click)="closeLifeSettingsOverlay()">
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          class="rounded-md border border-yellow-700 bg-yellow-500/10 px-2 py-1 text-xs text-yellow-200 transition hover:bg-yellow-500/20"
-                          (click)="saveLifeMaxPoints()">
-                          Salvar
-                        </button>
-                      </div>
-                    </div>
-                  </ng-template>
-                </div>
-                <div class="resistance-resource">
-                  <div class="resistance-heading">
-                    <h2>Resistência</h2>
-                    <span>{{ formatLifeValue(defensepointsData.currentPoints) }}/{{ formatLifeValue(getMaxDefensePoints()) }}</span>
-                  </div>
-                  <div class="flex flex-wrap gap-1.5">
-                    @for (resistanceSegment of resistanceSegments; track resistanceSegment) {
-                      <div class="resistance-square" [attr.aria-label]="'Caixa de resistência ' + resistanceSegment">
-                        <button
-                          type="button"
-                          class="resistance-square-half left"
-                          [class.is-active]="getResistanceFillState(resistanceSegment) >= 1"
-                          (click)="setDefensePoints(resistanceSegment, false)"
-                          [attr.aria-label]="'Definir resistência em ' + formatLifeValue(resistanceSegment - 0.5)">
-                        </button>
-                        <button
-                          type="button"
-                          class="resistance-square-half right"
-                          [class.is-active]="getResistanceFillState(resistanceSegment) === 2"
-                          (click)="setDefensePoints(resistanceSegment, true)"
-                          [attr.aria-label]="'Definir resistência em ' + formatLifeValue(resistanceSegment)">
-                        </button>
-                      </div>
-                    }
-                    @if (resistanceSegments.length === 0) {
-                      <span class="text-[10px] text-zinc-500">Sem caixas disponíveis</span>
-                    }
-                  </div>
-                </div>
-              </div>
-              <!-- Condições -->
-              <div class="character-overview-card character-conditions-card entity-properties-panel rounded-md bg-zinc-925 border border-zinc-800 p-3 flex flex-col gap-3">
-                <div class="flex items-center justify-between gap-3">
-                  <div>
-                    <h2 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Condições</h2>
-                    <p class="text-[10px] text-zinc-500">{{ activeConditionsData.length }} ativa(s)</p>
-                  </div>
-                  <div class="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      class="px-1 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
-                      (click)="openConditionCatalog()"
-                      aria-label="Editar e criar condições"
-                      title="Editar e criar condições">
-                      <i class="fa-solid fa-list-check text-xs"></i>
-                    </button>
-                    <button
-                      type="button"
-                      class="px-1 rounded-md border border-zinc-700 bg-zinc-850 text-zinc-400 transition hover:border-zinc-500 hover:text-zinc-200"
-                      cdkOverlayOrigin
-                      #conditionSettingsOrigin="cdkOverlayOrigin"
-                      (click)="toggleConditionSettingsOverlay()"
-                      aria-label="Ativar condições"
-                      title="Ativar condições">
-                      <i class="fa-solid fa-gear text-xs"></i>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="flex flex-wrap gap-2">
-                  @for (condition of getSortedActiveConditions(); track condition.code) {
-                    <div
-                      class="condition-chip"
-                      [ngClass]="getConditionSeverityClass(condition.severity)"
-                      [title]="getConditionTooltip(condition)">
-                      <span class="font-medium">{{ getConditionDefinition(condition.code).label }}</span>
-                      <span class="text-[10px] uppercase tracking-wide opacity-80">{{ getConditionSeverityText(condition) }}</span>
-                    </div>
-                  }
-
-                  @if (activeConditionsData.length === 0) {
-                    <p class="text-[11px] text-zinc-500">Nenhuma condição ativa.</p>
-                  }
-                </div>
-
-                <ng-template
-                  cdkConnectedOverlay
-                  [cdkConnectedOverlayOrigin]="conditionSettingsOrigin"
-                  [cdkConnectedOverlayOpen]="isConditionSettingsOpen"
-                  [cdkConnectedOverlayHasBackdrop]="true"
-                  [cdkConnectedOverlayOffsetY]="8"
-                  (backdropClick)="closeConditionSettingsOverlay()"
-                  (overlayOutsideClick)="closeConditionSettingsOverlay()">
-                  <div class="w-[28rem] max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-md border border-zinc-700 bg-zinc-900 p-3 shadow-xl scrollbar-dark">
-                    <div class="flex items-center justify-between gap-2 mb-3">
-                      <div>
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Condições ativas</h3>
-                        <p class="text-[11px] text-zinc-500">Selecione as condições e a severidade vigente.</p>
-                      </div>
-                      <button
-                        type="button"
-                        class="text-zinc-500 transition hover:text-zinc-200"
-                        (click)="closeConditionSettingsOverlay()"
-                        aria-label="Fechar">
-                        <i class="fa-solid fa-xmark"></i>
-                      </button>
-                    </div>
-
-                    <div class="flex flex-col gap-4">
-                      @for (category of conditionCategories; track category) {
-                        <section class="rounded-md border border-zinc-800 bg-zinc-950/30 p-3">
-                          <h4 class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 mb-2">{{ conditionCategoryLabel[category] }}</h4>
-                          <div class="flex flex-col gap-2">
-                            @for (definition of getConditionDefinitionsByCategory(category); track definition.code) {
-                              <div class="rounded-md border border-zinc-800 bg-zinc-900/80 p-2.5">
-                                <div class="flex items-start gap-3">
-                                  <input
-                                    type="checkbox"
-                                    class="mt-0.5 h-4 w-4 accent-yellow-400"
-                                    [checked]="isPendingConditionActive(definition.code)"
-                                    (change)="onPendingConditionToggle(definition.code, $any($event.target).checked)">
-
-                                  <div class="flex-1 min-w-0">
-                                    <div class="flex items-start justify-between gap-3">
-                                      <div>
-                                        <p class="text-sm text-zinc-100">{{ definition.label }}</p>
-                                        <p class="text-[11px] leading-5 text-zinc-500">{{ getConditionDefinitionSummary(definition) }}</p>
-                                      </div>
-
-                                      <select
-                                        class="rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-xs text-white outline-none focus:border-zinc-500"
-                                        [ngModel]="getPendingConditionSeverity(definition.code)"
-                                        (ngModelChange)="onPendingConditionSeverityChange(definition.code, $event)"
-                                        [disabled]="!isPendingConditionActive(definition.code)">
-                                        @for (severity of getAvailableConditionSeverities(definition); track severity) {
-                                          <option [ngValue]="severity">{{ getConditionSeverityText({ code: definition.code, severity }) }}</option>
-                                        }
-                                      </select>
-                                    </div>
-
-                                    @if (isPendingConditionActive(definition.code)) {
-                                      <p class="mt-2 text-[11px] leading-5 text-zinc-300">{{ getConditionEffectDescription({ code: definition.code, severity: getPendingConditionSeverity(definition.code) }) }}</p>
-                                    }
-                                  </div>
-                                </div>
-                              </div>
-                            }
-                          </div>
-                        </section>
-                      }
-                    </div>
-
-                    <div class="flex justify-end gap-2 mt-4">
-                      <button
-                        type="button"
-                        class="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
-                        (click)="closeConditionSettingsOverlay()">
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        class="rounded-md border border-yellow-700 bg-yellow-500/10 px-2 py-1 text-xs text-yellow-200 transition hover:bg-yellow-500/20"
-                        (click)="saveConditions()">
-                        Salvar
-                      </button>
-                    </div>
-                  </div>
-                </ng-template>
-              </div>
-              <section
-                class="character-overview-card resource-card stress-resource-card entity-properties-panel"
-                [ngClass]="getStressCardClass()"
-                aria-label="Estresse">
-                <div class="resource-card-heading">
-                  <div class="resource-card-name">
-                    <i class="fa-solid fa-brain" aria-hidden="true"></i>
-                    <h2>Estresse</h2>
-                    <span class="stress-state-label">{{ getStressStateLabel() }}</span>
-                  </div>
-                  <div class="resource-card-controls">
-                    <span class="resource-current-value">{{ resourceData.stress.currentPoints ?? 0 }}/{{ getStressMaximum() }}</span>
-                    <button
-                      type="button"
-                      class="resource-step-button resource-step-button--compact"
-                      (click)="adjustResource('stress', -1)"
-                      [disabled]="!canAdjustResource('stress', -1)"
-                      aria-label="Reduzir Estresse em 1">
-                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      class="resource-current-input resource-current-input--compact"
-                      aria-label="Estresse atual"
-                      [(ngModel)]="resourceData.stress.currentPoints"
-                      (ngModelChange)="onResourceChange()">
-                    <button
-                      type="button"
-                      class="resource-step-button resource-step-button--compact"
-                      (click)="adjustResource('stress', 1)"
-                      aria-label="Aumentar Estresse em 1">
-                      <i class="fa-solid fa-plus" aria-hidden="true"></i>
-                    </button>
-                    <button
-                      type="button"
-                      class="resource-settings-button"
-                      cdkOverlayOrigin
-                      #stressSettingsOrigin="cdkOverlayOrigin"
-                      (click)="toggleStressSettingsOverlay()"
-                      aria-label="Configurar limites de Estresse"
-                      title="Configurar limites de Estresse">
-                      <i class="fa-solid fa-gear" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                </div>
-                <div
-                  class="resource-meter stress-meter"
-                  role="progressbar"
-                  aria-label="Estresse acumulado"
-                  aria-valuemin="0"
-                  [attr.aria-valuemax]="getStressMaximum()"
-                  [attr.aria-valuenow]="getStressTrackValue()"
-                  [attr.aria-valuetext]="getStressProgressText()">
-                  <span class="resource-meter-fill" [ngClass]="getStressToneClass()" [style.width.%]="getStressFillPercentage()"></span>
-                  @for (threshold of stressThresholds; track threshold.value) {
-                    <span class="stress-meter-marker" [style.left.%]="threshold.position" [title]="threshold.value + ' · ' + threshold.label" aria-hidden="true"></span>
-                  }
-                </div>
-                <ng-template
-                  cdkConnectedOverlay
-                  [cdkConnectedOverlayOrigin]="stressSettingsOrigin"
-                  [cdkConnectedOverlayOpen]="isStressSettingsOpen"
-                  [cdkConnectedOverlayHasBackdrop]="true"
-                  [cdkConnectedOverlayOffsetY]="8"
-                  (backdropClick)="closeStressSettingsOverlay()"
-                  (overlayOutsideClick)="closeStressSettingsOverlay()">
-                  <div class="stress-settings-panel rounded-md border border-zinc-700 bg-zinc-900 p-3 shadow-xl">
-                    <div class="flex items-center justify-between gap-2 mb-3">
-                      <div>
-                        <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Limites de Estresse</h3>
-                        <p class="text-[11px] text-zinc-500">Defina o mínimo de cada estado para este personagem.</p>
-                      </div>
-                      <button
-                        type="button"
-                        class="text-zinc-500 transition hover:text-zinc-200"
-                        (click)="closeStressSettingsOverlay()"
-                        aria-label="Fechar">
-                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-                      </button>
-                    </div>
-                    <div class="stress-threshold-fields">
-                      <label>Ansioso<input type="number" min="1" step="1" [(ngModel)]="pendingStressThresholds.anxious"></label>
-                      <label>Transtornado<input type="number" min="2" step="1" [(ngModel)]="pendingStressThresholds.troubled"></label>
-                      <label>Perturbado<input type="number" min="3" step="1" [(ngModel)]="pendingStressThresholds.disturbed"></label>
-                      <label>Perdido<input type="number" min="4" step="1" [(ngModel)]="pendingStressThresholds.lost"></label>
-                    </div>
-                    <div class="flex justify-end gap-2 mt-3">
-                      <button
-                        type="button"
-                        class="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
-                        (click)="closeStressSettingsOverlay()">
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        class="rounded-md border border-yellow-700 bg-yellow-500/10 px-2 py-1 text-xs text-yellow-200 transition hover:bg-yellow-500/20"
-                        (click)="saveStressThresholds()">
-                        Salvar
-                      </button>
-                    </div>
-                  </div>
-                </ng-template>
-              </section>
-
-              <section class="character-overview-card resource-card entity-properties-panel" aria-label="Vigor">
-                <div class="resource-card-heading">
-                  <div class="resource-card-name">
-                    <i class="fa-solid fa-person-running" aria-hidden="true"></i>
-                    <h2>Vigor</h2>
-                  </div>
-                  <div class="resource-card-controls">
-                    <button
-                      type="button"
-                      class="resource-step-button resource-step-button--compact"
-                      (click)="adjustResource('vigor', -1)"
-                      [disabled]="!canAdjustResource('vigor', -1)"
-                      aria-label="Reduzir Vigor em 1">
-                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      class="resource-current-input resource-current-input--compact"
-                      [attr.max]="getReserveMaximum('vigor')"
-                      aria-label="Vigor atual"
-                      [(ngModel)]="resourceData.vigor.currentPoints"
-                      (ngModelChange)="onResourceChange()">
-                    <span class="resource-value-divider" aria-hidden="true">/</span>
-                    <label class="sr-only" for="vigor-maximum">Máximo de Vigor</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      class="resource-maximum-input resource-maximum-input--compact"
-                      id="vigor-maximum"
-                      placeholder="máx."
-                      title="Máximo base: 3 + o maior valor entre Corpo e Técnica. Ajuste para incluir modificadores."
-                      [ngModel]="getReserveMaximum('vigor')"
-                      (ngModelChange)="setResourceMaximum('vigor', $event)">
-                    <button
-                      type="button"
-                      class="resource-step-button resource-step-button--compact"
-                      (click)="adjustResource('vigor', 1)"
-                      [disabled]="!canAdjustResource('vigor', 1)"
-                      aria-label="Aumentar Vigor em 1">
-                      <i class="fa-solid fa-plus" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                </div>
-                @if ((getReserveMaximum('vigor') ?? 0) > 0) {
-                  <div
-                    class="resource-meter reserve-meter"
-                    role="progressbar"
-                    aria-label="Vigor disponível"
-                    aria-valuemin="0"
-                    [attr.aria-valuemax]="getReserveMaximum('vigor')"
-                    [attr.aria-valuenow]="getReserveTrackValue('vigor')"
-                    [attr.aria-valuetext]="getReserveProgressText('vigor')">
-                    <span class="resource-meter-fill" [style.width.%]="getReserveFillPercentage('vigor')"></span>
-                  </div>
-                } @else {
-                  <div class="resource-meter resource-meter-unconfigured" title="Defina o máximo de Vigor para acompanhar a reserva." aria-hidden="true"></div>
-                }
-              </section>
-
-              <section class="character-overview-card resource-card entity-properties-panel" aria-label="Mana">
-                <div class="resource-card-heading">
-                  <div class="resource-card-name">
-                    <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
-                    <h2>Mana</h2>
-                  </div>
-                  <div class="resource-card-controls">
-                    <button
-                      type="button"
-                      class="resource-step-button resource-step-button--compact"
-                      (click)="adjustResource('mana', -1)"
-                      [disabled]="!canAdjustResource('mana', -1)"
-                      aria-label="Reduzir Mana em 1">
-                      <i class="fa-solid fa-minus" aria-hidden="true"></i>
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      class="resource-current-input resource-current-input--compact"
-                      [attr.max]="getReserveMaximum('mana')"
-                      aria-label="Mana atual"
-                      [(ngModel)]="resourceData.mana.currentPoints"
-                      (ngModelChange)="onResourceChange()">
-                    <span class="resource-value-divider" aria-hidden="true">/</span>
-                    <label class="sr-only" for="mana-maximum">Máximo de Mana</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      class="resource-maximum-input resource-maximum-input--compact"
-                      id="mana-maximum"
-                      placeholder="máx."
-                      title="Defina o máximo conforme o nível de Conjuração e os modificadores."
-                      [ngModel]="getReserveMaximum('mana')"
-                      (ngModelChange)="setResourceMaximum('mana', $event)">
-                    <button
-                      type="button"
-                      class="resource-step-button resource-step-button--compact"
-                      (click)="adjustResource('mana', 1)"
-                      [disabled]="!canAdjustResource('mana', 1)"
-                      aria-label="Aumentar Mana em 1">
-                      <i class="fa-solid fa-plus" aria-hidden="true"></i>
-                    </button>
-                  </div>
-                </div>
-                @if ((getReserveMaximum('mana') ?? 0) > 0) {
-                  <div
-                    class="resource-meter reserve-meter"
-                    role="progressbar"
-                    aria-label="Mana disponível"
-                    aria-valuemin="0"
-                    [attr.aria-valuemax]="getReserveMaximum('mana')"
-                    [attr.aria-valuenow]="getReserveTrackValue('mana')"
-                    [attr.aria-valuetext]="getReserveProgressText('mana')">
-                    <span class="resource-meter-fill" [style.width.%]="getReserveFillPercentage('mana')"></span>
-                  </div>
-                } @else {
-                  <div class="resource-meter resource-meter-unconfigured" title="Defina o máximo de Mana para acompanhar a reserva." aria-hidden="true"></div>
-                }
-              </section>
-            </div>
-            <div class="character-workspace">
-                  <div class="character-stats-column flex flex-col h-full">
-                    <div class="entity-properties-panel flex flex-col rounded-md bg-zinc-925 border border-zinc-800 p-3 mb-2">
-                      <h1 class="text-center mb-2">Percepções</h1>
-                      <div class="flex flex-row justify-center gap-6">
-                        <div class="flex flex-col items-center gap-1">
-                          <span class="text-xs text-zinc-400">Olfato
-                            @if (getSpeciesPerceptionBase('smell') !== null) { <i class="fa-solid fa-paw ms-1 text-[9px] text-sky-300" [title]="getSpeciesPerceptionTooltip('smell')" [attr.aria-label]="getSpeciesPerceptionTooltip('smell')"></i> }
-                          </span>
-                          <input type="number" class="w-12 text-center bg-zinc-900 border border-zinc-700 rounded px-1 py-0.5 text-sm text-white outline-none focus:border-zinc-500"
-                            [(ngModel)]="perceptionsData.smell"
-                            (ngModelChange)="onPerceptionsChange()">
-                        </div>
-                        <div class="flex flex-col items-center gap-1">
-                          <span class="text-xs text-zinc-400">Visão
-                            @if (getSpeciesPerceptionBase('vision') !== null) { <i class="fa-solid fa-paw ms-1 text-[9px] text-sky-300" [title]="getSpeciesPerceptionTooltip('vision')" [attr.aria-label]="getSpeciesPerceptionTooltip('vision')"></i> }
-                          </span>
-                          <input type="number" class="w-12 text-center bg-zinc-900 border border-zinc-700 rounded px-1 py-0.5 text-sm text-white outline-none focus:border-zinc-500"
-                            [(ngModel)]="perceptionsData.vision"
-                            (ngModelChange)="onPerceptionsChange()">
-                        </div>
-                        <div class="flex flex-col items-center gap-1">
-                          <span class="text-xs text-zinc-400">Audição
-                            @if (getSpeciesPerceptionBase('hearing') !== null) { <i class="fa-solid fa-paw ms-1 text-[9px] text-sky-300" [title]="getSpeciesPerceptionTooltip('hearing')" [attr.aria-label]="getSpeciesPerceptionTooltip('hearing')"></i> }
-                          </span>
-                          <input type="number" class="w-12 text-center bg-zinc-900 border border-zinc-700 rounded px-1 py-0.5 text-sm text-white outline-none focus:border-zinc-500"
-                            [(ngModel)]="perceptionsData.hearing"
-                            (ngModelChange)="onPerceptionsChange()">
-                        </div>
-                      </div>
-                    </div>
-                    <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3  overflow-y-auto mb-2">
-                      <h1 class="text-center mb-3">Atributos</h1>
-                      <div class="flex flex-col gap-4">
-                        @for (entry of attributeGroupEntries; track entry[0]) {
-                          <div>
-                            <div class="flex items-center justify-between mb-2">
-                              <span class="text-xs font-semibold text-zinc-200 uppercase tracking-wide">{{ attributeGroupLabel[entry[0]] }}</span>
-                              <input type="number"
-                                class="w-12 text-center bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5 text-xs text-white outline-none focus:border-zinc-500"
-                                [(ngModel)]="attributesData[entry[0]].value"
-                                (ngModelChange)="onAttributesChange()">
-                            </div>
-                            <div class="flex flex-col gap-1.5 pl-1">
-                              @for (skill of entry[1]; track skill) {
-                                <div class="flex items-center justify-between">
-                                  <span class="text-xs text-zinc-400">{{ skillLabel[skill] }}
-                                    @if (isSkillAtVocationMinimum(entry[0], skill)) {
-                                      <i class="fa-solid fa-lock ms-1 text-[9px] text-sky-300" [title]="getVocationMinimumTooltip(skill)" [attr.aria-label]="getVocationMinimumTooltip(skill)"></i>
-                                    }
-                                  </span>
-                                  <div class="flex items-center gap-3">
-                                    <span class="text-[11px] text-zinc-500 whitespace-nowrap">
-                                      {{ getSkillRollSummary(entry[0], skill) }}
-                                    </span>
-                                    <div class="flex gap-1.5">
-                                    @for (level of [0,1,2,3]; track level) {
-                                      <input
-                                        type="checkbox"
-                                        class="circle-checkbox level-{{level}}"
-                                        [checked]="getSkillLevel(entry[0], skill) >= level"
-                                        [title]="getSkillLevelLabel(level)"
-                                        (click)="onCircleClick($event, entry[0], skill, level)">
-                                    }
-                                    </div>
-                                  </div>
-                                </div>
-                              }
-                            </div>
-                          </div>
-                        }
-                      </div>
-                    </div>
-                    <div class="rounded-md bg-zinc-925 border border-zinc-800 p-3">
-                      <h1 class="text-center mb-3">Subespecializações</h1>
-                      <div class="flex flex-col gap-2">
-                        @for (subspecialization of subspecializationsData; track $index; let subspecializationIndex = $index) {
-                          <input [historyField]="{ column: 'subspecialization', label: 'Subespecializações' }" [historyRead]="readSubspecializationHistory"
-                            type="text"
-                            class="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-                            [ngModel]="subspecialization"
-                            (ngModelChange)="onSubspecializationChange(subspecializationIndex, $event)"
-                            [placeholder]="subspecializationIndex === subspecializationsData.length - 1 ? 'Adicionar subespecialização...' : 'Subespecialização'">
-                        }
-                      </div>
-                    </div>
-                  </div>
-                  <div class="character-tabs-column p-3">
-                    <div class="flex-4 flex flex-col">
-                      <div class="character-tabs flex flex-row flex-wrap items-end gap-1 ms-1">
-                        <app-nav-button [label]="'Geral'" size="sm" [active]="currentTab === 'general'" (click)="selectTab('general')"></app-nav-button>
-                        <app-nav-button [label]="'Marcos'" size="sm" [active]="currentTab === 'marks'" (click)="selectTab('marks')"></app-nav-button>
-                        <app-nav-button [label]="'Inventário'" size="sm" [active]="currentTab === 'inventory'" (click)="selectTab('inventory')"></app-nav-button>
-                        <app-nav-button [label]="'Poderes'" size="sm" [active]="currentTab === 'skills'" (click)="selectTab('skills')"></app-nav-button>
-                      </div>
-                      <div class="character-tab-content entity-properties-panel p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
-                          @switch (currentTab) {
-                            @case ('general') {
-                              <div class="flex flex-col gap-4">
-                                @if (activeAbilityDetail; as detail) {
-                                  <section class="ironpaw-ability-detail" aria-live="polite">
-                                    <div class="flex items-start justify-between gap-3">
-                                      <div>
-                                        <h2>{{ detail.name }}</h2>
-                                        <p>{{ detail.description }}</p>
-                                      </div>
-                                      <button type="button" (click)="dismissAbilityDetail()" aria-label="Fechar detalhe da habilidade">
-                                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-                                      </button>
-                                    </div>
-                                  </section>
-                                }
-                                <section class="ironpaw-overview-section ironpaw-overview-shortcuts" aria-labelledby="overview-shortcuts-title">
-                                  <div class="mb-3 flex items-start justify-between gap-3">
-                                    <div>
-                                      <h2 id="overview-shortcuts-title" class="text-sm font-semibold text-zinc-100">Atalhos favoritos</h2>
-                                      <p class="mt-1 text-xs text-zinc-500">Armas equipadas e poderes favoritos ficam prontos para abrir daqui.</p>
-                                    </div>
-                                    <button type="button" class="text-xs text-yellow-300 transition hover:text-yellow-200" (click)="selectTab('skills')">Ver poderes</button>
-                                  </div>
-                                  <div class="flex flex-wrap gap-2">
-                                    @for (attack of getFavoriteAttacks(); track attack.favoriteKey) {
-                                      <button type="button" class="ironpaw-shortcut" (click)="openAttackRoll(attack)" [title]="attack.skillLabel + ' · ' + attack.entry.snapshot.name">
-                                        <i class="fa-solid fa-burst text-rose-300" aria-hidden="true"></i>
-                                        <span>{{ attack.entry.snapshot.name }}</span>
-                                        <small>{{ attack.skillLabel }}</small>
-                                      </button>
-                                    }
-                                    @for (hability of getFavoriteHabilities(); track hability.favoriteKey) {
-                                      <button type="button" class="ironpaw-shortcut" (click)="activateAbilityShortcut(hability)" [title]="hability.description || hability.sourceLabel">
-                                        <i class="fa-solid" [ngClass]="getHabilityTypeIcon(hability.type)" aria-hidden="true"></i>
-                                        <span>{{ hability.name || 'Habilidade sem nome' }}</span>
-                                        <small>{{ hability.sourceLabel }}</small>
-                                      </button>
-                                    }
-                                    @if (getFavoriteAttacks().length === 0 && getFavoriteHabilities().length === 0) {
-                                      <p class="rounded-lg border border-dashed border-zinc-700 px-3 py-3 text-xs text-zinc-500">Use a estrela nos ataques e habilidades para montar seus atalhos.</p>
-                                    }
-                                  </div>
-                                </section>
-
-                                <section class="ironpaw-overview-section" aria-labelledby="overview-attacks-title">
-                                  <div class="mb-3 flex items-center justify-between gap-3">
-                                    <div>
-                                      <h2 id="overview-attacks-title" class="text-sm font-semibold text-zinc-100">Ataques equipados</h2>
-                                      <p class="mt-1 text-xs text-zinc-500">As armas ativas do inventário aparecem automaticamente.</p>
-                                    </div>
-                                    <button type="button" class="text-xs text-zinc-400 transition hover:text-zinc-100" (click)="selectTab('inventory')">Inventário</button>
-                                  </div>
-                                  <div class="flex flex-col gap-2">
-                                    @for (attack of getEquippedAttacks(); track attack.favoriteKey) {
-                                      <article class="ironpaw-overview-row">
-                                        <div class="min-w-0 flex-1">
-                                          <div class="flex flex-wrap items-center gap-2">
-                                            <h3 class="truncate text-sm font-medium text-zinc-100">{{ attack.entry.snapshot.name }}</h3>
-                                            <span class="rounded-full border border-zinc-700/80 px-2 py-0.5 text-[10px] text-zinc-400">{{ attack.slotLabel }}</span>
-                                            <span class="text-[10px] text-zinc-500">{{ attack.skillLabel }}</span>
-                                          </div>
-                                          <p class="mt-1 line-clamp-2 text-xs leading-5 text-zinc-400">{{ getEquipmentEffectSummary(attack.entry) || attack.entry.snapshot.definition.weapon?.specialProperty || 'Sem efeito adicional descrito.' }}</p>
-                                        </div>
-                                        <div class="flex shrink-0 items-center gap-1.5">
-                                          <button type="button" class="ironpaw-favorite-button" [class.is-favorite]="isActionFavorite(attack.favoriteKey)" [attr.aria-pressed]="isActionFavorite(attack.favoriteKey)" [attr.aria-label]="isActionFavorite(attack.favoriteKey) ? 'Remover ataque dos favoritos' : 'Adicionar ataque aos favoritos'" (click)="toggleActionFavorite(attack.favoriteKey)">
-                                            <i class="fa-solid fa-star" aria-hidden="true"></i>
-                                          </button>
-                                          <button type="button" class="ironpaw-action-button" (click)="openAttackRoll(attack)">Rolar</button>
-                                        </div>
-                                      </article>
-                                    }
-                                    @if (getEquippedAttacks().length === 0) {
-                                      <p class="rounded-lg border border-dashed border-zinc-700 px-3 py-4 text-center text-xs text-zinc-500">Equipe uma arma nos espaços primário ou secundário para criar atalhos de ataque.</p>
-                                    }
-                                  </div>
-                                </section>
-
-                                <div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                                  <section class="ironpaw-overview-section" aria-labelledby="overview-species-title">
-                                    <h2 id="overview-species-title" class="text-sm font-semibold text-zinc-100">Espécie · {{ selectedCharacter.ParentSpecies?.name || 'Não definida' }}</h2>
-                                    <p class="mt-1 text-xs leading-5 text-zinc-400">{{ selectedCharacter.ParentSpecies?.description || selectedCharacter.ParentSpecies?.concept || 'Sem descrição registrada para esta espécie.' }}</p>
-                                    <div class="ironpaw-summary-facts mt-3">
-                                      <span><small>Vida base</small>{{ getSpeciesBaseHealthLabel() }}</span>
-                                      <span><small>Olfato</small>{{ getSpeciesPerceptionBase('smell') ?? '—' }}</span>
-                                      <span><small>Visão</small>{{ getSpeciesPerceptionBase('vision') ?? '—' }}</span>
-                                      <span><small>Audição</small>{{ getSpeciesPerceptionBase('hearing') ?? '—' }}</span>
-                                    </div>
-                                    <div class="mt-3 flex flex-col gap-2">
-                                      @for (hability of getInheritedHabilitiesBySource('species'); track hability.favoriteKey) {
-                                        <div class="ironpaw-summary-item">
-                                          <span class="text-xs font-medium text-zinc-200">{{ hability.name || 'Passiva da espécie' }}</span>
-                                          <p class="mt-0.5 whitespace-pre-line text-xs leading-5 text-zinc-400">{{ hability.description || 'Sem descrição.' }}</p>
-                                        </div>
-                                      }
-                                      @for (weakness of getSpeciesWeaknesses(); track weakness.id) {
-                                        <div class="ironpaw-summary-item ironpaw-summary-item--muted">
-                                          <span class="text-xs font-medium text-zinc-300">{{ weakness.name || 'Fraqueza' }}</span>
-                                          <p class="mt-0.5 whitespace-pre-line text-xs leading-5 text-zinc-500">{{ weakness.description }}</p>
-                                        </div>
-                                      }
-                                      @if (getInheritedHabilitiesBySource('species').length === 0 && getSpeciesWeaknesses().length === 0) {
-                                        <p class="text-xs text-zinc-500">Nenhuma característica cadastrada.</p>
-                                      }
-                                    </div>
-                                  </section>
-
-                                  <section class="ironpaw-overview-section" aria-labelledby="overview-vocation-title">
-                                    <h2 id="overview-vocation-title" class="text-sm font-semibold text-zinc-100">Vocação · {{ selectedCharacter.ParentIRPWVocation?.name || 'Não definida' }}</h2>
-                                    <p class="mt-1 text-xs leading-5 text-zinc-400">{{ selectedCharacter.ParentIRPWVocation?.description || 'Sem descrição registrada para esta vocação.' }}</p>
-                                    <div class="ironpaw-summary-facts mt-3">
-                                      <span><small>Vida base</small>{{ getVocationBaseHealthLabel() }}</span>
-                                      <span><small>Defesa base</small>{{ getVocationBaseDefenseLabel() }}</span>
-                                    </div>
-                                    <p class="mt-2 text-[11px] leading-5 text-zinc-400"><span class="text-zinc-500">Perícias iniciais · </span>{{ getVocationSkillMinimumSummary() }}</p>
-                                    <div class="mt-3 flex flex-col gap-2">
-                                      @for (hability of getInheritedHabilitiesBySource('vocation'); track hability.favoriteKey) {
-                                        <div class="ironpaw-summary-item">
-                                          <div class="flex items-center justify-between gap-2">
-                                            <span class="text-xs font-medium text-zinc-200">{{ hability.name || (hability.type === 'passive' ? 'Passiva da vocação' : 'Poder da vocação') }}</span>
-                                            <span class="text-[10px] text-zinc-500">{{ getHabilityTypeLabel(hability.type) }}</span>
-                                          </div>
-                                          <p class="mt-0.5 whitespace-pre-line text-xs leading-5 text-zinc-400">{{ hability.description || 'Sem descrição.' }}</p>
-                                        </div>
-                                      }
-                                      @if (getInheritedHabilitiesBySource('vocation').length === 0) {
-                                        <p class="text-xs text-zinc-500">Nenhuma característica cadastrada.</p>
-                                      }
-                                    </div>
-                                  </section>
-                                </div>
-
-                                <section class="ironpaw-overview-section" aria-labelledby="overview-equipment-title">
-                                  <div class="mb-3 flex items-center justify-between gap-3">
-                                    <div>
-                                      <h2 id="overview-equipment-title" class="text-sm font-semibold text-zinc-100">Equipamentos em uso</h2>
-                                      <p class="mt-1 text-xs text-zinc-500">Resumo dos efeitos descritos nos espaços equipados.</p>
-                                    </div>
-                                    <button type="button" class="text-xs text-zinc-400 transition hover:text-zinc-100" (click)="selectTab('inventory')">Gerenciar</button>
-                                  </div>
-                                  <div class="flex flex-col gap-2">
-                                    @for (equipment of getEquippedEquipment(); track equipment.entry.instanceId) {
-                                      <div class="ironpaw-equipment-summary">
-                                        <div class="flex shrink-0 items-center gap-2">
-                                          <i class="fa-solid fa-shield-halved text-xs text-zinc-500" aria-hidden="true"></i>
-                                          <span class="text-xs text-zinc-500">{{ equipment.slotLabel }}</span>
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                          <span class="text-xs font-medium text-zinc-200">{{ equipment.entry.snapshot.name }}</span>
-                                          <p class="mt-0.5 whitespace-pre-line text-xs leading-5 text-zinc-400">{{ equipment.effects || 'Sem efeito adicional descrito.' }}</p>
-                                        </div>
-                                        @if (equipment.slot === 'reserve') {
-                                          <span class="text-[10px] text-zinc-500">Reserva</span>
-                                        }
-                                      </div>
-                                    }
-                                    @if (getEquippedEquipment().length === 0) {
-                                      <p class="rounded-lg border border-dashed border-zinc-700 px-3 py-4 text-center text-xs text-zinc-500">Nenhum equipamento está vestido ou equipado.</p>
-                                    }
-                                  </div>
-                                </section>
-                              </div>
-                            }
-                            @case ('marks') {
-                              <div class="flex items-center justify-between gap-3 mb-4">
-                                <div>
-                                  <h2 class="text-sm text-zinc-100">Marcos narrativos</h2>
-                                  <p class="text-xs text-zinc-500">Cada marco usa JSON próprio com tipo, habilidades e atributos/perícias.</p>
-                                </div>
-                                <button
-                                  type="button"
-                                  class="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-500 hover:text-white"
-                                  (click)="addMark()">
-                                  Adicionar marco
-                                </button>
-                              </div>
-
-                              <div class="flex flex-col gap-4">
-                                @for (mark of marksData; track $index; let markIndex = $index) {
-                                  <div class="rounded-md border border-zinc-800 bg-zinc-925/80 p-4">
-                                    <div class="flex items-start justify-between gap-3">
-                                      <button
-                                        type="button"
-                                        class="flex-1 text-left"
-                                        (click)="toggleMarkExpanded(markIndex)">
-                                        <div class="flex items-center gap-2 mb-1 flex-wrap">
-                                          <h3 class="text-sm text-zinc-100">{{ mark.name || ('Marco ' + (markIndex + 1)) }}</h3>
-                                          <span class="text-[10px] uppercase tracking-wide text-zinc-500">{{ mark.narrativeType || 'Sem tipo' }}</span>
-                                        </div>
-                                        <p class="text-xs text-zinc-400 line-clamp-2">{{ mark.description || 'Sem descrição.' }}</p>
-                                        <div class="mt-3 flex flex-wrap gap-2">
-                                          @for (skillSummary of getMarkActiveSkillsSummary(mark); track skillSummary) {
-                                            <span class="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-[11px] text-zinc-300">
-                                              {{ skillSummary }}
-                                            </span>
-                                          }
-
-                                          @if (getMarkActiveSkillsSummary(mark).length === 0) {
-                                            <span class="rounded-full border border-dashed border-zinc-700 px-2 py-1 text-[11px] text-zinc-500">
-                                              Sem perícias treinadas
-                                            </span>
-                                          }
-                                        </div>
-                                      </button>
-
-                                      <div class="flex items-center gap-2 shrink-0">
-                                        <button
-                                          type="button"
-                                          class="rounded-md border border-zinc-700 bg-zinc-900/70 px-2.5 py-1 text-xs text-zinc-200 transition hover:border-zinc-500 hover:text-white"
-                                          (click)="toggleMarkExpanded(markIndex)">
-                                          {{ isMarkExpanded(markIndex) ? 'Recolher' : 'Expandir' }}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          class="rounded-md border border-red-900/70 bg-red-950/40 px-2.5 py-1 text-xs text-red-200 transition hover:bg-red-950/70"
-                                          (click)="removeMark(markIndex)">
-                                          Remover
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    @if (isMarkExpanded(markIndex)) {
-                                      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4 border-t border-zinc-800 pt-4">
-                                        <div class="xl:col-span-2 flex flex-col gap-4">
-                                          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <label class="flex flex-col gap-1 text-xs text-zinc-400">
-                                              Nome
-                                              <input [historyField]="{ column: 'marks', path: [markIndex, 'name'], trim: true, label: 'Marco: nome' }"
-                                                type="text"
-                                                class="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-                                                [(ngModel)]="mark.name"
-                                                (ngModelChange)="onMarksChange()"
-                                                placeholder="Ex.: Juramento da Vigília">
-                                            </label>
-
-                                            <label class="flex flex-col gap-1 text-xs text-zinc-400">
-                                              Tipo de marco narrativo
-                                              <input [historyField]="{ column: 'marks', path: [markIndex, 'narrativeType'], trim: true, label: 'Marco: tipo narrativo' }"
-                                                type="text"
-                                                class="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-                                                [(ngModel)]="mark.narrativeType"
-                                                (ngModelChange)="onMarksChange()"
-                                                placeholder="Ex.: Revelação, Trauma, Ascensão">
-                                            </label>
-
-                                            <label class="md:col-span-2 flex flex-col gap-1 text-xs text-zinc-400">
-                                              Descrição
-                                              <textarea [historyField]="{ column: 'marks', path: [markIndex, 'description'], trim: false, label: 'Marco: descrição' }"
-                                                class="min-h-28 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-                                                [(ngModel)]="mark.description"
-                                                (ngModelChange)="onMarksChange()"
-                                                placeholder="Descreva o impacto narrativo deste marco."></textarea>
-                                            </label>
-
-                                          </div>
-
-                                          <div class="rounded-md border border-zinc-800 bg-zinc-950/40 p-3">
-                                            <div class="flex items-center justify-between gap-3 mb-3">
-                                              <h4 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Habilidades</h4>
-                                              <button
-                                                type="button"
-                                                class="rounded-md border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 transition hover:border-zinc-500 hover:text-white"
-                                                (click)="addMarkHability(markIndex)">
-                                                Adicionar habilidade
-                                              </button>
-                                            </div>
-
-                                            <div class="flex flex-col gap-3">
-                                              @for (hability of mark.habilities; track $index; let habilityIndex = $index) {
-                                                <div class="rounded-md border border-zinc-800 bg-zinc-900/80 p-3">
-                                                  <div class="flex items-center justify-between gap-2 mb-3">
-                                                    <span class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Habilidade {{ habilityIndex + 1 }}</span>
-                                                    <button
-                                                      type="button"
-                                                      class="rounded-md border border-red-900/70 bg-red-950/40 px-2 py-1 text-[11px] text-red-200 transition hover:bg-red-950/70"
-                                                      (click)="removeMarkHability(markIndex, habilityIndex)">
-                                                      Remover
-                                                    </button>
-                                                  </div>
-
-                                                  <div class="grid grid-cols-1 gap-3">
-                                                    <label class="flex flex-col gap-1 text-xs text-zinc-400">
-                                                      Nome
-                                                      <input [historyField]="{ column: 'marks', path: [markIndex, 'habilities', habilityIndex, 'name'], trim: true, label: 'Habilidade do marco' }"
-                                                        type="text"
-                                                        class="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-                                                        [(ngModel)]="hability.name"
-                                                        (ngModelChange)="onMarksChange()"
-                                                        placeholder="Opcional">
-                                                    </label>
-
-                                                    <label class="flex flex-col gap-1 text-xs text-zinc-400">
-                                                      Descrição
-                                                      <textarea [historyField]="{ column: 'marks', path: [markIndex, 'habilities', habilityIndex, 'description'], trim: false, label: 'Habilidade do marco' }"
-                                                        class="min-h-24 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-                                                        [(ngModel)]="hability.description"
-                                                        (ngModelChange)="onMarksChange()"
-                                                        placeholder="Efeito da habilidade."></textarea>
-                                                    </label>
-                                                  </div>
-                                                </div>
-                                              }
-
-                                              @if (mark.habilities.length === 0) {
-                                                <div class="rounded-md border border-dashed border-zinc-700 px-4 py-4 text-center text-xs text-zinc-500">
-                                                  Nenhuma habilidade cadastrada para este marco.
-                                                </div>
-                                              }
-                                            </div>
-                                          </div>
-
-                                          <div class="rounded-md border border-zinc-800 bg-zinc-950/40 p-3">
-                                            <div class="flex items-center justify-between gap-3 mb-3">
-                                              <h4 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Fraquezas</h4>
-                                              <button
-                                                type="button"
-                                                class="rounded-md border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 transition hover:border-zinc-500 hover:text-white"
-                                                (click)="addMarkWeakness(markIndex)">
-                                                Adicionar fraqueza
-                                              </button>
-                                            </div>
-
-                                            <div class="flex flex-col gap-3">
-                                              @for (weakness of mark.weaknesses; track $index; let weaknessIndex = $index) {
-                                                <div class="rounded-md border border-zinc-800 bg-zinc-900/80 p-3">
-                                                  <div class="flex items-center justify-between gap-2 mb-3">
-                                                    <span class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Fraqueza {{ weaknessIndex + 1 }}</span>
-                                                    <button
-                                                      type="button"
-                                                      class="rounded-md border border-red-900/70 bg-red-950/40 px-2 py-1 text-[11px] text-red-200 transition hover:bg-red-950/70"
-                                                      (click)="removeMarkWeakness(markIndex, weaknessIndex)">
-                                                      Remover
-                                                    </button>
-                                                  </div>
-
-                                                  <div class="grid grid-cols-1 gap-3">
-                                                    <label class="flex flex-col gap-1 text-xs text-zinc-400">
-                                                      Nome
-                                                      <input [historyField]="{ column: 'marks', path: [markIndex, 'weaknesses', weaknessIndex, 'name'], trim: true, label: 'Fraqueza: nome' }"
-                                                        type="text"
-                                                        class="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-                                                        [(ngModel)]="weakness.name"
-                                                        (ngModelChange)="onMarksChange()"
-                                                        placeholder="Opcional">
-                                                    </label>
-
-                                                    <label class="flex flex-col gap-1 text-xs text-zinc-400">
-                                                      Descrição
-                                                      <textarea [historyField]="{ column: 'marks', path: [markIndex, 'weaknesses', weaknessIndex, 'description'], trim: false, label: 'Fraqueza: descrição' }"
-                                                        class="min-h-24 rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-                                                        [(ngModel)]="weakness.description"
-                                                        (ngModelChange)="onMarksChange()"
-                                                        placeholder="Limitação, custo ou vulnerabilidade."></textarea>
-                                                    </label>
-                                                  </div>
-                                                </div>
-                                              }
-
-                                              @if (mark.weaknesses.length === 0) {
-                                                <div class="rounded-md border border-dashed border-zinc-700 px-4 py-4 text-center text-xs text-zinc-500">
-                                                  Nenhuma fraqueza cadastrada para este marco.
-                                                </div>
-                                              }
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <div class="rounded-md border border-zinc-800 bg-zinc-950/30 p-3 overflow-y-auto">
-                                          <h4 class="text-center mb-3 text-sm text-zinc-100">Atributos e perícias</h4>
-                                          <div class="flex flex-col gap-4">
-                                            @for (entry of attributeGroupEntries; track entry[0]) {
-                                              <div>
-                                                <div class="flex items-center justify-between mb-2">
-                                                  <span class="text-xs font-semibold text-zinc-200 uppercase tracking-wide">{{ attributeGroupLabel[entry[0]] }}</span>
-                                                  <input
-                                                    type="number"
-                                                    class="w-12 text-center bg-zinc-800 border border-zinc-700 rounded px-1 py-0.5 text-xs text-white outline-none focus:border-zinc-500"
-                                                    [(ngModel)]="mark.attributes[entry[0]].value"
-                                                    (ngModelChange)="onMarksChange()">
-                                                </div>
-                                                <div class="flex flex-col gap-1.5 pl-1">
-                                                  @for (skill of entry[1]; track skill) {
-                                                    <div class="flex items-center justify-between gap-3">
-                                                      <span class="text-xs text-zinc-400">{{ skillLabel[skill] }}</span>
-                                                      <div class="flex gap-1.5">
-                                                        @for (level of [0,1,2,3]; track level) {
-                                                          <input
-                                                            type="checkbox"
-                                                            class="circle-checkbox level-{{level}}"
-                                                            [checked]="getMarkSkillLevel(mark, entry[0], skill) >= level"
-                                                            [title]="getSkillLevelLabel(level)"
-                                                            (click)="onMarkCircleClick($event, mark, entry[0], skill, level)">
-                                                        }
-                                                      </div>
-                                                    </div>
-                                                  }
-                                                </div>
-                                              </div>
-                                            }
-                                          </div>
-                                        </div>
-                                      </div>
-                                    }
-                                  </div>
-                                }
-
-                                @if (marksData.length === 0) {
-                                  <div class="rounded-md border border-dashed border-zinc-800 px-4 py-8 text-center text-sm text-zinc-500">
-                                    Nenhum marco cadastrado para este personagem.
-                                  </div>
-                                }
-                              </div>
-                            }
-                            @case ('inventory') {
-                              <irpw-inventory [characterId]="selectedCharacterId"></irpw-inventory>
-                            }
-                            @case ('skills') {
-                              <div class="flex flex-col gap-4">
-                                <div class="flex items-center justify-between gap-3">
-                                  <div>
-                                    <h3 class="text-sm font-semibold text-zinc-100">Poderes</h3>
-                                    <p class="text-xs text-zinc-500">Poderes, magias e passivas ficam organizados por tipo. Favoritos aparecem nos atalhos da aba Geral.</p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    class="ironpaw-action-button"
-                                    (click)="addHability()">
-                                    Adicionar habilidade
-                                  </button>
-                                </div>
-
-                                @for (type of habilityTypeOptions; track type.value) {
-                                  <section class="ironpaw-skill-section" [attr.data-skill-type]="type.value">
-                                    <header class="ironpaw-skill-section__header">
-                                      <div class="flex items-center gap-2">
-                                        <i class="fa-solid" [ngClass]="getHabilityTypeIcon(type.value)" aria-hidden="true"></i>
-                                        <h4>{{ type.label }}</h4>
-                                      </div>
-                                      <span>{{ getOwnHabilitiesByType(type.value).length + getInheritedHabilitiesByType(type.value).length }}</span>
-                                    </header>
-
-                                    <div class="flex flex-col gap-3">
-                                      @for (hability of habilitiesData; track hability.id; let habilityIndex = $index) {
-                                        @if (hability.type === type.value) {
-                                          <article class="ironpaw-ability-row">
-                                            <div class="ironpaw-ability-row__toolbar">
-                                              <span>Personagem</span>
-                                              <div class="flex items-center gap-1.5">
-                                                <button type="button" class="ironpaw-favorite-button" [class.is-favorite]="isActionFavorite(getOwnedAbilityFavoriteKey(hability, habilityIndex))" [attr.aria-pressed]="isActionFavorite(getOwnedAbilityFavoriteKey(hability, habilityIndex))" [attr.aria-label]="isActionFavorite(getOwnedAbilityFavoriteKey(hability, habilityIndex)) ? 'Remover habilidade dos favoritos' : 'Adicionar habilidade aos favoritos'" (click)="toggleActionFavorite(getOwnedAbilityFavoriteKey(hability, habilityIndex))">
-                                                  <i class="fa-solid fa-star" aria-hidden="true"></i>
-                                                </button>
-                                                <button type="button" class="ironpaw-remove-button" (click)="removeHability(habilityIndex)">Remover</button>
-                                              </div>
-                                            </div>
-                                            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                              <label class="flex flex-col gap-1 text-xs text-zinc-400">
-                                                Nome
-                                                <input [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory" type="text" class="rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500" [(ngModel)]="hability.name" (ngModelChange)="onHabilitiesChange()" placeholder="Ex.: Passos entre as sombras">
-                                              </label>
-                                              <label class="flex flex-col gap-1 text-xs text-zinc-400">
-                                                Perícia para o atalho
-                                                <select class="rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500" [(ngModel)]="hability.rollSkill" (ngModelChange)="onHabilitiesChange()">
-                                                  <option [ngValue]="null">Sem rolagem associada</option>
-                                                  @for (skill of rollSkillOptions; track skill.id) { <option [ngValue]="skill.id">{{ skill.name }}</option> }
-                                                </select>
-                                              </label>
-                                              <label class="flex flex-col gap-1 text-xs text-zinc-400">
-                                                Tipo
-                                                <select class="rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-zinc-500" [(ngModel)]="hability.type" (ngModelChange)="onHabilitiesChange()">
-                                                  @for (kind of habilityTypeOptions; track kind.value) { <option [ngValue]="kind.value">{{ kind.label }}</option> }
-                                                </select>
-                                              </label>
-                                              <label class="flex flex-col gap-1 text-xs text-zinc-400 md:col-span-2">
-                                                Descrição
-                                                <textarea [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory" class="min-h-20 rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500" [(ngModel)]="hability.description" (ngModelChange)="onHabilitiesChange()" placeholder="Descreva o efeito da habilidade."></textarea>
-                                              </label>
-                                            </div>
-                                          </article>
-                                        }
-                                      }
-
-                                      @for (hability of getInheritedHabilitiesByType(type.value); track hability.favoriteKey) {
-                                        <article class="ironpaw-ability-row ironpaw-ability-row--inherited">
-                                          <div class="ironpaw-ability-row__toolbar">
-                                            <div class="flex items-center gap-2">
-                                              <span>{{ hability.sourceLabel }}</span>
-                                              @if (hability.rollSkill) { <small>{{ skillLabel[hability.rollSkill] }}</small> }
-                                            </div>
-                                            <div class="flex items-center gap-1.5">
-                                              <button type="button" class="ironpaw-favorite-button" [class.is-favorite]="isActionFavorite(hability.favoriteKey)" [attr.aria-pressed]="isActionFavorite(hability.favoriteKey)" [attr.aria-label]="isActionFavorite(hability.favoriteKey) ? 'Remover habilidade dos favoritos' : 'Adicionar habilidade aos favoritos'" (click)="toggleActionFavorite(hability.favoriteKey)">
-                                                <i class="fa-solid fa-star" aria-hidden="true"></i>
-                                              </button>
-                                              <button type="button" class="ironpaw-action-button" (click)="activateAbilityShortcut(hability)">{{ hability.rollSkill ? 'Preparar rolagem' : 'Ver efeito' }}</button>
-                                            </div>
-                                          </div>
-                                          <h5>{{ hability.name || (hability.type === 'passive' ? 'Passiva sem nome' : 'Habilidade sem nome') }}</h5>
-                                          <p>{{ hability.description || 'Sem descrição.' }}</p>
-                                        </article>
-                                      }
-
-                                      @if (getOwnHabilitiesByType(type.value).length + getInheritedHabilitiesByType(type.value).length === 0) {
-                                        <p class="ironpaw-skill-section__empty">Nenhuma habilidade {{ type.label.toLowerCase() }} cadastrada.</p>
-                                      }
-                                    </div>
-                                  </section>
-                                }
-                              </div>
-                            }
-                          }
-
-                      </div>
-
-                    </div>
-                  </div>
-            </div>
-          } @else {
-            <div class="h-full rounded-md flex items-center justify-center text-zinc-500">
-              Selecione um personagem para ver a ficha
-            </div>
-          }
-        </div>
-
-      </div>
-    </div>
-
-    <button
-      type="button"
-      class="fixed cursor-pointer right-4 bottom-4 z-40 inline-flex items-center gap-1 rounded-md border px-1 py-0.5 text-sm shadow-2xl transition-all duration-200 hover:-translate-y-0.5 md:right-6 md:bottom-6"
-      [ngClass]="isRollPanelOpen
-        ? 'border-rose-500/40 bg-zinc-950 '
-        : 'border-zinc-800 bg-zinc-925  hover:border-white '"
-      (click)="toggleRollPanel()"
-      [attr.aria-expanded]="isRollPanelOpen"
-      aria-label="Abrir painel de rolagem">
-      <span class="flex h-9 w-9 items-center justify-center">
-        <i class="fa-solid text-sm" [ngClass]="isRollPanelOpen ? 'fa-xmark' : 'fa-dice'"></i>
-      </span>
-      <span class="text-xs font-semibold uppercase tracking-[0.22em]">Rolagens</span>
-    </button>
-
-    @if (isRollPanelOpen) {
-      <section class="fixed right-4 bottom-[5.5rem] z-[39] w-[calc(100vw-2rem)] max-h-[calc(100vh-6.5rem)] overflow-y-auto rounded-md border border-zinc-800 bg-zinc-925 p-4 shadow-2xl backdrop-blur md:right-6 md:bottom-[6.25rem] md:w-[min(32rem,calc(100vw-3rem))] md:max-h-[calc(100vh-7.5rem)]">
-        <div class="flex items-start justify-between gap-3 mb-4">
-          <div>
-            <p class="text-[11px] uppercase tracking-[0.24em] text-amber-300/70 mb-1">Rolagem tática</p>
-            <h2 class="text-sm font-semibold text-zinc-100">d10 simultâneos</h2>
-            @if (rollShortcutLabel) {
-              <p class="mt-1 text-[11px] text-zinc-400">{{ rollShortcutLabel }}</p>
-            }
-          </div>
-          <button
-            type="button"
-            class="text-zinc-500 transition hover:text-zinc-100"
-            (click)="toggleRollPanel()"
-            aria-label="Fechar painel de rolagem">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-          <app-combo-box
-            class="w-full"
-            label="Perícia"
-            [items]="rollSkillOptions"
-            compareProp="id"
-            displayProp="name"
-            [clearable]="true"
-            [(comboValue)]="selectedRollSkill"
-            (comboValueChange)="onRollSkillChange()">
-          </app-combo-box>
-
-          <app-combo-box
-            class="w-full"
-            label="Bônus base"
-            [items]="rollBonusSourceOptions"
-            compareProp="id"
-            displayProp="name"
-            [(comboValue)]="selectedRollBonusSource"
-            (comboValueChange)="onRollBonusSourceChange()">
-          </app-combo-box>
-        </div>
-
-        @if (selectedRollBonusSource === 'perception') {
-          <div class="mb-3">
-            <app-combo-box
-              class="w-full"
-              label="Percepção usada no bônus"
-              [items]="rollPerceptionOptions"
-              compareProp="id"
-              displayProp="name"
-              [clearable]="true"
-              [(comboValue)]="selectedRollPerception"
-              (comboValueChange)="onRollPerceptionChange()">
-            </app-combo-box>
-          </div>
-        }
-
-        <div class="grid grid-cols-2 gap-3 mb-3">
-          <label class="flex flex-col gap-1 text-xs text-zinc-400">
-            Ajuste manual
-            <input
-              type="number"
-              class="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-              [(ngModel)]="rollManualModifier"
-              (ngModelChange)="onRollManualModifierChange()">
-          </label>
-          <label class="flex flex-col gap-1 text-xs text-zinc-400">
-            Valor para passar
-            <input
-              type="number"
-              class="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-              [(ngModel)]="rollTargetValue">
-          </label>
-        </div>
-
-        <div class="mb-3 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3">
-          <div class="flex items-center justify-between gap-3 mb-2">
-            <div>
-              <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Fórmula</h3>
-              <p class="text-[11px] text-zinc-500">Formato: <span class="font-mono">3d10+3</span></p>
-            </div>
-            <button
-              type="button"
-              class="rounded-full border px-2.5 py-1 text-[11px] transition"
-              [ngClass]="rollFormulaMode === 'auto'
-                ? 'border-amber-500/50 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
-                : 'border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100'"
-              (click)="resetRollFormulaToAuto()">
-              {{ rollFormulaMode === 'auto' ? 'Automática ativa' : 'Usar automática' }}
-            </button>
-          </div>
-
-          <input
-            type="text"
-            class="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500 font-mono"
-            [ngModel]="rollFormula"
-            (ngModelChange)="onRollFormulaInputChange($event)"
-            placeholder="1d10+0">
-
-          @if (rollFormulaError) {
-            <p class="mt-2 text-[11px] text-red-300">{{ rollFormulaError }}</p>
-          } @else {
-            <div class="mt-3 flex flex-wrap gap-2">
-              @for (modifier of rollPreview.modifiers; track modifier.key) {
-                <span class="rounded-full border border-zinc-700 bg-zinc-900/80 px-2.5 py-1 text-[11px] text-zinc-300">
-                  {{ modifier.label }}: {{ modifier.displayValue ?? formatSignedValue(modifier.value) }}
-                </span>
-              }
-
-              @if (rollPreview.modifiers.length === 0) {
-                <span class="rounded-full border border-dashed border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-500">
-                  Sem bônus configurado
-                </span>
-              }
-            </div>
-          }
-        </div>
-
-        <div class="flex items-center justify-between gap-3 mb-3">
-          <div class="text-[11px] text-zinc-500">
-            {{ getRollPreviewDescription() }}
-          </div>
-          <button
-            type="button"
-            class="rounded-xl border border-emerald-700 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
-            (click)="rollDice()">
-            Rolar agora
-          </button>
-        </div>
-
-        @if (lastRollFormula) {
-          <div class="mb-3 rounded-xl border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-xs text-zinc-400">
-            Última rolagem: <span class="font-mono text-zinc-200">{{ lastRollFormula }}</span>
-            @if (rollTargetValue != null) {
-              <span class="text-zinc-500"> · alvo {{ rollTargetValue }}</span>
-            }
-          </div>
-        }
-
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-3">
-          @for (result of rollResults; track result.index) {
-            <article
-              class="rounded-2xl border p-3 text-zinc-200"
-              [ngClass]="getRollResultCardClass(result.status)">
-              <div class="flex items-center justify-between gap-2 mb-2">
-                <span class="text-[11px] uppercase tracking-wide opacity-80">Rolagem {{ result.index }}</span>
-                <span class="text-[11px] opacity-70">{{ result.resolutionLabel }} {{ formatSignedValue(result.modifier) }}</span>
-              </div>
-              <div class="flex items-end justify-between gap-3">
-                <div>
-                  <p class="text-[11px] opacity-75">Dado</p>
-                  <p class="text-xl font-semibold leading-none">{{ result.dieValue }}</p>
-                </div>
-                <div class="text-right">
-                  <p class="text-[11px] opacity-75">Total</p>
-                  <p class="text-2xl font-bold leading-none">{{ result.total }}</p>
-                </div>
-              </div>
-              @if (result.rolls.length > 1) {
-                <p class="mt-2 text-[11px] opacity-70">Dados: {{ result.rolls.join(', ') }}</p>
-              }
-            </article>
-          }
-
-          @if (rollResults.length === 0) {
-            <div class="rounded-2xl border border-dashed border-zinc-800 px-4 py-6 text-center text-xs text-zinc-500">
-              Configure a rolagem e execute para ver os resultados aqui.
-            </div>
-          }
-        </div>
-      </section>
-    }
-  `,
+  imports: [IconButtonComponent, EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent, IrpwAbilityMechanicsComponent],
+  templateUrl: './irpw-character-sheet.component.html',
   styleUrl: './irpw-character-sheet.component.css',
 })
 export class IrpwCharacterSheetComponent implements OnInit {
@@ -1634,6 +175,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   readonly readSubspecializationHistory = (): string => this.currentSheet?.subspecialization || '';
   readonly readHabilitiesHistory = (): string => this.currentSheet?.habilities || '';
   restoreSheetHistory(): void {
+    this.parseAttributes();
     this.parseSubspecializations();
     this.parseHabilities();
     this.parseLifepoints();
@@ -1656,6 +198,16 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private readonly itemCatalog = inject(IrpwItemCatalogService);
 
   characterIdInput = input<string>('');
+  private readonly catalogChangesEffect = effect(() => {
+    this.itemCatalog.changes();
+    if (!this.selectedCharacterId || !this.currentSheet) return;
+    const latest = this.sheetService.getSheet(this.selectedCharacterId);
+    if (latest) {
+      this.currentSheet.inventory = latest.inventory;
+      this.currentSheet.defensepoints = latest.defensepoints;
+      this.parseDefensepoints();
+    }
+  });
 
   private syncInputSelectionEffect = effect(() => {
     const characterId = this.characterIdInput().trim();
@@ -1688,12 +240,27 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 600);
   isLifeSettingsOpen = false;
   pendingLifeMaxPoints: number | null = null;
+  pendingLifeTemporaryPoints = 0;
+  isResistanceSettingsOpen = false;
+  pendingResistanceMaxPoints = 0;
+  pendingResistanceTemporaryPoints = 0;
   isStressSettingsOpen = false;
   pendingStressThresholds: StressThresholdConfig = { anxious: 10, troubled: 20, disturbed: 30, lost: 40 };
   isConditionSettingsOpen = false;
 
   perceptionsData: IrpwPerceptions = { smell: null, vision: null, hearing: null };
   vocationSkillMinimums: Record<SkillCode, number> = {} as Record<SkillCode, number>;
+
+  conjurationAttribute: AttributeGroupCode | null = null;
+  conjurationLevel = 0;
+  readonly abilitySummary = abilitySummary;
+  abilityGradeTone(ability: IrpwVocationHability): string {
+    if (ability.type === 'passive') return 'passive';
+    if (ability.grade === 'master' || ability.grade === 'major') return 'master';
+    if (ability.grade === 'intermediate' || ability.grade === 'medium') return 'intermediate';
+    return 'basic';
+  }
+  readonly abilitySkillOptions = Object.entries(SKILL_LABEL).map(([id, name]) => ({ id: id as SkillCode, name }));
 
   attributesData: Record<string, { value: number | null; skills: Record<string, number> }> = {};
   subspecializationsData: string[] = [''];
@@ -1708,6 +275,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   expandedMarkIndexes = new Set<number>();
   readonly attributeGroupEntries = Object.entries(ATTRIBUTE_GROUP_SKILLS) as [AttributeGroupCode, SkillCode[]][];
   readonly attributeGroupLabel = ATTRIBUTE_GROUP_LABEL;
+  readonly attributeGroupIcon = ATTRIBUTE_GROUP_ICON;
   readonly skillLabel = SKILL_LABEL;
   readonly conditionCategories: ConditionCategoryCode[] = [
     CONDITION_CATEGORY.ATTRIBUTE,
@@ -1732,17 +300,21 @@ export class IrpwCharacterSheetComponent implements OnInit {
     { id: 'vision', name: 'Visão' },
     { id: 'hearing', name: 'Audição' },
   ];
-  readonly rollSkillOptions = this.attributeGroupEntries.flatMap(([group, skills]) =>
-    skills.map(skill => ({ id: skill, name: `${this.skillLabel[skill]} · ${this.attributeGroupLabel[group]}` }))
-  );
-  private readonly skillToAttributeGroup = this.attributeGroupEntries.reduce((accumulator, [group, skills]) => {
+  get rollSkillOptions() {
+    return this.attributeGroupEntries.flatMap(([group]) => this.getAttributeSkills(group).map(skill => ({ id: skill, name: this.skillLabel[skill] + ' · ' + this.attributeGroupLabel[group] })));
+  }
+  private get skillToAttributeGroup(): Record<SkillCode, AttributeGroupCode> {
+    const mapping = this.attributeGroupEntries.reduce((accumulator, [group, skills]) => {
     for (const skill of skills) {
       accumulator[skill] = group;
     }
     return accumulator;
   }, {} as Record<SkillCode, AttributeGroupCode>);
+    if (this.conjurationAttribute) mapping.CONJURATION = this.conjurationAttribute;
+    return mapping;
+  }
 
-  lifepointsData: { maxPoints: number | null; currentPoints: number | null } = { maxPoints: null, currentPoints: null };
+  lifepointsData: { maxPoints: number | null; currentPoints: number | null; temporaryPoints?: number; temporaryCurrentPoints?: number } = { maxPoints: null, currentPoints: null };
   defensepointsData: IrpwDefensePointsEnvelope = parseIrpwDefensePoints(null);
   resourceData: Record<ResourceKey, ResourceValueState> = {
     stress: { currentPoints: 0, maxPoints: null },
@@ -1768,8 +340,12 @@ export class IrpwCharacterSheetComponent implements OnInit {
     return Array.from({ length: Math.ceil(this.getMaxDefensePoints()) }, (_, index) => index + 1);
   }
 
+  get temporaryLifeSegments(): number[] { return Array.from({ length: this.lifepointsData.temporaryPoints ?? 0 }, (_, i) => i + 1); }
+  get temporaryResistanceSegments(): number[] { return Array.from({ length: this.defensepointsData.temporaryPoints ?? 0 }, (_, i) => i + 1); }
+
   public getPersonalizationValue = getPersonalizationValue;
   public getTextColorStyle = getTextColorStyle;
+  public getTextClass = getTextClass;
   public getImageByUsageKey = getImageByUsageKey;
 
   isRollPanelOpen = false;
@@ -1782,7 +358,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   rollFormula = '1d10';
   rollFormulaMode: RollFormulaMode = 'auto';
   rollFormulaError = '';
-  rollPreview: RollPreview = { attempts: 1, modifiers: [], totalModifier: 0, resolutionMode: 'normal' };
+  rollPreview: RollPreview = { attempts: 1, sides: 10, modifiers: [], totalModifier: 0, resolutionMode: 'normal' };
   rollResults: RollResult[] = [];
   lastRollFormula = '';
 
@@ -2302,6 +878,9 @@ export class IrpwCharacterSheetComponent implements OnInit {
         result[group].skills[skill] = this.normalizeSkillLevel(parsed[group]?.skills?.[skill]);
       }
     }
+    const conjuration = (parsed as unknown as { _conjuration?: { attribute?: AttributeGroupCode; level?: number } })._conjuration;
+    this.conjurationAttribute = conjuration?.attribute && Object.hasOwn(ATTRIBUTE_GROUP_SKILLS, conjuration.attribute) ? conjuration.attribute : null;
+    this.conjurationLevel = this.normalizeSkillLevel(conjuration?.level);
     this.attributesData = result;
     this.clampAttributesToVocationMinimums();
   }
@@ -2309,7 +888,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   onAttributesChange() {
     if (this.currentSheet) {
       this.clampAttributesToVocationMinimums();
-      this.currentSheet.attributes = JSON.stringify(this.attributesData);
+      this.currentSheet.attributes = JSON.stringify({ ...this.attributesData, _conjuration: { attribute: this.conjurationAttribute, level: this.conjurationLevel } });
       this.scheduleAutoSave();
     }
     this.updateRollFormulaIfAuto();
@@ -2366,8 +945,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
     }
   }
 
-  addHability() {
-    this.habilitiesData = [...this.habilitiesData, this.createEmptyHability()];
+  addHability(type: IrpwHabilityType = 'technical') {
+    this.habilitiesData = [...this.habilitiesData, { ...this.createEmptyHability(), type, rollSkill: type === 'magic' ? SKILL.CONJURATION : null }];
+    this.onHabilitiesChange();
+  }
+
+  setHabilityType(index: number, type: IrpwHabilityType): void {
+    this.habilitiesData = this.habilitiesData.map((ability, i) => i === index ? changeAbilityType(ability, type) : ability);
     this.onHabilitiesChange();
   }
 
@@ -2494,8 +1078,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
   activateAbilityShortcut(hability: IrpwVocationHability & { sourceLabel?: string }): void {
     this.activeAbilityDetail = {
       name: hability.name || 'Habilidade sem nome',
-      description: hability.description || 'Sem descrição registrada.',
+      description: [hability.description || 'Sem descrição registrada.', abilitySummary(hability)].join('\n'),
     };
+    if (hability.rollSkill === SKILL.CONJURATION && !this.conjurationAttribute) {
+      this.activeAbilityDetail.description += '\nEscolha o atributo para conjurar na seção Atributos antes de preparar esta rolagem.';
+      this.selectTab('general');
+      return;
+    }
     if (!hability.rollSkill) {
       this.selectTab('general');
       return;
@@ -2507,6 +1096,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
     this.isRollPanelOpen = true;
     this.rollResults = [];
     this.updateRollFormulaIfAuto();
+  }
+
+  personalizeAbility(ability: IrpwVocationHability): void {
+    const copy = structuredClone(ability);
+    copy.id = crypto.randomUUID();
+    this.habilitiesData = [...this.habilitiesData, copy];
+    this.onHabilitiesChange();
   }
 
   getHabilityTypeLabel(type: IrpwHabilityType | null | undefined): string {
@@ -2525,7 +1121,18 @@ export class IrpwCharacterSheetComponent implements OnInit {
     return `ability:character:${this.selectedCharacterId}:${hability.id || `index-${index}`}`;
   }
 
+  getAttributeSkills(group: AttributeGroupCode): SkillCode[] {
+    return this.conjurationAttribute === group ? [...ATTRIBUTE_GROUP_SKILLS[group], SKILL.CONJURATION] : ATTRIBUTE_GROUP_SKILLS[group];
+  }
+
+  onConjurationAttributeChange(value: AttributeGroupCode | null): void {
+    this.conjurationAttribute = value;
+    if (!value && this.selectedRollSkill === SKILL.CONJURATION) this.selectedRollSkill = null;
+    this.onAttributesChange();
+  }
+
   getSkillLevel(group: string, skill: string): number {
+    if (skill === SKILL.CONJURATION) return this.conjurationLevel;
     const storedLevel = this.normalizeSkillLevel(this.attributesData[group]?.skills[skill]);
     const minimumLevel = this.vocationSkillMinimums[skill as SkillCode] ?? 0;
     return Math.max(storedLevel, minimumLevel);
@@ -2534,7 +1141,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
   onCircleClick(event: Event, group: string, skill: string, level: number) {
     event.preventDefault();
     const current = this.getSkillLevel(group, skill);
-    this.attributesData[group].skills[skill] = current === level ? 0 : this.normalizeSkillLevel(level);
+    if (skill === SKILL.CONJURATION) this.conjurationLevel = current === level ? 0 : this.normalizeSkillLevel(level);
+    else this.attributesData[group].skills[skill] = current === level ? 0 : this.normalizeSkillLevel(level);
     this.onAttributesChange();
   }
 
@@ -2575,6 +1183,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
       const maxPoints = Math.max(this.normalizeLifeMaxPoints(parsed.maxPoints) ?? 0, this.getLifeMinimum());
       this.lifepointsData = {
         maxPoints,
+        temporaryPoints: this.normalizeTemporaryCount(parsed.temporaryPoints),
+        temporaryCurrentPoints: Math.min(this.normalizeTemporaryCount(parsed.temporaryPoints), this.normalizeTemporaryCount(parsed.temporaryCurrentPoints)),
         currentPoints: this.normalizeLifeCurrentPoints(parsed.currentPoints, maxPoints),
       };
     } catch {
@@ -2632,15 +1242,15 @@ export class IrpwCharacterSheetComponent implements OnInit {
     }
   }
 
-  getLifeFillQuarters(segment: number): number {
+  getLifeFillHalves(segment: number): number {
     const currentPoints = this.normalizeLifeCurrentPoints(this.lifepointsData.currentPoints, this.getMaxLifePoints()) ?? 0;
     const pointsWithinSegment = Math.max(0, Math.min(1, currentPoints - segment + 1));
-    return Math.max(0, Math.min(4, Math.floor(pointsWithinSegment * 4 + 0.0001)));
+    return Math.max(0, Math.min(2, Math.floor(pointsWithinSegment * 2 + 0.0001)));
   }
 
-  setLifePoints(segment: number, quarter: number) {
-    const nextValue = segment - 1 + quarter * 0.25;
-    this.lifepointsData.currentPoints = this.normalizeLifeCurrentPoints(nextValue, this.getMaxLifePoints());
+  setLifePoints(segment: number, half: number) {
+    const nextValue = segment - 1 + half * 0.5;
+    this.lifepointsData.currentPoints = this.lifepointsData.currentPoints === nextValue ? Math.max(0, nextValue - 0.5) : this.normalizeLifeCurrentPoints(nextValue, this.getMaxLifePoints());
     this.onLifepointsChange();
   }
 
@@ -2651,7 +1261,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
   formatLifeValue(value: number | null | undefined): string {
     if (value == null || Number.isNaN(Number(value))) return '0';
-    const normalizedValue = Math.round(Number(value) * 4) / 4;
+    const normalizedValue = Math.round(Number(value) * 2) / 2;
     return Number.isInteger(normalizedValue) ? `${normalizedValue}` : `${normalizedValue}`.replace('.', ',');
   }
 
@@ -2696,16 +1306,15 @@ export class IrpwCharacterSheetComponent implements OnInit {
     return 'healthy';
   }
 
-  getResistanceFillState(segment: number): 0 | 1 | 2 {
+  getResistanceFillState(segment: number): 0 | 2 {
     const current = this.defensepointsData.currentPoints ?? 0;
     if (current >= segment) return 2;
-    if (current >= segment - 0.5) return 1;
     return 0;
   }
 
-  setDefensePoints(segment: number, isFullSegment: boolean): void {
-    const next = isFullSegment ? segment : segment - 0.5;
-    this.defensepointsData.currentPoints = Math.min(this.getMaxDefensePoints(), Math.max(0, next));
+  setDefensePoints(segment: number): void {
+    const next = segment;
+    this.defensepointsData.currentPoints = this.defensepointsData.currentPoints === next ? Math.max(0, next - 1) : Math.min(this.getMaxDefensePoints(), Math.max(0, next));
     this.onDefensepointsChange();
   }
 
@@ -2723,6 +1332,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
   openLifeSettingsOverlay() {
     this.pendingLifeMaxPoints = this.getMaxLifePoints();
+    this.pendingLifeTemporaryPoints = this.lifepointsData.temporaryPoints ?? 0;
     this.isLifeSettingsOpen = true;
   }
 
@@ -2733,9 +1343,50 @@ export class IrpwCharacterSheetComponent implements OnInit {
   saveLifeMaxPoints() {
     const maxPoints = Math.max(this.normalizeLifeMaxPoints(this.pendingLifeMaxPoints) ?? 0, this.getLifeMinimum());
     this.lifepointsData.maxPoints = maxPoints;
+    const nextTemporary = this.normalizeTemporaryCount(this.pendingLifeTemporaryPoints);
+    this.lifepointsData.temporaryCurrentPoints = this.resizeTemporary(this.lifepointsData.temporaryPoints, this.lifepointsData.temporaryCurrentPoints, nextTemporary);
+    this.lifepointsData.temporaryPoints = nextTemporary;
     this.lifepointsData.currentPoints = this.normalizeLifeCurrentPoints(this.lifepointsData.currentPoints, maxPoints);
     this.onLifepointsChange();
     this.closeLifeSettingsOverlay();
+  }
+
+  private normalizeTemporaryCount(value: unknown): number { return Math.min(100, Math.max(0, Math.trunc(Number(value) || 0))); }
+
+  private resizeTemporary(previous: number | undefined, current: number | undefined, next: number): number {
+    return Math.min(next, Math.max(0, (current ?? 0) + Math.max(0, next - (previous ?? 0))));
+  }
+
+  toggleTemporaryLife(segment: number): void {
+    const current = this.lifepointsData.temporaryCurrentPoints ?? 0;
+    this.lifepointsData.temporaryCurrentPoints = current === segment ? segment - 1 : segment;
+    this.onLifepointsChange();
+  }
+
+  getTemporaryResistanceFill(segment: number): number {
+    return (this.defensepointsData.temporaryCurrentPoints ?? 0) >= segment ? 2 : 0;
+  }
+
+  setTemporaryResistance(segment: number): void {
+    const next = Math.min(this.defensepointsData.temporaryPoints ?? 0, Math.max(0, Math.trunc(segment)));
+    this.defensepointsData.temporaryCurrentPoints = this.defensepointsData.temporaryCurrentPoints === next ? Math.max(0, next - 1) : next;
+    this.onDefensepointsChange();
+  }
+
+  toggleResistanceSettings(): void {
+    this.pendingResistanceMaxPoints = this.getMaxDefensePoints();
+    this.pendingResistanceTemporaryPoints = this.defensepointsData.temporaryPoints ?? 0;
+    this.isResistanceSettingsOpen = !this.isResistanceSettingsOpen;
+  }
+
+  saveResistanceSettings(): void {
+    const maximum = this.normalizeTemporaryCount(this.pendingResistanceMaxPoints);
+    this.defensepointsData.manualAdjustment = maximum - this.defensepointsData.vocationContribution - this.defensepointsData.protectionContribution;
+    const nextTemporary = this.normalizeTemporaryCount(this.pendingResistanceTemporaryPoints);
+    this.defensepointsData.temporaryCurrentPoints = this.resizeTemporary(this.defensepointsData.temporaryPoints, this.defensepointsData.temporaryCurrentPoints, nextTemporary);
+    this.defensepointsData.temporaryPoints = nextTemporary;
+    this.onDefensepointsChange();
+    this.isResistanceSettingsOpen = false;
   }
 
   toggleStressSettingsOverlay(): void {
@@ -2783,7 +1434,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     const numericValue = Number(value);
     if (!Number.isFinite(numericValue)) return null;
 
-    const roundedToQuarter = Math.round(numericValue * 4) / 4;
+    const roundedToQuarter = Math.round(numericValue * 2) / 2;
     const clampedValue = Math.max(0, maxPoints == null ? roundedToQuarter : Math.min(roundedToQuarter, maxPoints));
     return clampedValue === 0 ? 0 : clampedValue;
   }
@@ -3025,6 +1676,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
       description: typeof source.description === 'string' ? source.description : '',
       type,
       rollSkill,
+      ...normalizeAbilityMechanics({ ...source, description: source.description ?? '', type }),
     };
   }
 
@@ -3154,7 +1806,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   onDefensepointsChange() {
     if (this.currentSheet) {
       if (this.defensepointsData.currentPoints !== null) {
-        this.defensepointsData.currentPoints = Math.min(this.getMaxDefensePoints(), Math.max(0, Math.round(this.defensepointsData.currentPoints * 2) / 2));
+        this.defensepointsData.currentPoints = Math.min(this.getMaxDefensePoints(), Math.max(0, Math.round(this.defensepointsData.currentPoints)));
       }
       this.currentSheet.defensepoints = JSON.stringify(this.defensepointsData);
       this.scheduleAutoSave();
@@ -3563,13 +2215,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
     const parsedFormula = this.parseRollFormula(this.rollFormula);
     if (!parsedFormula) {
-      this.rollFormulaError = 'Use o formato Xd10+Y, por exemplo 3d10+3.';
+      this.rollFormulaError = 'Use de 1 a 50 dados d4, d6, d10 ou d20 e um ajuste inteiro. Ex.: 2d6+3.';
       this.rollResults = [];
       return;
     }
 
     this.rollResults = Array.from({ length: parsedFormula.attempts }, (_, index) => {
-      const dieValue = this.rollDie(10);
+      const dieValue = this.rollDie(parsedFormula.sides);
       const total = dieValue + parsedFormula.modifier;
       return {
         index: index + 1,
@@ -3578,7 +2230,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
         modifier: parsedFormula.modifier,
         total,
         status: this.getRollStatus(total),
-        resolutionLabel: '1d10',
+        resolutionLabel: `1d${parsedFormula.sides}`,
       };
     });
     this.lastRollFormula = this.rollFormula;
@@ -3589,23 +2241,20 @@ export class IrpwCharacterSheetComponent implements OnInit {
       return `1 tentativa com desvantagem e modificador total ${this.formatSignedValue(this.rollPreview.totalModifier)}`;
     }
 
-    return `${this.rollPreview.attempts} tentativa(s) com modificador total ${this.formatSignedValue(this.rollPreview.totalModifier)}`;
+    const { attempts, sides, totalModifier } = this.rollPreview;
+    return `${attempts} ${attempts === 1 ? 'tentativa' : 'tentativas'} de d${sides}, cada uma ${this.formatSignedValue(totalModifier)}`;
   }
 
   formatSignedValue(value: number): string {
     return value >= 0 ? `+${value}` : `${value}`;
   }
 
-  getRollResultCardClass(status: RollStatus): string {
+  getRollStatusLabel(status: RollStatus): string {
     switch (status) {
-      case 'success':
-        return 'border-emerald-500/45 bg-emerald-950/40 text-emerald-100';
-      case 'near':
-        return 'border-amber-400/45 bg-amber-950/30 text-amber-100';
-      case 'fail':
-        return 'border-red-500/40 bg-red-950/35 text-red-100';
-      default:
-        return 'border-zinc-700 bg-zinc-900/70 text-zinc-200';
+      case 'success': return 'Sucesso';
+      case 'near': return 'Por pouco';
+      case 'fail': return 'Falha';
+      default: return 'Sem alvo';
     }
   }
 
@@ -3620,8 +2269,8 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   private updateRollFormulaIfAuto() {
-    this.rollPreview = this.buildAutoRollPreview();
     if (this.rollFormulaMode === 'auto') {
+      this.rollPreview = this.buildAutoRollPreview();
       this.rollFormula = this.buildRollFormula(this.rollPreview);
       this.rollFormulaError = '';
     }
@@ -3630,13 +2279,14 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private refreshRollPreviewFromFormula() {
     const parsedFormula = this.parseRollFormula(this.rollFormula);
     if (!parsedFormula) {
-      this.rollPreview = { attempts: 1, modifiers: [], totalModifier: 0, resolutionMode: 'normal' };
-      this.rollFormulaError = 'Use o formato Xd10+Y, por exemplo 3d10+3.';
+      this.rollPreview = { attempts: 1, sides: 10, modifiers: [], totalModifier: 0, resolutionMode: 'normal' };
+      this.rollFormulaError = 'Use de 1 a 50 dados d4, d6, d10 ou d20 e um ajuste inteiro. Ex.: 2d6+3.';
       return;
     }
 
     this.rollPreview = {
       attempts: parsedFormula.attempts,
+      sides: parsedFormula.sides,
       modifiers: [{ key: 'manual-formula', label: 'Fórmula manual', value: parsedFormula.modifier, category: 'manual' }],
       totalModifier: parsedFormula.modifier,
       resolutionMode: 'normal',
@@ -3717,7 +2367,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
     }
 
     const totalModifier = modifiers.reduce((sum, modifier) => sum + modifier.value, 0);
-    return { attempts, modifiers, totalModifier, resolutionMode };
+    return { attempts, sides: 10, modifiers, totalModifier, resolutionMode };
   }
 
   private buildRollFormula(preview: RollPreview): string {
@@ -3863,17 +2513,18 @@ export class IrpwCharacterSheetComponent implements OnInit {
     return this.selectedRollBonusSource === 'perception' && target === 'PERCEPTION';
   }
 
-  private parseRollFormula(formula: string): { attempts: number; modifier: number } | null {
-    const match = formula.trim().match(/^(\d+)\s*d\s*10\s*([+-]\s*\d+)?$/i);
+  private parseRollFormula(formula: string): { attempts: number; sides: number; modifier: number } | null {
+    const match = formula.trim().match(/^(\d+)\s*d\s*(4|6|10|20)\s*([+-]\s*\d+)?$/i);
     if (!match) return null;
 
     const attempts = Number(match[1]);
     if (!Number.isInteger(attempts) || attempts < 1 || attempts > 50) return null;
 
-    const modifier = match[2] ? Number(match[2].replace(/\s+/g, '')) : 0;
-    if (!Number.isFinite(modifier)) return null;
+    const sides = Number(match[2]);
+    const modifier = match[3] ? Number(match[3].replace(/\s+/g, '')) : 0;
+    if (!Number.isSafeInteger(modifier)) return null;
 
-    return { attempts, modifier };
+    return { attempts, sides, modifier };
   }
 
   private normalizeIntegerValue(value: number | null | undefined): number {

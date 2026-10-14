@@ -1,0 +1,43 @@
+<div class="repertoire-toolbar">
+  <label class="config-label repertoire-search">Buscar no repertório<input type="search" placeholder="Nome ou descrição…" [ngModel]="query()" (ngModelChange)="query.set($event || '')"></label>
+  <div class="section-actions">
+    @if (mode() === 'abilities') {
+      <button type="button" (click)="add('technical')"><i class="fa-solid fa-plus" aria-hidden="true"></i> Poder</button>
+      <button type="button" (click)="add('magic')"><i class="fa-solid fa-plus" aria-hidden="true"></i> Magia</button>
+    } @else {
+      <button type="button" (click)="add()"><i class="fa-solid fa-plus" aria-hidden="true"></i> {{ mode() === 'weaknesses' ? 'Fraqueza' : 'Passiva' }}</button>
+    }
+  </div>
+</div>
+@if (mode() === 'abilities') {
+  <div class="repertoire-filters" role="group" aria-label="Filtrar repertório">
+    <button type="button" [class.active]="filter() === 'all'" [attr.aria-pressed]="filter() === 'all'" (click)="setFilter('all')">Todos <span>{{ abilities().length }}</span></button>
+    @for (kind of kinds; track kind.value) { <button type="button" [class.active]="filter() === kind.value" [attr.aria-pressed]="filter() === kind.value" (click)="setFilter(kind.value)">{{ kind.label }} <span>{{ count(kind.value) }}</span></button> }
+  </div>
+}
+<div class="repertoire-layout">
+  <aside class="repertoire-catalog scrollbar-dark" aria-label="Itens do repertório">
+    @for (ability of visible(); track ability.id; let index = $index) {
+      <button type="button" class="repertoire-row" [class.selected]="selected() === ability" [attr.aria-pressed]="selected() === ability" (click)="selectedId.set(ability.id ?? null)">
+        <i class="fa-solid" [class]="'fa-solid ' + icon(ability)" aria-hidden="true"></i>
+        <span><strong>{{ ability.name || label(ability) + ' sem nome' }}</strong><small>{{ mode() === 'abilities' ? summary(ability) : label(ability) }}</small></span>
+      </button>
+    } @empty { <p class="catalog-empty">{{ abilities().length ? 'Nenhum resultado. Ajuste a busca ou o filtro.' : 'Adicione o primeiro item para começar.' }}</p> }
+  </aside>
+  <div class="repertoire-detail">
+    @if (selected(); as ability) {
+      <header class="section-heading repertoire-detail-heading"><div><h3>{{ ability.name || label(ability) + ' sem nome' }}</h3><p class="section-hint">{{ mode() === 'abilities' ? summary(ability) : label(ability) }}</p></div><div class="section-actions"><button type="button" title="Duplicar item" aria-label="Duplicar item" (click)="duplicate(ability)"><i class="fa-regular fa-copy" aria-hidden="true"></i></button><button type="button" class="remove-action" title="Remover item" aria-label="Remover item" (click)="remove(ability)"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button></div></header>
+      <div class="config-fields">
+        <app-input [historyField]="historyRead() ? { column: 'habilities', label: 'Poderes e magias' } : null" [historyRead]="historyRead()" label="Nome" [(value)]="ability.name" (valueChange)="notify()"></app-input>
+        @if (mode() === 'abilities') {
+          <label class="config-label">Categoria<select [ngModel]="ability.type || 'technical'" (ngModelChange)="setType(ability, $event)">@for (kind of kinds; track kind.value) { <option [ngValue]="kind.value">{{ kind.singular }}</option> }</select></label>
+          <label class="config-label">Perícia da rolagem<select [(ngModel)]="ability.rollSkill" (ngModelChange)="notify()"><option [ngValue]="null">Sem rolagem associada</option>@for (skill of skills; track skill.id) { <option [ngValue]="skill.id">{{ skill.name }}</option> }</select></label>
+        }
+      </div>
+      <app-text-area [historyField]="historyRead() ? { column: 'habilities', label: 'Poderes e magias' } : null" [historyRead]="historyRead()" [label]="mode() === 'weaknesses' ? 'Efeito da fraqueza' : 'Efeito principal'" height="h-28" [(value)]="ability.description" (valueChange)="notify()"></app-text-area>
+      @if (mode() === 'abilities') { <irpw-ability-mechanics [ability]="ability" (changed)="notify()"></irpw-ability-mechanics> }
+    } @else {
+      <div class="config-empty"><i class="fa-solid fa-book-open" aria-hidden="true"></i><h3>{{ abilities().length ? 'Escolha um item do repertório' : 'Seu repertório começa aqui' }}</h3><p>{{ abilities().length ? 'Selecione na lista para editar seus efeitos.' : 'Use o botão de adicionar para cadastrar os efeitos.' }}</p></div>
+    }
+  </div>
+</div>

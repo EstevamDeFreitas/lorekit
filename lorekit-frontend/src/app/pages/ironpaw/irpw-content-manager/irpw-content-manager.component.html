@@ -7,7 +7,7 @@
         narrativos explícitos.
       </p>
     </div>
-    <div class="header-actions">
+    <div class="header-actions" [hidden]="contentTab !== 'items'">
       <app-button
         size="xs"
         buttonType="secondary"
@@ -44,6 +44,9 @@
       ></app-button>
     </div>
   </header>
+  <nav class="content-tabs" aria-label="Tipo de conteúdo"><app-nav-button label="Itens" icon="fa-solid fa-box" size="sm" [active]="contentTab === 'items'" (click)="contentTab = 'items'"></app-nav-button><app-nav-button label="Dinheiro" icon="fa-solid fa-coins" size="sm" [active]="contentTab === 'money'" (click)="contentTab = 'money'"></app-nav-button></nav>
+  @if (contentTab === 'money') { <irpw-currencies></irpw-currencies> }
+  <div [hidden]="contentTab !== 'items'">
   @if (notice) {
     <p
       role="status"
@@ -209,23 +212,10 @@
             ></app-button>
           </div>
         </div>
-        <nav class="editor-tabs" aria-label="Seções do editor">
-          <button
-            type="button"
-            [class.active]="editorSection === 'general'"
-            [attr.aria-pressed]="editorSection === 'general'"
-            (click)="editorSection = 'general'"
-          >
-            Informações e inventário</button
-          ><button
-            type="button"
-            [class.active]="editorSection === 'rules'"
-            [attr.aria-pressed]="editorSection === 'rules'"
-            (click)="editorSection = 'rules'"
-          >
-            Regras e efeitos
-          </button>
-        </nav>
+        <nav class="editor-tabs" aria-label="Seções do editor"><app-nav-button label="Base" icon="fa-solid fa-sliders" size="sm" [active]="editorSection === 'general'" (click)="editorSection = 'general'"></app-nav-button>
+<app-nav-button label="Efeitos" icon="fa-solid fa-wand-magic-sparkles" size="sm" [active]="editorSection === 'rules'" (click)="editorSection = 'rules'"></app-nav-button>
+<app-nav-button label="Aparência" icon="fa-solid fa-palette" size="sm" [active]="editorSection === 'appearance'" (click)="editorSection = 'appearance'"></app-nav-button>
+<app-nav-button label="Equipamento" icon="fa-solid fa-shield-halved" size="sm" [active]="editorSection === 'equipment'" (click)="editorSection = 'equipment'"></app-nav-button></nav>
         <div class="editor-layout">
           <div class="editor-fields">
             <section
@@ -236,7 +226,7 @@
               <p class="hint">
                 Defina a identidade, categoria e uso deste item.
               </p>
-              <div class="form-grid">
+              <div class="form-grid identity-fields">
                 <app-input
                   label="Nome"
                   [required]="true"
@@ -257,9 +247,24 @@
                   compareProp="value"
                   displayProp="label"
                   [comboValue]="item.definition.rarity"
+                  (comboValueChange)="setRarity($event)"
                   placeholder="Sem raridade"
                 ></app-combo-box>
-                <div class="icon-picker">
+                <app-text-area
+                  label="Descrição"
+                  [(value)]="item.description"
+                  height="h-24"
+                  placeholder="O que o personagem vê e sabe sobre o item?"
+                ></app-text-area>
+                <app-input
+                  label="Etiquetas"
+                  [value]="item.definition.tags.join(', ')"
+                  (valueChange)="item.definition.tags = splitTags($event)"
+                  placeholder="viagem, metal"
+                ></app-input>
+              </div>
+            </section>
+            <section class="section-card" [hidden]="editorSection !== 'appearance'"><h3>Aparência</h3><div class="form-grid">                <div class="icon-picker">
                   <span>Ícone do item</span
                   ><app-icon-selector
                     [selectedIcon]="item.definition.icon"
@@ -308,19 +313,8 @@
                     </div>
                   }
                 </div>
-                <app-text-area
-                  label="Descrição"
-                  [(value)]="item.description"
-                  height="h-24"
-                  placeholder="O que o personagem vê e sabe sobre o item?"
-                ></app-text-area>
-                <app-input
-                  label="Etiquetas"
-                  [value]="item.definition.tags.join(', ')"
-                  (valueChange)="item.definition.tags = splitTags($event)"
-                  placeholder="viagem, metal"
-                ></app-input>
-                <label class="stack-control"
+</div></section>
+            <section class="section-card" [hidden]="editorSection !== 'equipment'"><h3>Inventário e equipamento</h3><div class="form-grid">                <label class="stack-control"
                   ><input
                     type="checkbox"
                     [(ngModel)]="item.definition.stackable"
@@ -352,8 +346,7 @@
                     }
                   </div>
                 </section>
-              </div>
-            </section>
+</div></section>
             <div class="rules-fields" [hidden]="editorSection !== 'rules'">
               @if (item.definition.category === "weapon") {
                 <section class="section-card">
@@ -558,4 +551,5 @@
       }
     </main>
   </div>
+</div>
 </div>

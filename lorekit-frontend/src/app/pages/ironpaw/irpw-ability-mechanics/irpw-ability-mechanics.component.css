@@ -1,0 +1,22 @@
+:host { display: block; min-width: 0; }
+.mechanics { border-top: 1px solid #3f3f46; margin-top: 16px; padding-top: 16px; color: #d4d4d8; }
+.mechanics-summary { margin: 0 0 12px; font-size: 13px; color: #fde68a; font-variant-numeric: tabular-nums; }
+.mechanics-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 12px; }
+label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #d4d4d8; min-width: 0; }
+input, select, textarea { width: 100%; min-width: 0; border: 1px solid #52525b; border-radius: 6px; background: #18181b; padding: 9px 10px; color: #f4f4f5; font: inherit; font-size: 13px; caret-color: #facc15; }
+input::placeholder { color: #a1a1aa; }
+textarea { resize: vertical; margin-top: 2px; }
+.subsection-heading, .entry-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.subsection-heading { margin: 22px 0 10px; }
+h5 { margin: 0; font-size: 13px; font-weight: 600; }
+.entry-heading { font-size: 12px; margin-bottom: 12px; }
+.entry-heading span { color: #fde68a; }
+.mechanics-entry { padding: 14px 0; border-top: 1px solid #3f3f46; display: grid; gap: 12px; }
+.mechanics-entry p { margin: 0; white-space: pre-line; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+button { border: 1px solid #52525b; border-radius: 6px; background: transparent; color: #e4e4e7; padding: 7px 10px; font-size: 12px; cursor: pointer; width: fit-content; }
+button:hover { background: #27272a; border-color: #a1a1aa; }
+button:disabled { opacity: .5; cursor: default; }
+button.remove { color: #fda4af; }
+:where(input, select, textarea, button):focus-visible { outline: 2px solid #facc15; outline-offset: 3px; }
+.hint { color: #a1a1aa; font-size: 12px; line-height: 1.6; margin: 8px 0 0; }
+::selection { color: #fff; background: #854d0e; }

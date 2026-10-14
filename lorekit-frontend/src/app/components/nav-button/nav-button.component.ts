@@ -17,6 +17,7 @@ export class NavButtonComponent {
   params = input<Params>({});
   active = input<boolean>(false);
   activeColor = input<string>();
+  accentColor = input<string>();
   icon = input<string>();
   size = input<TextSizeType>('base');
   direction = input<'down' | 'up' | 'left' | 'right'>('down');
@@ -58,6 +59,7 @@ export class NavButtonComponent {
   }
 
   getActiveColorCss(): string {
+    if (this.accentColor()) return this.accentColor()!;
     const activeColors = {
       primary: 'yellow-400',
       secondary: 'zinc-300',

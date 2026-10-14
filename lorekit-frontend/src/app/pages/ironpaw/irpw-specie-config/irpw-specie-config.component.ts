@@ -1,122 +1,20 @@
+import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { CommonModule } from '@angular/common';
-import { DestroyRef, Component, inject, OnInit } from '@angular/core';
+import { DestroyRef, Component, inject, OnInit, signal } from '@angular/core';
 import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { FormsModule } from '@angular/forms';
+import { IrpwRepertoireEditorComponent } from '../irpw-repertoire-editor/irpw-repertoire-editor.component';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { InputComponent } from '../../../components/input/input.component';
-import { TextAreaComponent } from '../../../components/text-area/text-area.component';
 import { IrpwSpecie, IrpwSpecieHability, IrpwSpeciePerceptions } from '../../../models/irpw-specie.model';
 import { EntityChangeService } from '../../../services/entity-change.service';
 import { IrpwSpecieService } from '../../../services/irpw-specie.service';
 
 @Component({
   selector: 'irpw-specie-config',
-  imports: [CommonModule, FormsModule, ButtonComponent, InputComponent, TextAreaComponent],
-  template: `
-    <div class="w-full h-full min-h-0 box-border overflow-y-auto scrollbar-dark bg-zinc-950 p-5 text-white">
-      <div class="flex items-start justify-between gap-4 mb-4">
-        <div>
-          <h2 class="text-lg font-semibold">Configuração IRPW da Espécie</h2>
-          <p class="text-xs text-zinc-500">Ajuste percepções, vida base, passive e weakness.</p>
-        </div>
-        @if (isSaving) {
-          <span class="text-xs text-zinc-500">Salvando...</span>
-        }
-      </div>
-
-      <div class="grid grid-cols-2 gap-4">
-        <div class="rounded-md border border-zinc-800 bg-zinc-925 p-3">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-3">Percepções</h3>
-          <div class="grid grid-cols-3 gap-3">
-            <app-input label="Olfato" type="number" [(value)]="perceptionsData.smell" (valueChange)="onPerceptionsChange()"></app-input>
-            <app-input label="Visão" type="number" [(value)]="perceptionsData.vision" (valueChange)="onPerceptionsChange()"></app-input>
-            <app-input label="Audição" type="number" [(value)]="perceptionsData.hearing" (valueChange)="onPerceptionsChange()"></app-input>
-          </div>
-        </div>
-
-        <div class="rounded-md border border-zinc-800 bg-zinc-925 p-3">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-3">Base</h3>
-          <app-input label="Vida base" type="number" [(value)]="baseHealthValue" (valueChange)="onBaseHealthChange()"></app-input>
-        </div>
-
-        <div class="rounded-md border border-zinc-800 bg-zinc-925 p-3">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-3">Passive</h3>
-          <div class="flex flex-col gap-3">
-            <div class="flex justify-end">
-              <div class="w-32">
-                <app-button label="Adicionar" buttonType="secondary" size="xs" (click)="addPassive()"></app-button>
-              </div>
-            </div>
-
-            @for (passive of passiveData; track $index) {
-              <div class="rounded-md border border-zinc-800 bg-zinc-900/60 p-3">
-                <div class="flex items-center justify-between gap-2 mb-3">
-                  <span class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Passive {{ $index + 1 }}</span>
-                  <div class="w-24">
-                    <app-button label="Remover" buttonType="danger" size="xs" (click)="removePassive($index)"></app-button>
-                  </div>
-                </div>
-
-                <div class="flex flex-col gap-3">
-                  <app-input label="Nome" placeholder="Opcional" [(value)]="passive.name" (valueChange)="onPassiveChange()"></app-input>
-                  <app-text-area label="Descrição" placeholder="Descreva o efeito passivo." height="h-36" [(value)]="passive.description" (valueChange)="onPassiveChange()"></app-text-area>
-                </div>
-              </div>
-            }
-
-            @if (passiveData.length === 0) {
-              <div class="rounded-md border border-dashed border-zinc-700 p-4 text-sm text-zinc-500">
-                Nenhuma passive cadastrada.
-              </div>
-            }
-          </div>
-        </div>
-
-        <div class="rounded-md border border-zinc-800 bg-zinc-925 p-3">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-3">Weakness</h3>
-          <div class="flex flex-col gap-3">
-            <div class="flex justify-end">
-              <div class="w-32">
-                <app-button label="Adicionar" buttonType="secondary" size="xs" (click)="addWeakness()"></app-button>
-              </div>
-            </div>
-
-            @for (weakness of weaknessData; track $index) {
-              <div class="rounded-md border border-zinc-800 bg-zinc-900/60 p-3">
-                <div class="flex items-center justify-between gap-2 mb-3">
-                  <span class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Weakness {{ $index + 1 }}</span>
-                  <div class="w-24">
-                    <app-button label="Remover" buttonType="danger" size="xs" (click)="removeWeakness($index)"></app-button>
-                  </div>
-                </div>
-
-                <div class="flex flex-col gap-3">
-                  <app-input label="Nome" placeholder="Opcional" [(value)]="weakness.name" (valueChange)="onWeaknessChange()"></app-input>
-                  <app-text-area label="Descrição" placeholder="Descreva a fraqueza." height="h-36" [(value)]="weakness.description" (valueChange)="onWeaknessChange()"></app-text-area>
-                </div>
-              </div>
-            }
-
-            @if (weaknessData.length === 0) {
-              <div class="rounded-md border border-dashed border-zinc-700 p-4 text-sm text-zinc-500">
-                Nenhuma weakness cadastrada.
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-4 flex justify-end gap-2">
-        <div class="w-28">
-          <app-button label="Fechar" buttonType="secondary" size="sm" (click)="close()"></app-button>
-        </div>
-        <div class="w-28">
-          <app-button label="Salvar" size="sm" (click)="saveNow()"></app-button>
-        </div>
-      </div>
-    </div>
-  `,
+  imports: [NavButtonComponent, CommonModule, FormsModule, ButtonComponent, InputComponent, IrpwRepertoireEditorComponent],
+  templateUrl: './irpw-specie-config.component.html',
   styleUrl: './irpw-specie-config.component.css',
 })
 export class IrpwSpecieConfigComponent implements OnInit {
@@ -128,6 +26,10 @@ export class IrpwSpecieConfigComponent implements OnInit {
   currentConfig: IrpwSpecie = new IrpwSpecie();
   isSaving = false;
   private readonly saveTask = new FlushableDebounce(inject(DestroyRef), 600);
+
+  readonly editorTab = signal<'base' | 'passives' | 'weaknesses'>('base');
+  updatePassives(abilities: IrpwSpecieHability[]): void { this.passiveData = abilities; this.onPassiveChange(); }
+  updateWeaknesses(abilities: IrpwSpecieHability[]): void { this.weaknessData = abilities; this.onWeaknessChange(); }
 
   perceptionsData: IrpwSpeciePerceptions = { smell: null, vision: null, hearing: null };
   passiveData: IrpwSpecieHability[] = [];

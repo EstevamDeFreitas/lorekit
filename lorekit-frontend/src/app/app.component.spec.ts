@@ -18,6 +18,7 @@ describe('AppComponent', () => {
             subscribeToMutations: () => () => undefined,
             getCrudHelper: () => ({
               searchInTable: () => [],
+              findFirst: () => null,
             }),
             getDb: () => ({
               exec: () => [],
