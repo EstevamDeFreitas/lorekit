@@ -1,3 +1,4 @@
+import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
 import { IrpwRepertoireEditorComponent } from '../irpw-repertoire-editor/irpw-repertoire-editor.component';
 import { normalizeAbilityMechanics, changeAbilityType } from '../../../models/irpw-ability.model';
 import { IrpwHabilityType } from '../../../models/irpw-vocation.model';
@@ -31,7 +32,7 @@ import { getPersonalizationValue, getTextColorStyle } from '../../../models/pers
 
 @Component({
   selector: 'irpw-vocations',
-  imports: [EntityHistoryContextDirective, CommonModule, NgClass, FormsModule, InputComponent, TextAreaComponent, SafeDeleteButtonComponent, PersonalizationButtonComponent, IconButtonComponent, FormOverlayDirective, IrpwRepertoireEditorComponent],
+  imports: [NavButtonComponent, EntityHistoryContextDirective, CommonModule, NgClass, FormsModule, InputComponent, TextAreaComponent, SafeDeleteButtonComponent, PersonalizationButtonComponent, IconButtonComponent, FormOverlayDirective, IrpwRepertoireEditorComponent],
   templateUrl: './irpw-vocations.component.html',
   styleUrl: './irpw-vocations.component.css',
 })

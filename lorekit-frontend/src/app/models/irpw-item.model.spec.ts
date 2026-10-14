@@ -51,10 +51,11 @@ describe('Ironpaw item and inventory models', () => {
     expect(calculateDefensePointsMax(defense)).toBe(3);
     const restored = parseIrpwDefensePoints(JSON.stringify(defense));
     expect(restored.temporaryPoints).toBe(3);
-    expect(restored.temporaryCurrentPoints).toBe(2.5);
+    expect(restored.currentPoints).toBe(2);
+    expect(restored.temporaryCurrentPoints).toBe(3);
   });
 
-  it('clamps temporary resistance to its capacity and half-box states', () => {
+  it('clamps temporary resistance to its capacity and whole-box states', () => {
     const defense = parseIrpwDefensePoints(JSON.stringify({ version: 2, temporaryPoints: 2, temporaryCurrentPoints: 4.25 }));
     expect(defense.temporaryCurrentPoints).toBe(2);
   });

@@ -184,6 +184,9 @@ export function ensureSchema(db: any) {
 
     // Adiciona colunas opcionais novas da ficha sem afetar os dados legados.
     if (t.name === 'IRPWCharacterSheet') {
+      if (!getExistingColumns(db, t.name).has('wallet')) {
+        db.exec('ALTER TABLE "IRPWCharacterSheet" ADD COLUMN "wallet" TEXT');
+      }
       if (!getExistingColumns(db, t.name).has('favoriteActions')) {
         db.exec('ALTER TABLE "IRPWCharacterSheet" ADD COLUMN "favoriteActions" TEXT');
       }

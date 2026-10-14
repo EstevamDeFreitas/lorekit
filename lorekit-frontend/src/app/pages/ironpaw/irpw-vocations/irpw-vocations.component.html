@@ -73,7 +73,7 @@
               </div>
             </div>
 
-            <nav class="config-tabs" aria-label="Seções da vocação"><button type="button" [class.active]="editorTab() === 'base'" [attr.aria-pressed]="editorTab() === 'base'" (click)="editorTab.set('base')"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Base</button><button type="button" [class.active]="editorTab() === 'attributes'" [attr.aria-pressed]="editorTab() === 'attributes'" (click)="editorTab.set('attributes')"><i class="fa-solid fa-dice-d10" aria-hidden="true"></i> Atributos e perícias</button><button type="button" [class.active]="editorTab() === 'repertoire'" [attr.aria-pressed]="editorTab() === 'repertoire'" (click)="editorTab.set('repertoire')"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Repertório <span>{{ habilitiesData.length }}</span></button></nav><div class="config-content entity-properties-panel">
+            <nav class="config-tabs" aria-label="Seções da vocação"><app-nav-button label="Base" icon="fa-solid fa-sliders" size="sm" [active]="editorTab() === 'base'" (click)="editorTab.set('base')"></app-nav-button><app-nav-button label="Atributos e perícias" icon="fa-solid fa-dice-d10" size="sm" [active]="editorTab() === 'attributes'" (click)="editorTab.set('attributes')"></app-nav-button><app-nav-button [label]="'Repertório (' + habilitiesData.length + ')'" icon="fa-solid fa-book-open" size="sm" [active]="editorTab() === 'repertoire'" (click)="editorTab.set('repertoire')"></app-nav-button></nav><div class="config-content entity-properties-panel">
 @if (editorTab() === 'base') { <div class="vocation-editor-layout">
               <div class="config-section">
                 <div class="grid grid-cols-2 gap-3">

@@ -37,6 +37,18 @@ describe('local database migrations', () => {
     ))).toBe(LOCAL_SCHEMA_VERSION);
   });
 
+  it('adds wallet storage to legacy sheets and captures money configurations', () => {
+    const db = new SQL.Database();
+    db.exec('CREATE TABLE "IRPWCharacterSheet" ("id" TEXT PRIMARY KEY, "inventory" TEXT)');
+    db.run('INSERT INTO "IRPWCharacterSheet" ("id", "inventory") VALUES (?, ?)', ['legacy', 'inventory preserved']);
+    ensureSchema(db); runLocalMigrations(db);
+    expect(columnNames(db, 'IRPWCharacterSheet')).toContain('wallet');
+    expect(scalar(db, `SELECT "inventory" FROM "IRPWCharacterSheet" WHERE "id" = 'legacy'`)).toBe('inventory preserved');
+    db.run('INSERT INTO "IRPWCurrency" ("id", "name", "unitsJson") VALUES (?, ?, ?)', ['credits', 'Créditos', '[]']);
+    expect(Number(scalar(db, `SELECT COUNT(*) FROM "_SyncDirty" WHERE "entityType" = 'IRPWCurrency'`))).toBe(1);
+    db.close();
+  });
+
   it('captures every synchronizable entity and respects remote-apply suppression', () => {
     const db = new SQL.Database();
     ensureSchema(db);

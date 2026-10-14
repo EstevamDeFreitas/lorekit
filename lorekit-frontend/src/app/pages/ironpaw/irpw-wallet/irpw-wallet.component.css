@@ -1,0 +1,11 @@
+:host { display:block; margin-bottom:1.5rem; }
+.wallet { padding-bottom:1.25rem; border-bottom:1px solid #27272a; }
+.wallet-heading,.account-heading { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+.wallet-heading h3 { display:flex; align-items:center; gap:.5rem; color:#e4e4e7; font-size:.875rem; font-weight:600; margin:0; }
+.wallet-heading i { color:var(--inventory-accent,#a1a1aa); font-size:.75rem; }
+.account { margin-top:.75rem; }
+.account-heading { color:#a1a1aa; font-size:.75rem; margin-bottom:.5rem; flex-wrap:wrap; }
+.balances { display:grid; grid-template-columns:repeat(auto-fit,minmax(5rem,1fr)); gap:.5rem; }
+.wallet-settings { display:flex; flex-wrap:wrap; align-items:end; gap:.5rem; margin-top:.75rem; }
+.wallet-settings app-combo-box { flex:1 1 10rem; min-width:0; }
+.wallet-note { margin:.5rem 0 0; color:#a1a1aa; font-size:.7rem; line-height:1.5; }

@@ -1,3 +1,4 @@
+import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { EntityHistoryService } from '../../../services/entity-history.service';
@@ -165,7 +166,7 @@ interface ResourceValueState {
 
 @Component({
   selector: 'irpw-character-sheet',
-  imports: [EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent, IrpwAbilityMechanicsComponent],
+  imports: [IconButtonComponent, EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent, IrpwAbilityMechanicsComponent],
   templateUrl: './irpw-character-sheet.component.html',
   styleUrl: './irpw-character-sheet.component.css',
 })
@@ -197,6 +198,16 @@ export class IrpwCharacterSheetComponent implements OnInit {
   private readonly itemCatalog = inject(IrpwItemCatalogService);
 
   characterIdInput = input<string>('');
+  private readonly catalogChangesEffect = effect(() => {
+    this.itemCatalog.changes();
+    if (!this.selectedCharacterId || !this.currentSheet) return;
+    const latest = this.sheetService.getSheet(this.selectedCharacterId);
+    if (latest) {
+      this.currentSheet.inventory = latest.inventory;
+      this.currentSheet.defensepoints = latest.defensepoints;
+      this.parseDefensepoints();
+    }
+  });
 
   private syncInputSelectionEffect = effect(() => {
     const characterId = this.characterIdInput().trim();
@@ -243,6 +254,12 @@ export class IrpwCharacterSheetComponent implements OnInit {
   conjurationAttribute: AttributeGroupCode | null = null;
   conjurationLevel = 0;
   readonly abilitySummary = abilitySummary;
+  abilityGradeTone(ability: IrpwVocationHability): string {
+    if (ability.type === 'passive') return 'passive';
+    if (ability.grade === 'master' || ability.grade === 'major') return 'master';
+    if (ability.grade === 'intermediate' || ability.grade === 'medium') return 'intermediate';
+    return 'basic';
+  }
   readonly abilitySkillOptions = Object.entries(SKILL_LABEL).map(([id, name]) => ({ id: id as SkillCode, name }));
 
   attributesData: Record<string, { value: number | null; skills: Record<string, number> }> = {};
@@ -1289,16 +1306,15 @@ export class IrpwCharacterSheetComponent implements OnInit {
     return 'healthy';
   }
 
-  getResistanceFillState(segment: number): 0 | 1 | 2 {
+  getResistanceFillState(segment: number): 0 | 2 {
     const current = this.defensepointsData.currentPoints ?? 0;
     if (current >= segment) return 2;
-    if (current >= segment - 0.5) return 1;
     return 0;
   }
 
-  setDefensePoints(segment: number, isFullSegment: boolean): void {
-    const next = isFullSegment ? segment : segment - 0.5;
-    this.defensepointsData.currentPoints = this.defensepointsData.currentPoints === next ? Math.max(0, next - 0.5) : Math.min(this.getMaxDefensePoints(), Math.max(0, next));
+  setDefensePoints(segment: number): void {
+    const next = segment;
+    this.defensepointsData.currentPoints = this.defensepointsData.currentPoints === next ? Math.max(0, next - 1) : Math.min(this.getMaxDefensePoints(), Math.max(0, next));
     this.onDefensepointsChange();
   }
 
@@ -1348,12 +1364,12 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   getTemporaryResistanceFill(segment: number): number {
-    return Math.max(0, Math.min(2, ((this.defensepointsData.temporaryCurrentPoints ?? 0) - segment + 1) * 2));
+    return (this.defensepointsData.temporaryCurrentPoints ?? 0) >= segment ? 2 : 0;
   }
 
-  setTemporaryResistance(segment: number, half: number): void {
-    const next = segment - 1 + half * 0.5;
-    this.defensepointsData.temporaryCurrentPoints = this.defensepointsData.temporaryCurrentPoints === next ? Math.max(0, next - 0.5) : next;
+  setTemporaryResistance(segment: number): void {
+    const next = Math.min(this.defensepointsData.temporaryPoints ?? 0, Math.max(0, Math.trunc(segment)));
+    this.defensepointsData.temporaryCurrentPoints = this.defensepointsData.temporaryCurrentPoints === next ? Math.max(0, next - 1) : next;
     this.onDefensepointsChange();
   }
 
@@ -1790,7 +1806,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   onDefensepointsChange() {
     if (this.currentSheet) {
       if (this.defensepointsData.currentPoints !== null) {
-        this.defensepointsData.currentPoints = Math.min(this.getMaxDefensePoints(), Math.max(0, Math.round(this.defensepointsData.currentPoints * 2) / 2));
+        this.defensepointsData.currentPoints = Math.min(this.getMaxDefensePoints(), Math.max(0, Math.round(this.defensepointsData.currentPoints)));
       }
       this.currentSheet.defensepoints = JSON.stringify(this.defensepointsData);
       this.scheduleAutoSave();

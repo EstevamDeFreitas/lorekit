@@ -1,3 +1,4 @@
+import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
@@ -15,7 +16,7 @@ import { IrpwVocationService } from '../../../services/irpw-vocation.service';
 
 @Component({
   selector: 'irpw-vocation-config',
-  imports: [CommonModule, FormsModule, ButtonComponent, InputComponent, TextAreaComponent, IrpwRepertoireEditorComponent],
+  imports: [NavButtonComponent, CommonModule, FormsModule, ButtonComponent, InputComponent, TextAreaComponent, IrpwRepertoireEditorComponent],
   templateUrl: './irpw-vocation-config.component.html',
   styleUrl: './irpw-vocation-config.component.css',
 })

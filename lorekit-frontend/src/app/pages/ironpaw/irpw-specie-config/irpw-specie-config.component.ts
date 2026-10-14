@@ -1,3 +1,4 @@
+import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { CommonModule } from '@angular/common';
 import { DestroyRef, Component, inject, OnInit, signal } from '@angular/core';
@@ -12,7 +13,7 @@ import { IrpwSpecieService } from '../../../services/irpw-specie.service';
 
 @Component({
   selector: 'irpw-specie-config',
-  imports: [CommonModule, FormsModule, ButtonComponent, InputComponent, IrpwRepertoireEditorComponent],
+  imports: [NavButtonComponent, CommonModule, FormsModule, ButtonComponent, InputComponent, IrpwRepertoireEditorComponent],
   templateUrl: './irpw-specie-config.component.html',
   styleUrl: './irpw-specie-config.component.css',
 })

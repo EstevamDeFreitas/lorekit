@@ -294,7 +294,7 @@ function isValidImageReference(value: string): boolean {
 function normalizeSlots(values: unknown): IrpwEquipmentSlot[] { return Array.isArray(values) ? values.filter(isSlot) : []; }
 function normalizeStackLimit(value: unknown): number { const n = Number(value); return Number.isInteger(n) && n > 0 ? n : 99; }
 function normalizeNumber(value: unknown): number { const n = Number(value); return Number.isFinite(n) ? Math.trunc(n) : 0; }
-function normalizeNullableNumber(value: unknown): number | null { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? Math.max(0, Math.round(n * 2) / 2) : null; }
+function normalizeNullableNumber(value: unknown): number | null { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? Math.max(0, Math.round(n)) : null; }
 function isItemCategory(value: unknown): value is IrpwItemCategory { return typeof value === 'string' && (IRPW_ITEM_CATEGORIES as readonly string[]).includes(value); }
 function isRarity(value: unknown): value is IrpwItemRarity { return typeof value === 'string' && (IRPW_RARITIES as readonly string[]).includes(value); }
 function isSlot(value: unknown): value is IrpwEquipmentSlot { return typeof value === 'string' && (IRPW_EQUIPMENT_SLOTS as readonly string[]).includes(value); }

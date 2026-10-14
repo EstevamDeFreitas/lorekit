@@ -1,4 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
+import { synchronizeInventory } from '../models/irpw-inventory-sync.model';
+import { parseIrpwInventory, parseIrpwDefensePoints, protectionContribution } from '../models/irpw-item.model';
+import { IrpwCharacterSheet } from '../models/irpw-character-sheet.model';
 import { DbProvider } from '../app.config';
 import { CrudHelper } from '../database/database.helper';
 import { IrpwItemDefinition, IrpwItemRecord, createEmptyItemDefinition, normalizeIrpwItemDefinition, validateIrpwItemDefinition } from '../models/irpw-item.model';
@@ -9,6 +12,7 @@ export interface IrpwCatalogItem extends IrpwItemRecord {
 
 @Injectable({ providedIn: 'root' })
 export class IrpwItemCatalogService {
+  readonly changes = signal(0);
   private readonly crud: CrudHelper;
 
   constructor(private readonly dbProvider: DbProvider) {
@@ -46,6 +50,8 @@ export class IrpwItemCatalogService {
     const base = { id: now, name: row.name, description: row.description, concept: row.concept ?? null };
     if (this.crud.findById('Item', now)) this.crud.update('Item', now, base); else this.crud.create('Item', base);
     if (this.crud.findById('IRPWItem', now)) this.crud.update('IRPWItem', now, row); else this.crud.create('IRPWItem', row);
+    this.synchronizeSheets();
+    this.changes.update(value => value + 1);
     return this.withDefinition(row);
   }
 
@@ -60,6 +66,28 @@ export class IrpwItemCatalogService {
   archiveItem(id: string): void {
     if (!this.crud.findById('IRPWItem', id)) return;
     this.crud.update('IRPWItem', id, { archived: 1 });
+  }
+
+  resolveInventory(raw: string | null | undefined, items?: IrpwCatalogItem[]): string | null | undefined {
+    const inventory = parseIrpwInventory(raw);
+    if (!inventory || !raw) return raw;
+    const resolved = synchronizeInventory(inventory, items ?? this.getItems(true));
+    if (JSON.stringify(resolved) === JSON.stringify(inventory)) return raw;
+    // Preserve composite history data stored alongside the inventory.
+    return JSON.stringify({ ...JSON.parse(raw), ...resolved });
+  }
+
+  private synchronizeSheets(): void {
+    const items = this.getItems(true);
+    for (const sheet of this.crud.findAll('IRPWCharacterSheet') as IrpwCharacterSheet[]) {
+      const inventory = this.resolveInventory(sheet.inventory, items);
+      if (inventory === sheet.inventory) continue;
+      const protection = protectionContribution(parseIrpwInventory(inventory)!);
+      const defense = parseIrpwDefensePoints(sheet.defensepoints);
+      defense.protectionContribution = protection;
+      if (defense.currentPoints !== null) defense.currentPoints = Math.min(defense.currentPoints, Math.max(0, defense.vocationContribution + defense.manualAdjustment + protection));
+      this.crud.update('IRPWCharacterSheet', sheet.id, { inventory, defensepoints: JSON.stringify(defense) });
+    }
   }
 
   private withDefinition(row: IrpwItemRecord): IrpwCatalogItem {

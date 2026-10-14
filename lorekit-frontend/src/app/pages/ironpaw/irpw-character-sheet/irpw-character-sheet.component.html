@@ -282,31 +282,12 @@
                   </div>
                   <div class="flex flex-wrap gap-1.5">
                     @for (resistanceSegment of resistanceSegments; track resistanceSegment) {
-                      <div class="resistance-square" [attr.aria-label]="'Caixa de resistência ' + resistanceSegment">
-                        <button
-                          type="button"
-                          class="resistance-square-half left"
-                          [class.is-active]="getResistanceFillState(resistanceSegment) >= 1"
-                          [attr.aria-pressed]="getResistanceFillState(resistanceSegment) >= 1"
-                          (click)="setDefensePoints(resistanceSegment, false)"
-                          [attr.aria-label]="'Definir resistência em ' + formatLifeValue(resistanceSegment - 0.5)">
-                        </button>
-                        <button
-                          type="button"
-                          class="resistance-square-half right"
-                          [class.is-active]="getResistanceFillState(resistanceSegment) === 2"
-                          [attr.aria-pressed]="getResistanceFillState(resistanceSegment) === 2"
-                          (click)="setDefensePoints(resistanceSegment, true)"
-                          [attr.aria-label]="'Definir resistência em ' + formatLifeValue(resistanceSegment)">
-                        </button>
-                      </div>
+                      <button type="button" class="resistance-square resistance-whole" [class.is-active]="getResistanceFillState(resistanceSegment) === 2" [attr.aria-pressed]="getResistanceFillState(resistanceSegment) === 2" (click)="setDefensePoints(resistanceSegment)" [attr.aria-label]="'Definir resistência em ' + resistanceSegment"></button>
                     }
                     @if (temporaryResistanceSegments.length > 0) {
                       <div class="temporary-boxes" role="group" aria-label="Resistência temporária"><span class="temporary-boxes-label">Temporária {{ formatLifeValue(defensepointsData.temporaryCurrentPoints) }}/{{ defensepointsData.temporaryPoints }}</span>
                         @for (segment of temporaryResistanceSegments; track segment) {
-                          <div class="resistance-square is-temporary">
-                            @for (half of [1, 2]; track half) { <button type="button" class="resistance-square-half" [class.is-active]="getTemporaryResistanceFill(segment) >= half" [attr.aria-pressed]="getTemporaryResistanceFill(segment) >= half" [attr.aria-label]="'Definir resistência temporária em ' + formatLifeValue(segment - 1 + half * 0.5)" (click)="setTemporaryResistance(segment, half)"></button> }
-                          </div>
+                          <button type="button" class="resistance-square resistance-whole is-temporary" [class.is-active]="getTemporaryResistanceFill(segment) === 2" [attr.aria-pressed]="getTemporaryResistanceFill(segment) === 2" [attr.aria-label]="'Definir resistência temporária em ' + segment" (click)="setTemporaryResistance(segment)"></button>
                         }
                       </div>
                     }
@@ -777,10 +758,10 @@
                   <div class="character-tabs-column p-3">
                     <div class="flex-4 flex flex-col">
                       <div class="character-tabs flex flex-row flex-wrap items-end gap-1 ms-1">
-                        <app-nav-button [label]="'Geral'" size="sm" [active]="currentTab === 'general'" (click)="selectTab('general')"></app-nav-button>
-                        <app-nav-button [label]="'Marcos'" size="sm" [active]="currentTab === 'marks'" (click)="selectTab('marks')"></app-nav-button>
-                        <app-nav-button [label]="'Inventário'" size="sm" [active]="currentTab === 'inventory'" (click)="selectTab('inventory')"></app-nav-button>
-                        <app-nav-button [label]="'Poderes'" size="sm" [active]="currentTab === 'skills'" (click)="selectTab('skills')"></app-nav-button>
+                        <app-nav-button [label]="'Geral'" icon="fa-solid fa-address-card" [accentColor]="getPersonalizationValue(selectedCharacter, 'color') || '#eab308'" size="sm" [active]="currentTab === 'general'" (click)="selectTab('general')"></app-nav-button>
+                        <app-nav-button [label]="'Marcos'" icon="fa-solid fa-flag" [accentColor]="getPersonalizationValue(selectedCharacter, 'color') || '#eab308'" size="sm" [active]="currentTab === 'marks'" (click)="selectTab('marks')"></app-nav-button>
+                        <app-nav-button [label]="'Inventário'" icon="fa-solid fa-bag-shopping" [accentColor]="getPersonalizationValue(selectedCharacter, 'color') || '#eab308'" size="sm" [active]="currentTab === 'inventory'" (click)="selectTab('inventory')"></app-nav-button>
+                        <app-nav-button [label]="'Poderes'" icon="fa-solid fa-wand-magic-sparkles" [accentColor]="getPersonalizationValue(selectedCharacter, 'color') || '#eab308'" size="sm" [active]="currentTab === 'skills'" (click)="selectTab('skills')"></app-nav-button>
                       </div>
                       <div class="character-tab-content entity-properties-panel p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
                           @switch (currentTab) {
@@ -1197,7 +1178,7 @@
                               </div>
                             }
                             @case ('inventory') {
-                              <irpw-inventory [characterId]="selectedCharacterId"></irpw-inventory>
+                              <irpw-inventory [characterId]="selectedCharacterId" [accentColor]="getPersonalizationValue(selectedCharacter, 'color') || '#eab308'"></irpw-inventory>
                             }
                             @case ('skills') {
                               <div class="flex flex-col gap-4">
@@ -1221,10 +1202,10 @@
                                       <span>{{ getOwnHabilitiesByType(type.value).length + getInheritedHabilitiesByType(type.value).length }}</span>
                                     </header>
 
-                                    <div class="flex flex-col gap-3">
+                                    <div class="ironpaw-ability-grid">
                                       @for (hability of habilitiesData; track hability.id; let habilityIndex = $index) {
                                         @if (hability.type === type.value) {
-                                          <article class="ironpaw-ability-row">
+                                          <article class="ironpaw-ability-row" [attr.data-grade]="abilityGradeTone(hability)">
                                             <div class="ironpaw-ability-row__toolbar">
                                               <span>Personagem</span>
                                               <div class="flex items-center gap-1.5">
@@ -1234,6 +1215,11 @@
                                                 <button type="button" class="ironpaw-remove-button" (click)="removeHability(habilityIndex)">Remover</button>
                                               </div>
                                             </div>
+                                            <div class="ability-card-content">
+                                              <div class="ability-card-title"><h5><i class="fa-solid" [class]="'fa-solid ' + getHabilityTypeIcon(hability.type || 'technical')" aria-hidden="true"></i>{{ hability.name || 'Nova habilidade' }}</h5><span class="ability-grade">{{ abilitySummary(hability) }}</span></div>
+                                              <p class="ability-card-description">{{ hability.description || 'Adicione a descrição e o efeito desta habilidade.' }}</p>
+                                            </div>
+                                            <details class="ability-editor" [open]="!hability.name"><summary>Editar habilidade e efeitos</summary>
                                             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                                               <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                                 Nome
@@ -1258,13 +1244,14 @@
                                               </label>
                                             </div>
                                             <irpw-ability-mechanics [ability]="hability" (changed)="onHabilitiesChange()"></irpw-ability-mechanics>
-                                            <button type="button" class="ironpaw-action-button ability-roll-button" (click)="activateAbilityShortcut(hability)">{{ hability.rollSkill ? 'Preparar rolagem' : 'Ver efeito' }}</button>
+                                            </details>
+                                            <app-icon-button size="lg" buttonType="secondary" [title]="(hability.rollSkill ? 'Preparar rolagem de ' : 'Ver efeito de ') + hability.name" [icon]="hability.rollSkill ? 'fa-solid fa-dice' : 'fa-solid fa-eye'" (click)="activateAbilityShortcut(hability)"></app-icon-button>
                                           </article>
                                         }
                                       }
 
                                       @for (hability of getInheritedHabilitiesByType(type.value); track hability.favoriteKey) {
-                                        <article class="ironpaw-ability-row ironpaw-ability-row--inherited">
+                                        <article class="ironpaw-ability-row ironpaw-ability-row--inherited" [attr.data-grade]="abilityGradeTone(hability)">
                                           <div class="ironpaw-ability-row__toolbar">
                                             <div class="flex items-center gap-2">
                                               <span>{{ hability.sourceLabel }}</span>
@@ -1274,12 +1261,14 @@
                                               <button type="button" class="ironpaw-favorite-button" [class.is-favorite]="isActionFavorite(hability.favoriteKey)" [attr.aria-pressed]="isActionFavorite(hability.favoriteKey)" [attr.aria-label]="isActionFavorite(hability.favoriteKey) ? 'Remover habilidade dos favoritos' : 'Adicionar habilidade aos favoritos'" (click)="toggleActionFavorite(hability.favoriteKey)">
                                                 <i class="fa-solid fa-star" aria-hidden="true"></i>
                                               </button>
-                                              <button type="button" class="ironpaw-action-button" (click)="activateAbilityShortcut(hability)">{{ hability.rollSkill ? 'Preparar rolagem' : 'Ver efeito' }}</button>
+                                              <app-icon-button size="lg" buttonType="secondary" [title]="(hability.rollSkill ? 'Preparar rolagem de ' : 'Ver efeito de ') + hability.name" [icon]="hability.rollSkill ? 'fa-solid fa-dice' : 'fa-solid fa-eye'" (click)="activateAbilityShortcut(hability)"></app-icon-button>
                                             </div>
                                           </div>
-                                          <h5>{{ hability.name || (hability.type === 'passive' ? 'Passiva sem nome' : 'Habilidade sem nome') }}</h5>
-                                          <p>{{ hability.description || 'Sem descrição.' }}</p>
-                                          <irpw-ability-mechanics [ability]="hability" [readonly]="true"></irpw-ability-mechanics>
+                                          <div class="ability-card-content">
+                                            <div class="ability-card-title"><h5><i [class]="'fa-solid ' + getHabilityTypeIcon(hability.type || 'technical')" aria-hidden="true"></i>{{ hability.name || 'Habilidade sem nome' }}</h5><span class="ability-grade">{{ abilitySummary(hability) }}</span></div>
+                                            <p class="ability-card-description">{{ hability.description || 'Sem descrição.' }}</p>
+                                          </div>
+                                          <details class="ability-editor"><summary>Descrição completa e efeitos</summary><p>{{ hability.description || 'Sem descrição.' }}</p><irpw-ability-mechanics [ability]="hability" [readonly]="true"></irpw-ability-mechanics></details>
                                           @if (hability.type === 'magic') { <button type="button" class="ironpaw-action-button ability-roll-button" (click)="personalizeAbility(hability)">Criar cópia na ficha para remodelar</button> }
                                         </article>
                                       }

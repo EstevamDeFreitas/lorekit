@@ -1,9 +1,9 @@
 <div class="config-shell">
   <header class="config-header"><div><h2>Configurar espécie</h2><p>Sentidos, vitalidade e traços herdados pelo personagem.</p></div><button class="config-close" type="button" aria-label="Fechar configuração da espécie" (click)="close()"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></header>
   <nav class="config-tabs" aria-label="Seções da espécie">
-    <button type="button" [class.active]="editorTab() === 'base'" [attr.aria-pressed]="editorTab() === 'base'" (click)="editorTab.set('base')"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Base</button>
-    <button type="button" [class.active]="editorTab() === 'passives'" [attr.aria-pressed]="editorTab() === 'passives'" (click)="editorTab.set('passives')"><i class="fa-solid fa-leaf" aria-hidden="true"></i> Passivas <span>{{ passiveData.length }}</span></button>
-    <button type="button" [class.active]="editorTab() === 'weaknesses'" [attr.aria-pressed]="editorTab() === 'weaknesses'" (click)="editorTab.set('weaknesses')"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Fraquezas <span>{{ weaknessData.length }}</span></button>
+    <app-nav-button label="Base" icon="fa-solid fa-sliders" size="sm" [active]="editorTab() === 'base'" (click)="editorTab.set('base')"></app-nav-button>
+    <app-nav-button [label]="'Passivas (' + passiveData.length + ')'" icon="fa-solid fa-leaf" size="sm" [active]="editorTab() === 'passives'" (click)="editorTab.set('passives')"></app-nav-button>
+    <app-nav-button [label]="'Fraquezas (' + weaknessData.length + ')'" icon="fa-solid fa-triangle-exclamation" size="sm" [active]="editorTab() === 'weaknesses'" (click)="editorTab.set('weaknesses')"></app-nav-button>
   </nav>
   <div class="config-body scrollbar-dark"><div class="config-content entity-properties-panel">
     @if (editorTab() === 'base') {

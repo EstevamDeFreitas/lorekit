@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { IrpwItemCatalogService } from './irpw-item-catalog.service';
 import { CrudHelper } from '../database/database.helper';
 import { DbProvider } from '../app.config';
 import { IrpwCharacterSheet } from '../models/irpw-character-sheet.model';
@@ -7,6 +8,7 @@ import { IrpwCharacterSheet } from '../models/irpw-character-sheet.model';
   providedIn: 'root'
 })
 export class IrpwCharacterSheetService {
+  private readonly catalog = inject(IrpwItemCatalogService);
   private crud: CrudHelper;
 
   constructor(private dbProvider: DbProvider) {
@@ -18,7 +20,8 @@ export class IrpwCharacterSheetService {
    * The sheet ID mirrors the character ID (weak entity: sheet existence depends on character).
    */
   getSheet(characterId: string): IrpwCharacterSheet | null {
-    return this.crud.findById('IRPWCharacterSheet', characterId);
+    const sheet = this.crud.findById('IRPWCharacterSheet', characterId) as IrpwCharacterSheet | null;
+    return sheet ? { ...sheet, inventory: this.catalog.resolveInventory(sheet.inventory) } : null;
   }
 
   /**
@@ -26,6 +29,7 @@ export class IrpwCharacterSheetService {
    * On creation the sheet is given the same ID as the character.
    */
   saveSheet(characterId: string, sheet: IrpwCharacterSheet): IrpwCharacterSheet {
+    sheet = { ...sheet, inventory: this.catalog.resolveInventory(sheet.inventory) };
     const existing = this.crud.findById('IRPWCharacterSheet', characterId);
     if (existing) {
       return this.crud.update('IRPWCharacterSheet', characterId, sheet) as IrpwCharacterSheet;

@@ -1145,3 +1145,31 @@
 :host-context(html[data-lorekit-glass]) .roll-tools .roll-panel-trigger.is-open {
   background-color: color-mix(in srgb, var(--irpw-accent) 24%, rgb(24 24 27 / 80%));
 }
+
+.ironpaw-ability-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr)); gap: .75rem; align-items: start; }
+.ironpaw-ability-grid .ironpaw-ability-row { background: rgba(24, 24, 27, .75); backdrop-filter: none; padding: .85rem; }
+.ability-card-content { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.2fr); gap: 1rem; align-items: start; }
+.ironpaw-ability-row .ability-card-title h5 { display: flex; align-items: baseline; gap: .5rem; font-size: 1rem; line-height: 1.4; overflow-wrap: anywhere; }
+.ability-card-title h5 i { color: #a1a1aa; font-size: .8rem; flex: 0 0 auto; }
+.ability-grade { display: inline-block; color: #a1a1aa; font-size: .72rem; line-height: 1.5; margin-top: .25rem; font-variant-numeric: tabular-nums; }
+[data-grade='basic'] .ability-grade { color: #86efac; }
+[data-grade='intermediate'] .ability-grade { color: #93c5fd; }
+[data-grade='master'] .ability-grade { color: #d8b4fe; }
+.ability-card-description { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.ability-editor { border-top: 1px solid #3f3f46; margin-top: .75rem; padding-top: .6rem; }
+.ability-editor summary { color: #a1a1aa; font-size: .75rem; cursor: pointer; }
+.ability-editor[open] summary { margin-bottom: .75rem; color: #e4e4e7; }
+.ability-editor summary:focus-visible { outline: 2px solid var(--irpw-accent, #a1a1aa); outline-offset: 3px; }
+.ironpaw-ability-grid .ability-roll-button { margin-top: .65rem; }
+.ironpaw-ability-grid .ironpaw-skill-section__empty { grid-column: 1 / -1; }
+@media (max-width: 600px) { .ability-card-content { grid-template-columns: 1fr; gap: .5rem; } }
+
+.ability-card-title { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: .65rem; row-gap: .2rem; }
+.ability-card-title .ability-grade { margin-top: 0; }
+
+.resistance-whole { display:block; border:0; cursor:pointer; background:#334155; }
+.resistance-whole.is-active { background:#3b82f6; }
+.resistance-whole.is-temporary { background:#3f3f46; }
+.resistance-whole.is-temporary.is-active { background:#8b5cf6; }
+.resistance-whole:focus-visible { outline:2px solid #fafafa; outline-offset:3px; }
+.ability-roll-button { min-width:2rem; min-height:2rem; padding:.35rem; }

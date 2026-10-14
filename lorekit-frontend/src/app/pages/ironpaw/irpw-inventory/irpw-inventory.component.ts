@@ -1,3 +1,9 @@
+import { Dialog, DialogRef } from '@angular/cdk/dialog';
+import { TemplateRef, viewChild } from '@angular/core';
+import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
+import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { IrpwWalletComponent } from '../irpw-wallet/irpw-wallet.component';
+import { CdkConnectedOverlay, CdkOverlayOrigin } from '@angular/cdk/overlay';
 import { ButtonComponent } from '../../../components/button/button.component';
 import { InputComponent } from '../../../components/input/input.component';
 import { TextAreaComponent } from '../../../components/text-area/text-area.component';
@@ -10,11 +16,13 @@ import {
   effect,
   inject,
   input,
-  OnInit,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IrpwCharacterSheet } from '../../../models/irpw-character-sheet.model';
 import {
+  IRPW_ITEM_CATEGORIES,
+  IRPW_ITEM_CATEGORY_LABEL,
+  IrpwItemCategory,
   IRPW_EQUIPMENT_SLOTS,
   IRPW_EQUIPMENT_SLOT_LABEL,
   IrpwEquipmentSlot,
@@ -34,23 +42,30 @@ import { CharacterService } from '../../../services/character.service';
 import { HistoryAddress } from '../../../models/entity-history.model';
 import { EntityHistoryService } from '../../../services/entity-history.service';
 
-export interface IrpwCatalogUpdatePreview {
-  entryId: string;
-  changes: string[];
-  nextStackLimit: number;
-  splitCount: number;
-  moveToBackpack: boolean;
-}
-
 @Component({
   selector: 'irpw-inventory',
-  imports: [FormsModule, ButtonComponent, InputComponent, TextAreaComponent, AssetUrlPipe, CdkDrag, CdkDropList, CdkDropListGroup],
+  imports: [NavButtonComponent, ComboBoxComponent, IrpwWalletComponent, CdkConnectedOverlay, CdkOverlayOrigin, FormsModule, ButtonComponent, InputComponent, TextAreaComponent, AssetUrlPipe, CdkDrag, CdkDropList, CdkDropListGroup],
   templateUrl: './irpw-inventory.component.html',
   styleUrl: './irpw-inventory.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class IrpwInventoryComponent implements OnInit {
+export class IrpwInventoryComponent {
   readonly characterId = input<string>('');
+  readonly accentColor = input<string>('#eab308');
+  private readonly dialog = inject(Dialog);
+  readonly addModal = viewChild.required<TemplateRef<unknown>>('addModal');
+  private addDialog: DialogRef<unknown> | undefined;
+  readonly categoryOptions = IRPW_ITEM_CATEGORIES.map(value => ({ value, label: IRPW_ITEM_CATEGORY_LABEL[value] }));
+  readonly protectionOptions = [{value: 'light', label: 'Leve (+1 PR)'}, {value: 'medium', label: 'Média (+2 PR)'}, {value: 'heavy', label: 'Pesada (+3 PR)'}];
+  readonly handOptions = [{value: 1, label: 'Uma mão'}, {value: 2, label: 'Duas mãos'}];
+  openAdd(): void {
+    if (this.invalidInventory || this.addDialog) return;
+    this.showAdd = true;
+    this.addDialog = this.dialog.open(this.addModal(), { ariaLabel: 'Adicionar item à ficha', autoFocus: 'first-tabbable', maxWidth: 'calc(100vw - 2rem)' });
+    this.addDialog.closed.subscribe(() => { this.showAdd = false; this.addDialog = undefined; });
+  }
+  closeAdd(): void { this.addDialog?.close(); }
+
   private readonly sheetService = inject(IrpwCharacterSheetService);
   private readonly catalog = inject(IrpwItemCatalogService);
   private readonly characterService = inject(CharacterService);
@@ -66,24 +81,29 @@ export class IrpwInventoryComponent implements OnInit {
   selectedSlot: IrpwEquipmentSlot | null = null;
   draggedEntry: IrpwInventoryEntry | null = null;
   showAdd = false;
+  addMode: 'catalog' | 'create' = 'catalog';
+  quickItem = this.catalog.createDraft();
+  quickError = '';
+  hoveredEntry: string | null = null;
+  readonly categories = IRPW_ITEM_CATEGORIES;
+  readonly categoryLabels = IRPW_ITEM_CATEGORY_LABEL;
   catalogSearch = '';
   backpackSearch = '';
   invalidInventory = false;
-  catalogUpdatePreview: IrpwCatalogUpdatePreview | null = null;
   private historyAddress: HistoryAddress | null = null;
   private unregisterHistory: (() => void) | undefined;
   private lastHistoryState = '';
   defense = parseIrpwDefensePoints(null);
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.unregisterHistory?.());
+    this.destroyRef.onDestroy(() => { this.unregisterHistory?.(); this.closeAdd(); });
     effect(() => {
+      this.catalog.changes();
+      const selectedId = this.selectedEntry?.instanceId;
       const id = this.characterId();
       if (id) this.load(id);
+      if (selectedId) this.selectedEntry = this.inventory.entries.find(entry => entry.instanceId === selectedId) ?? null;
     });
-  }
-  ngOnInit(): void {
-    if (this.characterId()) this.load(this.characterId());
   }
   load(characterId: string): void {
     this.catalogItems = this.catalog.getItems();
@@ -114,8 +134,35 @@ export class IrpwInventoryComponent implements OnInit {
   }
   categoryLabel(item: IrpwCatalogItem | IrpwInventoryEntry): string {
     return 'snapshot' in item
-      ? item.snapshot.definition.category
-      : item.definition.category;
+      ? IRPW_ITEM_CATEGORY_LABEL[item.snapshot.definition.category]
+      : IRPW_ITEM_CATEGORY_LABEL[item.definition.category];
+  }
+  changeQuickCategory(category: IrpwItemCategory): void {
+    const draft = this.catalog.createDraft(category);
+    draft.name = this.quickItem.name; draft.description = this.quickItem.description; draft.effects = this.quickItem.effects;
+    if (['weapon', 'protection', 'wearable'].includes(category)) { draft.definition.stackable = false; draft.definition.stackLimit = 1; }
+    if (category === 'consumable') draft.definition.consumable = { subtype: 'utility', effect: '', actionCost: 1 };
+    if (category === 'weapon') draft.definition.equipmentSlots = ['primary', 'secondary', 'reserve'];
+    if (category === 'protection') draft.definition.equipmentSlots = ['armor'];
+    if (category === 'wearable') draft.definition.equipmentSlots = ['accessory1', 'accessory2', 'accessory3'];
+    this.quickItem = draft;
+  }
+  toggleQuickSlot(slot: IrpwEquipmentSlot, checked: boolean): void {
+    this.quickItem.definition.equipmentSlots = this.quickItem.definition.equipmentSlots.filter(value => value !== slot);
+    if (checked) this.quickItem.definition.equipmentSlots.push(slot);
+  }
+  createQuickItem(): void {
+    if (this.invalidInventory || !this.sheet) return;
+    try {
+      const saved = this.catalog.saveItem(this.quickItem);
+      this.catalogItems = this.catalog.getItems();
+      this.addItem(saved);
+      this.quickItem = this.catalog.createDraft(); this.quickError = ''; this.addMode = 'catalog';
+    } catch (error) { this.quickError = error instanceof Error ? error.message : 'Não foi possível criar o item.'; }
+  }
+  itemEffects(entry: IrpwInventoryEntry): string {
+    const definition = entry.snapshot.definition;
+    return [...new Set([entry.snapshot.effects, definition.consumable?.effect, definition.protection?.effects, definition.weapon?.specialProperty, definition.narrativeEffect, ...definition.uniqueBenefits, ...definition.uniqueCosts.map(cost => 'Custo: ' + cost)].filter(Boolean))].join('\n') || 'Sem efeito adicional descrito.';
   }
   visibleCatalogItems(): IrpwCatalogItem[] {
     const term = this.catalogSearch.trim().toLocaleLowerCase();
@@ -166,7 +213,8 @@ export class IrpwInventoryComponent implements OnInit {
     if (this.selectedEntry) this.equip(this.selectedEntry, slot);
   }
   addItem(item: IrpwCatalogItem): void {
-    const definition = JSON.parse(JSON.stringify(item.definition));
+    if (this.invalidInventory || !this.sheet) return;
+    const definition = structuredClone(item.definition);
     const entry: IrpwInventoryEntry = {
       instanceId: crypto.randomUUID(),
       sourceItemId: item.id,
@@ -198,7 +246,8 @@ export class IrpwInventoryComponent implements OnInit {
       this.inventory.backpackOrder.push(entry.instanceId);
     }
     this.showAdd = false;
-    this.selectedEntry = compatible ?? entry;
+    this.closeAdd();
+    this.selectedEntry = compatible || entry;
     this.persist();
   }
   equip(entry: IrpwInventoryEntry, slot: IrpwEquipmentSlot): void {
@@ -209,6 +258,7 @@ export class IrpwInventoryComponent implements OnInit {
       entry = { ...entry, instanceId: crypto.randomUUID(), quantity: 1 };
       this.inventory.entries.push(entry);
     }
+    if (entry.slot) this.inventory.equipment[entry.slot] = null;
     this.removeFromBackpack(entry.instanceId);
     const displaced = this.entryForSlot(slot);
     if (displaced && displaced.instanceId !== entry.instanceId)
@@ -298,7 +348,21 @@ export class IrpwInventoryComponent implements OnInit {
     if (other.quantity <= 0) this.removeEntry(other);
     else this.persist();
   }
+  equipTo(entry: IrpwInventoryEntry, value: string): void {
+    const slot = this.compatibleSlots(entry).find(slot => slot === value);
+    if (slot) this.equip(entry, slot);
+  }
+  ifEmptyClose(popover: HTMLElement): void { if (!this.selectedEntry) popover.hidePopover(); }
   saveEntry(entry: IrpwInventoryEntry): void {
+    const source = entry.sourceItemId ? this.catalog.getItem(entry.sourceItemId) : null;
+    try {
+      if (source) this.catalog.saveItem({ ...source, name: entry.snapshot.name, description: entry.snapshot.description, effects: entry.snapshot.effects });
+      else if (!entry.snapshot.name.trim()) throw new Error('Informe um nome para o item.');
+      this.quickError = '';
+      this.saveQuantity(entry);
+    } catch (error) { this.quickError = error instanceof Error ? error.message : 'Não foi possível salvar o item.'; }
+  }
+  saveQuantity(entry: IrpwInventoryEntry): void {
     entry.quantity =
       entry.location === 'equipment'
         ? 1
@@ -309,79 +373,6 @@ export class IrpwInventoryComponent implements OnInit {
               Math.trunc(Number(entry.quantity) || 1),
             ),
           );
-    this.persist();
-  }
-  hasCatalogUpdate(entry: IrpwInventoryEntry): boolean {
-    const source = entry.sourceItemId
-      ? this.catalogItems.find((item) => item.id === entry.sourceItemId)
-      : undefined;
-    return !!source && (source.revision ?? 1) > (entry.sourceRevision ?? 0);
-  }
-  previewCatalogUpdate(entry: IrpwInventoryEntry): void {
-    const source = entry.sourceItemId
-      ? this.catalogItems.find((item) => item.id === entry.sourceItemId)
-      : undefined;
-    if (!source) return;
-    const nextDefinition = JSON.parse(JSON.stringify(source.definition));
-    const changes: string[] = [];
-    if (entry.snapshot.name !== source.name) {
-      changes.push(`Nome: ${entry.snapshot.name || 'sem nome'} → ${source.name || 'sem nome'}`);
-    }
-    if (entry.snapshot.description !== source.description) changes.push('Descrição atualizada.');
-    if ((entry.snapshot.effects ?? null) !== (source.effects ?? null)) changes.push('Efeitos atualizados.');
-    if (JSON.stringify(entry.snapshot.definition) !== JSON.stringify(nextDefinition)) {
-      changes.push('Características e compatibilidade atualizadas.');
-    }
-    const nextStackLimit = nextDefinition.stackable ? nextDefinition.stackLimit : 1;
-    const splitCount = entry.location === 'backpack' && entry.quantity > nextStackLimit
-      ? Math.ceil(entry.quantity / nextStackLimit) - 1
-      : 0;
-    if (splitCount) changes.push(`A pilha será dividida em ${splitCount + 1} grupos para respeitar o novo limite.`);
-    const moveToBackpack = entry.location === 'equipment' && !!entry.slot && !nextDefinition.equipmentSlots.includes(entry.slot);
-    if (moveToBackpack) changes.push(`O item deixará ${this.slotLabel[entry.slot!]} porque o espaço não é mais compatível.`);
-    this.catalogUpdatePreview = { entryId: entry.instanceId, changes, nextStackLimit, splitCount, moveToBackpack };
-  }
-  applyCatalogUpdate(entry: IrpwInventoryEntry): void {
-    const preview = this.catalogUpdatePreview;
-    if (!preview || preview.entryId !== entry.instanceId) return;
-    const source = entry.sourceItemId
-      ? this.catalogItems.find((item) => item.id === entry.sourceItemId)
-      : undefined;
-    if (!source) return;
-    const nextDefinition = JSON.parse(JSON.stringify(source.definition));
-    const wasEquipped = entry.location === 'equipment';
-    const slot = entry.slot;
-    entry.snapshot = {
-      name: source.name,
-      description: source.description,
-      effects: source.effects ?? null,
-      definition: nextDefinition,
-      icon: nextDefinition.icon,
-    };
-    entry.sourceRevision = source.revision ?? 1;
-    if (wasEquipped && slot && !nextDefinition.equipmentSlots.includes(slot)) {
-      this.inventory.equipment[slot] = null;
-      this.toBackpack(entry);
-    }
-    if (!wasEquipped && entry.quantity > preview.nextStackLimit) {
-      let remaining = entry.quantity;
-      entry.quantity = Math.min(remaining, preview.nextStackLimit);
-      remaining -= entry.quantity;
-      while (remaining > 0) {
-        const quantity = Math.min(remaining, preview.nextStackLimit);
-        const copy: IrpwInventoryEntry = {
-          ...entry,
-          instanceId: crypto.randomUUID(),
-          quantity,
-          snapshot: { ...entry.snapshot, definition: JSON.parse(JSON.stringify(entry.snapshot.definition)) },
-        };
-        this.inventory.entries.push(copy);
-        const index = this.inventory.backpackOrder.indexOf(entry.instanceId);
-        this.inventory.backpackOrder.splice(index < 0 ? this.inventory.backpackOrder.length : index + 1, 0, copy.instanceId);
-        remaining -= quantity;
-      }
-    }
-    this.catalogUpdatePreview = null;
     this.persist();
   }
   dropOnSlot(event: CdkDragDrop<IrpwInventoryEntry[]>, slot: IrpwEquipmentSlot): void {
@@ -476,6 +467,7 @@ export class IrpwInventoryComponent implements OnInit {
     );
   }
   private toBackpack(entry: IrpwInventoryEntry): void {
+    if (entry.slot && this.inventory.equipment[entry.slot] === entry.instanceId) this.inventory.equipment[entry.slot] = null;
     entry.location = 'backpack';
     entry.slot = null;
     if (!this.inventory.backpackOrder.includes(entry.instanceId))
@@ -531,7 +523,8 @@ export class IrpwInventoryComponent implements OnInit {
     this.lastHistoryState = value;
   }
   private persist(): void {
-    if (!this.sheet || !this.characterId()) return;
+    if (this.invalidInventory || !this.sheet || !this.characterId()) return;
+    this.sheet = this.sheetService.getSheet(this.characterId()) ?? this.sheet;
     this.defense.protectionContribution = this.protection;
     if (this.defense.currentPoints !== null)
       this.defense.currentPoints = Math.min(this.defense.currentPoints, this.defenseMax);

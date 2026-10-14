@@ -7,10 +7,21 @@ describe('Ironpaw tactical roll formulas', () => {
     return sheet;
   }
 
+  function mockRandomValues(...values: number[]): void {
+    let index = 0;
+    spyOn(globalThis.crypto, 'getRandomValues').and.callFake(array => {
+      if (!(array instanceof Uint32Array) || index >= values.length) {
+        throw new Error('Unexpected random value request in roll test.');
+      }
+      array[0] = values[index++];
+      return array;
+    });
+  }
+
   for (const sides of [4, 6, 10, 20]) {
     it('rolls d' + sides + ' with separate attempts and a modifier on each', () => {
       const sheet = createSheet();
-      spyOn(Math, 'random').and.returnValues(0, 0.999999);
+      mockRandomValues(0, sides - 1);
       sheet.onRollFormulaInputChange('2d' + sides + '-2');
       sheet.rollDice();
       expect(sheet.rollFormulaError).toBe('');
@@ -45,7 +56,7 @@ describe('Ironpaw tactical roll formulas', () => {
   it('compares each result with the configured target', () => {
     const sheet = createSheet();
     sheet.rollTargetValue = 10;
-    spyOn(Math, 'random').and.returnValues(0.999999, 0);
+    mockRandomValues(19, 0);
     sheet.onRollFormulaInputChange('2d20');
     sheet.rollDice();
     expect(sheet.rollResults.map(result => result.status)).toEqual(['success', 'fail']);
@@ -65,7 +76,7 @@ describe('Ironpaw tactical roll formulas', () => {
     const sheet = createSheet();
     Object.assign(sheet, { buildAutoRollPreview: () => ({ attempts: 1, sides: 10, modifiers: [], totalModifier: 3, resolutionMode: 'disadvantage' }) });
     sheet.resetRollFormulaToAuto();
-    spyOn(Math, 'random').and.returnValues(0.999999, 0);
+    mockRandomValues(9, 0);
     sheet.rollDice();
     expect(sheet.rollFormula).toBe('2d10+3 (desvantagem)');
     expect(sheet.rollResults[0].rolls).toEqual([10, 1]);

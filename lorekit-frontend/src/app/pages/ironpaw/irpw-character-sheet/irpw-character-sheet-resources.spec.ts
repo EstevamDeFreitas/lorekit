@@ -40,6 +40,21 @@ describe('Ironpaw resource and conjuration persistence', () => {
     sheet.saveLifeMaxPoints();
     expect(sheet.lifepointsData.temporaryCurrentPoints).toBe(0);
   });
+  it('toggles permanent and temporary resistance by whole boxes', () => {
+    const sheet = createSheet();
+    sheet.defensepointsData = { version: 2, currentPoints: 0, vocationContribution: 3, protectionContribution: 0, manualAdjustment: 0, temporaryPoints: 2, temporaryCurrentPoints: 0 };
+    spyOn(sheet, 'onDefensepointsChange');
+    sheet.setDefensePoints(2);
+    expect(sheet.defensepointsData.currentPoints).toBe(2);
+    sheet.setDefensePoints(2);
+    expect(sheet.defensepointsData.currentPoints).toBe(1);
+    expect(sheet.getResistanceFillState(2)).toBe(0);
+    sheet.setTemporaryResistance(2);
+    expect(sheet.defensepointsData.temporaryCurrentPoints).toBe(2);
+    sheet.setTemporaryResistance(2);
+    expect(sheet.defensepointsData.temporaryCurrentPoints).toBe(1);
+    expect(sheet.defensepointsData.currentPoints).toBe(1);
+  });
   it('retains Conjuração training when its parent attribute changes and after reload', () => {
     const sheet = createSheet();
     sheet.parseAttributes();
