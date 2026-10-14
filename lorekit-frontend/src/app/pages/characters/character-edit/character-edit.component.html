@@ -27,7 +27,7 @@
     <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" (blur)="saveCharacter()" class="min-w-0 flex-5 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-0" [(ngModel)]="character.name" />
     <div class="flex flex-row flex-wrap gap-2 ms-auto">
       <app-icon-button buttonType="secondary" icon="fa-solid fa-scroll" size="xl" title="Abrir ficha Ironpaw" (click)="openIronpawSheet()"></app-icon-button>
-      <!-- <app-entity-transfer-button [entityId]="character.id" [entityTable]="'Character'" [size]="'xl'"></app-entity-transfer-button> -->
+      <app-entity-transfer-button [entityId]="character.id" [entityTable]="'Character'" [size]="'xl'"></app-entity-transfer-button>
       <app-ui-field-config-button
         [entityTable]="'Character'"
         [entityId]="character.id"

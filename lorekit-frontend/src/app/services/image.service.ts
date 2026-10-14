@@ -9,6 +9,10 @@ import { AuthService } from './auth.service';
 import { WorkspaceRuntimeService } from './workspace-runtime.service';
 import { EntityHistoryService } from './entity-history.service';
 import { SYNC_ENTITIES } from '../database/sync-entity-registry';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { environment } from '../../enviroments/environment';
+import { sha256 as portableSha256, validateRaster } from '../libs/entity-portability/entity-archive.codec';
 
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set([
@@ -36,6 +40,7 @@ export interface StagedImageAsset {
 
 @Injectable({ providedIn: 'root' })
 export class ImageService {
+  private readonly http = inject(HttpClient);
   private readonly dbProvider = inject(DbProvider);
   private readonly browserStorage = inject(BrowserDatabaseStorageService);
   private readonly auth = inject(AuthService);
@@ -186,6 +191,63 @@ export class ImageService {
     return { blobId, reference: canonicalAssetReference(blobId), sha256: asset.sha256, mimeType: asset.mimeType, localPath: isElectronRuntime() ? localPath : null };
   }
 
+  /** Entity packages read canonical blobs or legacy files inside the managed image root only. */
+  async readEntityAsset(reference: string): Promise<ReadableImageAsset> {
+    const embedded = reference.match(/^data:(image\/(?:png|jpeg|webp|gif|avif));base64,([A-Za-z0-9+/]*={0,2})$/);
+    if (embedded) {
+      if (embedded[2].length > Math.ceil(MAX_IMAGE_BYTES / 3) * 4) throw new Error('Imagem incorporada acima de 25 MiB.');
+      const bytes = Uint8Array.from(atob(embedded[2]), char => char.charCodeAt(0)); validateRaster(bytes, embedded[1]);
+      return { bytes: bytes.buffer, mimeType: embedded[1], sha256: await portableSha256(bytes), originalName: null };
+    }
+    if (/^lorekit-asset:\/\/[0-9a-f-]{36}$/i.test(reference)) {
+      try { return await this.readAsset(reference); } catch (error) {
+        if (!navigator.onLine || !this.auth.isAuthenticated() || !this.workspace.vault()) throw error;
+        const id = reference.slice('lorekit-asset://'.length);
+        const blob = await firstValueFrom(this.http.get(`${environment.apiUrl}/vaults/${this.workspace.vault()!.id}/blobs/${id}`, { responseType: 'blob', withCredentials: true }));
+        if (!blob.size || blob.size > MAX_IMAGE_BYTES) throw new Error('Imagem remota acima do limite.');
+        const bytes = await blob.arrayBuffer(); const mimeType = detectRasterMime(new Uint8Array(bytes));
+        return { bytes, mimeType, sha256: await portableSha256(new Uint8Array(bytes)), originalName: null };
+      }
+    }
+    if (!isElectronRuntime()) throw new Error('Imagem legada indisponível na web. Migre os assets no desktop antes de exportar.');
+    const root = String(await ElectronSafeAPI.electron.getImagePath()).replaceAll('\\', '/').replace(/\/$/, '');
+    let path = reference.replaceAll('\\', '/');
+    if (path.startsWith('lorekit-local://image')) path = new URL(path).searchParams.get('path') || '';
+    if (path.startsWith('file:')) {
+      const file = new URL(path); if (file.hostname && file.hostname !== 'localhost') throw new Error('Imagem em servidor externo não permitida.');
+      path = decodeURIComponent(file.pathname); if (/^\/[a-z]:\//i.test(path)) path = path.slice(1);
+    }
+    path = path.replaceAll('\\', '/');
+    if (!path.toLowerCase().startsWith(`${root.toLowerCase()}/`) || path.split('/').some(segment => segment === '..' || segment === '.')) throw new Error('Caminho de imagem fora do armazenamento gerenciado.');
+    const raw = await ElectronSafeAPI.electron.readFile(path); if (!raw) throw new Error('Imagem legada ausente.');
+    const bytes = toArrayBuffer(raw); if (!bytes.byteLength || bytes.byteLength > MAX_IMAGE_BYTES) throw new Error('Imagem acima do limite.');
+    const mimeType = detectRasterMime(new Uint8Array(bytes)); return { bytes, mimeType, sha256: await portableSha256(new Uint8Array(bytes)), originalName: null };
+  }
+
+  /** Write-ahead cache/outbox entries make even a crash during file IO recoverable. */
+  async stageEntityAsset(asset: { bytes: Uint8Array; mimeType: string; sha256: string }, blobId: string, operationId: string): Promise<StagedImageAsset> {
+    if (!/^[0-9a-f-]{36}$/i.test(blobId) || !/^[0-9a-f-]{36}$/i.test(operationId)) throw new Error('Identidade do asset inválida.');
+    if (!asset.bytes.length || asset.bytes.length > MAX_IMAGE_BYTES) throw new Error('Imagem acima do limite.'); validateRaster(asset.bytes, asset.mimeType);
+    if (await portableSha256(asset.bytes) !== asset.sha256) throw new Error('Hash do asset inválido.');
+    const db = this.dbProvider.getDb(); const user = this.auth.user(); const vault = this.workspace.vault();
+    const desktop = isElectronRuntime();
+    const localPath = desktop ? `${await ElectronSafeAPI.electron.getImagePath()}/entity-import/${operationId}/${blobId}.${extensionForMime(asset.mimeType)}` : null;
+    if (this.dbProvider.getDb() !== db || this.dbProvider.readOnly()) throw new Error('O workspace mudou durante a importação.');
+    if (db.exec('SELECT 1 FROM "_BlobOutbox" WHERE "blobId" = ? UNION ALL SELECT 1 FROM "_LocalBlobCache" WHERE "blobId" = ?', [blobId, blobId])[0]?.values.length) throw new Error('Identidade de blob já existente.');
+    const now = new Date().toISOString();
+    db.run('INSERT INTO "_BlobOutbox" ("blobId", "localPath", "mimeType", "originalName", "sha256", "state", "createdAt", "lastError") VALUES (?, ?, ?, ?, ?, ?, ?, NULL)', [blobId, localPath, asset.mimeType, `${blobId}.${extensionForMime(asset.mimeType)}`, asset.sha256, 'pending', now]);
+    db.run('INSERT INTO "_LocalBlobCache" ("blobId", "cacheKey", "mimeType", "sha256", "updatedAt") VALUES (?, ?, ?, ?, ?)', [blobId, localPath || blobId, asset.mimeType, asset.sha256, now]);
+    this.dbProvider.requestPersist(); await this.dbProvider.flushPendingWrites();
+    if (desktop) { await ElectronSafeAPI.electron.writeFile(localPath!, asset.bytes); this.assetResolver.registerLocal(blobId, localPath!); }
+    else {
+      if (!user || !vault) throw new Error('Workspace web indisponível.');
+      const bytes = new Uint8Array(asset.bytes).buffer;
+      await this.browserStorage.writeBlob({ userId: user.id, vaultId: vault.id, blobId, bytes, mimeType: asset.mimeType, sha256: asset.sha256, updatedAt: now, evictable: false });
+      this.assetResolver.registerBrowserBytes(blobId, bytes, asset.mimeType);
+    }
+    return { blobId, reference: canonicalAssetReference(blobId), mimeType: asset.mimeType, sha256: asset.sha256, localPath };
+  }
+
   async cleanupStagedAsset(asset: Pick<StagedImageAsset, 'blobId' | 'localPath'>): Promise<void> {
     if (isElectronRuntime() && asset.localPath) await ElectronSafeAPI.electron.deleteFile(asset.localPath);
     const user = this.auth.user();
@@ -329,4 +391,9 @@ function extensionForMime(mimeType: string): string {
   if (mimeType === 'image/gif') return 'gif';
   if (mimeType === 'image/avif') return 'avif';
   return 'jpg';
+}
+
+function detectRasterMime(bytes: Uint8Array): string {
+  for (const mime of ALLOWED_IMAGE_TYPES) { try { validateRaster(bytes, mime); return mime; } catch { /* Try the next supported signature. */ } }
+  throw new Error('Formato de imagem não reconhecido.');
 }

@@ -7,7 +7,9 @@ import { CrudHelper } from '../../database/database.helper';
 import { DbProvider } from '../../app.config';
 import { schema } from '../../database/schema';
 import { Router } from '@angular/router';
-import { EntityTransferService } from '../../services/entity-transfer.service';
+import { Dialog } from '@angular/cdk/dialog';
+import { EntityPortabilityService } from '../../services/entity-portability.service';
+import { EntityTransferDialogComponent } from '../entity-transfer-dialog/entity-transfer-dialog.component';
 import { TabManagerService } from '../../services/tab-manager.service';
 import { TabEntityType } from '../../models/workspace.model';
 
@@ -50,7 +52,8 @@ const SEARCHABLE_TABLES: Partial<Record<string, SearchableTabEntityType>> = {
         />
     </div>
 
-    <!-- <button
+    <button
+      [disabled]="!portability.canImport()"
       type="button"
       class="h-8 px-3 rounded-md bg-zinc-100 text-zinc-900 hover:brightness-90 text-sm"
       title="Importar pacote .lorekit"
@@ -58,9 +61,9 @@ const SEARCHABLE_TABLES: Partial<Record<string, SearchableTabEntityType>> = {
     >
       <i class="fa-solid fa-file-import me-1"></i>
       Importar
-    </button> -->
+    </button>
 
-    <input #fileInput type="file" accept=".lorekit,application/json" class="hidden" (change)="onImportFileSelected($event)" />
+    <input #fileInput type="file" accept=".lorekit" class="hidden" (change)="onImportFileSelected($event)" />
   </div>
 
   <ng-template
@@ -119,7 +122,8 @@ export class SearchComponent implements OnInit, OnDestroy {
   private searchSubscription?: Subscription;
   private crud : CrudHelper;
   private readonly router = inject(Router);
-  private readonly entityTransferService = inject(EntityTransferService);
+  readonly portability = inject(EntityPortabilityService);
+  private readonly dialog = inject(Dialog);
 
   currentTables = schema;
 
@@ -222,8 +226,8 @@ export class SearchComponent implements OnInit, OnDestroy {
     }
 
     try {
-      const root = await this.entityTransferService.importBundleFromFile(file);
-      this.router.navigateByUrl(this.getEditUrl(root.table, root.id));
+      const ref = this.dialog.open<{ id: string; name: string }>(EntityTransferDialogComponent, { data: { mode: 'import', file }, width: '760px', maxWidth: '95vw', disableClose: true });
+      ref.closed.subscribe(result => { if (result) this.tabManager.openTab('Character', result.id, result.name, 'fa-solid fa-user'); });
     } catch (error: any) {
       alert(error?.message || 'Falha ao importar o arquivo.');
     } finally {

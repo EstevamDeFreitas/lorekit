@@ -17,6 +17,7 @@ import { FormsModule } from '@angular/forms';
 import { EditorComponent } from '../../../components/editor/editor.component';
 import { EntityLateralMenuButtonComponent } from '../../../components/entity-lateral-menu-button/entity-lateral-menu-button.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
+import { EntityTransferButtonComponent } from '../../../components/entity-transfer-button/entity-transfer-button.component';
 import { PersonalizationButtonComponent } from '../../../components/personalization-button/personalization-button.component';
 import { SafeDeleteButtonComponent } from '../../../components/safe-delete-button/safe-delete-button.component';
 import { LocationListComponent } from '../../locations/location-list/location-list.component';
@@ -33,7 +34,7 @@ import { TabManagerService } from '../../../services/tab-manager.service';
 
 @Component({
   selector: 'app-character-edit',
-  imports: [EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
+  imports: [EntityTransferButtonComponent, EntityHistoryContextDirective, HistoryFieldDirective, IconButtonComponent, PersonalizationButtonComponent, FormsModule, EditorComponent, EntityLateralMenuButtonComponent, SafeDeleteButtonComponent, NavButtonComponent, UiFieldConfigButtonComponent, EntityConfiguredFieldsComponent, AssetUrlPipe],
   templateUrl: './character-edit.component.html',
   styleUrl: './character-edit.component.css',
 })

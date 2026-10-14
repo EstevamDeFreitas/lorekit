@@ -1,0 +1,51 @@
+<section class="transfer-dialog" aria-labelledby="transfer-title">
+  <header><h2 id="transfer-title">{{ data.mode === 'export' ? 'Exportar personagem' : 'Importar personagem' }}</h2><button type="button" (click)="cancel()" [disabled]="busy" aria-label="Fechar">✕</button></header>
+  <div class="transfer-content">
+    @if (error) { <p class="error" role="alert">{{ error }}</p> }
+    @if (data.mode === 'export') {
+      <p>O arquivo inclui os dados do personagem, campos dinâmicos, organização da ficha, imagens e documentos próprios. Outras entidades referenciadas não serão exportadas automaticamente.</p>
+      <label class="check"><input type="checkbox" [(ngModel)]="includeChildren" (ngModelChange)="inspectScope()" [disabled]="busy"> Incluir personagens filhos e seus descendentes</label>
+      @if (scopeWarnings.length) {
+        <div class="notice"><strong>Anexos sem suporte nesta versão</strong>@for (warning of scopeWarnings; track warning) { <p>{{ warning }}</p> }
+          <label class="check"><input type="checkbox" [(ngModel)]="omitUnsupported" (ngModelChange)="inspectScope()" [disabled]="busy"> Autorizo exportar sem esses anexos/conexões</label>
+        </div>
+      }
+      @if (hasSheet) {
+        <div class="notice"><p>A ficha Ironpaw será incluída. Os itens mantêm seus snapshots, quantidades, equipamentos e imagens, mas deixam de acompanhar o catálogo de origem. As definições de moeda usadas na carteira serão copiadas com novas identidades. Favoritos de ações herdadas de espécie/vocação não serão copiados.</p>
+          <label class="check"><input type="checkbox" [(ngModel)]="acknowledgeSheet" [disabled]="busy"> Entendi e quero incluir a ficha dessa forma</label>
+        </div>
+      }
+      @if (exportPreview) {
+        <h3>Prévia de {{ exportPreview.name }}</h3>
+        <ul><li>{{ exportPreview.characters }} personagem(ns)</li><li>{{ exportPreview.documents }} documento(s)</li><li>{{ exportPreview.fields }} definição(ões) de campo dinâmico</li><li>{{ exportPreview.images }} arquivo(s) de imagem</li></ul>
+        @for (warning of exportPreview.warnings; track warning) { <p class="notice">{{ warning }}</p> }
+        <p>O download usa exatamente os dados capturados nesta prévia.</p>
+      }
+    } @else if (packagePreview) {
+      <h3>{{ packagePreview.name }}</h3><p>{{ packagePreview.characters }} personagem(ns) e {{ packagePreview.images }} imagem(ns). A importação cria uma cópia com novas identidades. Registros existentes serão preservados.</p>
+      <label>Mundo de destino<select [(ngModel)]="worldId" (ngModelChange)="destinationChanged()" [disabled]="busy"><option value="">Escolha um mundo</option>@for (world of worlds; track world.id) { <option [value]="world.id">{{ world.name }}</option> }</select></label>
+      @if (!worlds.length) { <p class="notice">Crie um mundo antes de importar.</p> }
+      @if (worldId) {
+        @if (packagePreview.manifest.externalReferences.length) { <h3>Referências externas</h3><p>Escolha uma entidade do destino ou remova o vínculo. Menções removidas serão mantidas como texto.</p> }
+        @for (reference of packagePreview.manifest.externalReferences; track reference.key) {
+          <label>{{ reference.label || 'Referência externa' }} · {{ reference.targetType }}<select [(ngModel)]="references[reference.key]" (ngModelChange)="importPlan = null" [disabled]="busy"><option value="">Escolha o tratamento</option><option value="__remove__">Remover vínculo / manter texto</option>@for (candidate of candidates[reference.key] || []; track candidate.id) { <option [value]="candidate.id">{{ candidate.label }}</option> }</select></label>
+        }
+        <details><summary>Renomear definições dinâmicas em caso de conflito</summary><p>Definições equivalentes serão reutilizadas. Se um nome já tiver outra definição, informe um nome novo e gere a prévia novamente.</p>@for (field of packagePreview.manifest.dynamicFields; track field.key) { <label>{{ field.name }}<input type="text" [(ngModel)]="fieldNames[field.key]" (ngModelChange)="importPlan = null" placeholder="Manter o nome original" [disabled]="busy"></label> }</details>
+      }
+      @if (importPlan) {
+        <h3>Prévia da cópia</h3><p>{{ importPlan.rows.length }} registro(s) novo(s), {{ importPlan.reusedFields.length }} definição(ões) reutilizada(s), {{ importPlan.assets.length }} imagem(ns).</p>
+        @for (issue of importPlan.issues; track $index) { <p class="notice">{{ issue.message }}</p> }
+        @if (canApply()) { <p class="success">Pronto para criar a cópia no mundo escolhido.</p> }
+      }
+    }
+    @if (busy) { <p role="status" aria-live="polite">Processando dados e arquivos…</p> }
+  </div>
+  <footer><button type="button" (click)="cancel()" [disabled]="busy">Cancelar</button>
+    @if (data.mode === 'export') {
+      @if (exportPreview) { <button type="button" class="primary" (click)="download()" [disabled]="busy">Baixar .lorekit</button> }
+      @else { <button type="button" class="primary" (click)="prepareExport()" [disabled]="busy || (hasSheet && !acknowledgeSheet) || (scopeWarnings.length > 0 && !omitUnsupported)">Preparar prévia</button> }
+    } @else if (packagePreview) {
+      <button type="button" (click)="prepareImport()" [disabled]="busy || !worldId">Gerar prévia</button><button type="button" class="primary" (click)="apply()" [disabled]="busy || !canApply()">Criar cópia</button>
+    }
+  </footer>
+</section>

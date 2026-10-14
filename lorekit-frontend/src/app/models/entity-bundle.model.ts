@@ -5,6 +5,7 @@ export const ENTITY_BUNDLE_FORMAT = 'lorekit-entity-bundle';
 export const ENTITY_BUNDLE_VERSION = 2;
 export const ENTITY_BUNDLE_LIMITS = Object.freeze({
   manifestBytes: 8 * 1024 * 1024,
+  packageBytes: 100 * 1024 * 1024,
   records: 5000,
   depth: 64,
   assets: 2000,
@@ -13,7 +14,7 @@ export const ENTITY_BUNDLE_LIMITS = Object.freeze({
 });
 
 /** Package keys are deliberately different from database IDs. */
-export type PortableEntityType = 'Character' | 'Personalization' | 'DynamicFieldValue' | 'Image';
+export type PortableEntityType = 'Character' | 'Personalization' | 'DynamicFieldValue' | 'Image' | 'Document' | 'IRPWCharacterSheet' | 'IRPWCurrency';
 export interface PortableEntityRef { type: PortableEntityType; key: string; }
 export type PortableScalar = string | number | null;
 export interface PortableEntity {
@@ -41,8 +42,9 @@ export interface PortableExternalReference {
   key: string;
   ownerKey: string;
   targetType: string;
-  kind: 'relationship' | 'dynamic-field';
+  kind: 'relationship' | 'dynamic-field' | 'mention';
   fieldKey?: string;
+  label?: string;
 }
 export interface PortableAsset {
   key: string;

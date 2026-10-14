@@ -11,10 +11,17 @@ export const PORTABLE_COLUMNS: Readonly<Record<PortableEntityType, Readonly<Reco
   Personalization: { contentJson: 'text' },
   DynamicFieldValue: { value: 'text', fieldKey: 'text', entityKey: 'text', externalReferenceKey: 'text' },
   Image: { usageKey: 'text', assetKey: 'text' },
+  Document: { title: 'text', content: 'text', type: 'text' },
+  IRPWCurrency: { name: 'text', description: 'text', unitsJson: 'text' },
+  IRPWCharacterSheet: {
+    ownerKey: 'text', perceptions: 'text', attributes: 'text', lifepoints: 'text', seriousWoundCount: 'integer',
+    defensepoints: 'text', stress: 'text', mana: 'text', vigor: 'text', subspecialization: 'text',
+    inventory: 'text', wallet: 'text', habilities: 'text', marks: 'text', conditions: 'text', favoriteActions: 'text',
+  },
 };
 export const REFERENCE_TYPES = new Set([
   'World', 'Character', 'Species', 'Location', 'Item', 'Document', 'Culture', 'Organization',
-  'Object', 'Timeline', 'Age', 'GreatMark', 'Event', 'Moodboard', 'IRPWVocation',
+  'Object', 'Timeline', 'Age', 'GreatMark', 'Event', 'Moodboard', 'IRPWVocation', 'IRPWCurrency',
 ]);
 
 export function isPortableEntityType(value: unknown): value is PortableEntityType {
@@ -43,7 +50,8 @@ export function validatePortableData(type: PortableEntityType, data: Record<stri
   }
   const required = type === 'Character' ? ['name', 'description']
     : type === 'Personalization' ? ['contentJson']
-      : type === 'DynamicFieldValue' ? ['fieldKey'] : ['usageKey', 'assetKey'];
+      : type === 'DynamicFieldValue' ? ['fieldKey'] : type === 'Document' ? ['title', 'content']
+        : type === 'IRPWCharacterSheet' ? ['ownerKey'] : type === 'IRPWCurrency' ? ['name', 'description', 'unitsJson'] : ['usageKey', 'assetKey'];
   for (const column of required) {
     if (typeof data[column] !== 'string') throw new Error(`Campo obrigatório ausente: ${type}.${column}.`);
   }

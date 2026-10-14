@@ -2,28 +2,24 @@
 
 ## Why
 
-The legacy entity exporter traverses Relationship in both directions. Selecting one character can include its world, unrelated characters, and other values using the same DynamicField. The legacy importer also upserts rows using source IDs. Hidden buttons alone do not prevent direct calls to these unsafe methods.
+The legacy exporter followed bidirectional Relationship connectivity, which could include unrelated characters and other consumers of shared dynamic fields. The importer reused source identities and upserted existing rows. V2 exports an explicit ownership scope and imports new copies.
 
 ## What Changes
 
-- Define a closed v2 manifest with package-local identities, supported payloads, structural/owned edges, terminal dynamic definitions, layouts, references and asset metadata.
-- Plan Character exports using explicit ownership and hierarchy, with same-world/read checks and bounded traversal.
-- Prepare imports as copies into an explicit destination world. Reserve fresh IDs, reuse only equivalent dynamic definitions, report conflicts and remap internal references/layout tokens.
-- Keep plans immutable and preparation free of database/file mutations.
-- Reject legacy entry points at service level and keep all entity transfer UI disabled until full v2 execution is verified.
+- Character export with optional descendants, owned dynamic values and terminal definitions, layouts, personalization, document trees, raster assets and stored Ironpaw state.
+- Closed versioned `.lorekit` ZIP STORE archive, typed content/reference remapping, bounded validation, CRC32/SHA-256 and raster signature checks.
+- Explicit destination world, dynamic-definition reuse or conflict rename, and external-reference selection/removal.
+- Serialized copy execution with new identities, workspace/write/freshness guards, transaction, durable receipts, staged asset journal, compensation and sync capture.
+- Character-header export and search-toolbar import dialogs. Legacy v1 methods remain rejecting facades.
 
-## Scope of This Initial Commit
+## Scope
 
-Contract, manifest validation, export-scope preview, copy-import preview, Angular service boundary and regression tests. These APIs do not create an archive or apply an import. Rich content, personalization JSON, binary assets, Ironpaw and unknown attachments fail closed or appear as blocking issues rather than being silently omitted.
+Character is the only supported root. Links, moodboards and unknown attachments require explicit omission; opaque editor content is rejected. Ironpaw item snapshots are detached from source catalogs, own actions are remapped, inherited species/vocation favorites are omitted with acknowledgment, and used wallet currency definitions are copied as terminal records.
 
-## Remaining Delivery
+## Validation and Remaining Work
 
-ZIP codec, verified asset extraction/staging, rich text and gallery codecs, external-reference/conflict resolution, transactional executor/recovery, UI and two-device sync validation. This change remains open until those milestones pass.
-
-## Capabilities
-
-- entity-portability-v2: new bounded entity export and copy import contract.
+Automated SQLite round trips, isolated browser UI workspaces and production web/desktop builds cover this delivery. Real Electron file-system tests, real authenticated web service tests and live two-device/server sync remain release qualification work. See tasks and docs/entity-portability-v2.md for precise evidence.
 
 ## Impact
 
-Frontend portability models, pure planners and EntityPortabilityService. EntityTransferService becomes a rejecting compatibility facade. No database migration, new production dependency or server API is introduced by the foundation.
+Frontend codecs, planners, executor, dialogs, image staging, sync pause and local schema migration 10 for import receipts. No new production dependency or server API.

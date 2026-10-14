@@ -2,7 +2,7 @@ import type { BindParams, SqlValue } from 'sql.js';
 import { schema, TableDef } from './schema';
 import { SYNC_ENTITIES } from './sync-entity-registry';
 
-export const LOCAL_SCHEMA_VERSION = 9;
+export const LOCAL_SCHEMA_VERSION = 10;
 
 interface SqlDatabase {
   exec(sql: string, params?: BindParams): Array<{
@@ -129,6 +129,14 @@ const migrations: readonly LocalMigration[] = [
       createSyncTables(db);
       createSyncTriggers(db);
     },
+  },
+  {
+    version: 10,
+    name: 'recibos-locais-de-importacao-de-entidades',
+    up: db => db.exec(`CREATE TABLE IF NOT EXISTS "_EntityImportReceipts" (
+      "operationId" TEXT NOT NULL PRIMARY KEY, "rootId" TEXT NOT NULL,
+      "digest" TEXT NOT NULL, "createdAt" TEXT NOT NULL
+    )`),
   },
 ];
 

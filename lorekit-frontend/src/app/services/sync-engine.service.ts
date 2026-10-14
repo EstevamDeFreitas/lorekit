@@ -136,6 +136,7 @@ export class SyncEngineService {
   }
 
   async syncNow(): Promise<void> {
+    if (this.localImportPaused) return;
     if (this.syncInFlight) return this.syncInFlight;
     if (!this.canSync()) return;
 
@@ -149,6 +150,13 @@ export class SyncEngineService {
         this.syncing.set(false);
       });
     return this.syncInFlight;
+  }
+
+  private localImportPaused = false;
+  async pauseForEntityImport(): Promise<() => void> {
+    this.localImportPaused = true;
+    if (this.syncInFlight) await this.syncInFlight;
+    return () => { this.localImportPaused = false; void this.syncNow(); };
   }
 
   conflicts(): LocalSyncConflict[] {

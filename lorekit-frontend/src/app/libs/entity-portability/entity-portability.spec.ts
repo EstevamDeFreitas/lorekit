@@ -121,20 +121,20 @@ describe('Entity export v2 scope planner', () => {
     }
   });
   it('warns about unsupported dependencies without reading their content', () => {
-    const source = sourceFixture().add('Document', 'secret', { content: 'secret' });
-    source.edges.push(relation('Character', 'a', 'Document', 'secret'));
+    const source = sourceFixture().add('Moodboard', 'secret', { content: 'secret' });
+    source.edges.push(relation('Character', 'a', 'Moodboard', 'secret'));
     const plan = planCharacterExport(source, 'a'); expect(plan.issues.some(item => item.code === 'UNSUPPORTED_DEPENDENCY' && item.blocking)).toBeTrue();
-    expect(source.reads).not.toContain('Document:secret');
+    expect(source.reads).not.toContain('Moodboard:secret');
   });
   it('detects the Ironpaw weak dependency by character ID', () => {
     const source = sourceFixture().add('IRPWCharacterSheet', 'a', { inventory: '[]' });
-    expect(planCharacterExport(source, 'a').issues.some(item => item.message.includes('Ironpaw'))).toBeTrue();
+    expect(planCharacterExport(source, 'a').entities.some(item => item.source.table === 'IRPWCharacterSheet' && item.data['ownerKey'] === 'character-1')).toBeTrue();
   });
-  it('does not fetch species/location references or reveal their IDs in external previews', () => {
+  it('keeps reference bindings in the local capture without fetching target payloads', () => {
     const source = sourceFixture(); source.edges.push(relation('Species', 'secret-species', 'Character', 'a'));
     const refs = planCharacterExport(source, 'a').externalReferences;
-    expect(refs).toEqual([{ ownerKey: 'character-1', targetType: 'Species', kind: 'relationship' }]);
-    expect(JSON.stringify(refs)).not.toContain('secret-species'); expect(source.reads).not.toContain('Species:secret-species');
+    expect(refs).toEqual([{ ownerKey: 'character-1', targetType: 'Species', kind: 'relationship', sourceId: 'secret-species' }]);
+    expect(source.reads).not.toContain('Species:secret-species');
   });
   it('marks image resources, rich text and entity-valued fields as requiring codecs', () => {
     const source = sourceFixture().add('Image', 'image', { usageKey: 'profile', filePath: '/private/path.png' });
@@ -143,8 +143,8 @@ describe('Entity export v2 scope planner', () => {
     source.rows.get('DynamicField:field')!['fieldType'] = 'entity'; source.rows.get('DynamicField:field')!['targetEntityTable'] = 'Species';
     const plan = planCharacterExport(source, 'a');
     expect(plan.issues.map(item => item.code)).toEqual(jasmine.arrayContaining(['ASSET_CODEC_PENDING', 'RICH_TEXT_CODEC_PENDING', 'ENTITY_REFERENCE_CODEC_PENDING']));
-    expect(JSON.stringify(plan.entities.find(entity => entity.source.table === 'Image')!.data)).not.toContain('/private/path.png');
-    expect(plan.entities.find(entity => entity.source.id === 'va')!.data['value']).toBeNull();
+    expect(plan.entities.find(entity => entity.source.table === 'Image')!.data['filePath']).toBe('/private/path.png');
+    expect(plan.entities.find(entity => entity.source.id === 'va')!.data['value']).toBe('10');
   });
 });
 
@@ -195,9 +195,9 @@ describe('Entity bundle v2 manifest validation', () => {
     raw.externalReferences.push({ key: 'ref1', ownerKey: 'c1', targetType: 'Species', kind: 'dynamic-field', fieldKey: 'f1' });
     expect(() => validateEntityBundle(raw)).not.toThrow(); raw.externalReferences[0].ownerKey = 'c2'; expect(() => validateEntityBundle(raw)).toThrow();
   });
-  it('rejects rich/asset-bearing payloads until their codecs are implemented', () => {
-    const raw = manifest(); raw.entities[0].data['description'] = '{"blocks":[]}'; expect(() => validateEntityBundle(raw)).toThrowError(/codec/);
-    const image = manifest(); image.dynamicFields[0].fieldType = 'image'; expect(() => validateEntityBundle(image)).toThrowError(/codec/);
+  it('rejects unknown rich-document schemas and malformed galleries', () => {
+    const raw = manifest(); raw.entities[0].data['description'] = '{"blocks":[]}'; expect(() => validateEntityBundle(raw)).toThrow();
+    const image = manifest(); image.dynamicFields[0].fieldType = 'image'; expect(() => validateEntityBundle(image)).toThrow();
   });
   it('validates asset metadata and rejects traversal, missing and unused assets', () => {
     const raw = manifest(); raw.entities.push({ type: 'Image', key: 'i1', schemaVersion: 1, data: { usageKey: 'profile', assetKey: 'asset1' } });

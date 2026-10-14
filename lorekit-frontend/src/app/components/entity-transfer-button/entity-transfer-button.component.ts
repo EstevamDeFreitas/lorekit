@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { IconButtonComponent } from '../icon-button/icon-button.component';
-import { EntityTransferService } from '../../services/entity-transfer.service';
+import { Dialog } from '@angular/cdk/dialog';
+import { EntityTransferDialogComponent } from '../entity-transfer-dialog/entity-transfer-dialog.component';
 
 @Component({
   selector: 'app-entity-transfer-button',
@@ -10,7 +11,7 @@ import { EntityTransferService } from '../../services/entity-transfer.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EntityTransferButtonComponent {
-  private readonly entityTransferService = inject(EntityTransferService);
+  private readonly dialog = inject(Dialog);
 
   entityId = input<string>('');
   entityTable = input<string>('');
@@ -25,7 +26,8 @@ export class EntityTransferButtonComponent {
     }
 
     try {
-      await this.entityTransferService.exportEntityBundle(entityTable, entityId);
+      if (entityTable !== 'Character') throw new Error('A exportação v2 está disponível para personagens.');
+      this.dialog.open(EntityTransferDialogComponent, { data: { mode: 'export', entityId }, width: '760px', maxWidth: '95vw', disableClose: true });
     } catch (error: any) {
       alert(error?.message || 'Falha ao exportar a entidade.');
     }

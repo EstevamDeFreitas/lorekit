@@ -50,16 +50,30 @@ The system SHALL prepare creation of copies into an explicit writable destinatio
 - **AND** no target is guessed from a source ID or name
 
 ### Requirement: Legacy methods fail closed
-Legacy entity export/import entry points SHALL reject direct calls while v2 execution remains incomplete. UI visibility alone SHALL NOT be the protection.
+Legacy entity export/import entry points SHALL reject direct calls, including after v2 is enabled. UI visibility alone SHALL NOT be the protection.
 
 #### Scenario: A caller invokes the hidden v1 importer
 - **WHEN** importBundleFromFile is called directly
 - **THEN** it rejects before reading the file or writing a database
 
-### Requirement: Full execution remains gated
-The feature SHALL NOT be enabled for users until archive integrity, typed content/asset codecs, conflict/reference resolution, transactional execution/recovery and platform/sync validations are complete.
+### Requirement: Verified archive and copy execution
+The system SHALL enable only supported Character transfers with archive integrity checks, typed codecs, explicit resolutions and transactional copy execution with staged asset recovery. It SHALL reject v1 and full-backup files as entity inputs.
 
-#### Scenario: Foundation APIs are available
-- **WHEN** only preview and manifest-validation APIs are implemented
-- **THEN** export/import UI stays disabled
-- **AND** no preview is treated as an executable import or final archive
+#### Scenario: Import fails before commit
+- **WHEN** staged assets exist and row creation fails
+- **THEN** database creation rolls back and staged resources are compensated
+- **AND** existing destination rows remain unchanged
+
+#### Scenario: Persistence fails after commit
+- **WHEN** a receipt and rows have committed but durable persistence fails
+- **THEN** committed resources are retained
+- **AND** retry resumes the same operation without creating a second copy
+
+#### Scenario: Destination changes after preview
+- **WHEN** workspace identity, permissions, definition semantics or selected references change
+- **THEN** execution rejects the stale preview before creating rows
+
+#### Scenario: Unsupported attachments exist
+- **WHEN** the selected scope includes links or moodboards
+- **THEN** export requires explicit omission
+- **AND** the preview reports the omitted dependency
