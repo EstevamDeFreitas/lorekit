@@ -1,0 +1,11 @@
+/* Matches app-input, app-button and the Ironpaw configuration editors. */
+:host{color:#f4f4f5;min-width:0;--calendar-border:rgb(161 161 170 / 18%)}
+label{display:flex;flex-direction:column;gap:.4rem;font-size:.75rem;color:#d4d4d8;min-width:0}
+input,select,textarea{width:100%;min-width:0;border:1px solid var(--color-zinc-900,#18181b);border-radius:.5rem;background:var(--color-zinc-940,#101013);color:#f4f4f5;padding:.5rem .75rem;min-height:38px;font:inherit;font-size:.875rem;color-scheme:dark;caret-color:#facc15}
+textarea{resize:vertical}
+button{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;min-height:38px;border:1px solid var(--calendar-border);border-radius:.65rem;background:rgb(39 39 42 / 40%);color:#e4e4e7;padding:.5rem .75rem;font:inherit;font-size:.75rem;cursor:pointer}
+button:hover{background:rgb(63 63 70 / 40%);color:#fafafa}button:disabled{opacity:.45;cursor:default}
+.primary{background:var(--color-yellow-500,#eab308);border-color:transparent;color:#27272a;font-weight:500}.primary:hover{background:var(--color-yellow-400,#facc15);color:#18181b}
+:where(input,select,textarea,button,summary):focus-visible{outline:2px solid #facc15!important;outline-offset:3px}
+.check{display:flex;flex-direction:row;align-items:center;gap:.5rem}.check input{width:auto;min-height:0;accent-color:#facc15}
+p{font-size:.8rem;line-height:1.6;color:#a1a1aa;max-width:70ch}.error{color:#fda4af;font-size:.8rem}::selection{background:#facc15;color:#18181b}

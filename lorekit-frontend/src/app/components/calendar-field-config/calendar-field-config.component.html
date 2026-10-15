@@ -1,0 +1,12 @@
+<div class="calendar-config">
+  <label>Calendário do campo<select [ngModel]="config()?.mode" (ngModelChange)="mode($event)"><option value="selectable">Escolher ao preencher a data</option><option value="fixed">Calendário fixo por mundo</option></select></label>
+  <label class="check"><input type="checkbox" [ngModel]="config()?.allowTime" (ngModelChange)="time($event)">Permitir horário</label>
+  @if (config()?.mode === 'fixed') {
+    <p>Associe os calendários de cada mundo onde este campo será utilizado.</p>
+    <label>Mundo<select [ngModel]="worldId()" (ngModelChange)="worldId.set($event)"><option value="">Selecione um mundo</option>@for (world of worlds; track world.id) {<option [value]="world.id">{{ world.name }}</option>}</select></label>
+    @if (worldId()) {<label>Calendário<select [ngModel]="binding()?.calendarId || ''" (ngModelChange)="calendar($event)"><option value="">Sem associação neste mundo</option>@for (calendar of choices(); track calendar.id) {<option [value]="calendar.id">{{ calendar.name }}</option>}</select></label>}
+    @if (binding()) {<label>Revisão<select [ngModel]="binding()!.revisionId" (ngModelChange)="revision($event)">@for (revision of revisions(); track revision.id) {<option [value]="revision.id">Revisão {{ revision.revision }}</option>}</select></label><label>Contagem dos anos<select [ngModel]="binding()?.countId || ''" (ngModelChange)="count($event)"><option value="">Padrão do calendário</option>@for (count of rules()?.counts || []; track count.id) {<option [value]="count.id">{{ count.name }}</option>}</select></label><label>Formato<select [ngModel]="binding()?.formatId || ''" (ngModelChange)="format($event)"><option value="">Padrão do calendário</option>@for (format of rules()?.formats || []; track format.id) {<option [value]="format.id">{{ format.name }}</option>}</select></label>}
+    <p>{{ configBindingCount() }} mundos associados.</p>
+  }
+  @if (error()) {<p class="error" role="alert">{{ error() }}</p>}
+</div>

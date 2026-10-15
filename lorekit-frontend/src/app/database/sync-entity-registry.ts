@@ -24,6 +24,8 @@ const entity = (
  * allowlist equivalente no servidor.
  */
 export const SYNC_ENTITIES = [
+  entity('Calendar'),
+  entity('CalendarRevision'),
   entity('World'),
   entity('LocationCategory'),
   entity('Location'),

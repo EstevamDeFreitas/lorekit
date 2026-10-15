@@ -2,7 +2,7 @@ import type { BindParams, SqlValue } from 'sql.js';
 import { schema, TableDef } from './schema';
 import { SYNC_ENTITIES } from './sync-entity-registry';
 
-export const LOCAL_SCHEMA_VERSION = 9;
+export const LOCAL_SCHEMA_VERSION = 10;
 
 interface SqlDatabase {
   exec(sql: string, params?: BindParams): Array<{
@@ -126,6 +126,20 @@ const migrations: readonly LocalMigration[] = [
     up: db => {
       const sheetTable = schema.find(table => table.name === 'IRPWCharacterSheet');
       if (sheetTable) addMissingColumns(db, sheetTable);
+      createSyncTables(db);
+      createSyncTriggers(db);
+    },
+  },
+  {
+    version: 10,
+    name: 'calendarios-configuraveis-por-mundo',
+    up: db => {
+      for (const name of ['Calendar', 'CalendarRevision']) {
+        const table = schema.find(t => t.name === name)!;
+        db.exec('CREATE TABLE IF NOT EXISTS "' + name + '" (' + table.columns.map(c => c.def).join(', ') + ')');
+        for (const index of table.indexes ?? []) db.exec(index);
+      }
+      for (const name of ['Timeline', 'Age', 'Event', 'GreatMark']) addMissingColumns(db, schema.find(t => t.name === name)!);
       createSyncTables(db);
       createSyncTriggers(db);
     },

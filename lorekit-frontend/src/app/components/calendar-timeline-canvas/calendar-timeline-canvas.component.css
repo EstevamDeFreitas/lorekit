@@ -1,0 +1,13 @@
+:host{display:block;min-height:0;flex:1;overflow:auto}.calendar-timeline{color:#f4f4f5;padding:.5rem;min-height:100%}.calendar-controls{display:flex;gap:.5rem;align-items:end;flex-wrap:wrap}.range-label{font-size:.85rem;font-variant-numeric:tabular-nums;margin:.75rem 0;color:#d4d4d8}.help{font-size:.8rem;line-height:1.5;color:#d4d4d8;max-width:80ch}.plot{position:relative;min-height:520px;overflow:hidden;border:1px solid #3f3f46;border-radius:.75rem;background:#09090b;cursor:crosshair}.tick{position:absolute;top:0;bottom:0;border-left:1px solid #27272a;pointer-events:none}.tick span{position:absolute;top:10px;left:4px;font-size:.75rem;white-space:nowrap;color:#d4d4d8;font-variant-numeric:tabular-nums}.season{position:absolute;bottom:12px;font-size:.7rem;color:#d4d4d8;max-width:100px;pointer-events:none;overflow:hidden}.quick-create{display:flex;align-items:center;gap:.5rem;padding:1rem 0;flex-wrap:wrap}.quick-create span{font-size:.85rem;flex:1;min-width:160px}.movement{font-size:.875rem;color:#fde047}.group-details{padding:1rem 0;border-bottom:1px solid #3f3f46}.group-details header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem}.group-details h3{font-size:1rem}.group-details>button{display:block;margin:.35rem 0;text-align:left}.unresolved{padding:1rem 0}.unresolved button{margin:.5rem}.Math{display:none}
+
+.plot{background:linear-gradient(180deg, transparent 81px, rgb(39 39 42 / .22) 82px) 0 0 / 100% 82px, #09090b}
+.marks-section{position:absolute;left:0;right:0;pointer-events:none;background:linear-gradient(90deg,rgb(250 204 21 / .105),transparent)}
+.marks-section-label{display:inline-flex;margin:.4rem .65rem;border:1px solid rgb(250 204 21 / .32);border-radius:999px;padding:.2rem .5rem;color:#fde047;font-size:.62rem;font-weight:800;text-transform:uppercase}
+.grouped-events{width:150px;text-align:left;color:white}
+.timeline-interactive-item--selected{outline:2px solid #fde047;outline-offset:3px}
+.timeline-tooltip{max-width:min(360px,70vw)}
+.timeline-interactive-item:focus-visible .timeline-tooltip{opacity:1;visibility:visible}
+.range-handle:focus-visible{opacity:1}
+
+.range-handle{min-height:0;min-width:0;padding:0}
+.grouped-events .event-meta{display:block}

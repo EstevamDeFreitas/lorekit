@@ -14,6 +14,8 @@ import { WorldObject } from './object.model';
 
 export class GreatMark {
   id: string;
+  calendarStartJson?: string | null;
+  calendarEndJson?: string | null;
   name: string;
   description: string;
   concept?: string | null;

@@ -228,6 +228,7 @@
                 <app-combo-box label="Proporção da imagem" [items]="imageAspectRatioItems" compareProp="value" displayProp="label" [(comboValue)]="newFieldImageAspectRatio"></app-combo-box>
               }
 
+              @if (newFieldType === 'calendar-date') {<app-calendar-field-config [options]="newCalendarOptions" (optionsChange)="newCalendarOptions = $event"></app-calendar-field-config>}
               @if (newFieldType === 'slider') {
                 <div class="grid grid-cols-3 gap-2">
                   <app-input label="Minimo" type="number" [(value)]="newSliderMin"></app-input>
@@ -322,6 +323,7 @@
                       @if (field.fieldType === 'image') {
                         <app-combo-box label="Proporção da imagem" [items]="imageAspectRatioItems" compareProp="value" displayProp="label" [comboValue]="field.options ?? '1'" (comboValueChange)="field.options = $event"></app-combo-box>
                       }
+                      @if (field.fieldType === 'calendar-date') {<app-calendar-field-config [options]="field.options" (optionsChange)="field.options = $event"></app-calendar-field-config>}
                       @if (field.fieldType === 'slider') {
                         <div class="grid grid-cols-3 gap-2">
                           <app-input label="Minimo" type="number" [value]="numberText(sliderConfig(field).min)" (valueChange)="updateSliderConfig(field, 'min', $event)"></app-input>

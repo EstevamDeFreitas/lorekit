@@ -11,6 +11,19 @@ describe('local database migrations', () => {
     SQL = await initSqlJs({ locateFile: file => `assets/${file}` });
   });
 
+  it('adds calendars to a version 9 database without changing legacy positions', () => {
+    const db = new SQL.Database(); ensureSchema(db); runLocalMigrations(db);
+    db.run('INSERT INTO "Timeline" ("id", "name", "description") VALUES (?, ?, ?)', ['legacy-timeline', 'Antiga', 'preservado']);
+    db.run('INSERT INTO "Event" ("id", "name", "description", "startDate", "endDate", "date") VALUES (?, ?, ?, ?, ?, ?)', ['legacy-event', 'Evento', '', -1.5, 3, 'durante a guerra']);
+    db.exec('DROP TABLE "CalendarRevision"; DROP TABLE "Calendar"; UPDATE "_SchemaMetadata" SET "value" = \'9\' WHERE "key" = \'schemaVersion\'');
+    runLocalMigrations(db); runLocalMigrations(db);
+    expect(columnNames(db, 'Calendar')).toContain('worldId');
+    expect(columnNames(db, 'CalendarRevision')).toContain('rulesJson');
+    expect(scalar(db, 'SELECT "calendarId" FROM "Timeline" WHERE "id" = \'legacy-timeline\'')).toBeNull();
+    expect(db.exec('SELECT "startDate", "endDate", "date" FROM "Event" WHERE "id" = \'legacy-event\'')[0].values[0]).toEqual([-1.5, 3, 'durante a guerra']);
+    db.close();
+  });
+
   it('preserves unknown legacy columns and removes only the known invalid table', () => {
     const db = new SQL.Database();
     db.exec(`

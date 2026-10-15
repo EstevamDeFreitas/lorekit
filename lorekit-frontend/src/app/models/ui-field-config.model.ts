@@ -1,5 +1,5 @@
 export type UiFieldSource = 'schema' | 'dynamic';
-export type UiFieldControl = 'input' | 'textarea' | 'editor' | 'options' | 'entity' | 'image' | 'slider' | 'list' | 'chart';
+export type UiFieldControl = 'input' | 'textarea' | 'editor' | 'options' | 'entity' | 'image' | 'slider' | 'list' | 'chart' | 'calendar-date';
 
 export interface UiFieldCatalogItem {
   token: string;
@@ -63,7 +63,13 @@ export interface LegacyUiConfigPayload {
 }
 
 export const UI_FIELD_LAYOUT_EXPORT_FORMAT = 'lorekit-ui-field-layout';
-export const UI_FIELD_LAYOUT_EXPORT_VERSION = 2;
+export const UI_FIELD_LAYOUT_EXPORT_VERSION = 3;
+
+export interface PortableCalendarReference {
+  key: string; fieldKey: string; label: string;
+  rules: import('./calendar.model').CalendarRules;
+  countKey?: string; formatKey?: string;
+}
 
 export interface PortableDynamicFieldDefinition {
   key: string;
@@ -80,6 +86,7 @@ export interface UiFieldLayoutExportDocument {
   entityTable: string;
   layout: UiConfigPayload;
   dynamicFields: PortableDynamicFieldDefinition[];
+  calendarReferences?: PortableCalendarReference[];
 }
 
 export function createFieldLayoutItem(token: string, col: number, row: number, width: number, height: number): UiFieldLayoutFieldItem {

@@ -1,4 +1,6 @@
-export type DynamicFieldType = 'text' | 'options' | 'editor' | 'entity' | 'image' | 'slider' | 'list' | 'chart';
+import { CalendarDateFieldOptions } from './calendar.model';
+import { parseCalendarFieldOptions } from '../utils/calendar-field-options';
+export type DynamicFieldType = 'text' | 'options' | 'editor' | 'entity' | 'image' | 'slider' | 'list' | 'chart' | 'calendar-date';
 
 export type SliderFieldOptions = {
   version: 1;
@@ -44,7 +46,7 @@ export type ChartFieldOptions = {
   categories?: string[];
 };
 
-export type DynamicFieldStructuredOptions = SliderFieldOptions | ListFieldOptions | ChartFieldOptions;
+export type DynamicFieldStructuredOptions = SliderFieldOptions | ListFieldOptions | ChartFieldOptions | CalendarDateFieldOptions;
 
 export interface SliderFieldValue {
   value: number;
@@ -88,6 +90,7 @@ export function defaultChartFieldOptions(): ChartFieldOptions {
 }
 
 export function parseDynamicFieldOptions(fieldType: DynamicFieldType, serialized?: string | null): DynamicFieldStructuredOptions | null {
+  if (fieldType === 'calendar-date') return parseCalendarFieldOptions(serialized);
   if (fieldType === 'slider') return normalizeSliderOptions(parseJson(serialized), defaultSliderFieldOptions());
   if (fieldType === 'list') return normalizeListOptions(parseJson(serialized), defaultListFieldOptions());
   if (fieldType === 'chart') return normalizeChartOptions(parseJson(serialized), defaultChartFieldOptions());
@@ -103,6 +106,7 @@ export function serializeDynamicFieldOptions(options: DynamicFieldStructuredOpti
 }
 
 export function isValidDynamicFieldOptions(fieldType: DynamicFieldType, serialized?: string | null): boolean {
+  if (fieldType === 'calendar-date') { try { parseCalendarFieldOptions(serialized); return !!serialized; } catch { return false; } }
   if (fieldType !== 'slider' && fieldType !== 'list' && fieldType !== 'chart') return true;
   if (!serialized) return false;
   const parsed = parseJson(serialized);

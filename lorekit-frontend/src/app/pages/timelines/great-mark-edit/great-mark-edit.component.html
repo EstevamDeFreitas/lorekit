@@ -1,0 +1,68 @@
+<div [historyEntity]="{ table: 'GreatMark', id: mark.id || '' }" [historyModel]="mark" class="w-full max-w-[980px] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-5">
+      <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <input [historyField]="{ column: 'name', label: 'Nome' }" type="text" class="min-w-0 flex-1 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-none" [(ngModel)]="mark.name" />
+        <div class="flex shrink-0 flex-wrap justify-end gap-2">
+          @if (mark.id) {
+            <app-personalization-button [entityId]="mark.id" [entityTable]="'GreatMark'" [size]="'xl'"></app-personalization-button>
+          }
+          <app-icon-button icon="fa-solid fa-xmark" buttonType="secondary" size="xl" (click)="dialogRef.close()"></app-icon-button>
+        </div>
+      </div>
+
+            @if (hasCalendar()) {<app-calendar-event-dates [timelineId]="data.timelineId" [startJson]="mark.calendarStartJson" [endJson]="mark.calendarEndJson" [defaultPosition]="data.defaultSortOrder" [defaultDate]="data.calendarDefaultDate" (datesChange)="mark.calendarStartJson = $event.start; mark.calendarEndJson = $event.end" (validityChange)="calendarDateError = $event"></app-calendar-event-dates>}
+      @if (calendarDateError) {<p class="text-rose-300 text-sm" role="alert">{{ calendarDateError }}</p>}
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+@if (!hasCalendar()) {
+        <app-input class="w-full min-w-0" label="Início (ano)" type="number" size="xs" [(value)]="mark.startDate"></app-input>
+        <app-input class="w-full min-w-0" label="Fim (ano)" type="number" size="xs" [(value)]="mark.endDate"></app-input>
+}
+
+        <app-input class="w-full min-w-0" label="Faixa do marco" type="number" size="xs" [(value)]="mark.lane"></app-input>
+        <app-input [historyField]="{ column: 'displayDate', label: 'Data exibida' }" class="w-full min-w-0" label="Data exibida" size="xs" [(value)]="mark.displayDate"></app-input>
+        <app-combo-box label="Tipo do evento" class="w-full" [items]="eventTypes" compareProp="id" displayProp="name" [(comboValue)]="selectedEventTypeId"></app-combo-box>
+        <app-combo-box label="Local principal" class="w-full" [items]="locations" compareProp="id" displayProp="name" [(comboValue)]="selectedLocationId"></app-combo-box>
+      </div>
+
+      <p class="-mt-2 text-xs text-zinc-500">O ponto do marco fica automaticamente no centro do intervalo. A personalização define o ícone.</p>
+      <app-text-area [historyField]="{ column: 'description', label: 'Descrição' }" label="Descrição" [(value)]="mark.description" height="h-32"></app-text-area>
+
+      <div class="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3 flex flex-col gap-3">
+        <div>
+          <h3 class="font-semibold">Entidades relacionadas</h3>
+          <p class="text-xs text-zinc-400">Adicione quantas entidades quiser para conectar o marco com o restante do sistema.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 min-h-10">
+          @for (item of relatedEntities; track item.entityTable + '-' + item.entityId) {
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-sm" [style]="'border: solid 1px ' + (getPersonalizationValue(item, 'color') || 'var(--color-zinc-900)') + ';' + ' background: ' + hexToRgba(getPersonalizationValue(item, 'color') || 'var(--color-zinc-800)', 0.25)">
+              <span class="text-zinc-200">{{ item.label }}</span>
+              <span class="text-zinc-500 text-xs">{{ item.subtitle }}</span>
+              <button type="button" class="text-zinc-400 hover:text-white cursor-pointer" (click)="removeRelatedEntity(item)"><i class="fa-solid fa-xmark"></i></button>
+            </span>
+          }
+          @if (relatedEntities.length === 0) { <span class="text-sm text-zinc-500">Nenhuma entidade relacionada.</span> }
+        </div>
+        <div class="relative">
+          <div class="flex gap-2">
+            <input type="text" [(ngModel)]="relatedSearchTerm" (ngModelChange)="onRelatedSearchChange($event)" placeholder="Buscar mundos, personagens, documentos, organizações..." class="flex-1 rounded-lg px-3 py-2 bg-zinc-925 border border-zinc-800 text-sm focus:outline-none focus:border-zinc-100 placeholder:text-white/20" />
+            <app-button label="Limpar" buttonType="secondary" size="sm" (click)="clearRelatedSearch()"></app-button>
+          </div>
+          @if (searchResults.length > 0) {
+            <div class="absolute z-20 top-full mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 shadow-lg max-h-56 overflow-y-auto scrollbar-dark">
+              @for (result of searchResults; track result.entityTable + '-' + result.entityId) {
+                <button type="button" class="w-full text-left px-3 py-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-900 cursor-pointer" (click)="addRelatedEntity(result)">
+                  <div class="font-medium">{{ result.label }}</div><div class="text-xs text-zinc-500">{{ result.subtitle }}</div>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="flex flex-wrap justify-between gap-3 pt-2">
+        <div>@if (mark.id) { <app-button label="Excluir" buttonType="danger" size="sm" (click)="deleteMark()"></app-button> }</div>
+        <div class="flex gap-2"><app-icon-button title="Salvar" icon="fa-solid fa-floppy-disk" buttonType="primary" size="xl" (click)="saveMark()"></app-icon-button></div>
+      </div>
+    
+</div>
+
+@if (calendarSaveError) {<p class="text-rose-300 text-sm" role="alert">{{ calendarSaveError }}</p>}

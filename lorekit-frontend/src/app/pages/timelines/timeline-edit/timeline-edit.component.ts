@@ -1,3 +1,9 @@
+import { CalendarService } from '../../../services/calendar.service';
+import { parseCalendarDate } from '../../../utils/calendar-engine';
+import { CalendarTimelineCanvasComponent } from '../../../components/calendar-timeline-canvas/calendar-timeline-canvas.component';
+import { CalendarTimelineConfigComponent } from '../../../components/calendar-timeline-config/calendar-timeline-config.component';
+import { CalendarDate } from '../../../models/calendar.model';
+import { CalendarTemporalTable, CalendarTimelineService } from '../../../services/calendar-timeline.service';
 import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { Dialog, DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
@@ -61,9 +67,9 @@ interface TimelineDrag {
 }
 @Component({
   selector: 'app-timeline-edit',
-  imports: [EntityHistoryContextDirective, HistoryFieldDirective, EditorComponent, FormsModule, IconButtonComponent, PersonalizationButtonComponent, SafeDeleteButtonComponent],
+  imports: [CalendarTimelineCanvasComponent, CalendarTimelineConfigComponent, EntityHistoryContextDirective, HistoryFieldDirective, EditorComponent, FormsModule, IconButtonComponent, PersonalizationButtonComponent, SafeDeleteButtonComponent],
   templateUrl: './timeline-edit.component.html',
-  styleUrl: './timeline-edit.component.css',
+  styleUrls: ['../../../components/timeline-items.css', './timeline-edit.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TimelineEditComponent implements OnDestroy {
@@ -97,6 +103,9 @@ export class TimelineEditComponent implements OnDestroy {
   readonly isRouteComponent = computed(() => this.router.routerState.root.firstChild?.component === TimelineEditComponent || this.activatedRoute.component === TimelineEditComponent);
   readonly getTextClass = getTextClass;
   timeline = new Timeline();
+  showCalendarConfig = false;
+  calendarRefresh = 0;
+  private readonly calendarTimeline = inject(CalendarTimelineService);
   ages: Age[] = [];
   greatMarks: GreatMark[] = [];
   events: TimelineEvent[] = [];
@@ -178,6 +187,7 @@ export class TimelineEditComponent implements OnDestroy {
     }
 
     this.timeline = loadedTimeline;
+    this.calendarRefresh++;
     this.timeline.timeUnitName ||= 'Anos';
     this.ages = this.ageService.getAgesByTimelineId(id);
     this.greatMarks = this.greatMarkService.getGreatMarksByTimelineId(id);
@@ -453,9 +463,9 @@ export class TimelineEditComponent implements OnDestroy {
     } else {
       const item = drag.item as Age | TimelineEvent;
       if (drag.kind === 'age-start' || drag.kind === 'event-start') {
-        item.startDate = Math.min(this.snapDate(drag.startDate + dateDelta, event), drag.endDate - 1);
+        item.startDate = Math.min(this.snapDate(drag.startDate + dateDelta, event), drag.endDate - (drag.kind === 'age-start' ? 1 : 0));
       } else if (drag.kind === 'age-end' || drag.kind === 'event-end') {
-        item.endDate = Math.max(this.snapDate(drag.endDate + dateDelta, event), drag.startDate + 1);
+        item.endDate = Math.max(this.snapDate(drag.endDate + dateDelta, event), drag.startDate + (drag.kind === 'age-end' ? 1 : 0));
       } else {
         const duration = drag.endDate - drag.startDate;
         item.startDate = this.snapDate(drag.startDate + dateDelta, event);
@@ -532,14 +542,26 @@ export class TimelineEditComponent implements OnDestroy {
   private async persistEventPlacement(event: TimelineEvent): Promise<void> {
     await this.eventService.saveEventPlacement(event.id, event.startDate, event.endDate, event.lane);
   }
-  openAgeDialog(defaultStartDate: number, ageId?: string): void {
-    this.openDialog(AgeEditComponent, { id: ageId, timelineId: this.timeline.id, defaultStartDate });
+  calendarChanged(): void { this.showCalendarConfig = false; this.loadTimeline(); this.cdr.markForCheck(); }
+  calendarEdit(item: { table: CalendarTemporalTable; id: string }): void {
+    if (item.table === 'Age') this.openAgeDialog(0, item.id);
+    else if (item.table === 'GreatMark') this.openGreatMarkDialog(0, item.id);
+    else this.openEventDialog(0, item.id);
   }
-  openGreatMarkDialog(defaultDate: number, markId?: string): void {
-    this.openDialog(GreatMarkEditComponent, { id: markId, timelineId: this.timeline.id, defaultSortOrder: defaultDate, worldId: this.timeline.ParentWorld?.id || null }, '90vw', '980px');
+  calendarCreate(item: { table: CalendarTemporalTable; date: CalendarDate }): void {
+    const position = this.calendarTimeline.project(item.date, this.timeline);
+    if (item.table === 'Age') this.openAgeDialog(position, undefined, item.date);
+    else if (item.table === 'GreatMark') this.openGreatMarkDialog(position, undefined, item.date);
+    else this.openEventDialog(position, undefined, item.date);
   }
-  openEventDialog(defaultDate: number, eventId?: string): void {
-    this.openDialog(TimelineEventEditComponent, { id: eventId, timelineId: this.timeline.id, defaultSortOrder: defaultDate, worldId: this.timeline.ParentWorld?.id || null }, '90vw', '980px');
+  openAgeDialog(defaultStartDate: number, ageId?: string, calendarDefaultDate?: CalendarDate): void {
+    this.openDialog(AgeEditComponent, { id: ageId, timelineId: this.timeline.id, defaultStartDate, calendarDefaultDate });
+  }
+  openGreatMarkDialog(defaultDate: number, markId?: string, calendarDefaultDate?: CalendarDate): void {
+    this.openDialog(GreatMarkEditComponent, { id: markId, timelineId: this.timeline.id, defaultSortOrder: defaultDate, calendarDefaultDate, worldId: this.timeline.ParentWorld?.id || null }, '90vw', '980px');
+  }
+  openEventDialog(defaultDate: number, eventId?: string, calendarDefaultDate?: CalendarDate): void {
+    this.openDialog(TimelineEventEditComponent, { id: eventId, timelineId: this.timeline.id, defaultSortOrder: defaultDate, calendarDefaultDate, worldId: this.timeline.ParentWorld?.id || null }, '90vw', '980px');
   }
   private openDialog(component: unknown, data: object, width = '36rem', maxWidth = '92vw'): void {
     const ref = this.dialog.open(component as any, { panelClass: ['screen-dialog', 'overflow-visible'], width, maxWidth, data });
@@ -583,6 +605,8 @@ export class TimelineEditComponent implements OnDestroy {
     this.yearTicks = this.buildYearTicks();
     this.rebuildTimelineIndex();
   }
+  @ViewChild(CalendarTimelineCanvasComponent) private calendarCanvas?: CalendarTimelineCanvasComponent;
+  private readonly calendarService = inject(CalendarService);
   private rebuildTimelineIndex(): void {
     const unit = this.timeline.timeUnitName || 'Anos';
     this.timelineIndexItems = [
@@ -622,10 +646,21 @@ export class TimelineEditComponent implements OnDestroy {
         date: event.startDate,
         endDate: event.endDate,
       })),
-    ].sort((a, b) => a.date - b.date || a.typeLabel.localeCompare(b.typeLabel));
+    ].map(item => {
+      if (!this.timeline.calendarId || !this.timeline.calendarRevisionId) return item;
+      try {
+        const engine = this.calendarService.resolve({ calendarId: this.timeline.calendarId, revisionId: this.timeline.calendarRevisionId }, this.timeline.ParentWorld?.id).engine;
+        const record = (item.kind === 'age' ? this.ages : item.kind === 'mark' ? this.greatMarks : this.events).find(source => source.id === item.id)!;
+        const start = parseCalendarDate(record.calendarStartJson, engine), end = parseCalendarDate(record.calendarEndJson, engine);
+        const format = (value: string): string => value.replaceAll('{AutoGenDate}', start ? engine.format(start, this.timeline.calendarFormatId ?? undefined, this.timeline.calendarCountId ?? undefined) : 'Data pendente').replaceAll('{AutoGenStartDate}', start ? engine.format(start, this.timeline.calendarFormatId ?? undefined, this.timeline.calendarCountId ?? undefined) : 'Data pendente').replaceAll('{AutoGenEndDate}', end ? engine.format(end, this.timeline.calendarFormatId ?? undefined, this.timeline.calendarCountId ?? undefined) : 'Data pendente');
+        return { ...item, label: format(record.name || item.label), summary: format(record.description || ''), typeLabel: item.kind === 'age' ? 'Período' : item.typeLabel, date: start ? engine.bounds(start).start.day : item.date,
+          dateLabel: start ? engine.format(start, this.timeline.calendarFormatId ?? undefined, this.timeline.calendarCountId ?? undefined) + (end && JSON.stringify(start) !== JSON.stringify(end) ? ' — ' + engine.format(end, this.timeline.calendarFormatId ?? undefined, this.timeline.calendarCountId ?? undefined) : '') : 'Data pendente' };
+      } catch { return { ...item, dateLabel: 'Data indisponível' }; }
+    }).sort((a, b) => a.date - b.date || a.typeLabel.localeCompare(b.typeLabel));
     this.filterTimelineIndex();
   }
   private focusTimelineItem(item: TimelineIndexItem): void {
+    if (this.timeline.calendarId) { this.calendarCanvas?.focusItem(item.kind === 'age' ? 'Age' : item.kind === 'mark' ? 'GreatMark' : 'Event', item.id); return; }
     const viewport = this.viewport?.nativeElement;
     if (!viewport) return;
     const itemTop = item.kind === 'age'

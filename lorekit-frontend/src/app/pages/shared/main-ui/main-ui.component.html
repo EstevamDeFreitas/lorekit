@@ -22,6 +22,7 @@
             [active]="layout.activeSidebarSection === 'document'"
             activeColor="olive-400"
             (click)="tabManager.setActiveSidebarSection('document')"></app-nav-button>
+          <app-nav-button [label]="'Calendários'" [showLabel]="false" [icon]="'fa-solid fa-calendar-days'" size="xl" [fullWidth]="true" [direction]="'right'" (click)="tabManager.setActiveSidebarSection('calendars')"></app-nav-button>
           <app-nav-button [label]="'Linhas do Tempo'" [showLabel]="false" [icon]="'fa-solid fa-timeline'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'timeline'"
             activeColor="mist-400"

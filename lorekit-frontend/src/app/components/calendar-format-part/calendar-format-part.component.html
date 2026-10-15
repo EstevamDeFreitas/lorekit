@@ -1,0 +1,31 @@
+@let current = part();
+<div class="part-editor">
+  <ng-template #partActions>
+  <div class="part-actions" role="group" [attr.aria-label]="'Organizar parte ' + (position() + 1)">
+    <button type="button" [disabled]="position() === 0" (click)="moved.emit(-1)" [attr.aria-label]="'Mover parte ' + (position() + 1) + ' para cima'"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+    <button type="button" [disabled]="position() === total() - 1" (click)="moved.emit(1)" [attr.aria-label]="'Mover parte ' + (position() + 1) + ' para baixo'"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+    <button type="button" (click)="removed.emit()" [attr.aria-label]="'Remover parte ' + (position() + 1)"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+  </div>
+  </ng-template>
+  @if (isLiteral(current)) {
+    <div class="part-row"><label>Texto<input [ngModel]="current.literal" (ngModelChange)="changed.emit({literal: $event})"></label><ng-container [ngTemplateOutlet]="partActions"></ng-container></div>
+  } @else if (isConditional(current)) {
+    <fieldset class="conditional"><legend>Texto condicional</legend>
+      <div class="part-row"><label>Exibir quando<select [ngModel]="current.conditional.mode" (ngModelChange)="mode($event)"><option value="all">Todas as condições forem verdadeiras (E)</option><option value="any">Qualquer condição for verdadeira (OU)</option></select></label><ng-container [ngTemplateOutlet]="partActions"></ng-container></div>
+      @for (condition of current.conditional.conditions; track $index; let index = $index) {
+        <div class="condition-row">
+          <label>Componente<select [ngModel]="condition.field" (ngModelChange)="updateCondition(index, 'field', $event)">@for (field of fields; track field.value) {<option [value]="field.value">{{ field.label }}</option>}</select></label>
+          <label>Comparação<select [ngModel]="condition.operator" (ngModelChange)="updateCondition(index, 'operator', $event)">@for (operator of operators; track operator.value) {<option [value]="operator.value">{{ operator.label }}</option>}</select></label>
+          <label>{{ condition.operator === 'between' ? 'De' : 'Valor' }}<input type="number" step="1" [ngModel]="condition.value" (ngModelChange)="updateCondition(index, 'value', $event)"></label>
+          @if (condition.operator === 'between') {<label>Até<input type="number" step="1" [ngModel]="condition.end" (ngModelChange)="updateCondition(index, 'end', $event)"></label>}
+          <button type="button" [disabled]="current.conditional.conditions.length === 1" (click)="removeCondition(index)" [attr.aria-label]="'Remover condição ' + (index + 1)"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+        </div>
+      }
+      <button type="button" [disabled]="current.conditional.conditions.length >= 20" (click)="addCondition()"><i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar condição</button>
+      <div class="results"><label>Se verdadeiro<input [ngModel]="current.conditional.whenTrue" (ngModelChange)="ruleText('whenTrue', $event)" placeholder="Ex.: Dia de luz"></label><label>Caso contrário<input [ngModel]="current.conditional.whenFalse" (ngModelChange)="ruleText('whenFalse', $event)" placeholder="Ex.: Dia da noite"></label><label>Quando faltar informação<input [ngModel]="current.conditional.whenUnknown || ''" (ngModelChange)="ruleText('whenUnknown', $event)" placeholder="Vazio para não exibir texto"></label></div>
+      <p>O dia do mês, o mês e o horário só são comparados quando conhecidos. Sem meses, “Dia” usa o dia do ano. Os números da semana seguem a ordem configurada, começando em 1.</p>
+    </fieldset>
+  } @else {
+    <div class="part-row"><div class="token-fields"><label>Componente<select [ngModel]="current.token" (ngModelChange)="token($event, current.width)">@for (token of tokens; track token) {<option [value]="token">{{ tokenLabel(token) }}</option>}</select></label><label>Dígitos mínimos<input type="number" min="1" max="20" [ngModel]="current.width" (ngModelChange)="token(current.token, $event)"></label></div><ng-container [ngTemplateOutlet]="partActions"></ng-container></div>
+  }
+</div>

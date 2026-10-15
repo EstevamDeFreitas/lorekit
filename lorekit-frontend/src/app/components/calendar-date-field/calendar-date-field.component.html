@@ -1,0 +1,21 @@
+<div class="calendar-field" #container>
+  <label class="field-label" [for]="fieldId" [title]="label()" [style.color]="labelColor()">{{ label() }}</label>
+  <div class="date-input" cdkOverlayOrigin #trigger="cdkOverlayOrigin" [class.has-error]="!!dependencyError()">
+    <input [id]="fieldId" type="text" readonly [value]="display().text" [title]="display().title" placeholder="Selecione uma data…" aria-haspopup="dialog" [attr.aria-expanded]="isOpen()" [attr.aria-controls]="isOpen() ? fieldId + '-panel' : null" [attr.aria-invalid]="!!dependencyError() || null" (click)="open()" (keydown.enter)="open(); $event.preventDefault()" (keydown.space)="open(); $event.preventDefault()" (keydown.arrowDown)="open(); $event.preventDefault()">
+    @if (value()) {<button class="clear-date" type="button" (click)="update(null)" [attr.aria-label]="'Limpar ' + label()" title="Limpar data"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>}
+    <button class="calendar-trigger" type="button" (click)="toggle()" [attr.aria-label]="'Selecionar calendário e data para ' + label()" aria-haspopup="dialog" [attr.aria-expanded]="isOpen()" [attr.aria-controls]="isOpen() ? fieldId + '-panel' : null" title="Selecionar calendário e data"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i></button>
+  </div>
+</div>
+<ng-template cdkConnectedOverlay [cdkConnectedOverlayOrigin]="trigger" [cdkConnectedOverlayOpen]="isOpen()" [cdkConnectedOverlayWidth]="panelWidth()" [cdkConnectedOverlayPositions]="dropdownPositions" [cdkConnectedOverlayPush]="true" [cdkConnectedOverlayViewportMargin]="8" (attach)="attached()" (overlayOutsideClick)="outside($event)" (overlayKeydown)="keydown($event)" (detach)="close()">
+  <section class="date-panel scrollbar-dark" [id]="fieldId + '-panel'" role="dialog" [attr.aria-label]="'Selecionar ' + label()" cdkTrapFocus [cdkTrapFocusAutoCapture]="true">
+    <header><h3>{{ label() }}</h3><button type="button" (click)="close()" aria-label="Fechar seleção de data"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></header>
+    @if (worlds().length !== 1) {<app-combo-box label="Mundo da data" [items]="worlds()" compareProp="id" displayProp="name" [comboValue]="worldId()" (comboValueChange)="selectWorld($event)"></app-combo-box>}
+    @if (config()?.mode === 'selectable') {<app-combo-box label="Calendário" [items]="calendars()" compareProp="id" displayProp="name" [comboValue]="selectedCalendarId()" (comboValueChange)="selectCalendar($event)" placeholder="Selecione um calendário"></app-combo-box>}
+    @if (dependencyError()) {<p class="error" role="alert">{{ dependencyError() }}</p>}
+    @if (binding()) {<app-calendar-date-picker [binding]="binding()" [value]="pickerValue()" [allowTime]="config()?.allowTime || false" label="Data" (valueChange)="update($event)"></app-calendar-date-picker>}
+    @else {<p role="status">{{ config()?.mode === 'fixed' ? 'Associe um calendário a este mundo na configuração do campo. O valor foi preservado.' : 'Escolha o mundo e o calendário para definir a data.' }}</p>}
+    @if (!worlds().length) {<p role="status">Associe esta entidade a um mundo para utilizar seus calendários.</p>}
+    @if (error()) {<p class="error" role="alert">{{ error() }}</p>}
+    <p class="selection-help">“Usar data” confirma e salva o campo. Fechar mantém o valor anterior.</p>
+  </section>
+</ng-template>

@@ -13,6 +13,14 @@ export interface RegistryEntry {
 
 /** Maps entity types and view names to their lazy-loaded components + input key. */
 const REGISTRY: Record<string, RegistryEntry> = {
+  Calendar: {
+    loader: () => import('../pages/calendars/calendar-edit/calendar-edit.component').then(m => m.CalendarEditComponent),
+    inputKey: 'calendarIdInput',
+  },
+  'view:calendars': {
+    loader: () => import('../pages/calendars/calendar-list/calendar-list.component').then(m => m.CalendarListComponent),
+    inputKey: '',
+  },
   Character: {
     loader: () =>
       import('../pages/characters/character-edit/character-edit.component').then(

@@ -4,6 +4,11 @@ import { World } from "./world.model";
 
 export class Timeline {
   id: string;
+  calendarId?: string | null;
+  calendarRevisionId?: string | null;
+  calendarCountId?: string | null;
+  calendarFormatId?: string | null;
+  calendarMappingJson?: string | null;
   name: string;
   description: string;
   concept?: string | null;

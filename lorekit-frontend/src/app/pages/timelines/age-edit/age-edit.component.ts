@@ -1,3 +1,6 @@
+import { CalendarEventDatesComponent } from '../../../components/calendar-event-dates/calendar-event-dates.component';
+import { CalendarTimelineService } from '../../../services/calendar-timeline.service';
+import { CalendarDate } from '../../../models/calendar.model';
 import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
@@ -12,48 +15,20 @@ import { AgeService } from '../../../services/age.service';
 interface AgeDialogData {
   id?: string;
   timelineId: string;
+  calendarDefaultDate?: CalendarDate;
   defaultStartDate: number;
 }
 @Component({
   selector: 'app-age-edit',
-  imports: [EntityHistoryContextDirective, ButtonComponent, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
-  template: `
-    <div [historyEntity]="{ table: 'Age', id: age.id || '' }" [historyModel]="age" class="w-full max-w-[36rem] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-4">
-      <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 class="text-lg font-bold">{{ age.id ? 'Editar Era' : 'Nova Era' }}</h2>
-          <p class="text-sm text-zinc-400">As eras podem se sobrepor e organizar o contexto visual da timeline.</p>
-        </div>
-        <div class="flex shrink-0 flex-wrap items-center gap-2">
-          @if (age.id) {
-            <app-personalization-button [entityId]="age.id" [entityTable]="'Age'" [size]="'lg'"></app-personalization-button>
-          }
-          <app-icon-button icon="fa-solid fa-xmark" buttonType="secondary" size="lg" (click)="dialogRef.close()"></app-icon-button>
-        </div>
-      </div>
-      <app-input [historyField]="{ column: 'name', label: 'Nome' }" label="Nome" [(value)]="age.name"></app-input>
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <app-input label="Início (ano)" type="number" [(value)]="age.startDate"></app-input>
-        <app-input label="Fim (ano)" type="number" [(value)]="age.endDate"></app-input>
-      </div>
-      <app-text-area [historyField]="{ column: 'description', label: 'Descrição' }" label="Descrição" [(value)]="age.description" height="h-28"></app-text-area>
-      <p class="text-xs text-zinc-500">Use &#123;AutoGenDate&#125;, &#123;AutoGenStartDate&#125; e &#123;AutoGenEndDate&#125; no nome ou na descrição.</p>
-      <div class="flex flex-wrap justify-between gap-3 pt-2">
-        <div>
-          @if (age.id) {
-            <app-button label="Excluir" buttonType="danger" size="sm" (click)="deleteAge()"></app-button>
-          }
-        </div>
-        <div class="flex gap-2">
-          <app-button label="Cancelar" buttonType="secondary" size="sm" (click)="dialogRef.close()"></app-button>
-          <app-button label="Salvar" buttonType="primary" size="sm" (click)="saveAge()"></app-button>
-        </div>
-      </div>
-    </div>
-  `,
+  imports: [CalendarEventDatesComponent, EntityHistoryContextDirective, ButtonComponent, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent],
+  templateUrl: './age-edit.component.html',
   changeDetection: ChangeDetectionStrategy.Default,
 })
 export class AgeEditComponent {
+  private readonly calendarTimeline = inject(CalendarTimelineService);
+  calendarDateError = '';
+  calendarSaveError = '';
+  hasCalendar(): boolean { return !!this.calendarTimeline.timeline(this.data.timelineId).calendarId; }
   readonly dialogRef = inject<DialogRef<any>>(DialogRef<any>);
   readonly data = inject<AgeDialogData>(DIALOG_DATA);
   private readonly ageService = inject(AgeService);
@@ -65,12 +40,22 @@ export class AgeEditComponent {
       if (storedAge) this.age = storedAge;
     }
   }
-  saveAge() {
+  async saveAge(): Promise<void> {
+    if (this.calendarDateError) return;
+    this.calendarSaveError = '';
+    try {
+      this.calendarTimeline.prepareRecord(this.age, this.data.timelineId);
+
     if (!this.age.name.trim()) return;
     this.age.description ||= '';
     const savedAge = this.ageService.saveAge(this.age, this.data.timelineId);
+    this.age = savedAge;
+    await this.calendarTimeline.flush();
     this.dialogRef.close({ saved: true, ageId: savedAge.id });
+
+    } catch (error) { this.calendarSaveError = error instanceof Error ? error.message : 'Não foi possível salvar.'; }
   }
+
   deleteAge() {
     this.confirm.ask(`Tem certeza que deseja excluir a era ${this.age.name}?`).then(confirmed => {
       if (!confirmed) return;

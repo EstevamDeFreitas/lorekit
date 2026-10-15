@@ -9,6 +9,27 @@ export type TableDef = {
 
 export const schema: TableDef[] = [
   {
+    name: 'Calendar',
+    columns: [
+      { name: 'id', def: '"id" TEXT NOT NULL PRIMARY KEY' },
+      { name: 'worldId', def: '"worldId" TEXT NOT NULL' },
+      { name: 'name', def: '"name" TEXT NOT NULL' },
+      { name: 'description', def: '"description" TEXT NOT NULL DEFAULT \'\'' },
+      { name: 'latestRevisionId', def: '"latestRevisionId" TEXT NOT NULL' },
+    ],
+    indexes: ['CREATE INDEX IF NOT EXISTS "idx_calendar_world" ON "Calendar" ("worldId")'],
+  },
+  {
+    name: 'CalendarRevision',
+    columns: [
+      { name: 'id', def: '"id" TEXT NOT NULL PRIMARY KEY' },
+      { name: 'calendarId', def: '"calendarId" TEXT NOT NULL' },
+      { name: 'revision', def: '"revision" INTEGER NOT NULL' },
+      { name: 'rulesJson', def: '"rulesJson" TEXT NOT NULL' },
+    ],
+    indexes: ['CREATE INDEX IF NOT EXISTS "idx_calendar_revision" ON "CalendarRevision" ("calendarId")'],
+  },
+  {
     name: "World",
     columns: [
       { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
@@ -192,6 +213,11 @@ export const schema: TableDef[] = [
   {
     name: "Timeline",
     columns: [
+      { name: "calendarId", def: '"calendarId" TEXT' },
+      { name: "calendarRevisionId", def: '"calendarRevisionId" TEXT' },
+      { name: "calendarCountId", def: '"calendarCountId" TEXT' },
+      { name: "calendarFormatId", def: '"calendarFormatId" TEXT' },
+      { name: "calendarMappingJson", def: '"calendarMappingJson" TEXT' },
       { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
       { name: "name",        def: `"name" TEXT NOT NULL` },
       { name: "concept",     def: `"concept" TEXT` },
@@ -202,6 +228,8 @@ export const schema: TableDef[] = [
   {
     name: "GreatMark",
     columns: [
+      { name: "calendarStartJson", def: '"calendarStartJson" TEXT' },
+      { name: "calendarEndJson", def: '"calendarEndJson" TEXT' },
       { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
       { name: "name",        def: `"name" TEXT NOT NULL` },
       { name: "concept",     def: `"concept" TEXT` },
@@ -218,6 +246,9 @@ export const schema: TableDef[] = [
   {
     name: "Age",
     columns: [
+      { name: "calendarStartJson", def: '"calendarStartJson" TEXT' },
+      { name: "calendarEndJson", def: '"calendarEndJson" TEXT' },
+      { name: "calendarConvertedCountId", def: '"calendarConvertedCountId" TEXT' },
       { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },
       { name: "name",        def: `"name" TEXT NOT NULL` },
       { name: "description", def: `"description" TEXT NOT NULL` },
@@ -235,6 +266,8 @@ export const schema: TableDef[] = [
   {
     name: "Event",
     columns: [
+      { name: "calendarStartJson", def: '"calendarStartJson" TEXT' },
+      { name: "calendarEndJson", def: '"calendarEndJson" TEXT' },
       { name: "id",              def: `"id" TEXT NOT NULL PRIMARY KEY` },
       { name: "name",            def: `"name" TEXT NOT NULL` },
       { name: "concept",         def: `"concept" TEXT` },

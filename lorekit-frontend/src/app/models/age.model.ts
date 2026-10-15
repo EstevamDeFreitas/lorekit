@@ -3,6 +3,9 @@ import { Personalization } from './personalization.model';
 import { Timeline } from './timeline.model';
 export class Age {
   id: string;
+  calendarStartJson?: string | null;
+  calendarEndJson?: string | null;
+  calendarConvertedCountId?: string | null;
   name: string;
   description: string;
   startDate: number;

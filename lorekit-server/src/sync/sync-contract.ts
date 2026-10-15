@@ -3,6 +3,8 @@ export const SYNC_PUSH_LIMIT = 100;
 export const SYNC_PULL_LIMIT = 500;
 
 export const SYNC_ENTITY_TYPES = [
+  'Calendar',
+  'CalendarRevision',
   'World',
   'LocationCategory',
   'Location',

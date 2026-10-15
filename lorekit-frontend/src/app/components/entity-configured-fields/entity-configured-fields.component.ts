@@ -15,6 +15,7 @@ import { FlushableDebounce } from '../../utils/flushable-debounce';
 import { DynamicSliderFieldComponent } from '../dynamic-slider-field/dynamic-slider-field.component';
 import { DynamicListFieldComponent } from '../dynamic-list-field/dynamic-list-field.component';
 import { DynamicChartFieldComponent } from '../dynamic-chart-field/dynamic-chart-field.component';
+import { CalendarDateFieldComponent } from '../calendar-date-field/calendar-date-field.component';
 
 export interface ConfigurableEntity {
   id: string;
@@ -28,7 +29,7 @@ export interface NativeFieldChange {
 
 @Component({
   selector: 'app-entity-configured-fields',
-  imports: [FormsModule, MobilePinchZoomDirective, InputComponent, TextAreaComponent, EditorComponent, ComboBoxComponent, DynamicImageFieldComponent, DynamicSliderFieldComponent, DynamicListFieldComponent, DynamicChartFieldComponent],
+  imports: [FormsModule, MobilePinchZoomDirective, InputComponent, TextAreaComponent, EditorComponent, ComboBoxComponent, DynamicImageFieldComponent, DynamicSliderFieldComponent, DynamicListFieldComponent, DynamicChartFieldComponent, CalendarDateFieldComponent],
   templateUrl: './entity-configured-fields.component.html',
   styleUrl: './entity-configured-fields.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -131,6 +132,11 @@ export class EntityConfiguredFieldsComponent {
   onDynamicValueChange(fieldId: string, value: string): void {
     this.getDynamicFieldValue(fieldId).value = value;
     this.saveDynamicValues();
+  }
+
+  onDynamicCalendarValueChange(fieldId: string, value: string): void {
+    this.onDynamicValueChange(fieldId, value);
+    this.dynamicSaveTask.flush();
   }
 
   onDynamicSliderValueChange(fieldId: string, value: number): void {

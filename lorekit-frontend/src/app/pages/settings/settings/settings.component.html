@@ -322,6 +322,7 @@
                   }
 
                   @if (layoutImportPlan) {
+                    @if (layoutImportPlan.document.calendarReferences?.length) {<app-calendar-layout-associations [plan]="layoutImportPlan" (planChange)="layoutImportPlan = $event"></app-calendar-layout-associations>}
                     <div class="mt-3 rounded-md border border-zinc-700 bg-zinc-950 p-3 text-sm">
                       <p><span class="text-zinc-400">Entidade detectada:</span> {{ layoutImportPlan.document.entityTable }}</p>
                       <p class="mt-1"><span class="text-zinc-400">Campos dinâmicos:</span> {{ layoutImportPlan.fieldsToCreate.length }} a criar, {{ layoutImportPlan.reusedFields.length }} a reutilizar.</p>

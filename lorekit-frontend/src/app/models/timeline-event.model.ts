@@ -34,6 +34,8 @@ export interface TimelineEventRelatedEntity {
 
 export class TimelineEvent {
   id: string;
+  calendarStartJson?: string | null;
+  calendarEndJson?: string | null;
   name: string;
   description: string;
   concept?: string | null;

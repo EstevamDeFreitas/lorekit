@@ -43,6 +43,9 @@
             @let dynamicTemplate = dynamicTemplateByItem(item);
             @if (dynamicTemplate) {
               @switch (metadata?.control) {
+                @case ('calendar-date') {
+                  <app-calendar-date-field [entityTable]="entityTable()" [entityId]="entity().id" [label]="dynamicTemplate.name" [labelColor]="item.color || null" [options]="dynamicTemplate.options" [value]="getDynamicFieldValue(dynamicTemplate.id).value" (valueChange)="onDynamicCalendarValueChange(dynamicTemplate.id, $event)"></app-calendar-date-field>
+                }
                 @case ('image') {
                   <app-dynamic-image-field class="block h-full min-h-0" [label]="dynamicTemplate.name"
                     [labelColor]="item.color || null" [value]="getDynamicFieldValue(dynamicTemplate.id).value" [aspectRatio]="dynamicTemplate.options"

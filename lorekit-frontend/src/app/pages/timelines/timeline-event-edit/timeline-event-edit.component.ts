@@ -1,3 +1,6 @@
+import { CalendarEventDatesComponent } from '../../../components/calendar-event-dates/calendar-event-dates.component';
+import { CalendarTimelineService } from '../../../services/calendar-timeline.service';
+import { CalendarDate } from '../../../models/calendar.model';
 import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
@@ -27,6 +30,7 @@ import { getPersonalizationValue, hexToRgba } from '../../../models/personalizat
 interface TimelineEventDialogData {
   id?: string;
   timelineId: string;
+  calendarDefaultDate?: CalendarDate;
   defaultSortOrder: number;
   worldId?: string | null;
 }
@@ -34,120 +38,16 @@ interface TimelineEventDialogData {
 @Component({
   selector: 'app-timeline-event-edit',
   standalone: true,
-  imports: [EntityHistoryContextDirective, HistoryFieldDirective, ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent, SafeDeleteButtonComponent],
-  template: `
-    <div [historyEntity]="{ table: 'Event', id: event.id || '' }" [historyModel]="event" class="w-full max-w-[980px] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-5">
-      <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <input [historyField]="{ column: 'name', label: 'Nome' }"
-            type="text"
-            class="min-w-0 flex-1 text-2xl font-bold bg-transparent border-0 focus:ring-0 focus:outline-none"
-            [(ngModel)]="event.name"
-          />
-        <div class="flex shrink-0 flex-wrap justify-end gap-2">
-          @if (event.id) {
-            <app-personalization-button [entityId]="event.id" [entityTable]="'Event'" [size]="'xl'"></app-personalization-button>
-            <app-safe-delete-button [entityName]="event.name" [entityId]="event.id" [entityTable]="'Event'" [size]="'xl'"></app-safe-delete-button>
-            <!-- <app-button label="Excluir" buttonType="danger" size="sm" (click)="deleteEvent()"></app-button> -->
-          }
-          <app-icon-button icon="fa-solid fa-xmark" buttonType="secondary" size="xl" (click)="dialogRef.close()"></app-icon-button>
-        </div>
-      </div>
-
-
-      <div class=" gap-3">
-        <!-- <app-text-area [historyField]="{ column: 'concept', label: 'concept' }" label="Conceito" height="h-42" [(value)]="event.concept"></app-text-area> -->
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <app-input class="w-full min-w-0" label="Início (ano)" type="number" size="xs" [(value)]="event.startDate"></app-input>
-          <app-input class="w-full min-w-0" label="Fim (ano)" type="number" size="xs" [(value)]="event.endDate"></app-input>
-          <app-input class="w-full min-w-0" label="Faixa" type="number" size="xs" [(value)]="event.lane"></app-input>
-          <app-input [historyField]="{ column: 'date', label: 'Data exibida' }" class="w-full min-w-0" label="Data exibida" size="xs" [(value)]="event.date"></app-input>
-          <app-combo-box
-            label="Tipo do evento"
-            class="w-full"
-            [items]="eventTypes"
-            compareProp="id"
-            displayProp="name"
-            [(comboValue)]="selectedEventTypeId">
-          </app-combo-box>
-          <app-combo-box
-            label="Local principal"
-            class="w-full"
-            [items]="locations"
-            compareProp="id"
-            displayProp="name"
-            [(comboValue)]="selectedLocationId">
-          </app-combo-box>
-        </div>
-        <!-- <app-input label="Ordem cronológica" type="number" [(value)]="event.chronologyOrder"></app-input> -->
-      </div>
-
-      <app-text-area [historyField]="{ column: 'description', label: 'Descrição' }" label="Descrição" [(value)]="event.description" height="h-32"></app-text-area>
-
-      <div class="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3 flex flex-col gap-3">
-        <div>
-          <h3 class="font-semibold">Entidades relacionadas</h3>
-          <p class="text-xs text-zinc-400">Adicione quantas entidades quiser para conectar o evento com o restante do sistema.</p>
-        </div>
-
-        <div class="flex flex-wrap gap-2 min-h-10">
-          @for (item of relatedEntities; track item.entityTable + '-' + item.entityId) {
-            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-sm" [style]="'border: solid 1px ' + (getPersonalizationValue(item, 'color') || 'var(--color-zinc-900)') + ';' + ' background: ' + hexToRgba(getPersonalizationValue(item, 'color') || 'var(--color-zinc-800)', 0.25)">
-              <span class="text-zinc-200">{{ item.label }}</span>
-              <span class="text-zinc-500 text-xs">{{ item.subtitle }}</span>
-              <button type="button" class="text-zinc-400 hover:text-white cursor-pointer" (click)="removeRelatedEntity(item)">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
-            </span>
-          }
-          @if (relatedEntities.length === 0) {
-            <span class="text-sm text-zinc-500">Nenhuma entidade relacionada.</span>
-          }
-        </div>
-
-        <div class="relative">
-          <div class="flex gap-2">
-            <input
-              type="text"
-              [(ngModel)]="relatedSearchTerm"
-              (ngModelChange)="onRelatedSearchChange($event)"
-              placeholder="Buscar mundos, personagens, documentos, organizações..."
-              class="flex-1 rounded-lg px-3 py-2 bg-zinc-925 border border-zinc-800 text-sm focus:outline-none focus:border-zinc-100 placeholder:text-white/20"
-            />
-            <app-button label="Limpar" buttonType="secondary" size="sm" (click)="clearRelatedSearch()"></app-button>
-          </div>
-
-          @if (searchResults.length > 0) {
-            <div class="absolute z-20 top-full mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 shadow-lg max-h-56 overflow-y-auto scrollbar-dark">
-              @for (result of searchResults; track result.entityTable + '-' + result.entityId) {
-                <button
-                  type="button"
-                  class="w-full text-left px-3 py-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-900 cursor-pointer"
-                  (click)="addRelatedEntity(result)">
-                  <div class="font-medium">{{ result.label }}</div>
-                  <div class="text-xs text-zinc-500">{{ result.subtitle }}</div>
-                </button>
-              }
-            </div>
-          }
-        </div>
-      </div>
-
-      <div class="flex flex-wrap justify-between gap-3 pt-2">
-        <div>
-          @if (event.id) {
-            <!-- <app-button label="Excluir" buttonType="danger" size="sm" (click)="deleteEvent()"></app-button> -->
-          }
-        </div>
-        <div class="flex gap-2">
-          <app-icon-button title="Salvar" icon="fa-solid fa-floppy-disk" buttonType="primary" size="xl" (click)="saveEvent()"></app-icon-button>
-        </div>
-      </div>
-    </div>
-  `,
+  imports: [CalendarEventDatesComponent, EntityHistoryContextDirective, HistoryFieldDirective, ButtonComponent, ComboBoxComponent, FormsModule, IconButtonComponent, InputComponent, PersonalizationButtonComponent, TextAreaComponent, SafeDeleteButtonComponent],
+  templateUrl: './timeline-event-edit.component.html',
   styleUrl: './timeline-event-edit.component.css',
   changeDetection: ChangeDetectionStrategy.Default,
 })
 export class TimelineEventEditComponent {
+  private readonly calendarTimeline = inject(CalendarTimelineService);
+  calendarDateError = '';
+  calendarSaveError = '';
+  hasCalendar(): boolean { return !!this.calendarTimeline.timeline(this.data.timelineId).calendarId; }
   readonly dialogRef = inject<DialogRef<any>>(DialogRef<any>);
   readonly data = inject<TimelineEventDialogData>(DIALOG_DATA);
   private readonly eventService = inject(EventService);
@@ -185,7 +85,12 @@ export class TimelineEventEditComponent {
     }
   }
 
-  saveEvent() {
+  async saveEvent(): Promise<void> {
+    if (this.calendarDateError) return;
+    this.calendarSaveError = '';
+    try {
+      this.calendarTimeline.prepareRecord(this.event, this.data.timelineId);
+
     if (!this.event.name.trim()) {
       return;
     }
@@ -205,11 +110,15 @@ export class TimelineEventEditComponent {
       relatedEntities: this.relatedEntities,
     });
 
+    this.event = savedEvent;
+    await this.calendarTimeline.flush();
     this.dialogRef.close({
       saved: true,
       reorderRequired,
       eventId: savedEvent.id,
     });
+
+    } catch (error) { this.calendarSaveError = error instanceof Error ? error.message : 'Não foi possível salvar.'; }
   }
 
   deleteEvent() {

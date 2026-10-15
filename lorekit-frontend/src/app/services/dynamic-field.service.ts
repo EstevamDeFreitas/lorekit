@@ -20,6 +20,13 @@ export class DynamicFieldService {
   }
 
   saveDynamicField(field: DynamicField): DynamicField {
+    if (field.id) {
+      const previous = this.crud.findById('DynamicField', field.id) as DynamicField | undefined;
+      if (previous?.fieldType === 'calendar-date' && (previous.options !== field.options || field.fieldType !== previous.fieldType)) {
+        const values = this.crud.findAll('DynamicFieldValue', {}, [], { parentTable: 'DynamicField', parentId: field.id });
+        if (values.some((value: { value?: string }) => !!value.value)) throw new Error('Revise as datas existentes antes de alterar a configuração deste campo.');
+      }
+    }
     if (field.id != '') {
       field = <DynamicField>this.crud.update('DynamicField', field.id, field);
     } else {

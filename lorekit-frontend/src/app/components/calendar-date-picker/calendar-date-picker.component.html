@@ -1,0 +1,23 @@
+<fieldset class="date-picker" [formGroup]="form">
+  <legend>{{ label() }}</legend>
+  @if (state().engine; as engine) {
+    <div class="date-fields">
+      <label>Precisão<select formControlName="precision"><option value="year">Somente ano</option>@if (engine.rules.months.length) {<option value="month">Mês e ano</option>}<option value="day">Dia completo</option></select></label>
+      @if (engine.rules.counts.length) {
+        <label>Contagem dos anos<select #countChoice formControlName="countId" (change)="changeCount(countChoice.value)">@for (count of engine.rules.counts; track count.id) {<option [value]="count.id">{{ count.name }}</option>}</select></label>
+        <label>Lado do marco<select formControlName="side"><option value="before">Antes</option><option value="after">Depois</option></select></label>
+      }
+      <label>Ano<input type="number" formControlName="year" step="1"></label>
+      @if (form.controls.precision.value !== 'year' && engine.rules.months.length) {<label>Mês<select formControlName="monthId">@for (month of engine.rules.months; track month.id) {<option [value]="month.id">{{ month.name }} · {{ month.days }} dias</option>}</select></label>}
+      @if (form.controls.precision.value === 'day') {<label>{{ engine.rules.months.length ? 'Dia' : 'Dia do ano' }}<input type="number" formControlName="day" min="1" step="1"></label>}
+    </div>
+    @if (allowTime() && form.controls.precision.value === 'day') {
+      <label class="check"><input type="checkbox" formControlName="withTime">Informar horário</label>
+      @if (form.controls.withTime.value) {<div class="date-fields time-fields"><label>{{ engine.rules.clock.hourName }}<input type="number" formControlName="hour" min="0" [max]="engine.rules.clock.hoursPerDay - 1"></label><label>{{ engine.rules.clock.minuteName }}<input type="number" formControlName="minute" min="0" [max]="engine.rules.clock.minutesPerHour - 1"></label><label>{{ engine.rules.clock.secondName }}<input type="number" formControlName="second" min="0" [max]="engine.rules.clock.secondsPerMinute - 1"></label></div>}
+    }
+    <p class="preview" aria-live="polite">{{ preview() }}</p>
+    @if (contextLabel()) {<p class="preview">{{ contextLabel() }}</p>}
+    @if (error()) {<p class="error" role="alert">{{ error() }}</p>}
+    <div class="actions"><button type="button" class="primary" (click)="apply()">Usar data</button><button type="button" (click)="clear()">Limpar</button></div>
+  } @else {<p class="error" role="status">{{ state().error }}</p>}
+</fieldset>

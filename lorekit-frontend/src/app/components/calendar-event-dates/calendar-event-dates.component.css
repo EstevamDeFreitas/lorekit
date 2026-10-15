@@ -1,0 +1,1 @@
+.event-dates{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.event-dates p{grid-column:1/-1;color:#fda4af;font-size:.875rem}

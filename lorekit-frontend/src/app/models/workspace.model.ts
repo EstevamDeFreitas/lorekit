@@ -9,6 +9,7 @@ export type TabEntityType =
   | 'Organization'
   | 'Object'
   | 'Timeline'
+  | 'Calendar'
   | 'World'
   | 'Moodboard'
   | 'CharacterSheet'

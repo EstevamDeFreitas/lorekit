@@ -1,0 +1,56 @@
+<section class="calendar-timeline scrollbar-dark">
+  @if (state().engine) {
+    <div class="calendar-controls"><label>Escala<select [ngModel]="scale()" (ngModelChange)="selectScale($event)"><option value="auto">Automática · {{ scaleLabel(activeScale()) }}</option>@for (scale of scales(); track scale) {<option [value]="scale">{{ scaleLabel(scale) }}</option>}</select></label><label>Ajuste ao mover<select [ngModel]="snap()" (ngModelChange)="snap.set($event)"><option value="day">Dia</option>@if (state().engine!.rules.week.enabled) {<option value="week">Semana</option>}@if (state().engine!.rules.months.length) {<option value="month">Mês</option>}<option value="year">Ano</option></select></label><button type="button" aria-label="Período anterior" (click)="pan(-1)"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button><button type="button" aria-label="Período seguinte" (click)="pan(1)"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button><button type="button" aria-label="Reduzir zoom" (click)="zoom(1.4)"><i class="fa-solid fa-minus" aria-hidden="true"></i></button><button type="button" aria-label="Aumentar zoom" (click)="zoom(.7)"><i class="fa-solid fa-plus" aria-hidden="true"></i></button><button type="button" (click)="showGoTo.set(!showGoTo())">Ir para data</button><label class="check"><input type="checkbox" [ngModel]="showSeasons()" (ngModelChange)="showSeasons.set($event)">Estações</label></div>
+    <p class="range-label" role="status">{{ rangeLabel() }}</p>
+    @if (showGoTo()) {<app-calendar-date-picker [binding]="binding()" label="Ir para data" (valueChange)="goTo($event)"></app-calendar-date-picker>}
+    <p class="help">Clique no espaço vazio para criar. Ctrl + roda aproxima; Shift + roda move. Arraste os acontecimentos para posicionar e as extremidades para alterar as datas.</p>
+    <div #plot class="plot timeline-canvas" [style.height.px]="plotHeight()" (wheel)="wheel($event)" (click)="plotClick($event)">
+      @for (tick of ticks(); track tick.day) {<div class="tick" [style.left.px]="x(tick.day)"><span>{{ tick.label }}</span></div>}
+      <div class="marks-section" [style.top.px]="markBase() - 12" [style.height.px]="eventBase() - markBase()"><span class="marks-section-label">Grandes marcos</span></div>
+      @for (group of groups(); track group.key) {
+        @let item = group.items[0];
+        @if (group.items.length > 1) {
+          <button type="button" class="event-bar grouped-events" [style.left.px]="Math.max(0, x(group.day))" [style.top.px]="top(item)" [style.--event-color]="color(item)" (click)="openGroup(group)">
+            <span class="event-content"><span class="event-heading">{{ group.items.length }} acontecimentos</span><span class="event-meta">{{ formatted(item.start) }}</span></span>
+          </button>
+        } @else {
+          @switch (item.table) {
+            @case ('GreatMark') {
+              <article class="great-mark timeline-interactive-item" role="button" tabindex="0" [attr.data-item-id]="item.source.id" [attr.aria-label]="'Editar marco ' + item.source.name" [class.timeline-interactive-item--selected]="selectedId() === itemKey(item)" [style.left.px]="Math.max(18, x(item.left))" [style.top.px]="top(item)" [style.--mark-color]="color(item)" (keydown)="keydown($event, item)" (pointerdown)="startDrag($event, item)">
+                <span class="great-mark-dot" [style.background-image]="background(item)"><i class="great-mark-icon" [class]="icon(item)"></i></span>
+                <span class="great-mark-name">{{ text(item, item.source.name) }}</span>
+                <span class="great-mark-date">{{ formatted(item.start) }}</span>
+                <div class="timeline-tooltip" role="tooltip" [style.border-color]="color(item)" [style.background-image]="background(item)"><strong>{{ text(item, item.source.name) }}</strong><span>{{ formatted(item.start) }}</span>@if (item.source.description) {<p>{{ text(item, item.source.description) }}</p>}</div>
+              </article>
+            }
+            @case ('Age') {
+              <article class="age-bar timeline-interactive-item" role="group" tabindex="0" [attr.data-item-id]="item.source.id" [attr.aria-label]="'Editar período ' + item.source.name" [class.timeline-interactive-item--selected]="selectedId() === itemKey(item)" [style.left.px]="Math.max(0, x(item.left))" [style.top.px]="top(item)" [style.width.px]="itemWidth(item)" [style.--age-color]="color(item)" [style.background-image]="background(item)" (keydown)="keydown($event, item)" (pointerdown)="startDrag($event, item)">
+                <button type="button" class="range-handle start" aria-label="Alterar início do período" (click)="$event.stopPropagation()" (pointerdown)="startDrag($event, item, 'start')"></button>
+                <div class="age-content"><span class="age-label"><i [class]="icon(item)"></i> {{ text(item, item.source.name) }}</span></div>
+                <div class="timeline-tooltip" role="tooltip" [style.border-color]="color(item)" [style.background-image]="background(item)"><strong>{{ text(item, item.source.name) }}</strong><span>{{ formatted(item.start) }} — {{ formatted(item.end) }}</span>@if (item.source.description) {<p>{{ text(item, item.source.description) }}</p>}</div>
+                <button type="button" class="range-handle end" aria-label="Alterar fim do período" (click)="$event.stopPropagation()" (pointerdown)="startDrag($event, item, 'end')"></button>
+              </article>
+            }
+            @case ('Event') {
+              <article class="event-bar timeline-interactive-item" role="group" tabindex="0" [attr.data-item-id]="item.source.id" [attr.aria-label]="'Editar evento ' + item.source.name" [class.timeline-interactive-item--selected]="selectedId() === itemKey(item)" [style.left.px]="Math.max(0, x(item.left) - (compact(item) ? 21 : 0))" [style.top.px]="top(item)" [style.width.px]="compact(item) ? 42 : itemWidth(item)" [style.--event-color]="color(item)" [class]="getTextClass(color(item))" [class.compact-event]="compact(item)" [style.background-image]="compact(item) ? null : background(item)" (keydown)="keydown($event, item)" (pointerdown)="startDrag($event, item)">
+                <button type="button" class="range-handle start" aria-label="Alterar início do evento" (click)="$event.stopPropagation()" (pointerdown)="startDrag($event, item, 'start')"></button>
+                <div class="event-content">@if (compact(item)) {<i class="compact-event-icon" [class]="icon(item)"></i>} @else {<div class="event-heading">{{ text(item, item.source.name) }}</div><div class="event-meta">{{ formatted(item.start) }} — {{ formatted(item.end) }}</div>}</div>
+                @if (compact(item)) {<span class="compact-event-title">{{ text(item, item.source.name) }}</span>}
+                <div class="timeline-tooltip" role="tooltip" [style.border-color]="color(item)" [style.background-image]="background(item)"><strong>{{ text(item, item.source.name) }}</strong><span>{{ formatted(item.start) }} — {{ formatted(item.end) }}</span>@if (item.source.description) {<p>{{ text(item, item.source.description) }}</p>}</div>
+                <button type="button" class="range-handle end" aria-label="Alterar fim do evento" (click)="$event.stopPropagation()" (pointerdown)="startDrag($event, item, 'end')"></button>
+              </article>
+            }
+          }
+        }
+      }
+      @for (season of seasonTicks(); track season.day) {<span class="season" [style.left.px]="x(season.day)">{{ season.names }}</span>}
+    </div>
+    @if (movePreview()) {<p role="status" class="movement">{{ movePreview() }}</p>}
+    @if (quickDate(); as date) {<div class="quick-create"><span>{{ formatted(date) }}</span><button type="button" (click)="createItem.emit({table: 'Event', date: date}); quickDate.set(null)">Criar evento</button><button type="button" (click)="createItem.emit({table: 'GreatMark', date: date}); quickDate.set(null)">Criar marco</button><button type="button" (click)="createItem.emit({table: 'Age', date: date}); quickDate.set(null)">Criar período</button><button type="button" (click)="quickDate.set(null)">Cancelar</button></div>}
+    @if (group(); as selectedGroup) {<aside class="group-details"><header><h3>Acontecimentos agrupados</h3><button type="button" (click)="group.set(null)" aria-label="Fechar grupo"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></header>@for (item of selectedGroup.items; track item.source.id) {<button type="button" (click)="editItem.emit({table: item.table, id: item.source.id})">{{ item.source.name }} · {{ formatted(item.start) }}</button>}</aside>}
+    @if (unresolvedItems().length) {<details class="unresolved"><summary>{{ unresolvedItems().length }} acontecimentos precisam de associação de data</summary>@for (item of unresolvedItems(); track item.source.id) {<button type="button" (click)="editItem.emit({table: item.table, id: item.source.id})">Revisar {{ item.source.name }}</button>}</details>}
+  } @else {<p class="error" role="status">{{ state().error }}</p>}
+  @if (error()) {<p class="error" role="alert">{{ error() }}</p>}
+</section>
+
+@if (convertedPeriods().length) {<details class="group-details"><summary>Períodos de origem das contagens ({{ convertedPeriods().length }})</summary><p class="help">Consulte os textos, imagens e limites narrativos preservados durante a transformação.</p>@for (item of convertedPeriods(); track item.source.id) {<button type="button" (click)="editItem.emit({table: item.table, id: item.source.id})">{{ item.source.name }}</button>}</details>}

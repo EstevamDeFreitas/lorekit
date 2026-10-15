@@ -1,3 +1,4 @@
+import { CalendarLayoutAssociationsComponent } from '../../../components/calendar-layout-associations/calendar-layout-associations.component';
 import { Component, inject, OnInit, ViewChild, ViewContainerRef } from '@angular/core';
 import type { ComponentRef } from '@angular/core';
 import { ButtonComponent } from "../../../components/button/button.component";
@@ -27,7 +28,7 @@ import { AppearanceEffectsService } from '../../../services/appearance-effects.s
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, ButtonComponent, IconButtonComponent, FormOverlayDirective, OverlayModule, ComboBoxComponent, InputComponent],
+  imports: [CalendarLayoutAssociationsComponent, FormsModule, ButtonComponent, IconButtonComponent, FormOverlayDirective, OverlayModule, ComboBoxComponent, InputComponent],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css',
 })
@@ -103,7 +104,7 @@ export class SettingsComponent implements OnInit{
 
   textEditorEngine: 'editorjs' | 'tiptap' = 'editorjs';
 
-  ignoredTables = ['Personalization',
+  ignoredTables = ['Calendar', 'CalendarRevision', 'Personalization',
                     'Image',
                     'DynamicField',
                     'DynamicFieldValue',

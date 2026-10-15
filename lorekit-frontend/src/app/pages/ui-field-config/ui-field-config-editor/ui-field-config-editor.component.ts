@@ -1,6 +1,10 @@
+import { CalendarFieldService } from '../../../services/calendar-field.service';
+import { CalendarFieldReviewComponent } from '../../../components/calendar-field-review/calendar-field-review.component';
+import { CalendarFieldConfigComponent } from '../../../components/calendar-field-config/calendar-field-config.component';
+import { defaultCalendarFieldOptions } from '../../../utils/calendar-field-options';
 import { NgStyle } from '@angular/common';
 import { Component, ElementRef, inject, input, output, ViewChild } from '@angular/core';
-import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { Dialog, DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { ActivatedRoute, Router } from '@angular/router';
 import { createFieldLayoutItem, UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutItem, UiFieldLayoutTab, UiFieldTemplate, validateUiConfigPayload } from '../../../models/ui-field-config.model';
 import { UiFieldConfigService, getSystemDefaultConfig } from '../../../services/ui-field-config.service';
@@ -34,7 +38,7 @@ interface SelectOptionItem {
 
 @Component({
   selector: 'app-ui-field-config-editor',
-  imports: [NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent, InputComponent, HexColorPickerComponent],
+  imports: [CalendarFieldConfigComponent, NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent, InputComponent, HexColorPickerComponent],
   templateUrl: './ui-field-config-editor.component.html',
   styleUrl: './ui-field-config-editor.component.css',
 })
@@ -54,6 +58,8 @@ export class UiFieldConfigEditorComponent {
   private dynamicFieldService = inject(DynamicFieldService);
   private uiFieldLayoutPortabilityService = inject(UiFieldLayoutPortabilityService);
   private confirmService = inject(ConfirmService);
+  private readonly calendarFields = inject(CalendarFieldService);
+  private readonly calendarDialog = inject(Dialog);
 
   entityTable = '';
   entityId: string | null = null;
@@ -78,6 +84,7 @@ export class UiFieldConfigEditorComponent {
   parentEntityItems: ParentEntityItem[] = [];
   selectedParentEntityId = '';
 
+  newCalendarOptions = JSON.stringify(defaultCalendarFieldOptions());
   newFieldName = '';
   newFieldOptions = '';
   newFieldIsEditorField = false;
@@ -111,6 +118,7 @@ export class UiFieldConfigEditorComponent {
     { value: 'slider', label: 'Slider numerico' },
     { value: 'list', label: 'Listagem' },
     { value: 'chart', label: 'Grafico' },
+    { value: 'calendar-date', label: 'Data do calendário' },
   ];
   readonly imageAspectRatioItems = [
     { value: '1', label: 'Quadrada (1:1)' },
@@ -141,7 +149,7 @@ export class UiFieldConfigEditorComponent {
     const ignored = new Set([
       'Personalization', 'Image', 'DynamicField', 'DynamicFieldValue', 'Document',
       'UiFieldConfig', 'UiFieldTemplate', 'LocationCategory', 'Relationship',
-      'GlobalParameter', 'OrganizationType', 'Link',
+      'GlobalParameter', 'OrganizationType', 'Link', 'Calendar', 'CalendarRevision',
     ]);
     return schema.map((t) => t.name).filter((name) => !ignored.has(name));
   }
@@ -1003,14 +1011,15 @@ export class UiFieldConfigEditorComponent {
   }
 
   setDynamicFieldType(field: DynamicField, value: string): void {
-    if (!['text', 'options', 'editor', 'entity', 'image', 'slider', 'list', 'chart'].includes(value)) return;
+    if (!['text', 'options', 'editor', 'entity', 'image', 'slider', 'list', 'chart', 'calendar-date'].includes(value)) return;
 
     field.fieldType = value as DynamicFieldType;
     field.isEditorField = field.fieldType === 'editor';
+    if (field.fieldType === 'calendar-date' && !field.options) field.options = JSON.stringify(defaultCalendarFieldOptions());
     if (field.fieldType === 'slider' && !field.options) field.options = serializeDynamicFieldOptions(defaultSliderFieldOptions());
     if (field.fieldType === 'list' && !field.options) field.options = serializeDynamicFieldOptions(defaultListFieldOptions());
     if (field.fieldType === 'chart' && !field.options) field.options = serializeDynamicFieldOptions(defaultChartFieldOptions());
-    if (field.fieldType !== 'options' && field.fieldType !== 'image' && field.fieldType !== 'slider' && field.fieldType !== 'list' && field.fieldType !== 'chart') field.options = undefined;
+    if (field.fieldType !== 'options' && field.fieldType !== 'image' && field.fieldType !== 'slider' && field.fieldType !== 'list' && field.fieldType !== 'chart' && field.fieldType !== 'calendar-date') field.options = undefined;
     if (field.fieldType === 'image' && !this.imageAspectRatioItems.some((option) => option.value === field.options)) {
       field.options = '1';
     }
@@ -1042,7 +1051,7 @@ export class UiFieldConfigEditorComponent {
     field.isEditorField = field.fieldType === 'editor';
     if (field.fieldType === 'options' || field.fieldType === 'image') {
       field.options = field.options?.trim() || undefined;
-    } else if (field.fieldType === 'slider' || field.fieldType === 'list' || field.fieldType === 'chart') {
+    } else if (field.fieldType === 'slider' || field.fieldType === 'list' || field.fieldType === 'chart' || field.fieldType === 'calendar-date') {
       const config = parseDynamicFieldOptions(field.fieldType, field.options);
       field.options = config ? serializeDynamicFieldOptions(config) : undefined;
     } else {
@@ -1050,7 +1059,19 @@ export class UiFieldConfigEditorComponent {
     }
     if (field.fieldType !== 'entity') field.targetEntityTable = undefined;
 
-    this.uiFieldConfigService.saveDynamicField(field);
+    if (field.fieldType === 'calendar-date' && this.calendarFields.requiresReview(field)) {
+      try {
+        const plan = this.calendarFields.plan(field);
+        if (plan.items.length) {
+          this.calendarDialog.open<boolean>(CalendarFieldReviewComponent, { data: plan, width: '90vw', maxWidth: '850px' }).closed.subscribe(saved => {
+            if (saved) { this.loadDynamicFields(); this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable); this.editingDynamicFieldId = ''; this.showNotice('Configuração e datas atualizadas.'); }
+          });
+          return;
+        }
+      } catch (error) { this.showNotice(error instanceof Error ? error.message : 'Não foi possível revisar as datas.'); return; }
+    }
+    try { this.uiFieldConfigService.saveDynamicField(field); }
+    catch (error) { this.showNotice(error instanceof Error ? error.message : 'Não foi possível salvar o campo.'); return; }
     this.loadDynamicFields();
     this.catalog = this.uiFieldConfigService.getCatalog(this.entityTable);
     this.editingDynamicFieldId = '';
@@ -1077,6 +1098,7 @@ export class UiFieldConfigEditorComponent {
   getDynamicFieldTypeLabel(field: DynamicField): string {
     switch (field.fieldType) {
       case 'options': return `Opções${field.options ? `: ${field.options}` : ''}`;
+      case 'calendar-date': return 'Data do calendário';
       case 'editor': return 'Editor de texto';
       case 'entity': return `Entidade relacionada${field.targetEntityTable ? `: ${field.targetEntityTable}` : ''}`;
       case 'image': return 'Imagem';
@@ -1220,6 +1242,7 @@ export class UiFieldConfigEditorComponent {
   }
 
   private newFieldOptionsForType(): string | undefined {
+    if (this.newFieldType === 'calendar-date') return this.newCalendarOptions;
     if (this.newFieldType === 'options') return this.newFieldOptions.trim();
     if (this.newFieldType === 'image') return this.newFieldImageAspectRatio;
     if (this.newFieldType === 'slider') {

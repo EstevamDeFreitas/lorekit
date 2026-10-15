@@ -8,6 +8,11 @@ export const routes: Routes = [
   {path: '', redirectTo: 'app', pathMatch: 'full'},
   {path: 'login', component: LoginComponent},
   {path: 'app', component: MainUiComponent, canActivate: [webAuthGuard, workspaceGuard], children: [
+      { path: 'calendar', children: [
+        { path: '', redirectTo: 'list', pathMatch: 'full' },
+        { path: 'list', loadComponent: () => import('./pages/calendars/calendar-list/calendar-list.component').then(m => m.CalendarListComponent) },
+        { path: 'edit/:calendarId', loadComponent: () => import('./pages/calendars/calendar-edit/calendar-edit.component').then(m => m.CalendarEditComponent) },
+      ] },
       {path: 'world', children:[
         {path: '', loadComponent: () =>
           import('./pages/world/world-list/world-list.component')

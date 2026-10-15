@@ -1,0 +1,40 @@
+<div [historyEntity]="{ table: 'Age', id: age.id || '' }" [historyModel]="age" class="w-full max-w-[36rem] max-h-[82vh] overflow-y-auto scrollbar-dark pr-1 flex flex-col gap-4">
+      <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 class="text-lg font-bold">{{ age.id ? 'Editar Era' : 'Nova Era' }}</h2>
+          <p class="text-sm text-zinc-400">As eras podem se sobrepor e organizar o contexto visual da timeline.</p>
+        </div>
+        <div class="flex shrink-0 flex-wrap items-center gap-2">
+          @if (age.id) {
+            <app-personalization-button [entityId]="age.id" [entityTable]="'Age'" [size]="'lg'"></app-personalization-button>
+          }
+          <app-icon-button icon="fa-solid fa-xmark" buttonType="secondary" size="lg" (click)="dialogRef.close()"></app-icon-button>
+        </div>
+      </div>
+      <app-input [historyField]="{ column: 'name', label: 'Nome' }" label="Nome" [(value)]="age.name"></app-input>
+            @if (hasCalendar()) {<app-calendar-event-dates [timelineId]="data.timelineId" [startJson]="age.calendarStartJson" [endJson]="age.calendarEndJson" [defaultPosition]="data.defaultStartDate" [defaultDate]="data.calendarDefaultDate" (datesChange)="age.calendarStartJson = $event.start; age.calendarEndJson = $event.end" (validityChange)="calendarDateError = $event"></app-calendar-event-dates>}
+      @if (calendarDateError) {<p class="text-rose-300 text-sm" role="alert">{{ calendarDateError }}</p>}
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+@if (!hasCalendar()) {
+        <app-input label="Início (ano)" type="number" [(value)]="age.startDate"></app-input>
+        <app-input label="Fim (ano)" type="number" [(value)]="age.endDate"></app-input>
+}
+
+      </div>
+      <app-text-area [historyField]="{ column: 'description', label: 'Descrição' }" label="Descrição" [(value)]="age.description" height="h-28"></app-text-area>
+      <p class="text-xs text-zinc-500">Use &#123;AutoGenDate&#125;, &#123;AutoGenStartDate&#125; e &#123;AutoGenEndDate&#125; no nome ou na descrição.</p>
+      <div class="flex flex-wrap justify-between gap-3 pt-2">
+        <div>
+          @if (age.id) {
+            <app-button label="Excluir" buttonType="danger" size="sm" (click)="deleteAge()"></app-button>
+          }
+        </div>
+        <div class="flex gap-2">
+          <app-button label="Cancelar" buttonType="secondary" size="sm" (click)="dialogRef.close()"></app-button>
+          <app-button label="Salvar" buttonType="primary" size="sm" (click)="saveAge()"></app-button>
+        </div>
+      </div>
+    
+</div>
+
+@if (calendarSaveError) {<p class="text-rose-300 text-sm" role="alert">{{ calendarSaveError }}</p>}
