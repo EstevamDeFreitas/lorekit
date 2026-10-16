@@ -220,25 +220,25 @@
 
 [🔖Itens Únicos	52](#🔖itens-únicos)
 
-[**👿 NPCS e Inimigos	53**](#👿-npcs-e-inimigos)
+[**👿 PNJS e Inimigos	53**](#👿-pnjs-e-inimigos)
 
-[Criação, Estrutura central e Nível de Ameaça	53](#criação,-estrutura-central-e-nível-de-ameaça)
+[Criação, Estrutura central e Nível de Ameaça	53](#heading=h.b94cdc5wpnne)
 
-[Regras básicas	53](#regras-básicas)
+[Regras básicas	53](#heading=h.4vujoxmc90gc)
 
-[Atributos Implícitos	53](#atributos-implícitos)
+[Atributos Implícitos	53](#heading=h.o7sgzu61lh2r)
 
-[Nível de Ameaça	54](#nível-de-ameaça)
+[Nível de Ameaça	54](#heading=h.hgkxeay2shz9)
 
-[Função	56](#função)
+[Função	56](#heading=h.kwg4qg6cdamo)
 
-[CV, CR e Fraquezas	57](#cv,-cr-e-fraquezas)
+[CV, CR e Fraquezas	57](#heading=h.u7mqc4jajp2g)
 
-[Ações Básicas e Assinaturas	58](#ações-básicas-e-assinaturas)
+[Ações Básicas e Assinaturas	58](#heading=h.tf9117kyy65l)
 
-[Ações Básicas	58](#ações-básicas)
+[Ações Básicas	58](#heading=h.kueg6pk7hz6)
 
-[Assinaturas	59](#assinaturas)
+[Assinaturas	59](#heading=h.be88enrl9btt)
 
 # **🍀Introdução do Ironpaw🌿** {#🍀introdução-do-ironpaw🌿}
 
@@ -551,6 +551,31 @@ Entretanto existem dois tipos de Cena que não são separados por esse tipo de d
 * **E o Descanso Breve**
 
 Um **Descanso Completo** é um tipo de Cena que é mais duradouro e obrigatoriamente no final dela existem as demarcações de fim de Cena.
+
+### **🕵️ Furtividade e Investigação**
+
+A furtividade é resolvida pela ficção da cena e pelas regras normais de rolagem. Role quando houver risco real de ser percebido e o resultado puder mudar a situação.
+
+**Ocultação e deslocamento**  
+Furtividade pode servir para se esconder ou se mover sem ser notado. Antes de rolar, determine quais sentidos do observador podem alcançar o personagem. Uma rolagem não permite perceber algo que o sentido não poderia detectar naquela situação.
+
+**Investigação ativa**  
+Uma suspeita, por si só, não exige um teste imediato. O observador pode investigar e a narração pode indicar pistas ou restringir possíveis esconderijos. Quando a busca realmente ameaçar revelar o personagem, faça um teste adversativo: Percepção do observador contra Furtividade do personagem. O maior resultado vence.  
+Se o observador vencer, percebe ou localiza o personagem conforme as condições da cena. Se o personagem vencer, permanece oculto por enquanto; a busca pode continuar ou as circunstâncias podem mudar.
+
+**Suspeita e pistas**  
+A reação depende da evidência: um ruído estranho pode gerar uma suspeita passageira; rastros, cheiro ou um objeto deslocado podem manter a investigação ativa. A suspeita pode desaparecer, mas evidências físicas podem persistir.
+
+**Furtividade em grupo**  
+Não existe falha automática para todo o grupo nem proteção automática por estar acompanhado. Considere a formação, a proximidade, a rota e a causa do erro. Um ruído compartilhado pode comprometer todos; personagens em rotas separadas podem ser avaliados individualmente. Use uma rolagem conjunta quando o grupo agir de forma coordenada e enfrentar o mesmo risco.
+
+**Resultados na narrativa**
+
+* ✅ **Sucesso** \- o personagem passa despercebido.   
+* **⚠️ Sucesso Parcial** \- consegue, mas deixa uma pista, perde tempo ou desperta suspeita.   
+* ❌ **Falha \-**  a tentativa é comprometida ou o observador ganha uma vantagem concreta. 
+
+Resultados naturais 10 e 1 aplicam seus efeitos especiais normais, adaptados à cena.
 
 ### **❤️‍🩹Descanso Breve** {#❤️‍🩹descanso-breve}
 
@@ -869,12 +894,12 @@ Estados de Vida representam o quão bem um personagem está em um combate ou Cen
 * **Saudável**  
   Esse personagem não foi machucado de nenhuma forma, ou os seus ferimentos foram leves ou não se acumularam o suficiente para ele estar afetado.  
 * **Ferido:**  
-  Quando um personagem atinge **metade das suas CV** ele passa a ser considerado Ferido. Ao atingir o estado Ferido, personagem ganha **Exaustão Leve** até o personagem sair desse estado.  
+  Quando um personagem atinge **metade das suas CV** ele passa a ser considerado Ferido. Ao atingir o estado Ferido, o personagem ganha **Exaustão Leve** até o personagem sair desse estado.  
 * **Crítico:**  
   Esse personagem está por um fio, tendo apenas **um CV restante** antes de começar a desmaiar. Quando nesse estado é recomendado recuar e fugir do perigo, já que **seus testes para evitar uma Ferida Grave passam a receber \-2**.  
-* **Criticamente Ferido (0 CV restante):**
-  Quando um personagem não tem mais **nenhum CV restante**, ele recebe [**Desmaiando**](#desmaiando) se não tiver uma Ferida Grave, ou [**Morrendo**](#morrendo) se tiver ao menos uma. Curar remove a condição.
-  * Se ele chegar a zero CV **três vezes em uma mesma cena de confronto**, as próximas vezes entrará em **Morrendo** ao invés de **Desmaiando**, perdendo a capacidade de agir.
+* **Criticamente Ferido (0 MV restante):**  
+  Quando um personagem não tem mais **nenhum CV restante**, o personagem ganha a condição [**Desmaiando**](#desmaiando). Ele ainda pode agir, mas de forma debilitada. Curar remove a condição.   
+  * Se ele chegar neste estado **três vezes em uma mesma cena de confronto**, as próximas vezes que ele entrará em no estado **Morrendo** ao invés de **Desmaiando** perdendo a capacidade de agir.
 
 #### **🖤Ferida Grave** {#🖤ferida-grave}
 
@@ -1117,9 +1142,9 @@ Essa mutabilidade é representada pelas **Magias-Chaves** que agem do seguinte m
 
 **💎Remodelar** é a habilidade essencial de manipular magias chaves e alterar suas formas seguindo suas tags e núcleo, podendo alterar levemente o propósito da magia ou transformá-la drasticamente, pagando sempre um custo de essência.
 
-* **Potenciar** é uma remodelação básica adquirida no nível Treinado de conjuração, e ela apenas aumenta o efeito básico da Magia-Chave levemente (Aumentar nível de dano ou cura, um pouco mais de alcance e etc…).   
+* **Alterar em Adjacência** é a principal remodelação, ela permite alterar a forma da Magia-Chave e esticar o seu propósito para atender outras demandas.   
 - **Custo de \+1 de Essência.**  
-* **Alterar em Adjacência** é a principal remodelação adquirida no Intermediário e ela permite alterar a forma da Magia-Chave e esticar o seu propósito para atender outras demandas.   
+* **Potenciar** é uma remodelação básica adquirida no nível Treinado de conjuração, e ela apenas aumenta o efeito básico da Magia-Chave levemente (Aumentar nível de dano ou cura, um pouco mais de alcance e etc…).   
 - **Custo de \+1 de Essência.**  
 * **Moldar Potencial** é uma versão mais custosa e alternativa de Alterar em Adjacência que permite esticar **ainda mais** uma magia-chave para atender expectativas que vão mais longe ainda de seus temas iniciais, possivelmente **invadindo** o território de outras magias-chaves.   
 - **Custo inicial de \+2 de Essência**, e deve ser usado exclusivamente em Magias-Chaves conjuradas em sua forma Média ou Maior.
@@ -1326,7 +1351,7 @@ Enquanto tiver essa condição a criatura está recebendo dano por rodada. Essa 
 * Personagem imediatamente cai no chão e solta tudo em suas mãos, conseguindo se levantar apenas no turno seguinte.  
 * Todas as rolagens (**exceto Fortitude**) tem \-1d10.  
 * Movimentação em geral reduzida (Personagem pode estar mancando ou até mesmo rastejando).  
-* Ao final de toda ação (Livre ou Ofensiva) o personagem faz um teste com a perícia Fortitude para continuar acordado, caso falhe três vezes, ele **desmaia** e fica **inconsciente.**  
+* Ao final de toda ação (Livre ou Ofensiva) o personagem faz um teste com a perícia Fortitude para continuar acordado, caso falhe, ele **desmaia** e fica **inconsciente.**  
 * A condição termina automaticamente quando a fonte que está provocando ela se extingue. 
 
 ##### **Morrendo** {#morrendo}
@@ -1336,6 +1361,8 @@ Enquanto tiver essa condição a criatura está recebendo dano por rodada. Essa 
 * Ao final de uma rodada o personagem faz um teste com a Perícia Fortitude com dificuldade crescente, começando como **Rotineiro e indo até Difícil**, em uma falha, ele **tem uma parada cardíaca** precisando de **primeiros socorros** o mais rápido possível antes que sua reanimação seja **tarde demais.**  
   * A dificuldade “pausa” quando a condição termina, e resume seu crescimento ao adquiri-la novamente. Ela apenas retorna à rotineira no final de um Descanso Completo.  
 * A condição termina automaticamente quando a fonte que está provocando ela se extingue. 
+
+##### **Inconsciente** 
 
 ##### **Em Pânico** {#em-pânico}
 
@@ -1347,6 +1374,8 @@ Enquanto tiver essa condição a criatura está recebendo dano por rodada. Essa 
 
 * Moderado \= Incapaz de se mover e possui \-1d10 em rolagens que precisam de movimento preciso. Ataques para atingir essa criatura ganham \+1d10.  
 * Severo \= Incapaz de se mover e agir até que a condição termine, ataques acertam automaticamente essa criatura a tornando impossibilitada de **esquivar**.
+
+##### 
 
 # **⚙️ Armas, Proteções e Itens** {#⚙️-armas,-proteções-e-itens}
 
@@ -1631,230 +1660,340 @@ Exemplos de benefícios:
 
 Itens únicos **não escalam automaticamente**.
 
-# **👿 NPCS e Inimigos** {#👿-npcs-e-inimigos}
+# **👿 PNJS e Inimigos** {#👿-pnjs-e-inimigos}
 
-## **Criação, Estrutura central e Nível de Ameaça** {#criação,-estrutura-central-e-nível-de-ameaça}
+Pessoas, criaturas, inimigos e entidades são parte central dos desafios do Ironpaw. Diferentemente dos personagens jogáveis (PJs), personagens não jogáveis não precisam de uma ficha completa de atributos, perícias, equipamentos e recursos. Sua ficha reúne apenas os parâmetros necessários para resolver as ações relevantes da cena, facilitando o uso em combate, interação social, investigação, exploração e outros conflitos.
 
-Pessoas, criaturas, inimigos e entidades são a espinha dorsal dos desafios dentro do Ironpaw. Diferentes de personagens jogáveis, criaturas **não possuem atributos** ou **perícias a sua disposição**, e muito menos tem acesso total aos equipamentos e recursos disponibilizados para PJs. Além disso, os PNJ (Personagens não jogáveis) são afetados por condições de forma diferente, tudo isso os ajuda a ser mais simples para **facilitar o RP em chat**. Uma criatura não jogável é constituída pelos parâmetros:
+## 
 
-- **Nível de Ameaça**  
-- **Função**  
-- **Resistências e Fraquezas**  
-- **Ações Básicas e Assinaturas**
+## **Estrutura de um PNJs**
 
-### **Regras básicas** {#regras-básicas}
+Um PNJ pode ser definido pelos seguintes elementos:
 
-Algo que deve-se deixar claro é a diferença entre um PJ e um PNJ em relação à disponibilidade de recursos, habilidades e forma que são usados. Entre as principais diferenças entre eles são:
+* **Nome e conceito**: identidade, papel narrativo e comportamento geral.  
+* **Nível de Ameaça (NA)**: referência numérica para rolagens, resistência e limite de dano.  
+* **CV e CR**: valores de resistência calculados a partir do NA e ajustados quando necessário.  
+* **Tags**: competências, propriedades, gatilhos e limitações que personalizam a criatura.  
+* **Ações Básicas**: ações recorrentes e diretas.  
+* **Assinaturas**: capacidades especiais que distinguem o PNJ.  
+* **Resistências e Fraquezas:** interações específicas com danos, condições, ambientes ou abordagens.  
+* **Observações:** aparência, motivações, comportamento, equipamento representado narrativamente e outros detalhes úteis.
 
-* Os PNJs não adquirem nem a condição Morrendo ou Desmaiando. Ao atingir 0 CV, um PNJ automáticamente **morre** e é eliminado na cena. Caso um PJ, ou o próprio destino, deseje que esse personagem permaneça vivo após um dano, ele ficará com no estado Crítico (1 CV restante) e **inconsciente**.  
-* Os PNJs não possuem acesso a Técnicas de Vigor ou Conjuração de Essência, magias ou técnicas são representadas pelas suas três [Assinaturas](#assinaturas) e [ações básicas](#ações-básicas).  
-* Os PNJs não podem sofrer Feridas Graves, sendo um efeito dramático exclusivo para PJs.  
-* Os PNJs não possuem equipamentos explícitos e suas propriedades assim ditas no capítulo de [itens](#⚙️-armas,-proteções-e-itens).  
-  * Entretanto, podem ter algum redutor de dano proveniente da armadura ou proteção específica deles.
+Nem todo PNJ precisa desenvolver todos esses campos. Um personagem incidental pode ter apenas um conceito e algumas competências narrativas.   
+Um antagonista importante pode precisar de uma ficha mais completa. A complexidade da ficha deve acompanhar a complexidade narrativa e a função do PNJ na cena.
 
-### **Atributos Implícitos** {#atributos-implícitos}
+### **Regras básicas**
 
-Você pode se perguntar: "Como os inimigos rolam dados se eles não têm atributos e perícias, que normalmente definem os modificadores base e o número de dados das rolagens, e que são centrais para muitas condições e efeitos do sistema?".
+* PNJs não precisam possuir fichas completas de atributos ou perícias. As ações indicam qual dos quatro atributos implícitos utilizam: Corpo, Mente, Presença ou Técnica.  
+* PNJs não utilizam diretamente as Técnicas de Vigor ou as opções de Conjuração de Essência dos PJs. Capacidades equivalentes são representadas por Ações Básicas, Assinaturas e Tags.  
+* PNJs não sofrem Feridas Graves pelas regras exclusivas dos PJs.  
+* Ao atingir 0 CV, um PNJ normalmente morre ou é removido da cena. Se a narrativa exigir que sobreviva, pode permanecer Crítico com 1 CV e inconsciente, conforme a regra atual.  
+* PNJs normalmente não precisam de equipamentos detalhados como os dos PJs. Armas, armaduras e ferramentas podem ser representadas por Tags, ações, resistências ou redução de dano quando tiverem efeito mecânico relevante.  
+* Condições que afetam atributos aplicam-se às ações associadas ao atributo correspondente.
 
-Para manter essa lógica, os inimigos possuem **ações** com **tags de atributo**, especificando qual ela use dentre os quatro: 
+## **Nível de Ameaça (NA)**
 
-* Corpo  
-* Mente  
-* Presença  
-* Técnica
+O Nível de Ameaça é a base numérica do PNJ. Ele determina a rolagem inicial, os valores-base de CV e CR, e a severidade máxima de dano que o PNJ pode causar.
 
-Exemplo:
+| NA | Categoria | Rolagem-base |
+| :---- | :---- | :---- |
+| 1 | Ameaça Figurante | 1d10 \+1 |
+| 2 | Ameaça Comum | 1d10 \+2 |
+| 3 | Ameaça Elite | 1d10 \+3 |
+| 4 | Ameaça Chefe | 2d10 \+2 |
+| 5 | Ameaça Massiva | 2d10 \+3 |
+| 6 | Ameaça Terrível | 3d10 \+3 |
 
-* Ataque com Garra *(Técnica)* 2d10 \+2  
-* Defesa Física *(Corpo)* 2d10 \+2  
-* Defesa Emocional *(Presença)* 1d10 \+1  
-* Esconder-se (Técnica) 1d10+1
+Um PNJ pode rolar **no máximo 4d10** em uma rolagem. Esse limite continua valendo mesmo quando Tags, condições ou outros efeitos alteraram a quantidade de dados.
 
-Seus **modificadores de rolagem** e **número de dados** são definidos pelo seu **nível de ameaça** e **função**. Isso os torna objetivamente mais simples de gerenciar do que os personagens.
+### **Atributos implícitos**
 
-Condições que afetam atributos **funcionam normalmente**, aplicando-se às ações associadas.
+| Atributo | Abrangência típica |
+| :---: | :---- |
+| Corpo | Força, resistência física, vigor e esforço corporal. |
+| Mente | Raciocínio, conhecimento, análise e planejamento. |
+| Presença | Influência, expressão, intimidação e força de personalidade. |
+| Técnica | Precisão, coordenação, destreza e execução especializada. |
+| Percepção | Sentidos básicos, Visão, Olfato e Audição. |
 
-### **Nível de Ameaça** {#nível-de-ameaça}
+Cada ação deve indicar o atributo principal que utiliza. A rolagem-base é determinada pelo NA; em seguida, aplicam-se apenas as Tags pertinentes à ação, as condições e os demais efeitos válidos.
 
-O Nível de Ameaça é o eixo central de um PNJ, ditando a dificuldade da criatura em específico e sua capacidade de influenciar a narrativa como um obstáculo (ou como um aliado?). Com ele pode ser calculado e determinado diversos atributos como:
+**Exemplo para um PNJ de NA 3, antes de aplicar Tags ou condições:**  
+• Ataque com garra (Técnica): 1d10 \+3.  
+• Intimidar um guarda (Presença): 1d10 \+3.  
+• Investigar rastros (Mente): 1d10 \+3.
 
-* Quantidade de dados e Modificadores de rolagem base  
-* CV e CR  
-* Valor máximo de Pressão  
-* Força de Assinaturas  
-* Máximo de dano que pode causar
+### **Caixas de Vida e Caixas de Resistência**
 
-Existem 5 níveis de ameaça:
+Os valores-base seguem as seguintes fórmulas utilizando-se do NA do PNJ:  
+**“CV base \= 2 × NA”**  
+**“CR base \= 1 × NA”**  
+Exemplo: um PNJ de NA 3 começa com CV 6 e CR 3\.
 
-| Níveis de Ameaça |  |
-| :---: | :---: |
-| **Nome do Nível** | **Valor de NA** |
-| Ameaça Figurante | 1 |
-| Ameaça Comum | 2 |
-| Ameaça Elite | 3 |
-| Ameaça Chefe | 4 |
-| Ameaça Massiva | 5 |
+Caixas de Vida e ferimentos para PNJs seguem regras similares às citadas em seu capítulo, entretanto com a diferença crucial de que PNJs não podem receber Feridas Graves, logo ignoram qualquer regra relacionada a isso.
 
-### 
+Caixas de Resistência **não são obrigatórias** e também dependem de Proteção especificada por meio de Tags para existir. Caso o PNJ não possua nenhum tipo de Proteção como uma carapaça, armadura, Assinaturas que concedem Caixa de Resistência ou algo similar, **ele não** recebe Caixas de Resistência.  
+Os valores calculados podem ser ajustados narrativamente em até −5 ou \+5. 
 
-O nível de ameaça determina a quantidade de dados que esse inimigo rola para suas rolagens e um modificador de rolagem assim como os atributos de um personagem jogável sendo:  
- 
+* O ajuste é opcional e deve representar uma diferença relevante de resistência, sem substituir o NA como referência central.
 
-| Nível de Ameaça | Quantidade de dados | Modificador base |
-| :---: | :---: | :---: |
-| 1 e 2 | 1d10 | 1 |
-| 3 e 4 | 2d10 | 2 |
-| 5 | 3d10 | 3 |
+### **Limites de dano**
 
-Um PNJ pode no máximo ter **4d10** em uma determinada rolagem.
+Ao definir o NA de uma criatura deve-se ficar atento
 
-Danos iniciais de PNJs (sem efeitos os influenciando) são limitados por graus de severidade que são explícitos na tabela de severidade por NA. Assim como os danos citados no capítulo de ataques e danos, progredindo de **Leve a Devastador**.
-
-* Danos Graves **são reservados para criaturas de NA 4**  
-* Danos Devastadores **são reservados para criaturas de NA 5**  
-* Ataques básicos geralmente causam dano Leve ou Moderado no máximo, podendo ser acompanhado de alguma Condição.  
-* Assinaturas podem causar qualquer dano da tabela, seguindo restrições citadas mais a frente.
-
-O que também deve ficar explícito é que PNJs não usam equipamentos como armadura ou armas explícitas no capítulo passado, a fim de simplificá-los e dar esses efeitos para os PJs. Mas os PNJs também não ficam sem nada, podendo os efeitos serem dados a eles que simbolizam seus equipamentos ou armas.
-
-| Tabela de danos comuns para PNJS: |  |  |  |  |  |
-| ----- | :---: | :---: | :---: | :---: | :---: |
-| **NA** | **Leve** | **Moderado** | **Severo** | **Grave** | **Devastador** |
-| **1** | **X** | **X** | **\-** | **\-** | **\-** |
-| **2** | **X** | **X** | **X** | **\-** | **\-** |
-| **3** | **X** | **X** | **X** | **\-** | **\-** |
-| **4** | **X** | **X** | **X** | **X** | **\-** |
-| **5** | **X** | **X** | **X** | **X** | **X** |
-
-### 
-
-## **Função** {#função}
-
-Uma função define como um personagem não jogável (PNJ) se comporta em um combate narrativo e também seu papel, funcionando como uma **classe**, especificando também certos **traços universais que mudam suas rolagens e modificadores definidos pelo seu nível de ameaça**. Cada função altera os seguintes parâmetros de uma criatura:
-
-* Altere sua quantidade de dados e modificadores de forma **positiva e negativa**, sendo usado exclusivamente:  
-  * **\+1d10**  
-  * **–1d10**  
-* **Uma trava**, que funciona como uma fraqueza limitante e universal.
-
-Funções básicas e universais que existem para criaturas são:
-
-| Tabela de Funções básicas |  |  |  |  |  |
-| :---: | :---: | ----- | ----- | :---: | ----- |
-| **Nome** | **Modificadores de Função** |  |  | **Trava** |  |
-| Agressor | \+1d10 em rolagens de Corpo, \-1d10 em rolagens de Mente |  |  | Poder ter apenas uma Assinatura Defensiva.Não pode ter mais de 1 defesa física forte. |  |
-| Ágil | \+1d10 em rolagens de Técnica, \-1d10 em rolagens de Presença |  |  | Não pode ter defesa pesada ou usar ataques pesados. |  |
-| Líder | \+1d10 em rolagens de Presença, \-1d10 em rolagens de Técnica. |  |  | Perde parte toda a sua força ao não ter aliados próximos |  |
-| Controlador | \+1d10 em rolagens de Mente, \-1d10 em Rolagens de Corpo |  |  | Pode ter apenas uma Assinatura Ofensiva.Assinaturas **não podem causar dano Grave ou Devastador** |  |
-| Suporte | \+1d10 em rolagens de Mente, \-1d10 em Rolagens de Presença |  |  | Se estiver sozinho, perde acesso às Assinaturas Nunca pode causar dano acima de Moderado. |  |
-| Vanguarda | \+1d10 em rolagens de Corpo, \-1d10 em rolagens de Técnica |  |  | Nunca recebe bônus em ataques à distânciaNão pode ter assinaturas focadas em mobilidade. |  |
-| Sentinela | \+1d10 em rolagens de Técnica, \-1d10 em rolagens de Presença |  |  | Não pode perseguir alvos de forma eficiente. |  |
-| Artilheiro | \+1d10 em rolagens de Técnica, \-1d10 em rolagens de Corpo |  |  | Se engajado corpo a corpo, perde a vantagem. |  |
-| Aberrante | \+1d10 em rolagens de Presença, \-1d10 em Rolagens de Técnica |  |  | Sempre são criaturas **estranhas** e muitas vezes horripilantes.  |  |
-| Errático | \+1d10 em rolagens de Corpo, \-1d10 em Rolagens de Presença |  |  | Esse personagem nunca possui inteligência alta, sendo instintivo. |  |
-
-## **CV, CR e Fraquezas**  {#cv,-cr-e-fraquezas}
-
-PNJs diferente de personagens jogáveis não seguem o cálculo básico para Caixas de Vida ou tem suas defesas determinadas por vocação ou armadura, mas na verdade, tem ambos calculados por seu NA, sendo:  
-*“CV base \= 2 x NA” e “CR base \= 2 x NA \- 1”*
-
-Os valores que são calculados por essas duas fórmulas podem ser ajustados adequadamente entre valores de \-5 a \+5 para aperfeiçoar a criatura narrativamente, mas isto é **opcional**.
-
-Agora, no contexto do sistema, as **Fraquezas** são **elementos cruciais** na construção de uma criatura única. Diferentemente das Funções, que impõem **limitações mecânicas absolutas**, as fraquezas funcionam como formas de expressar vulnerabilidade, tanto na narrativa quanto na mecânica, de um PNJ.  
-Fraquezas são **obrigatórias** para **qualquer** PNJs que seja minimamente relevante, podendo uma criatura ter de **uma a duas** fraquezas que abrangem de:
-
-* Receber mais dano de um determinado elemento ou ataque. [Seguindo as regras de fraquezas.](#heading=h.mp004edx3awj)  
-* Ter alguma penalidade debilitante e permanente em alguma defesa.  
-* Impor penalidades (por exemplo, um modificador de \-1 nas rolagens) quando estiver em certas condições ambientais, como umidade ou ruído excessivo, estiverem presentes.  
-  * Penalidades podem ir até \-5 dependendo da sua gravidade.  
-  * Penalidades podem ser impostas em forma de **Condições**, como ficar Enfraquecido Moderado ao estar sob a luz do sol.  
-* Entre outras formas de punição e vulnerabilidade que permitem que PJs possam explorar e utilizar de forma inteligente, mas que também ajudam a definir o **comportamento** de dados PNJ.
+| NA | Severidade máxima permitida |
+| :---: | :---- |
+| 1 | Moderado |
+| 2 | Severo |
+| 3 | Severo |
+| 4 | Grave |
+| 5 | Devastador |
+| 6 | Devastador |
 
  
 
-## **Ações Básicas e Assinaturas** {#ações-básicas-e-assinaturas}
+* Ataques básicos normalmente causam dano Leve ou Moderado geralmente.  
+* Assinaturas podem causar severidades superiores às de uma ação básica, respeitando o limite do NA.  
+* Tags não ultrapassam, por si só, o limite de severidade do NA.  
+* Qualquer exceção ao limite precisa estar autorizada expressamente por uma regra geral do sistema.
 
-Esse é o último passo obrigatório para criar um PNJ, definir suas ações básicas e suas 3 Assinaturas, tendo elas o formato da criatura se concretizar totalmente.
+## 
 
-### **Ações Básicas** {#ações-básicas}
+## **Tags de Personalização**
 
-Para começar, Ações Básicas representam aquilo que a criatura **consegue fazer repetidamente** sem alterar de forma significativa o estado da cena, sendo para:
+PNJs, diferente de PJs, não possuem as mesmas ferramentas de customização, e em geral, devem ser construídos de forma mais simples e intuitiva, rápida de ser improvisada e montada. Por esta razão existem as **Tags de Personalização**, elas funcionam em forma de características atreladas a frases e orações que dão **efeitos diferentes** para uma criatura de forma explícita. Ao criar um PNJ, o narrador escolhe Tags individuais que representam as características relevantes daquela criatura.
 
-* manter pressão constante  
-* responder às ações dos PJs  
-* sustentar o conflito entre Assinaturas
+Não existe orçamento de pontos nem quantidade fixa de Tags. A escolha deve seguir o conceito do PNJ, a complexidade narrativa e a necessidade prática da ficha. 
 
-Características das Ações Básicas são:
+É importante afirmar que o nome de uma Tag, sozinho, não concede efeito mecânico: todo efeito numérico ou regra especial precisa ser descrito.
 
-* Podem ser usadas **livremente**, sempre que a criatura tiver uma ação disponível.  
-* Utilizam a rolagem base do NA, ajustada por Função e Condições.  
-* Todo PNJ possui até 4 ações básicas.  
-* Sempre indicam **qual atributo utilizam** e também qual perícia que o PJ deve usar para resisti-la ou evitá-la.  
-* Não alteram drasticamente o cenário ou as regras do conflito  
-* [Essas ações básicas seguem as mesmas regras de ação antes explicadas.](#heading=h.dsqxsn9ecn92)  
-* Ter um efeito simples, fraco, de fácil leitura e uso, que permite deixar a ação básica mais única para aquele monstro.
+Existem quatro tipos de tags:
 
-Exemplos comuns:
+* **Tags de Competência**  
+* **Tags de Propriedade**  
+* **Tags de Gatilho**  
+* **Tags de Limitação**
 
-* ataques simples  
-* defesas e esquivas  
-* movimentação relevante  
-* manobras diretas
+### **Tags de Competência**
 
-Exemplo:
+Representam aptidões, deficiências e especializações que alteram rolagens. Uma Tag de Competência pode modificar a quantidade de dados, o modificador fixo ou ambos, desde que a descrição deixe isso explícito. Também pode ser restrita a um atributo, tipo de ação ou circunstância.
 
-* Ataque com Garra *(Técnica)* 2d10 \+2 \- Dano Moderado \- Em uma Oportunidade aplica Sangramento Leve.  
-* Esquiva Recuada *(Corpo)* 2d10 \+2 \- A criatura Esquiva se afasta do seu atacante acrobaticamente.
+| Tag de exemplo | Efeito |
+| :---- | :---- |
+| Potência Física | \+1d10 em rolagens de Corpo que envolvam força ou esforço físico. |
+| Precisão Excepcional | \+2 ao modificador fixo em ataques à distância baseados em Técnica. |
+| Raciocínio Limitado | −1d10 em rolagens de Mente que exijam raciocínio abstrato. |
+| Comandante Nato | \+1d10 em rolagens de Presença para coordenar aliados capazes de receber suas ordens. |
+| Movimentos Desajeitados | −1 ao modificador fixo em tarefas que exijam coordenação motora precisa. |
+| Especialista em Emboscadas | \+1d10 ao atacar um alvo que ainda não percebeu a presença do PNJ. |
 
-Na ausência de uma ação básica para se defender de um efeito, deve-se usar os dados e modificadores definidos pelo NA.
+#### **Diretriz de intensidade para modificadores fixos**
 
-Minimamente, uma criatura tem uma **Ação Básica Ofensiva** e **uma Ação Básica que é reativa usada para defesa**.
+ ±1 a ±2 são valores usuais; ±3 representa uma especialização excepcional; valores maiores podem existir, mas exigem justificativa clara e atenção ao impacto na cena. Esta é uma diretriz de consistência, não um orçamento de pontos nem um limite rígido.
 
-### **Assinaturas** {#assinaturas}
+#### **Limite por atributo em uma rolagem**
 
-Assinaturas são **ações especiais e identitárias**, assim como habilidades e Poderes de PJs. Elas representam os momentos em que a criatura realmente mostra por que é uma ameaça narrativa e um obstáculo a ser derrotado. 
+Em uma mesma rolagem, no máximo uma Tag de Competência pode modificar numericamente o atributo principal da ação. Não se acumulam automaticamente duas Tags de Competência que beneficiem ou prejudiquem a mesma rolagem. Se mais de uma parecer aplicável, o narrador escolhe o mais relevante para a ação.
 
-Toda criatura possui **três Assinaturas,** e a força, alcance, complexidade, escopo e grandiosidade é limitada por NA. Sendo:
+Tags de outras categorias ainda podem funcionar quando representam efeitos distintos. Por exemplo, uma Tag de Competência pode melhorar um ataque, enquanto uma Tag de Propriedade reduz o dano recebido; não têm o mesmo efeito e não precisam ser tratadas como bônus duplicados.  
+Todas as rolagens continuam limitadas a 4d10. Tags também respeitam as regras gerais de condições, bônus e penalidades do Ironpaw: não removem condições automaticamente nem anulam uma penalidade severa sem uma regra explícita que permita isso.
 
-* NA 1-2 \= Assinaturas menores, de pouco impacto.  
-* NA 3-4 \= Assinaturas com mais liberdade em alcance, força e complexidades, mas não tremendamente destrutivas sem nenhum **custo narrativo gravissímo**.  
-* NA 5 \= Assinaturas grandiosas e **chamativas**, complexas, que tornam aquela criatura distinta de qualquer outra, ainda mais por ser um Nível de Ameaça que abraça os PNJs mais poderosos, perigosos e raros.
+### **Tags de Propriedade**
 
-Características das Assinaturas são:
+Representam características relativamente constantes do PNJ. Uma Propriedade não concede bônus numérico automaticamente; se alterar uma rolagem, dano, defesa, condição ou interação, esse efeito deve estar escrito.
 
-* Consomem a ação principal do turno (independente de ser uma Assinatura ofensiva ou não), e dependendo da força, só podem ser usadas após 1d10 rodadas  
-* Utilizam rolagens danos da tabela de Severidade por NA  
-* Sempre indicam **qual atributo utilizam** e também qual perícia que o PJ deve usar para resisti-la ou evitá-la.  
-* Sofrem efeitos de Condições normalmente.  
-* São limitadas a:  
-  * causar dano  
-  * aplicar/remover Condição  
-  * modificar posicionamento  
-  * alterar e interagir com o estado do cenário de forma limitada.
+| Tag de exemplo | Efeito ou alcance |
+| :---- | :---- |
+| Visão Noturna | Permite enxergar em baixa luminosidade; não concede automaticamente bônus a todo teste de percepção. |
+| Blindagem Natural | Reduz um tipo definido de dano pela quantidade ou grau descrito na Tag. |
+| Membro Regenerativo | Recupera uma quantidade definida de CV sob condições explicitadas. |
+| Anatomia Incomum | Altera interações específicas, desde que a descrição indique quais abordagens são afetadas. |
+| Autoridade Reconhecida | Pode justificar acesso ou cooperação de quem reconheça a posição do PNJ. |
+| Corpo Incorpóreo | Define quais obstáculos atravessa e quais interações ainda podem afetá-lo. |
 
-No fim uma criatura terá os seguintes parâmetros ao terminar de criá-la.
+#### **Resistências**
 
-**Nome:**  
-**NA:**  
-**Função:**  
-**CV / cR:**
+Resistências são Tags de Propriedade que representam interações específicas com tipos de dano, condições, ambientes ou abordagens. Toda resistência mecânica deve indicar o que afeta e qual efeito produz.  
+• Resistência a fogo: reduz dano de fogo pelo valor ou grau definido.  
+• Resistência à intimidação: pode alterar a defesa contra tentativas de intimidação, se o efeito estiver descrito.  
+• Carapaça natural: reduz determinados danos físicos conforme o valor definido.  
+• Imunidade a venenos comuns: impede os efeitos dos venenos abrangidos pela descrição, mas não significa imunidade universal a qualquer substância ou condição.
 
-**Ações Básicas:**  
-\- Ataque Principal \[Atributo\] Xd10 \+X  
-\- Defesa Principal \[Atributo\] Xd10 \+X  
-\- Ação Secundária \[Atributo\] Xd10 \+X  
-\- Alguma outra ação relevante…
+### **Tags de Gatilho**
 
-**Assinaturas:**  
-1\.   
-2\.   
-3\. 
+Representam efeitos que só ocorrem quando uma condição específica é satisfeita. Todo Gatilho deve informar o que o ativa, qual efeito produz, se exige ação ou reação e se possui limite ou recarga.
 
-Fraquezas (opcional):
+| Tag de exemplo | Gatilho e efeito |
+| :---- | :---- |
+| Retaliação | Quando atingido em combate corpo a corpo, pode responder conforme o efeito descrito. |
+| Predador à Espreita | Ativa um benefício definido ao atacar uma presa que ainda não percebeu sua presença. |
+| Defesa Desesperada | Ativa uma defesa especial quando o CV chega ao limite definido. |
+| Protetor de Aliados | Permite intervir quando um aliado próximo é ameaçado, se houver reação disponível. |
+| Fúria Crescente | Ativa ou acumula um efeito definido quando o PNJ sofre dano; a duração e o limite devem ser indicados. |
 
-\- (situação, condição ou abordagem que o prejudica)
+O nome do Gatilho não é a regra completa. O efeito e as condições de ativação devem estar explícitos na ficha.
 
-Observações:
+### **Tags de Limitação**
 
-- (Aparência de algum equipamento, resistência a algum tipo de dano, ou qualquer outra coisa passiva ou cosmética importante)
+Representam vulnerabilidades, restrições e condições que impedem o PNJ de usar todo o seu potencial em determinadas circunstâncias. Uma Limitação deve ser concreta o suficiente para ser utilizada durante a cena.
+
+| Tag de exemplo | Efeito ou restrição |
+| :---- | :---- |
+| Dependência de Aliados | Perde acesso às Assinaturas indicadas quando não há aliados próximos. |
+| Corpo Pesado | Não pode executar certas manobras de mobilidade ou sofre o efeito descrito ao tentá-las. |
+| Mira Comprometida em Curta Distância | Perde o benefício indicado em ataques à distância quando está engajado em combate corpo a corpo. |
+| Instinto Predatório | Pode ser atraído para armadilhas ou provocado por estímulos específicos, conforme a descrição. |
+| Vulnerável à Luz Solar | Sofre o efeito definido quando exposto à luz solar direta. |
+| Raciocínio Instintivo | Não consegue realizar tarefas específicas que exijam planejamento abstrato, mas pode agir por instinto. |
+
+Uma descrição como 'é impulsivo' pode ser apenas narrativa. Uma Limitação jogável explica o que acontece, quando acontece e como os personagens podem explorá-la.
+
+#### **Fraquezas**
+
+Fraquezas expressam vulnerabilidades narrativas ou mecânicas. PNJs importantes devem possuir ao menos uma vulnerabilidade, Fraqueza ou Limitação explorável quando isso fizer sentido para seu conceito. PNJs simples ou descartáveis podem não possuir Fraquezas.  
+Uma Fraqueza pode, por exemplo:
+
+* aumentar o dano recebido de um tipo específico de ataque;  
+* impor uma penalidade a uma defesa ou rolagem em uma condição definida;  
+* limitar ações ou Assinaturas em certas circunstâncias;  
+* aplicar uma condição quando o PNJ é exposto a um ambiente ou estímulo específico;  
+* criar uma oportunidade narrativa explorável pelos PJs.  
+* O efeito deve ser proporcional à vulnerabilidade e indicar quando se aplica, seguindo as regras fundamentais de rolagem.
+
+**Exemplo: Vulnerável à Luz Solar —** sob luz solar direta, a criatura não pode regenerar CV e sofre a penalidade especificada em ações que dependam de sua visão noturna. A penalidade numérica, se necessária, deve ser definida na ficha.
+
+### 
+
+### **Aplicação das Tags e ordem de resolução**
+
+1\. Identifique a ação e seu atributo principal.  
+2\. Defina a rolagem-base pelo NA.  
+3\. Aplique, se houver, uma Tag de Competência numérica pertinente ao atributo da rolagem.  
+4\. Verifique Propriedades relevantes e Gatilhos efetivamente ativados.  
+5\. Aplique condições, penalidades e outros efeitos gerais pertinentes.  
+6\. Confirme o limite máximo de 4d10 e o limite de severidade de dano do NA.  
+7\. Resolva a ação pelas regras normais do sistema.  
+Quando duas Tags parecem produzir o mesmo benefício, não some os efeitos automaticamente. Determine se representam efeitos distintos; se forem duplicados, aplique apenas o efeito mais relevante, salvo regra expressa em contrário.
+
+## **Ações Básicas**
+
+Ações Básicas representam o que um PNJ consegue fazer repetidamente sem alterar de maneira excepcional o estado da cena. Servem para manter pressão constante, responder às ações dos PJs e sustentar o conflito.  
+Podem representar ataques simples, defesas, esquivas, deslocamentos, manobras, interações sociais, investigação ou apoio.  
+Cada Ação Básica deve indicar, conforme a necessidade:
+
+* nome da ação;  
+* atributo utilizado;  
+* alvo ou situação em que pode ser usada;  
+* resultado em caso de sucesso;  
+* dano ou condição, se houver;  
+* forma de resistir ou evitar o efeito, quando aplicável.
+
+Um PNJ pode ter até quatro Ações Básicas; não é necessário preencher todas as opções. Ações Básicas utilizam a rolagem-base do NA, ajustada pelas Tags pertinentes e pelas condições. É de se destacar que mesmo sem uma ação defensiva escrita um PNJ **ainda pode tentar se defender usando a rolagem apropriada ao atributo e à abordagem**, com as Tags e condições aplicáveis.  
+**Exemplos de Ações Básicas**
+
+* Ataque com Garra (Técnica): ataque corpo a corpo que causa dano Moderado em caso de sucesso. Qualquer efeito adicional, como Sangramento Leve em uma Oportunidade, deve respeitar as regras gerais de Oportunidades.  
+* Esquiva Recuada (Corpo): o PNJ tenta evitar o ataque e se afastar do agressor. A rolagem usa Corpo, ajustada pelas Tags pertinentes.  
+* Interrogar com Autoridade (Presença): o PNJ pressiona um interlocutor por meio de sua posição e confiança. A resistência é definida pela abordagem do PJ e pela situação.  
+* Rastrear Pegadas (Mente): o PNJ examina o ambiente em busca de sinais da passagem de alguém. A dificuldade depende das condições e da qualidade dos rastros.
+
+## **Assinaturas**
+
+Assinaturas são ações especiais e identitárias, equivalentes em função narrativa às capacidades marcantes de um PNJ. Uma Assinatura pode causar dano, aplicar ou remover condições, alterar posicionamento, interagir com o cenário, apoiar aliados ou ativar uma capacidade especial. Elas seguem as seguintes regras:
+
+* A quantidade de Assinaturas é flexível e deve acompanhar a complexidade narrativa do PNJ.   
+  * PNJs simples podem não possuir Assinaturas ou ter apenas uma; PNJs recorrentes ou especializados podem ter algumas; PNJs importantes ou chefes podem ter mais quando a variedade for necessária. Não há número obrigatório nem orçamento de pontos.  
+* Uma Assinatura normalmente consome a ação principal do turno.  
+* A Assinatura deve indicar atributo, alvo, efeito, resistência ou evasão aplicável e qualquer condição de uso.  
+* Se houver custo, recarga, limite de uso ou gatilho de ativação, isso deve estar escrito na própria Assinatura.  
+* Não existe recarga universal para todas as Assinaturas cada uma poder a sua específica.  
+* As assinaturas respeitam a severidade máxima de dano do NA e sofrem os efeitos das Condições normalmente.  
+* A Assinatura deve indicar se afeta aliados, se pode ser repetida em turnos consecutivos e quais condições impedem sua utilização.
+
+### 
+
+| NA | Diretriz para Assinaturas |
+| :---- | :---- |
+| 1–2 | Efeitos de impacto limitado, com alcance e complexidade modestos. |
+| 3–4 | Maior liberdade de alcance, força e complexidade, sem destruição extrema sem justificativa narrativa relevante. |
+| 5 | Efeitos grandiosos e marcantes, adequados a ameaças excepcionais. |
+
+Exemplo de Assinatura: **Rugido de Ruína (Presença) —** a criatura emite um rugido que abala os inimigos próximos que possam ouvi-la. Os alvos resistem conforme a abordagem definida pela cena. Em caso de falha, sofrem a Condição Amedrontado pelo grau e duração especificados na ficha. 
+
+## **Informações adicionais pertinentes\!**
+
+### **PNJs fora de combate**
+
+O sistema de Tags também se aplica a PNJs sociais, investigadores, comerciantes, guias, autoridades, artesãos e outras figuras que não sejam combatentes. O NA só precisa ser definido quando houver risco ou consequência relevante que exija resolução mecânica. Ações sem oposição ou sem consequência relevante podem ser resolvidas narrativamente.
+
+### 
+
+**Exemplo: Arquivista da Cidade**  
+• Conceito: especialista em documentos e registros históricos.  
+• Competência — Memória Especializada: \+1d10 em testes de Mente para recordar documentos e registros consultados.  
+• Propriedade — Acesso aos Arquivos: pode consultar materiais disponíveis nos arquivos aos quais tem permissão de acesso.  
+• Limitação — Pouca Experiência Física: sofre o efeito definido pela Tag em desafios que exijam esforço físico prolongado.  
+• Ação Básica — Localizar Registro (Mente): procura um documento dentro dos arquivos a que tem acesso.  
+• Assinaturas: nenhuma, salvo se houver uma capacidade especial relevante para a história.
+
+### **Exemplos de PNJs completos**
+
+**Predador de Ruínas — NA 3**  
+Conceito: criatura que espreita exploradores, ataca de surpresa e recua quando perde a vantagem.  
+• NA: 3\.  
+• CV: 6\.  
+• CR: 5\.  
+• Competência — Especialista em Emboscadas: \+1d10 em ataques contra alvos que ainda não perceberam sua presença.  
+• Competência — Potência Física: \+1d10 em testes de Corpo que envolvam força física.  
+• Propriedade — Visão Noturna: enxerga em baixa luminosidade.  
+• Gatilho — Predador à Espreita: quando ataca uma presa desprevenida, ativa o benefício de Especialista em Emboscadas; o benefício não se aplica duas vezes.  
+• Limitação — Instinto Predatório: pode abandonar uma posição vantajosa para perseguir uma presa isolada, salvo quando houver objetivo prioritário.  
+• Ação Básica — Ataque com Garra (Técnica): causa dano Moderado.  
+• Ação Básica — Recuo Instintivo (Corpo): tenta se afastar de uma ameaça corpo a corpo.  
+• Ação Básica — Rastrear (Mente): segue rastros recentes.  
+• Assinatura — Salto da Emboscada (Técnica): avança sobre um alvo desprevenido e realiza um ataque especial, sem ultrapassar o limite de dano do NA 3\.  
+• Fraqueza — Luz Intensa: em luz intensa e direta, perde a vantagem narrativa de ocultação e pode sofrer a penalidade definida para tarefas que dependam de sua visão noturna.
+
+**Guarda veterano — NA 2**  
+Conceito: guarda treinado que protege uma entrada e tenta impedir a passagem sem perseguir intrusos por longas distâncias.  
+• NA: 2; CV base: 4; CR base: 3\.  
+• Competência — Guarda Treinado: \+1d10 em rolagens de Técnica para defender uma entrada ou bloquear uma passagem.  
+• Propriedade — Equipamento de Proteção: redução de dano apenas se a ficha definir o valor e os tipos de dano afetados.  
+• Limitação — Posto Fixo: não abandona seu posto sem ordem ou ameaça claramente superior.  
+• Ação Básica — Golpe de Bastão (Corpo): ataque simples, normalmente causando dano Leve ou Moderado.  
+• Ação Básica — Bloquear Passagem (Corpo): tenta impedir o avanço de um alvo por um espaço estreito.  
+• Assinaturas: nenhuma necessária para uma aparição simples.  
+• Fraquezas: podem ser omitidas se o guarda for incidental; para um guarda importante, definir uma vulnerabilidade explorável.
+
+### **Modelo de ficha de PNJ**
+
+Use apenas os campos relevantes para a cena. Categorias sem Tags podem ser omitidas.  
+Nome:  
+Conceito / papel narrativo:  
+NA:  
+CV:  
+CR:  
+Tags de Competência:  
+Tags de Propriedade:  
+Tags de Gatilho:  
+Tags de Limitação:  
+Ações Básicas:  
+Assinaturas:  
+Resistências:  
+Fraquezas:  
+Observações:  
+As Tags podem ser descritas de forma compacta. Uma resistência, Fraqueza ou propriedade já definida em uma Tag não precisa ser repetida em outra seção, desde que fique fácil encontrar seu efeito durante a cena.
+
+### **Regras de consistência resumidamente**
+
+* O NA define a rolagem-base; as Tags personalizam o PNJ.  
+* Nenhuma rolagem ultrapassa 4d10.  
+* No máximo uma Tag de Competência modifica numericamente o atributo principal em uma mesma rolagem.  
+* Modificadores fixos de ±1 a ±2 são usuais; ±3 é excepcional; valores maiores precisam de justificativa.  
+* Tags mecânicas descrevem seus efeitos; nomes sugestivos não criam regras implícitas.  
+* Gatilhos indicam condições de ativação, efeito e eventual limite de uso.  
+* Limitações devem ter consequências claras e ser relevantes para o conceito.  
+* O NA limita a severidade do dano de Ações Básicas e Assinaturas.  
+* A quantidade de Assinaturas é flexível e acompanha a complexidade narrativa.  
+* Não acumule automaticamente efeitos duplicados de Tags diferentes.  
+* As regras gerais de condições, bônus, penalidades e resistências do Ironpaw continuam valendo, salvo exceção expressa.
 
