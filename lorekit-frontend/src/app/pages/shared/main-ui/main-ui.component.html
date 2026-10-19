@@ -10,6 +10,8 @@
           <img src="assets/lorekit-logo.png" alt="Lorekit">
         </div>
         <div class="activity-navigation__sections">
+          <app-nav-button label="Histórias" [showLabel]="false" icon="fa-solid fa-book-open" size="xl" [fullWidth]="true" direction="right" (click)="tabManager.setActiveSidebarSection('stories')"></app-nav-button>
+          @if (database.ready()) {
           <app-nav-button [label]="'Mundos'" [showLabel]="false" [icon]="'fa-solid fa-earth'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'world'"
             activeColor="yellow-400"
@@ -61,16 +63,21 @@
             (click)="tabManager.setActiveSidebarSection('vocations')"></app-nav-button>
           <app-nav-button [label]="'Gerenciador de Conteúdo'" buttonType="pink" [showLabel]="false" [icon]="'fa-solid fa-box-open'" size="xl" [fullWidth]="true" [direction]="'right'"
             (click)="tabManager.setActiveSidebarSection('content-manager')"></app-nav-button>
+          } @else {
+            <app-nav-button label="Abrir worldbuilding" [showLabel]="false" icon="fa-solid fa-earth" size="xl" [fullWidth]="true" direction="right" routerLink="/app/world"></app-nav-button>
+          }
         </div>
       </div>
 
+      @if (database.ready()) {
       <div class="activity-navigation__settings">
         <app-nav-button [label]="'Configurações'" (click)="openSettings()" [showLabel]="false" [icon]="'fa-solid fa-gears'" size="xl" [fullWidth]="true" [direction]="'right'"></app-nav-button>
       </div>
+      }
     </div>
 
     <!-- Sidebar panel (entity list for active section) -->
-    <app-sidebar-panel />
+    @if (database.ready()) { <app-sidebar-panel /> }
 
     <!-- Workspace (tabbed editor panes) -->
     <div class="flex-1 min-h-0 min-w-0 h-full overflow-hidden">

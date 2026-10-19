@@ -31,8 +31,8 @@
     @let activeTab = getActiveTab();
     <div
       class="workspace-tab-viewport absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-dark"
-      [class.px-3]="!activeTab || !usesFullBleedEditor(activeTab.entityType)"
-      [class.workspace-tab-full-bleed]="!!activeTab && usesFullBleedEditor(activeTab.entityType)">
+      [class.px-3]="!activeTab || !usesFullBleedEditor(activeTab.entityType, activeTab.entityId)"
+      [class.workspace-tab-full-bleed]="!!activeTab && usesFullBleedEditor(activeTab.entityType, activeTab.entityId)">
       @if (activeTab && !activeTab.resolvedComponent) {
         <div class="h-full flex items-center justify-center text-zinc-500 text-sm">
           <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Carregando...

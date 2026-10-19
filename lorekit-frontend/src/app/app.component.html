@@ -1,5 +1,5 @@
 <main>
-  @if (workspace.desktopRecoveryRequired()) {
+  @if (workspace.desktopRecoveryRequired() && !isStoryRoute()) {
     <div class="absolute left-1/2 top-0 z-[20000] flex -translate-x-1/2 items-center p-1">
       <app-cloud-button style="-webkit-app-region: no-drag;"></app-cloud-button>
     </div>

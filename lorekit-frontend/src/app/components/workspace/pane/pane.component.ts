@@ -82,8 +82,8 @@ export class WorkspacePaneComponent implements AfterViewInit, OnChanges, OnDestr
     'Character', 'Document', 'World', 'Location', 'Specie', 'Culture', 'Organization', 'Object',
   ]);
 
-  usesFullBleedEditor(entityType: string): boolean {
-    return this.fullBleedEntityTypes.has(entityType);
+  usesFullBleedEditor(entityType: string, entityId?: string): boolean {
+    return this.fullBleedEntityTypes.has(entityType) || (entityType === 'view' && entityId === 'stories');
   }
 
   getTabInputs(tab: { entityType: any; entityId: string; id: string }): Record<string, unknown> {

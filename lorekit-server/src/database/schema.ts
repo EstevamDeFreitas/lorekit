@@ -2,6 +2,8 @@ import {
   bigserial,
   bigint,
   boolean,
+  check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -10,9 +12,11 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import type { StoryMechanics, StoryRollRecord, StoryEventType, StorySequence } from '../shared/ironpaw';
 
 export const appSchema = pgSchema('app');
 
@@ -254,3 +258,144 @@ export const auditEvents = appSchema.table(
     index('audit_events_action_idx').on(table.action, table.createdAt),
   ],
 );
+
+// Histórias have their own access boundary; membership never grants vault access.
+export const stories = appSchema.table('stories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ownerUserId: uuid('owner_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  creationOperationId: uuid('creation_operation_id').notNull(),
+  title: text('title').notNull(),
+  sequence: bigint('sequence', { mode: 'bigint' }).notNull().default(sql`0`),
+  ...timestamps,
+}, table => [uniqueIndex('stories_creation_uidx').on(table.ownerUserId, table.creationOperationId), check('stories_sequence_nonnegative', sql`${table.sequence} >= 0`)]);
+
+export const storyMembers = appSchema.table('story_members', {
+  storyId: uuid('story_id').notNull().references(() => stories.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  role: text('role').$type<'owner' | 'participant'>().notNull(),
+  readCursor: bigint('read_cursor', { mode: 'bigint' }).notNull().default(sql`0`),
+  seen: jsonb('seen').$type<Array<[StorySequence, StorySequence]>>().notNull().default([]),
+  sound: boolean('sound').notNull().default(true),
+  external: boolean('external').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [primaryKey({ columns: [table.storyId, table.userId] }), index('story_members_user_idx').on(table.userId), check('story_members_role_valid', sql`${table.role} in ('owner', 'participant')`)]);
+
+export const storyInvites = appSchema.table('story_invites', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storyId: uuid('story_id').notNull().references(() => stories.id, { onDelete: 'cascade' }),
+  issuerUserId: uuid('issuer_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  tokenHash: text('token_hash').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  consumedAt: timestamp('consumed_at', { withTimezone: true }),
+  cancelledAt: timestamp('cancelled_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [uniqueIndex('story_invites_token_uidx').on(table.tokenHash), index('story_invites_story_idx').on(table.storyId)]);
+
+export const storyScenes = appSchema.table('story_scenes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storyId: uuid('story_id').notNull().references(() => stories.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  position: bigint('position', { mode: 'bigint' }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [unique('story_scenes_scope_uidx').on(table.storyId, table.id), uniqueIndex('story_scenes_position_uidx').on(table.storyId, table.position)]);
+
+export const storyAssets = appSchema.table('story_assets', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storyId: uuid('story_id').notNull().references(() => stories.id, { onDelete: 'cascade' }),
+  uploaderUserId: uuid('uploader_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  name: text('name').notNull(),
+  mimeType: text('mime_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  sha256: text('sha256').notNull(),
+  state: text('state').$type<'pending' | 'ready'>().notNull().default('pending'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [unique('story_assets_scope_uidx').on(table.storyId, table.id), index('story_assets_pending_idx').on(table.state, table.expiresAt), check('story_assets_size_valid', sql`${table.sizeBytes} > 0 and ${table.sizeBytes} <= 10485760`)]);
+
+export const storySpeakers = appSchema.table('story_speakers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storyId: uuid('story_id').notNull().references(() => stories.id, { onDelete: 'cascade' }),
+  sceneId: uuid('scene_id'),
+  kind: text('kind').$type<'character' | 'npc' | 'incidental'>().notNull(),
+  publisherUserId: uuid('publisher_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  revision: integer('revision').notNull().default(1),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [unique('story_speakers_scope_uidx').on(table.storyId, table.id),
+  foreignKey({ columns: [table.storyId, table.sceneId], foreignColumns: [storyScenes.storyId, storyScenes.id] }),
+  check('story_speakers_kind_valid', sql`${table.kind} in ('character', 'npc', 'incidental')`),
+  check('story_speakers_incidental_scene', sql`${table.kind} != 'incidental' or ${table.sceneId} is not null`),
+]);
+
+export const storySpeakerRevisions = appSchema.table('story_speaker_revisions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storyId: uuid('story_id').notNull(),
+  speakerId: uuid('speaker_id').notNull(),
+  number: integer('number').notNull(),
+  name: text('name').notNull(), color: text('color').notNull(),
+  portraitAssetId: uuid('portrait_asset_id'),
+  mechanics: jsonb('mechanics').$type<StoryMechanics>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [unique('story_revisions_scope_uidx').on(table.storyId, table.speakerId, table.id), uniqueIndex('story_revisions_number_uidx').on(table.speakerId, table.number),
+  foreignKey({ columns: [table.storyId, table.speakerId], foreignColumns: [storySpeakers.storyId, storySpeakers.id] }),
+  foreignKey({ columns: [table.storyId, table.portraitAssetId], foreignColumns: [storyAssets.storyId, storyAssets.id] }),
+]);
+
+export const storyMessages = appSchema.table('story_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storyId: uuid('story_id').notNull().references(() => stories.id, { onDelete: 'cascade' }),
+  sceneId: uuid('scene_id').notNull(),
+  speakerId: uuid('speaker_id').notNull(),
+  revisionId: uuid('revision_id').notNull(),
+  sequence: bigint('sequence', { mode: 'bigint' }).notNull(),
+  operationId: uuid('operation_id').notNull(),
+  authorUserId: uuid('author_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  authorName: text('author_name').notNull(),
+  text: text('text').notNull().default(''),
+  roll: jsonb('roll').$type<StoryRollRecord>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [uniqueIndex('story_messages_sequence_uidx').on(table.storyId, table.sequence), unique('story_messages_scope_uidx').on(table.storyId, table.id),
+  index('story_messages_scene_idx').on(table.storyId, table.sceneId, table.sequence),
+  foreignKey({ columns: [table.storyId, table.sceneId], foreignColumns: [storyScenes.storyId, storyScenes.id] }),
+  foreignKey({ columns: [table.storyId, table.speakerId, table.revisionId], foreignColumns: [storySpeakerRevisions.storyId, storySpeakerRevisions.speakerId, storySpeakerRevisions.id] }),
+]);
+
+export const storyMessageAssets = appSchema.table('story_message_assets', {
+  storyId: uuid('story_id').notNull(), messageId: uuid('message_id').notNull(), assetId: uuid('asset_id').notNull(), position: integer('position').notNull(),
+}, table => [primaryKey({ columns: [table.messageId, table.assetId] }), uniqueIndex('story_message_assets_position_uidx').on(table.messageId, table.position),
+  foreignKey({ columns: [table.storyId, table.messageId], foreignColumns: [storyMessages.storyId, storyMessages.id] }),
+  foreignKey({ columns: [table.storyId, table.assetId], foreignColumns: [storyAssets.storyId, storyAssets.id] }),
+]);
+
+export const storyOperations = appSchema.table('story_operations', {
+  storyId: uuid('story_id').notNull().references(() => stories.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  operationId: uuid('operation_id').notNull(), requestHash: text('request_hash').notNull(),
+  result: jsonb('result').$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [primaryKey({ columns: [table.storyId, table.userId, table.operationId] })]);
+
+export const storyEvents = appSchema.table('story_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  storyId: uuid('story_id').notNull().references(() => stories.id, { onDelete: 'cascade' }),
+  sequence: bigint('sequence', { mode: 'bigint' }).notNull(),
+  type: text('type').$type<StoryEventType>().notNull(), entityId: uuid('entity_id').notNull(),
+  dispatchedAt: timestamp('dispatched_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [uniqueIndex('story_events_sequence_uidx').on(table.storyId, table.sequence), index('story_events_pending_idx').on(table.dispatchedAt)]);
+
+export const storyPushSubscriptions = appSchema.table('story_push_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(), userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  sessionId: uuid('session_id').notNull().references(() => refreshSessions.id, { onDelete: 'cascade' }),
+  installationId: uuid('installation_id').notNull(), endpoint: text('endpoint').notNull(),
+  p256dh: text('p256dh').notNull(), auth: text('auth').notNull(), active: boolean('active').notNull().default(true),
+  ...timestamps,
+}, table => [uniqueIndex('story_push_endpoint_uidx').on(table.endpoint), index('story_push_account_idx').on(table.userId, table.installationId)]);
+
+export const storyNotificationDeliveries = appSchema.table('story_notification_deliveries', {
+  eventId: uuid('event_id').notNull().references(() => storyEvents.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  installationId: uuid('installation_id').notNull(), channel: text('channel').notNull(),
+  state: text('state').$type<'pending' | 'sent' | 'presented' | 'skipped'>().notNull().default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  ...timestamps,
+}, table => [primaryKey({ columns: [table.eventId, table.userId, table.installationId] }), index('story_deliveries_pending_idx').on(table.state, table.updatedAt)]);

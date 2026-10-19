@@ -1,0 +1,428 @@
+<div class="npc-manager">
+  <aside class="npc-catalog" aria-label="Catálogo de PNJs">
+    <div class="catalog-heading">
+      <h2>PNJs</h2>
+      <button
+        type="button"
+        class="primary"
+        (click)="create()"
+        [disabled]="form.dirty"
+      >
+        <i class="fa-solid fa-plus" aria-hidden="true"></i> Novo PNJ
+      </button>
+    </div>
+    <label
+      >Buscar PNJs<input
+        type="search"
+        placeholder="Nome ou conceito"
+        [value]="search()"
+        (input)="search.set($any($event.target).value)"
+    /></label>
+    <label class="check"
+      ><input
+        type="checkbox"
+        [checked]="includeArchived()"
+        (change)="reload($any($event.target).checked)"
+      />
+      Mostrar arquivados</label
+    >
+    <div class="catalog-list">
+      @for (npc of filtered(); track npc.id) {
+        <button
+          type="button"
+          class="npc-row"
+          [class.selected]="selected()?.id === npc.id"
+          [attr.aria-current]="selected()?.id === npc.id ? 'true' : null"
+          (click)="select(npc)"
+        >
+          <strong>{{ npc.name }}</strong
+          ><span>{{ npc.definition.concept || "Sem conceito" }}</span
+          ><small
+            >{{
+              npc.definition.threatLevel
+                ? "NA " + npc.definition.threatLevel
+                : "Narrativo"
+            }}{{ npc.archived ? " · Arquivado" : "" }}</small
+          >
+        </button>
+      } @empty {
+        <p class="empty-list">
+          {{
+            search()
+              ? "Nenhum PNJ corresponde à busca."
+              : "Seu catálogo ainda está vazio. Crie um PNJ para começar."
+          }}
+        </p>
+      }
+    </div>
+  </aside>
+  <section class="npc-editor" aria-label="Construtor de PNJs">
+    @if (notice()) {
+      <p class="notice" role="status">{{ notice() }}</p>
+    }
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+    @if (selected(); as npc) {
+      <header class="editor-heading">
+        <div>
+          <h2>{{ npc.id ? npc.name : "Novo PNJ" }}</h2>
+          <p>Preencha apenas o que a cena precisa. O NA é opcional.</p>
+        </div>
+        <div class="actions">
+          @if (form.dirty) {
+            <button type="button" (click)="cancel()">
+              Descartar alterações
+            </button>
+          }
+          <button type="button" class="primary" (click)="save()">
+            Salvar PNJ
+          </button>
+        </div>
+      </header>
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="identity-grid">
+          <div>
+            <label
+              >Nome<input
+                formControlName="name"
+                maxlength="120"
+                required /></label
+            ><label
+              >Conceito<textarea
+                formControlName="concept"
+                rows="2"
+                placeholder="Identidade, papel narrativo e comportamento"
+              ></textarea>
+            </label>
+          </div>
+          <div class="portrait-block">
+            @if (portrait(); as image) {
+              <img
+                [src]="image | assetUrl"
+                [alt]="'Retrato de ' + npc.name"
+                width="88"
+                height="88"
+              />
+            }
+            <button
+              type="button"
+              (click)="uploadPortrait()"
+              [disabled]="!npc.id || form.dirty"
+            >
+              Retrato</button
+            ><small>{{
+              !npc.id
+                ? "Salve antes de adicionar um retrato."
+                : "Salve as alterações antes de trocar o retrato."
+            }}</small
+            ><label class="color-field"
+              >Cor do nome<input type="color" formControlName="color"
+            /></label>
+          </div>
+        </div>
+        <section class="form-section">
+          <h3>Ameaça e resistência</h3>
+          <div class="fields-grid">
+            <label
+              >Nível de Ameaça<select formControlName="threatLevel">
+                <option [ngValue]="null">Sem NA · apenas narrativa</option>
+                @for (level of [1, 2, 3, 4, 5, 6]; track level) {
+                  <option [ngValue]="level">NA {{ level }}</option>
+                }
+              </select></label
+            >
+            <label
+              >Proteção explícita<input
+                formControlName="protection"
+                (change)="clearProtectionAdjustment()"
+                placeholder="Ex.: carapaça, armadura"
+            /></label>
+            <label
+              >Ajuste de CV<input
+                type="number"
+                formControlName="lifeAdjustment"
+                min="-5"
+                max="5"
+                step="1"
+            /></label>
+            <label
+              >Ajuste de CR<input
+                type="number"
+                formControlName="resistanceAdjustment"
+                min="-5"
+                max="5"
+                step="1"
+            /></label>
+          </div>
+          @if (preview(); as values) {
+            <dl class="rule-summary">
+              <div>
+                <dt>Rolagem-base</dt>
+                <dd>{{ values.dice }}d10+{{ values.modifier }}</dd>
+              </div>
+              <div>
+                <dt>Caixas de Vida</dt>
+                <dd>
+                  {{ values.lifeBase }} + ({{
+                    form.controls.lifeAdjustment.value
+                  }}) = {{ values.life }}
+                </dd>
+              </div>
+              <div>
+                <dt>Caixas de Resistência</dt>
+                <dd>
+                  {{ values.resistanceBase }} + ({{
+                    form.controls.resistanceAdjustment.value
+                  }}) = {{ values.resistance }}
+                </dd>
+              </div>
+              <div>
+                <dt>Dano máximo</dt>
+                <dd>{{ damageLabels[values.damage] }}</dd>
+              </div>
+            </dl>
+          }
+          <p class="hint">
+            CV base = 2 × NA. CR base = NA somente com proteção. Nenhuma rolagem
+            de PNJ ultrapassa 4d10.
+          </p>
+          @if (ruleErrors().length) {
+            <ul class="error-list">
+              @for (message of ruleErrors(); track $index) {
+                <li>{{ message }}</li>
+              }
+            </ul>
+          }
+        </section>
+        <section class="form-section">
+          <div class="section-heading">
+            <h3>Tags</h3>
+            <button type="button" (click)="addTag()">Adicionar Tag</button>
+          </div>
+          <p class="hint">
+            Descreva os efeitos. Em cada rolagem, escolha no máximo uma
+            Competência numérica aplicável.
+          </p>
+          @for (
+            tag of form.controls.tags.controls;
+            track tag;
+            let index = $index
+          ) {
+            <fieldset [formGroup]="tag">
+              <legend>Tag {{ index + 1 }}</legend>
+              <div class="fields-grid">
+                <label>Nome<input formControlName="name" /></label
+                ><label
+                  >Tipo<select
+                    formControlName="type"
+                    (change)="tagTypeChanged(index)"
+                  >
+                    @for (type of tagTypes; track type.value) {
+                      <option [value]="type.value">{{ type.label }}</option>
+                    }
+                  </select></label
+                >
+              </div>
+              <label
+                >Efeito e condições de uso<textarea
+                  formControlName="description"
+                  rows="2"
+                ></textarea>
+              </label>
+              @if (tag.controls.type.value === "competence") {
+                <div class="fields-grid">
+                  <label
+                    >Atributo<select formControlName="attribute">
+                      <option [ngValue]="null">
+                        Conforme a ação e o contexto
+                      </option>
+                      @for (attr of attributes; track attr) {
+                        <option [value]="attr">
+                          {{ attributeLabels[attr] }}
+                        </option>
+                      }
+                    </select></label
+                  ><label
+                    >Alteração de dados<input
+                      type="number"
+                      formControlName="diceModifier"
+                      step="1" /></label
+                  ><label
+                    >Modificador fixo<input
+                      type="number"
+                      formControlName="modifier"
+                      step="1"
+                  /></label>
+                </div>
+                <label
+                  >Contexto de aplicação<input
+                    formControlName="context"
+                    placeholder="Quando essa competência se aplica?"
+                /></label>
+              }
+              <button
+                type="button"
+                class="remove"
+                (click)="remove('tags', index)"
+              >
+                Remover Tag
+              </button>
+            </fieldset>
+          }
+        </section>
+        @for (section of ["actions", "signatures"]; track section) {
+          <section class="form-section">
+            <div class="section-heading">
+              <h3>
+                {{ section === "actions" ? "Ações básicas" : "Assinaturas" }}
+              </h3>
+              <button
+                type="button"
+                [disabled]="
+                  section === 'actions' && form.controls.actions.length >= 4
+                "
+                (click)="addAction(section === 'signatures')"
+              >
+                {{
+                  section === "actions"
+                    ? "Adicionar ação"
+                    : "Adicionar assinatura"
+                }}
+              </button>
+            </div>
+            <p class="hint">
+              {{
+                section === "actions"
+                  ? "Até quatro ações recorrentes. Não é necessário preencher todas."
+                  : "Capacidades especiais com efeitos e condições explícitos. Não há recarga universal."
+              }}
+            </p>
+            @for (
+              action of section === "actions"
+                ? form.controls.actions.controls
+                : form.controls.signatures.controls;
+              track action;
+              let index = $index
+            ) {
+              <fieldset [formGroup]="action">
+                <legend>
+                  {{ section === "actions" ? "Ação" : "Assinatura" }}
+                  {{ index + 1 }}
+                </legend>
+                <div class="fields-grid">
+                  <label>Nome<input formControlName="name" /></label
+                  ><label
+                    >Atributo<select formControlName="attribute">
+                      @for (attr of attributes; track attr) {
+                        <option [value]="attr">
+                          {{ attributeLabels[attr] }}
+                        </option>
+                      }
+                    </select></label
+                  ><label
+                    >Severidade<select formControlName="damage">
+                      <option [ngValue]="null">Sem dano definido</option>
+                      @for (damage of damages; track damage) {
+                        <option [value]="damage">
+                          {{ damageLabels[damage] }}
+                        </option>
+                      }
+                    </select></label
+                  >
+                </div>
+                <label
+                  >Efeito<textarea
+                    formControlName="description"
+                    rows="2"
+                  ></textarea>
+                </label>
+                <div class="fields-grid">
+                  <label>Alvo<input formControlName="target" /></label
+                  ><label
+                    >Resistência ou evasão<input formControlName="resistance"
+                  /></label>
+                </div>
+                @if (section === "signatures") {
+                  <label
+                    >Condições de uso<textarea
+                      formControlName="usage"
+                      rows="2"
+                      placeholder="Ativação, aliados afetados, repetição e impedimentos"
+                    ></textarea>
+                  </label>
+                  <div class="fields-grid">
+                    <label>Custo<input formControlName="cost" /></label
+                    ><label
+                      >Recarga ou limite<input formControlName="cooldown"
+                    /></label>
+                  </div>
+                }
+                <button
+                  type="button"
+                  class="remove"
+                  (click)="
+                    remove(
+                      section === 'actions' ? 'actions' : 'signatures',
+                      index
+                    )
+                  "
+                >
+                  Remover {{ section === "actions" ? "ação" : "assinatura" }}
+                </button>
+              </fieldset>
+            }
+          </section>
+        }
+        <section class="form-section">
+          <h3>Detalhes narrativos</h3>
+          <div class="fields-grid">
+            <label
+              >Resistências<textarea
+                formControlName="resistances"
+                rows="3"
+              ></textarea></label
+            ><label
+              >Fraquezas<textarea
+                formControlName="weaknesses"
+                rows="3"
+              ></textarea>
+            </label>
+          </div>
+          <label
+            >Observações<textarea formControlName="notes" rows="4"></textarea>
+          </label>
+          <p class="hint">
+            Gatilhos, resistências e fraquezas descrevem regras da cena. Não
+            aplicam efeitos automaticamente.
+          </p>
+        </section>
+      </form>
+      @if (npc.id) {
+        <footer class="editor-footer">
+          <button type="button" (click)="duplicate()" [disabled]="form.dirty">
+            Duplicar PNJ</button
+          ><button
+            type="button"
+            (click)="archive()"
+            [disabled]="form.dirty || npc.archived"
+          >
+            Arquivar
+          </button>
+        </footer>
+      }
+    } @else {
+      <div class="editor-empty">
+        <i class="fa-solid fa-masks-theater" aria-hidden="true"></i>
+        <h2>Personagens para cada cena</h2>
+        <p>
+          Selecione um PNJ ou crie um novo. Comece com nome e conceito;
+          acrescente regras quando a narrativa precisar.
+        </p>
+        <button type="button" class="primary" (click)="create()">
+          Criar PNJ
+        </button>
+      </div>
+    }
+  </section>
+</div>

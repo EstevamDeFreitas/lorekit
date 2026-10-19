@@ -59,6 +59,7 @@ export const SYNC_ENTITIES = [
   entity('IRPWItem'),
   entity('IRPWVocation'),
   entity('IRPWCurrency'),
+  entity('IRPWNpc'),
 ] as const satisfies readonly SyncEntityDefinition[];
 
 export const SYNC_ENTITY_BY_TYPE = new Map(

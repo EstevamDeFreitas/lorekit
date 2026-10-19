@@ -1,0 +1,7 @@
+{
+  "name": "@lorekit/ironpaw",
+  "version": "1.0.0",
+  "private": true,
+  "types": "./index.ts",
+  "description": "Platform-independent source package compiled by both the Lorekit server and Angular app"
+}

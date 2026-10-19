@@ -1,0 +1,17 @@
+# Opt-in: docker compose -f compose.yaml -f compose.stories-push.yaml up -d api
+# Copie este arquivo para /opt/lorekit e prepare os segredos antes de usar.
+services:
+  api:
+    environment:
+      STORIES_ENABLED: "true"
+      STORY_VAPID_PUBLIC_KEY_FILE: /run/secrets/story_vapid_public_key
+      STORY_VAPID_PRIVATE_KEY_FILE: /run/secrets/story_vapid_private_key
+      STORY_VAPID_SUBJECT: https://app.lorekit.online
+    secrets:
+      - story_vapid_public_key
+      - story_vapid_private_key
+secrets:
+  story_vapid_public_key:
+    file: ./secrets/story_vapid_public_key
+  story_vapid_private_key:
+    file: ./secrets/story_vapid_private_key

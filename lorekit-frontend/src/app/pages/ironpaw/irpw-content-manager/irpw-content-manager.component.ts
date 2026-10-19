@@ -1,4 +1,5 @@
 import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
+import { IrpwNpcCatalogComponent } from '../irpw-npc-catalog/irpw-npc-catalog.component';
 import { IrpwCurrenciesComponent } from '../irpw-currencies/irpw-currencies.component';
 import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { ButtonComponent } from '../../../components/button/button.component';
@@ -48,6 +49,7 @@ import { SKILL, SKILL_LABEL } from '../../../models/irpw-attributes-skills.model
 @Component({
   selector: 'irpw-content-manager',
   imports: [
+    IrpwNpcCatalogComponent,
     FormsModule,
     NavButtonComponent,
     IrpwCurrenciesComponent,
@@ -66,7 +68,8 @@ import { SKILL, SKILL_LABEL } from '../../../models/irpw-attributes-skills.model
 })
 export class IrpwContentManagerComponent implements OnInit, OnDestroy {
   private readonly cdr = inject(ChangeDetectorRef);
-  contentTab: 'items' | 'money' = 'items';
+  contentTab: 'items' | 'money' | 'npcs' = 'items';
+  npcTabOpened = false;
   editorSection: 'general' | 'appearance' | 'equipment' | 'rules' = 'general';
   readonly categoryOptions = IRPW_ITEM_CATEGORIES.map((value) => ({
     value,

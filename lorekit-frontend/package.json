@@ -4,8 +4,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
-    "build:web": "ng build --configuration production,web",
+    "build": "ng build && node scripts/story-shell-manifest.cjs",
+    "build:web": "ng build --configuration production,web && node scripts/story-shell-manifest.cjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -57,6 +57,7 @@
     "@tiptap/suggestion": "^3.31.2",
     "postcss": "^8.5.6",
     "rxjs": "~7.8.0",
+    "socket.io-client": "4.8.1",
     "sql.js": "^1.13.0",
     "tailwindcss": "^4.3.3",
     "tslib": "^2.3.0",

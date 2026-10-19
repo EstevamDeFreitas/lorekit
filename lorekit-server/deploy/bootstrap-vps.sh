@@ -36,6 +36,7 @@ usermod -aG docker "${DEPLOY_USER}"
 
 install -d -m 0750 -o "${DEPLOY_USER}" -g "${DEPLOY_USER}" "${LOREKIT_ROOT}/backend"
 install -d -m 0750 -o 10001 -g 10001 "${LOREKIT_ROOT}/data/blobs"
+install -d -m 0700 -o 10001 -g 10001 "${LOREKIT_ROOT}/data/story-assets"
 
 create_secret() {
   local secret_path="${SECRETS_DIR}/$1"

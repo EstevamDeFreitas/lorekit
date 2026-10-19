@@ -3,6 +3,7 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "paths": { "@lorekit/ironpaw": ["../lorekit-server/src/shared/ironpaw/index.ts"] },
     "outDir": "./dist/out-tsc",
     "strict": true,
     "noImplicitOverride": true,

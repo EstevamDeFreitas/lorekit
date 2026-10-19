@@ -1,4 +1,4 @@
-export const SYNC_CONTRACT_VERSION = 3;
+export const SYNC_CONTRACT_VERSION = 4;
 export const SYNC_PUSH_LIMIT = 100;
 export const SYNC_PULL_LIMIT = 500;
 
@@ -38,6 +38,7 @@ export const SYNC_ENTITY_TYPES = [
   'IRPWItem',
   'IRPWVocation',
   'IRPWCurrency',
+  'IRPWNpc',
 ] as const;
 
 export type SyncEntityType = (typeof SYNC_ENTITY_TYPES)[number];

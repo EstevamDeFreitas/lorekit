@@ -4,6 +4,7 @@ set -Eeuo pipefail
 readonly ROOT='/opt/lorekit'
 readonly CONFIG="${ROOT}/secrets/restic.env"
 readonly BLOBS="${ROOT}/data/blobs"
+readonly STORY_ASSETS="${ROOT}/data/story-assets"
 readonly COMPOSE="${ROOT}/compose.yaml"
 
 if [[ "$(id -u)" -ne 0 ]]; then
@@ -45,6 +46,7 @@ restic backup \
   --tag lorekit-vps \
   "$staging/lorekit.pgdump" \
   "$BLOBS" \
+  "$STORY_ASSETS" \
   "$COMPOSE" \
   "${ROOT}/caddy/Caddyfile"
 

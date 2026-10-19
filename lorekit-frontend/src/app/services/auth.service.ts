@@ -35,6 +35,11 @@ export class AuthService {
   private readonly storage = inject(CloudSessionStorageService);
   private readonly apiUrl = `${environment.apiUrl}/auth`;
   private refreshInFlight: Promise<string | null> | null = null;
+  private readonly sessionCleanups = new Set<(previousUserId: string | null, nextUserId?: string) => Promise<void>>();
+
+  onSessionCleanup(cleanup: (previousUserId: string | null, nextUserId?: string) => Promise<void>): () => void {
+    this.sessionCleanups.add(cleanup); return () => this.sessionCleanups.delete(cleanup);
+  }
 
   private readonly session = signal<CloudSession | null>(null);
   readonly busy = signal(false);
@@ -60,8 +65,8 @@ export class AuthService {
       try {
         await this.refreshAccessToken();
         this.syncEnabled.set(this.authenticated());
-      } catch {
-        await this.clearLocalSession();
+      } catch (error) {
+        if (!(error instanceof HttpErrorResponse && error.status === 0)) await this.clearLocalSession();
         this.lastError.set(null);
       }
       return;
@@ -136,7 +141,7 @@ export class AuthService {
         return response.accessToken;
       })
       .catch(async error => {
-        await this.clearLocalSession();
+        if (!(error instanceof HttpErrorResponse && error.status === 0)) await this.clearLocalSession();
         const message = this.describeError(error, 'Sua sessão expirou. Conecte a conta novamente.');
         this.lastError.set(message);
         throw error;
@@ -186,6 +191,9 @@ export class AuthService {
   }
 
   private async acceptSession(response: AuthResponse): Promise<void> {
+    if (this.user()?.id !== response.user.id) {
+      for (const cleanup of this.sessionCleanups) await cleanup(this.user()?.id ?? null, response.user.id);
+    }
     const session: CloudSession = {
       ...response,
       accessTokenExpiresAt: Date.now() + response.expiresIn * 1000,
@@ -196,9 +204,13 @@ export class AuthService {
   }
 
   private async clearLocalSession(): Promise<void> {
+    const previousUserId = this.user()?.id ?? null;
     this.session.set(null);
     this.syncEnabled.set(false);
     this.writeValue(SYNC_ENABLED_KEY, 'false');
+    for (const cleanup of this.sessionCleanups) {
+      try { await cleanup(previousUserId); } catch { this.lastError.set('Não foi possível remover todo o cache local desta conta.'); }
+    }
     try {
       await this.storage.clear();
     } catch {

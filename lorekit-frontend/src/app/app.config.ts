@@ -8,6 +8,7 @@ import { tokenInterceptor } from './interceptors/token.interceptor';
 import { AuthService } from './services/auth.service';
 import { DbProvider } from './database/db-provider.service';
 import { WorkspaceRuntimeService } from './services/workspace-runtime.service';
+import { StoryNotificationsService } from './services/story-notifications.service';
 
 export { DbProvider } from './database/db-provider.service';
 
@@ -21,6 +22,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(async () => {
       const auth = inject(AuthService);
       const workspace = inject(WorkspaceRuntimeService);
+      inject(StoryNotificationsService);
       await auth.initialize();
       await workspace.initializeDesktop();
     }),

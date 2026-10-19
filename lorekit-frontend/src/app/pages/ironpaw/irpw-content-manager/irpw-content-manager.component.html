@@ -44,7 +44,10 @@
       ></app-button>
     </div>
   </header>
-  <nav class="content-tabs" aria-label="Tipo de conteúdo"><app-nav-button label="Itens" icon="fa-solid fa-box" size="sm" [active]="contentTab === 'items'" (click)="contentTab = 'items'"></app-nav-button><app-nav-button label="Dinheiro" icon="fa-solid fa-coins" size="sm" [active]="contentTab === 'money'" (click)="contentTab = 'money'"></app-nav-button></nav>
+  <nav class="content-tabs" aria-label="Tipo de conteúdo"><app-nav-button label="Itens" icon="fa-solid fa-box" size="sm" [active]="contentTab === 'items'" (click)="contentTab = 'items'"></app-nav-button><app-nav-button label="Dinheiro" icon="fa-solid fa-coins" size="sm" [active]="contentTab === 'money'" (click)="contentTab = 'money'"></app-nav-button><app-nav-button label="PNJs" icon="fa-solid fa-masks-theater" size="sm" [active]="contentTab === 'npcs'" (click)="contentTab = 'npcs'; npcTabOpened = true"></app-nav-button></nav>
+  @if (contentTab === 'npcs' || npcTabOpened) {
+    <div [hidden]="contentTab !== 'npcs'"><irpw-npc-catalog></irpw-npc-catalog></div>
+  }
   @if (contentTab === 'money') { <irpw-currencies></irpw-currencies> }
   <div [hidden]="contentTab !== 'items'">
   @if (notice) {

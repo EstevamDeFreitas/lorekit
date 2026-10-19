@@ -1,0 +1,2 @@
+ALTER TABLE "app"."story_push_subscriptions" ADD COLUMN "session_id" uuid NOT NULL;--> statement-breakpoint
+ALTER TABLE "app"."story_push_subscriptions" ADD CONSTRAINT "story_push_subscriptions_session_id_refresh_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "app"."refresh_sessions"("id") ON DELETE cascade ON UPDATE no action;

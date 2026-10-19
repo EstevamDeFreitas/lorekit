@@ -1,18 +1,17 @@
 import { Injectable } from '@angular/core';
 import { CrudHelper } from '../database/database.helper';
-import { DbProvider } from '../app.config';
+import { DbProvider } from '../database/db-provider.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GlobalParameterService {
-  private crud : CrudHelper;
+  constructor(private dbProvider : DbProvider) {}
 
-  constructor(private dbProvider : DbProvider) {
-    this.crud = this.dbProvider.getCrudHelper();
-  }
+  private get crud(): CrudHelper { return this.dbProvider.getCrudHelper(); }
 
   getParameter(key: string) : string | null {
+    if (!this.dbProvider.ready()) return null;
     const param = this.crud.findFirst('GlobalParameter', {key: key});
     return param ? param.value : null;
   }

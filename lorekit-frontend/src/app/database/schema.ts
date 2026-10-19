@@ -368,6 +368,18 @@ export const schema: TableDef[] = [
   },
   /////////////////////////////////////// IRONPAW INTEGRATION ///////////////////////////////////////
   {
+    name: 'IRPWNpc',
+    columns: [
+      { name: 'id', def: '"id" TEXT NOT NULL PRIMARY KEY' },
+      { name: 'name', def: '"name" TEXT NOT NULL' },
+      { name: 'color', def: '"color" TEXT NOT NULL DEFAULT \'#a1a1aa\'' },
+      { name: 'portraitImageId', def: '"portraitImageId" TEXT' },
+      { name: 'definitionJson', def: '"definitionJson" TEXT NOT NULL' },
+      { name: 'revision', def: '"revision" INTEGER NOT NULL DEFAULT 1' },
+      { name: 'archived', def: '"archived" INTEGER NOT NULL DEFAULT 0' },
+    ],
+  },
+  {
     name:"IRPWCharacterSheet",
     columns:[
       { name: "id",          def: `"id" TEXT NOT NULL PRIMARY KEY` },

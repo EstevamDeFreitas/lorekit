@@ -8,6 +8,11 @@ declare global {
       readCloudSession?: () => Promise<string | null>;
       writeCloudSession?: (value: string) => Promise<boolean>;
       clearCloudSession?: () => Promise<boolean>;
+      readStoryCache?: (accountId: string, assetId: string | null) => Promise<Uint8Array | null>;
+      writeStoryCache?: (accountId: string, assetId: string | null, bytes: Uint8Array) => Promise<boolean>;
+      deleteStoryCache?: (accountId: string, assetId: string | null) => Promise<boolean>;
+      showStoryNotification?: (value: { storyId: string; eventId: string; sound: boolean }) => Promise<boolean>;
+      onOpenStory?: (callback: (storyId: string) => void) => () => void;
       [key: string]: unknown;
     };
   }

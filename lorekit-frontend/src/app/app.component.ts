@@ -1,4 +1,7 @@
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
 import { RouterOutlet } from '@angular/router';
 import { SearchComponent } from './components/search/search.component';
 import { BackupButtonComponent } from './components/backup-button/backup-button.component';
@@ -24,6 +27,9 @@ declare const window: any;
 })
 export class AppComponent implements OnInit, OnDestroy {
   protected readonly dbProvider = inject(DbProvider);
+  private readonly router = inject(Router);
+  private readonly routeUrl = toSignal(this.router.events.pipe(filter(event => event instanceof NavigationEnd), map(event => event.urlAfterRedirects)), { initialValue: this.router.url });
+  protected readonly isStoryRoute = computed(() => this.routeUrl().startsWith('/stories'));
   protected readonly auth = inject(AuthService);
   protected readonly workspace = inject(WorkspaceRuntimeService);
   private readonly componentRefresh = inject(ComponentRefreshService);

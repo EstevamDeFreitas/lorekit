@@ -1,3 +1,4 @@
+import { buildRollPreview, buildRollFormula, executeRoll, parseRollFormula, parseConditionImpact, getRollStatus, normalizeRollInteger, signedValue, type RollModifier, type RollPreview, type RollResult, type RollStatus, type ConditionImpact as ParsedConditionImpact } from '@lorekit/ironpaw';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { HistoryFieldDirective } from '../../../directives/history-field.directive';
@@ -69,46 +70,10 @@ import { IrpwConditionCatalogService } from '../../../services/irpw-condition-ca
 type RollBonusSourceType = 'attribute' | 'perception';
 type RollFormulaMode = 'auto' | 'manual';
 type PerceptionKey = 'smell' | 'vision' | 'hearing';
-type RollStatus = 'success' | 'near' | 'fail' | 'neutral';
-type RollResolutionMode = 'normal' | 'disadvantage';
 
 interface RollOption<TValue extends string> {
   id: TValue;
   name: string;
-}
-
-interface RollModifier {
-  key: string;
-  label: string;
-  value: number;
-  category: 'skill' | 'source' | 'manual' | 'condition';
-  displayValue?: string;
-}
-
-interface RollPreview {
-  attempts: number;
-  sides: number;
-  modifiers: RollModifier[];
-  totalModifier: number;
-  resolutionMode: RollResolutionMode;
-}
-
-interface RollResult {
-  index: number;
-  dieValue: number;
-  rolls: number[];
-  modifier: number;
-  total: number;
-  status: RollStatus;
-  resolutionLabel: string;
-}
-
-interface ParsedConditionImpact {
-  key: string;
-  label: string;
-  type: 'modifier' | 'minus-dice' | 'disadvantage';
-  value: number;
-  displayValue: string;
 }
 
 interface IrpwCharacterMark {
@@ -2171,68 +2136,14 @@ export class IrpwCharacterSheetComponent implements OnInit {
   rollDice() {
     if (this.rollFormulaMode === 'auto') {
       this.rollPreview = this.buildAutoRollPreview();
-      const preview = this.rollPreview;
-
-      if (preview.resolutionMode === 'disadvantage') {
-        const rolls = [this.rollDie(10), this.rollDie(10)];
-        const dieValue = Math.min(...rolls);
-        const total = dieValue + preview.totalModifier;
-        this.rollResults = [{
-          index: 1,
-          dieValue,
-          rolls,
-          modifier: preview.totalModifier,
-          total,
-          status: this.getRollStatus(total),
-          resolutionLabel: '2d10 pior',
-        }];
-        this.lastRollFormula = this.rollFormula;
+    } else {
+      this.refreshRollPreviewFromFormula();
+      if (this.rollFormulaError) {
+        this.rollResults = [];
         return;
       }
-
-      this.rollResults = Array.from({ length: preview.attempts }, (_, index) => {
-        const dieValue = this.rollDie(10);
-        const total = dieValue + preview.totalModifier;
-        return {
-          index: index + 1,
-          dieValue,
-          rolls: [dieValue],
-          modifier: preview.totalModifier,
-          total,
-          status: this.getRollStatus(total),
-          resolutionLabel: '1d10',
-        };
-      });
-      this.lastRollFormula = this.rollFormula;
-      return;
     }
-
-    this.refreshRollPreviewFromFormula();
-    if (this.rollFormulaError) {
-      this.rollResults = [];
-      return;
-    }
-
-    const parsedFormula = this.parseRollFormula(this.rollFormula);
-    if (!parsedFormula) {
-      this.rollFormulaError = 'Use de 1 a 50 dados d4, d6, d10 ou d20 e um ajuste inteiro. Ex.: 2d6+3.';
-      this.rollResults = [];
-      return;
-    }
-
-    this.rollResults = Array.from({ length: parsedFormula.attempts }, (_, index) => {
-      const dieValue = this.rollDie(parsedFormula.sides);
-      const total = dieValue + parsedFormula.modifier;
-      return {
-        index: index + 1,
-        dieValue,
-        rolls: [dieValue],
-        modifier: parsedFormula.modifier,
-        total,
-        status: this.getRollStatus(total),
-        resolutionLabel: `1d${parsedFormula.sides}`,
-      };
-    });
+    this.rollResults = executeRoll(this.rollPreview, sides => this.rollDie(sides), this.rollTargetValue);
     this.lastRollFormula = this.rollFormula;
   }
 
@@ -2246,7 +2157,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   formatSignedValue(value: number): string {
-    return value >= 0 ? `+${value}` : `${value}`;
+    return signedValue(value);
   }
 
   getRollStatusLabel(status: RollStatus): string {
@@ -2312,71 +2223,11 @@ export class IrpwCharacterSheetComponent implements OnInit {
       modifiers.push({ key: 'manual-adjustment', label: 'Ajuste manual', value: manualModifier, category: 'manual' });
     }
 
-    let attempts = baseAttempts;
-    let resolutionMode: RollResolutionMode = 'normal';
-    let minusDice = 0;
-
-    for (const impact of this.getApplicableConditionImpacts()) {
-      if (impact.type === 'modifier') {
-        modifiers.push({
-          key: impact.key,
-          label: impact.label,
-          value: impact.value,
-          category: 'condition',
-          displayValue: impact.displayValue,
-        });
-        continue;
-      }
-
-      if (impact.type === 'minus-dice') {
-        minusDice += impact.value;
-        modifiers.push({
-          key: impact.key,
-          label: impact.label,
-          value: 0,
-          category: 'condition',
-          displayValue: impact.displayValue,
-        });
-        continue;
-      }
-
-      resolutionMode = 'disadvantage';
-      modifiers.push({
-        key: impact.key,
-        label: impact.label,
-        value: 0,
-        category: 'condition',
-        displayValue: impact.displayValue,
-      });
-    }
-
-    attempts -= minusDice;
-    if (attempts <= 0) {
-      attempts = 1;
-      modifiers.push({
-        key: 'condition-dice-floor',
-        label: 'Sem dados restantes',
-        value: -3,
-        category: 'condition',
-        displayValue: '1d10-3',
-      });
-    }
-
-    if (resolutionMode === 'disadvantage') {
-      attempts = 1;
-    }
-
-    const totalModifier = modifiers.reduce((sum, modifier) => sum + modifier.value, 0);
-    return { attempts, sides: 10, modifiers, totalModifier, resolutionMode };
+    return buildRollPreview(baseAttempts, modifiers, this.getApplicableConditionImpacts());
   }
 
   private buildRollFormula(preview: RollPreview): string {
-    const modifierText = preview.totalModifier === 0 ? '' : this.formatSignedValue(preview.totalModifier);
-    if (preview.resolutionMode === 'disadvantage') {
-      return `2d10${modifierText} (desvantagem)`;
-    }
-
-    return `${preview.attempts}d10${modifierText}`;
+    return buildRollFormula(preview);
   }
 
   private getAutoRollAttempts(): number {
@@ -2448,88 +2299,22 @@ export class IrpwCharacterSheetComponent implements OnInit {
     severity: ConditionSeverityCode,
     effectEntry: string,
   ): ParsedConditionImpact | null {
-    const [rawTarget, rawValue] = effectEntry.split(':');
-    if (!rawTarget || !rawValue) {
-      return null;
-    }
-
-    const target = rawTarget.trim().toUpperCase();
-    if (!this.matchesConditionTarget(target)) {
-      return null;
-    }
-
-    const valueText = rawValue.trim().toUpperCase();
-    const label = `${definition.label} ${this.conditionSeverityLabel[severity]}`;
-    const keyBase = `${definition.code}-${severity}-${target}`.toLowerCase();
-
-    if (/^-?\d+$/.test(valueText)) {
-      const value = Number(valueText);
-      return {
-        key: `${keyBase}-modifier`,
-        label,
-        type: 'modifier',
-        value,
-        displayValue: this.formatSignedValue(value),
-      };
-    }
-
-    const minusDiceMatch = valueText.match(/^MINUS\s+(\d+)D10$/i);
-    if (minusDiceMatch) {
-      const value = Number(minusDiceMatch[1]);
-      return {
-        key: `${keyBase}-minus-dice`,
-        label,
-        type: 'minus-dice',
-        value,
-        displayValue: `-${value}d10`,
-      };
-    }
-
-    if (valueText === 'DISADVANTAGE') {
-      return {
-        key: `${keyBase}-disadvantage`,
-        label,
-        type: 'disadvantage',
-        value: 0,
-        displayValue: 'Desvantagem',
-      };
-    }
-
-    return null;
-  }
-
-  private matchesConditionTarget(target: string): boolean {
+    const targets: string[] = [];
     if (this.selectedRollSkill) {
-      if (target === this.selectedRollSkill) {
-        return true;
-      }
-
-      const attributeGroup = this.skillToAttributeGroup[this.selectedRollSkill];
-      if (attributeGroup && target === attributeGroup) {
-        return true;
-      }
+      targets.push(this.selectedRollSkill);
+      const group = this.skillToAttributeGroup[this.selectedRollSkill];
+      if (group) targets.push(group);
     }
-
-    return this.selectedRollBonusSource === 'perception' && target === 'PERCEPTION';
+    if (this.selectedRollBonusSource === 'perception') targets.push('PERCEPTION');
+    return parseConditionImpact(effectEntry, targets, definition.code + '-' + severity, definition.label + ' ' + this.conditionSeverityLabel[severity]);
   }
 
   private parseRollFormula(formula: string): { attempts: number; sides: number; modifier: number } | null {
-    const match = formula.trim().match(/^(\d+)\s*d\s*(4|6|10|20)\s*([+-]\s*\d+)?$/i);
-    if (!match) return null;
-
-    const attempts = Number(match[1]);
-    if (!Number.isInteger(attempts) || attempts < 1 || attempts > 50) return null;
-
-    const sides = Number(match[2]);
-    const modifier = match[3] ? Number(match[3].replace(/\s+/g, '')) : 0;
-    if (!Number.isSafeInteger(modifier)) return null;
-
-    return { attempts, sides, modifier };
+    return parseRollFormula(formula);
   }
 
   private normalizeIntegerValue(value: number | null | undefined): number {
-    const numericValue = Number(value ?? 0);
-    return Number.isFinite(numericValue) ? Math.trunc(numericValue) : 0;
+    return normalizeRollInteger(value);
   }
 
   private normalizeActiveConditions(value: unknown): ActiveConditionState[] {
@@ -2610,14 +2395,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
 
   private getRollStatus(total: number): RollStatus {
-    if (this.rollTargetValue == null || !Number.isFinite(Number(this.rollTargetValue))) {
-      return 'neutral';
-    }
-
-    const target = Number(this.rollTargetValue);
-    if (total >= target) return 'success';
-    if (total === target - 1) return 'near';
-    return 'fail';
+    return getRollStatus(total, this.rollTargetValue);
   }
 
   private rollDie(sides: number): number {

@@ -1,0 +1,33 @@
+@if (url(); as image) {
+  <button
+    type="button"
+    class="image-button"
+    [class.avatar]="avatar()"
+    (click)="open()"
+    [attr.aria-label]="'Ampliar: ' + description()"
+  >
+    <img [src]="image" [alt]="description()" loading="lazy" />
+  </button>
+  <dialog #viewer (click)="backdrop($event)" [attr.aria-label]="description()">
+    <button
+      type="button"
+      class="close"
+      (click)="close()"
+      aria-label="Fechar imagem"
+    >
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i></button
+    ><img [src]="image" [alt]="description()" />
+  </dialog>
+} @else {
+  <span
+    class="image-unavailable"
+    [class.avatar]="avatar()"
+    [attr.title]="description()"
+  >
+    @if (avatar()) {
+      <i class="fa-solid fa-user" aria-hidden="true"></i>
+    } @else {
+      Imagem ainda não disponível neste dispositivo.
+    }
+  </span>
+}

@@ -64,3 +64,8 @@ O PostgreSQL e o serviço `api` devem estar ativos. O utilitário inicia um
 contêiner administrativo descartável na rede interna, usando as mesmas
 credenciais restritas da API. A criação também gera a primeira biblioteca da
 conta; desativação e troca de senha revogam todas as sessões existentes.
+
+## Histórias e RP
+
+Configuração, segredos opcionais de push, backup, rollback e matriz de suporte:
+[STORIES.md](STORIES.md). A configuração base mantém Histórias desabilitadas em produção.

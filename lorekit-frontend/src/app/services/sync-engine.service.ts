@@ -477,10 +477,15 @@ export class SyncEngineService {
   }
 
   private async pushAll(vaultId: string, deadline?: number): Promise<void> {
+    const hasNpcOperations = rows(this.db().exec(`SELECT 1 FROM "_SyncOutbox" WHERE "entityType" = 'IRPWNpc' LIMIT 1`)).length > 0;
+    const npcSupported = hasNpcOperations
+      ? (await this.api.capabilities(this.remaining(deadline))).entityTypes.includes('IRPWNpc')
+      : false;
     while (true) {
       const batch = rows(this.db().exec(`
-        SELECT * FROM "_SyncOutbox" ORDER BY CAST("modifiedAt" AS INTEGER) LIMIT 100
-      `));
+        SELECT * FROM "_SyncOutbox" WHERE "entityType" != 'IRPWNpc' OR ? = 1
+        ORDER BY CAST("modifiedAt" AS INTEGER) LIMIT 100
+      `, [npcSupported ? 1 : 0]));
       if (!batch.length) return;
       const operations: SyncPushOperation[] = batch.map(row => ({
         operationId: String(row['operationId']),

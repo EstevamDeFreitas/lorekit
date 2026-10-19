@@ -1,0 +1,1031 @@
+<div class="story-shell" [class.show-sidebar]="sidebar()">
+  <header class="story-topbar">
+    <div class="brand">
+      <button
+        type="button"
+        class="mobile-menu"
+        (click)="sidebar.set(!sidebar())"
+        aria-label="Abrir lista de Histórias"
+        [attr.aria-expanded]="sidebar()"
+      >
+        <i class="fa-solid fa-bars" aria-hidden="true"></i></button
+      ><span>Histórias</span
+      ><span
+        class="connection"
+        [class.connected]="client.canWrite()"
+        role="status"
+        >{{
+          client.status() === 'online'
+            ? 'Conectado'
+            : client.status() === 'degraded'
+              ? 'Conectado · atualizando por consulta'
+              : client.status() === 'connecting'
+                ? 'Conectando…'
+                : 'Consulta offline'
+        }}</span
+      >
+    </div>
+    <div class="top-actions">
+      <button
+        type="button"
+        (click)="client.connect()"
+        [disabled]="client.status() === 'connecting'"
+      >
+        Reconectar</button
+      >
+    </div>
+  </header>
+  <aside class="story-sidebar" aria-label="Histórias e cenas">
+    <div class="sidebar-title">
+      <h1>Suas Histórias</h1>
+      <button
+        type="button"
+        (click)="newStory.set(!newStory())"
+        [disabled]="!client.canWrite()"
+        aria-label="Criar História"
+      >
+        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+      </button>
+    </div>
+    @if (newStory()) {
+      <form class="create-story" (submit)="$event.preventDefault(); create()">
+        <label
+          >Título da História<input
+            [formControl]="title"
+            maxlength="200"
+            required /></label
+        ><button
+          type="submit"
+          class="primary"
+          [disabled]="busy() || !client.canWrite()"
+        >
+          Criar História
+        </button>
+      </form>
+    }
+    <nav aria-label="Histórias disponíveis">
+      @for (story of client.summaries(); track story.id) {
+        <a
+          class="story-link"
+          [class.active]="client.current()?.story?.id === story.id"
+          [routerLink]="['/stories', story.id]"
+          ><span>{{ story.title }}</span>
+          @if (story.unread) {
+            <span
+              class="unread"
+              [attr.aria-label]="story.unread + ' mensagens não lidas'"
+              >{{ story.unread }}</span
+            >
+          }
+        </a>
+      } @empty {
+        <p class="muted sidebar-empty">
+          As Histórias que você criar ou aceitar por convite aparecerão aqui.
+        </p>
+      }
+    </nav>
+    @if (client.current(); as current) {
+      <div class="scene-heading">
+        <h2>Cenas</h2>
+        <button
+          type="button"
+          (click)="panel.set('scene')"
+          [disabled]="!client.canWrite()"
+          aria-label="Criar cena"
+        >
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+        </button>
+      </div>
+      <nav aria-label="Índice de cenas">
+        @for (scene of current.scenes; track scene.id) {
+          <button
+            type="button"
+            class="scene-link"
+            [class.active]="sceneId() === scene.id"
+            (click)="browseScene(scene.id)"
+          >
+            {{ scene.title }}
+          </button>
+        } @empty {
+          <p class="muted">Crie a primeira cena para começar o RP.</p>
+        }
+      </nav>
+    }
+    <p class="sidebar-footnote">
+      Envios exigem conexão. O conteúdo já baixado fica disponível para consulta
+      offline.
+    </p>
+  </aside>
+  <section class="story-session">
+    @if (error() || client.error()) {
+      <p class="error banner" role="alert">{{ error() || client.error() }}</p>
+    }
+    @if (client.cache.warning()) {
+      <p class="warning banner" role="status">{{ client.cache.warning() }}</p>
+    }
+    @if (notice()) {
+      <p class="notice banner" role="status">{{ notice() }}</p>
+    }
+    @if (inviteToken()) {
+      <div class="empty-state">
+        <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+        <h1>Uma nova História espera por você</h1>
+        <p>
+          Aceitar este convite libera somente a História. Todos os participantes
+          podem narrar com os locutores disponibilizados.
+        </p>
+        <button
+          type="button"
+          class="primary"
+          (click)="acceptInvite()"
+          [disabled]="busy() || !auth.isAuthenticated()"
+        >
+          Aceitar convite
+        </button>
+      </div>
+    } @else {
+      @if (client.current(); as current) {
+        <header class="session-header">
+          <div>
+            <h1>{{ current.story.title }}</h1>
+            <p class="muted">
+              {{
+                current.member.role === 'owner'
+                  ? 'Você administra esta História'
+                  : 'Todos os participantes podem narrar'
+              }}
+            </p>
+          </div>
+          <div class="header-actions">
+            <button type="button" (click)="download()" [disabled]="busy()">
+              <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i>
+              Baixar .md</button
+            ><button
+              type="button"
+              (click)="participants()"
+              [disabled]="!client.canWrite()"
+            >
+              Participantes</button
+            ><button
+              type="button"
+              (click)="
+                panel.set(panel() === 'preferences' ? 'none' : 'preferences')
+              "
+              aria-label="Preferências de notificações"
+            >
+              <i class="fa-solid fa-bell" aria-hidden="true"></i>
+            </button>
+          </div>
+        </header>
+        @if (assetRoute(); as assetId) {
+          <section class="asset-view">
+            <a [routerLink]="['/stories', current.story.id]"
+              >Voltar à História</a
+            ><story-image
+              [storyId]="current.story.id"
+              [assetId]="assetId"
+              description="Imagem compartilhada na História"
+            />
+          </section>
+        } @else {
+          @if (panel() !== 'none') {
+            <section
+              class="utility-panel"
+              [attr.aria-label]="
+                panel() === 'roll'
+                  ? 'Rolagem Ironpaw'
+                  : 'Configuração da História'
+              "
+            >
+              <button
+                type="button"
+                class="close-panel"
+                (click)="panel.set('none')"
+                aria-label="Fechar painel"
+              >
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+              @if (panel() === 'scene') {
+                <h2>Cenas da História</h2>
+                <p class="muted">Cada cena aparece como uma divisão no RP.</p>
+                <div class="inline-fields">
+                  <label
+                    >Título<input
+                      [formControl]="sceneTitle"
+                      maxlength="200" /></label
+                  ><button
+                    type="button"
+                    class="primary"
+                    (click)="addScene()"
+                    [disabled]="busy() || !client.canWrite()"
+                  >
+                    Criar cena
+                  </button>
+                  @if (sceneId()) {
+                    <button
+                      type="button"
+                      (click)="addScene(true)"
+                      [disabled]="busy() || !client.canWrite()"
+                    >
+                      Renomear cena selecionada
+                    </button>
+                  }
+                </div>
+              }
+              @if (panel() === 'locutors') {
+                <h2>Locutor desta cena</h2>
+                <p class="muted">
+                  Crie uma identidade simples ou disponibilize um personagem da
+                  sua biblioteca.
+                </p>
+                <div class="inline-fields">
+                  <label
+                    >Nome<input
+                      [formControl]="speakerName"
+                      maxlength="120" /></label
+                  ><label class="color-label"
+                    >Cor do nome<input
+                      type="color"
+                      [formControl]="speakerColor" /></label
+                  ><label
+                    >Retrato opcional<input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      (change)="portraitFile($event)" /></label
+                  ><button
+                    type="button"
+                    class="primary"
+                    (click)="addSpeaker()"
+                    [disabled]="busy() || !sceneId() || !client.canWrite()"
+                  >
+                    Criar locutor
+                  </button>
+                </div>
+                @if (incidentalPortrait(); as file) {
+                  <p class="muted">
+                    {{ file.name }}
+                    <button
+                      type="button"
+                      (click)="incidentalPortrait.set(null)"
+                    >
+                      Remover retrato
+                    </button>
+                  </p>
+                }
+                <button
+                  type="button"
+                  (click)="library()"
+                  [disabled]="busy() || !client.canWrite()"
+                >
+                  Disponibilizar personagem ou PNJ
+                </button>
+              }
+              @if (panel() === 'share') {
+                <h2>Disponibilizar um locutor</h2>
+                <p class="muted">
+                  Os participantes verão os dados desta prévia. Biografia,
+                  carteira e notas privadas do mundo ficam de fora.
+                </p>
+                <div class="source-list">
+                  @for (source of sources(); track source.kind + source.id) {
+                    <button type="button" (click)="chooseSource(source)">
+                      {{ source.name }}
+                      <small>{{
+                        source.kind === 'npc' ? 'PNJ' : 'Personagem'
+                      }}</small>
+                    </button>
+                  } @empty {
+                    <p class="muted">
+                      Nenhum personagem ou PNJ disponível no seu conteúdo local.
+                    </p>
+                  }
+                </div>
+                @if (sharePreview(); as preview) {
+                  <div class="share-preview">
+                    <div class="inline-fields">
+                      <label
+                        >Nome compartilhado<input
+                          [formControl]="sourceName" /></label
+                      ><label class="color-label"
+                        >Cor do nome<input
+                          type="color"
+                          [formControl]="sourceColor" /></label
+                      ><label class="check"
+                        ><input
+                          type="checkbox"
+                          [checked]="sharePortrait()"
+                          (change)="sharePortrait.set(readChecked($event))"
+                        />
+                        Incluir retrato disponível</label
+                      >
+                    </div>
+                    @if (preview.mechanics; as mechanics) {
+                      @if (mechanics.kind === 'character') {
+                        <h3>Ações e dados mecânicos</h3>
+                        <p class="muted">
+                          Selecione o que será compartilhado. A ficha de origem
+                          não será alterada pelas rolagens.
+                        </p>
+                        <div class="shared-actions">
+                          @for (action of mechanics.actions; track action.id) {
+                            <label class="check"
+                              ><input
+                                type="checkbox"
+                                [checked]="sharedActions().has(action.id)"
+                                (change)="
+                                  toggleAction(action.id, readChecked($event))
+                                "
+                              /><span
+                                >{{ action.name }}
+                                <small
+                                  >{{ action.sourceLabel }}
+                                  {{ action.sourceValue }} · treino
+                                  {{ action.skillLevel }}</small
+                                >
+                                @if (action.description) {
+                                  <span class="action-description">{{
+                                    action.description
+                                  }}</span>
+                                }
+                              </span></label
+                            >
+                          }
+                        </div>
+                      } @else {
+                        <p>
+                          <strong>{{ mechanics.definition.concept }}</strong>
+                        </p>
+                        <p class="muted">
+                          {{
+                            mechanics.definition.threatLevel
+                              ? 'NA ' + mechanics.definition.threatLevel
+                              : 'Apenas narrativa'
+                          }}
+                          · proteção:
+                          {{ mechanics.definition.protection || 'Nenhuma' }}
+                        </p>
+                        @for (tag of mechanics.definition.tags; track tag.id) {
+                          <p class="preview-detail">
+                            <strong>{{ tag.name }}</strong>
+                            {{ tag.description }}
+                            @if (tag.type === 'competence') {
+                              <span
+                                >Dados {{ tag.diceModifier }} · modificador
+                                {{ tag.modifier }}</span
+                              >
+                            }
+                          </p>
+                        }
+                        @for (
+                          action of mechanics.definition.actions.concat(
+                            mechanics.definition.signatures
+                          );
+                          track action.id
+                        ) {
+                          <p class="preview-detail">
+                            <strong>{{ action.name }}</strong>
+                            {{ action.description }}
+                          </p>
+                        }
+                        <p class="preview-detail">
+                          Resistências:
+                          {{
+                            mechanics.definition.resistances || 'Não definidas'
+                          }}
+                        </p>
+                        <p class="preview-detail">
+                          Fraquezas:
+                          {{
+                            mechanics.definition.weaknesses || 'Não definidas'
+                          }}
+                        </p>
+                      }
+                    } @else {
+                      <p class="muted">
+                        Será compartilhada apenas a identidade visual. Este
+                        personagem ainda não tem ficha Ironpaw.
+                      </p>
+                    }
+                    <label
+                      >Destino<select [formControl]="existingSpeakerId">
+                        <option value="">Criar nova cópia na História</option>
+                        @for (speaker of current.speakers; track speaker.id) {
+                          @if (
+                            speaker.publisherUserId === auth.user()?.id &&
+                            speaker.kind === preview.source.kind &&
+                            (speaker.kind === 'character' ||
+                              speaker.sceneId === sceneId())
+                          ) {
+                            <option [value]="speaker.id">
+                              Atualizar {{ speaker.revision.name }} · revisão
+                              {{ speaker.revision.number }}
+                            </option>
+                          }
+                        }
+                      </select></label
+                    >
+                    <p class="muted">
+                      Atualizações valem para novos envios. Mensagens e rolagens
+                      anteriores preservam a revisão usada.
+                    </p>
+                    <button
+                      type="button"
+                      class="primary"
+                      (click)="publish()"
+                      [disabled]="busy() || !client.canWrite()"
+                    >
+                      Confirmar compartilhamento
+                    </button>
+                  </div>
+                }
+              }
+              @if (panel() === 'members') {
+                <h2>Participantes</h2>
+                <ul class="member-list">
+                  @for (member of members(); track member.userId) {
+                    <li>
+                      <span
+                        >{{ member.name || 'Participante' }}
+                        <small>{{
+                          member.role === 'owner'
+                            ? 'Proprietário'
+                            : 'Participante'
+                        }}</small></span
+                      >
+                      @if (
+                        current.member.role === 'owner' &&
+                        member.role !== 'owner'
+                      ) {
+                        <button
+                          type="button"
+                          (click)="removeMember(member.userId)"
+                          [disabled]="busy()"
+                        >
+                          Remover acesso
+                        </button>
+                      }
+                    </li>
+                  }
+                </ul>
+                @if (current.member.role === 'owner') {
+                  <button type="button" (click)="invite()" [disabled]="busy()">
+                    Gerar convite
+                  </button>
+                  @if (inviteLink()) {
+                    <label
+                      >Link de convite<input
+                        readonly
+                        [value]="inviteLink()"
+                        (focus)="$event.target && $any($event.target).select()"
+                    /></label>
+                    <p class="muted">
+                      Válido por sete dias, para uma aceitação. Compartilhe com
+                      quem participará desta História.
+                    </p>
+                  }
+                }
+                <p class="muted">
+                  A remoção impede novos acessos. Arquivos exportados e
+                  dispositivos ainda offline não podem ser recolhidos
+                  remotamente.
+                </p>
+              }
+              @if (panel() === 'preferences') {
+                <h2>Notificações desta História</h2>
+                <label class="check"
+                  ><input
+                    type="checkbox"
+                    [checked]="current.member.sound"
+                    [disabled]="!client.canWrite()"
+                    (change)="
+                      savePreferences(
+                        readChecked($event),
+                        current.member.external
+                      )
+                    "
+                  />
+                  Som para novas mensagens</label
+                ><label class="check"
+                  ><input
+                    type="checkbox"
+                    [checked]="current.member.external"
+                    [disabled]="!client.canWrite()"
+                    (change)="
+                      savePreferences(current.member.sound, readChecked($event))
+                    "
+                  />
+                  Notificações fora da História</label
+                >
+                <div class="inline-fields">
+                  <button type="button" (click)="notifications.enableSound()">
+                    {{
+                      notifications.soundReady()
+                        ? 'Som ativado nesta guia'
+                        : 'Ativar som nesta guia'
+                    }}</button
+                  ><button type="button" (click)="notifications.enablePush()">
+                    Ativar notificações no navegador
+                  </button>
+                </div>
+                <p class="muted" role="status">
+                  {{ notifications.pushState() }}
+                </p>
+                <p class="muted">
+                  No desktop, o Lorekit precisa estar em execução. No celular, a
+                  entrega depende do navegador e das permissões do sistema.
+                </p>
+              }
+              @if (panel() === 'roll') {
+                <h2>Rolagem Ironpaw</h2>
+                @if (selectedSpeaker()?.revision?.mechanics) {
+                  <form [formGroup]="rollForm" class="roll-form">
+                    <div class="field-grid">
+                      <label
+                        >Registro<select formControlName="kind">
+                          <option value="test">Teste comum</option>
+                          <option value="attack">Ataque</option>
+                          <option value="defense">Defesa</option>
+                        </select></label
+                      ><label
+                        >Ação<select formControlName="actionId">
+                          @for (action of rollActions(); track action.id) {
+                            <option [value]="action.id">
+                              {{ action.name }}
+                            </option>
+                          }
+                        </select></label
+                      ><label
+                        >Ajuste manual<input
+                          type="number"
+                          formControlName="manualModifier"
+                          min="-50"
+                          max="50"
+                          step="1" /></label
+                      ><label
+                        >Dificuldade opcional<input
+                          type="number"
+                          formControlName="target"
+                          step="1"
+                      /></label>
+                      @if (
+                        selectedSpeaker()?.revision?.mechanics?.kind === 'npc'
+                      ) {
+                        <label
+                          >Competência aplicável<select
+                            formControlName="competenceId"
+                          >
+                            <option value="">Nenhuma</option>
+                            @for (tag of competencies(); track tag.id) {
+                              <option [value]="tag.id">{{ tag.name }}</option>
+                            }
+                          </select></label
+                        >
+                      }
+                      <label
+                        >Alvo opcional<select formControlName="targetSpeakerId">
+                          <option value="">Sem alvo definido</option>
+                          @for (
+                            speaker of visibleSpeakers();
+                            track speaker.id
+                          ) {
+                            <option [value]="speaker.id">
+                              {{ speaker.revision.name }}
+                            </option>
+                          }
+                        </select></label
+                      ><label
+                        >Rolagem relacionada<select
+                          formControlName="relatedRollMessageId"
+                        >
+                          <option value="">Sem oposição definida</option>
+                          @for (message of previousRolls(); track message.id) {
+                            <option [value]="message.id">
+                              {{ message.speaker.name }} ·
+                              {{ message.roll?.actionName }}
+                            </option>
+                          }
+                        </select></label
+                      >
+                    </div>
+                    <details>
+                      <summary>Condição contextual desta ação</summary>
+                      <div class="field-grid">
+                        <label
+                          >Condição<input
+                            formControlName="conditionLabel" /></label
+                        ><label
+                          >Efeito<select formControlName="conditionType">
+                            <option value="none">Nenhum</option>
+                            <option value="modifier">Modificador fixo</option>
+                            <option value="minus-dice">Redução de dados</option>
+                            <option value="disadvantage">Desvantagem</option>
+                          </select></label
+                        ><label
+                          >Valor<input
+                            type="number"
+                            formControlName="conditionValue"
+                            step="1"
+                            min="-50"
+                            max="50"
+                        /></label>
+                      </div>
+                    </details>
+                  </form>
+                  @if (preview(); as roll) {
+                    <div class="roll-preview">
+                      <strong>{{ formula(roll) }}</strong>
+                      <ul>
+                        @for (modifier of roll.modifiers; track $index) {
+                          <li>
+                            {{ modifier.label }}:
+                            {{ modifier.value >= 0 ? '+' : ''
+                            }}{{ modifier.value }}
+                            @if (modifier.displayValue) {
+                              ({{ modifier.displayValue }})
+                            }
+                          </li>
+                        }
+                      </ul>
+                    </div>
+                  }
+                  <p class="muted">
+                    O resultado será registrado no chat. Vida, condições, itens
+                    e recursos da ficha não serão alterados.
+                  </p>
+                  <button
+                    type="button"
+                    class="primary"
+                    (click)="send(true)"
+                    [disabled]="sending() || !client.canWrite() || !preview()"
+                  >
+                    Rolar e registrar
+                  </button>
+                } @else {
+                  <p class="muted">
+                    Este locutor não possui ficha Ironpaw disponibilizada. Você
+                    pode continuar narrando ou escolher outro locutor.
+                  </p>
+                }
+              }
+            </section>
+          }
+          <div
+            #timeline
+            class="timeline"
+            (scroll)="onScroll()"
+            aria-label="Histórico da História"
+            tabindex="0"
+          >
+            @if (client.hasOlder()) {
+              <div class="history-actions">
+                <button
+                  type="button"
+                  (click)="client.older()"
+                  [disabled]="client.loading()"
+                >
+                  {{
+                    client.loading()
+                      ? 'Carregando…'
+                      : 'Carregar mensagens anteriores'
+                  }}
+                </button>
+              </div>
+            }
+            @if (client.scope() || !client.viewingLatest()) {
+              <div class="history-actions">
+                <button type="button" (click)="latest()">
+                  Voltar às mensagens recentes
+                </button>
+              </div>
+            }
+            @for (group of groups(); track group.scene.id) {
+              @if (group.messages.length || group.scene.id === sceneId()) {
+                <section
+                  class="scene-block"
+                  [attr.aria-label]="group.scene.title"
+                >
+                  <h2 class="scene-divider">{{ group.scene.title }}</h2>
+                  @for (message of group.messages; track message.id) {
+                    <article
+                      class="message"
+                      [attr.data-sequence]="message.sequence"
+                      [attr.data-message-id]="message.id"
+                    >
+                      <div class="message-avatar">
+                        @if (message.speaker.portraitAssetId) {
+                          <story-image
+                            [storyId]="current.story.id"
+                            [assetId]="message.speaker.portraitAssetId!"
+                            [description]="'Retrato de ' + message.speaker.name"
+                            [avatar]="true"
+                          />
+                        } @else {
+                          <span class="avatar-placeholder" aria-hidden="true">{{
+                            message.speaker.name.slice(0, 1).toLocaleUpperCase()
+                          }}</span>
+                        }
+                      </div>
+                      <div class="message-content">
+                        <header>
+                          <strong
+                            class="speaker-name"
+                            [style.color]="nameColor(message.speaker.color)"
+                            >{{ message.speaker.name }}</strong
+                          ><span class="message-author"
+                            >por {{ message.authorName }}</span
+                          ><time [attr.datetime]="message.createdAt">{{
+                            message.createdAt | date: 'dd/MM HH:mm'
+                          }}</time>
+                        </header>
+                        @if (message.text) {
+                          <div
+                            class="message-text"
+                            [innerHTML]="renderText(message.text)"
+                          ></div>
+                        }
+                        @if (message.roll; as roll) {
+                          <div class="roll-record">
+                            <div class="roll-record-heading">
+                              <i
+                                class="fa-solid fa-dice-d10"
+                                aria-hidden="true"
+                              ></i
+                              ><strong>{{ roll.actionName }}</strong
+                              ><span>{{
+                                roll.kind === 'attack'
+                                  ? 'Ataque'
+                                  : roll.kind === 'defense'
+                                    ? 'Defesa'
+                                    : 'Teste'
+                              }}</span>
+                            </div>
+                            <p class="roll-formula">{{ roll.formula }}</p>
+                            <div class="roll-results">
+                              @for (
+                                result of roll.results;
+                                track result.index
+                              ) {
+                                <div>
+                                  <span class="die-value">{{
+                                    result.total
+                                  }}</span
+                                  ><span>{{ statusLabels[result.status] }}</span
+                                  ><small
+                                    >Dados: {{ result.rolls.join(', ') }}</small
+                                  >
+                                </div>
+                              }
+                            </div>
+                            <details>
+                              <summary>Detalhes de rolagem</summary>
+                              <ul>
+                                @for (
+                                  modifier of roll.preview.modifiers;
+                                  track $index
+                                ) {
+                                  <li>
+                                    {{ modifier.label }}:
+                                    {{ modifier.value >= 0 ? '+' : ''
+                                    }}{{ modifier.value }}
+                                    {{ modifier.displayValue || '' }}
+                                  </li>
+                                }
+                              </ul>
+                              @if (roll.target !== null) {
+                                <p>Dificuldade: {{ roll.target }}</p>
+                              }
+                              @if (roll.relatedRollMessageId) {
+                                <p>
+                                  Vinculada a uma rolagem anterior desta
+                                  História.
+                                </p>
+                              }
+                              <p>
+                                Regras Ironpaw v{{ roll.rulesVersion }} ·
+                                revisão {{ message.speaker.number }}
+                              </p>
+                            </details>
+                          </div>
+                        }
+                        <div class="message-images">
+                          @for (image of message.assets; track image.id) {
+                            <story-image
+                              [storyId]="current.story.id"
+                              [assetId]="image.id"
+                              [description]="image.name"
+                            />
+                          }
+                        </div>
+                      </div>
+                    </article>
+                  } @empty {
+                    <p class="scene-empty">
+                      Esta cena ainda não tem mensagens.
+                    </p>
+                  }
+                </section>
+              }
+            }
+            @if (!current.scenes.length) {
+              <div class="empty-state">
+                <h2>A primeira cena começa aqui</h2>
+                <p>
+                  Dê um título à cena e escolha os locutores para começar a
+                  narrar.
+                </p>
+                <button
+                  type="button"
+                  class="primary"
+                  (click)="panel.set('scene')"
+                  [disabled]="!client.canWrite()"
+                >
+                  Criar primeira cena
+                </button>
+              </div>
+            }
+          </div>
+          <section class="composer" aria-label="Escrever mensagem">
+            @if (client.uncertain().length) {
+              <div class="pending-notice" role="status">
+                <span>Há um envio aguardando confirmação.</span
+                ><button
+                  type="button"
+                  (click)="checkPending()"
+                  [disabled]="!client.canWrite()"
+                >
+                  Verificar entrega
+                </button>
+                @if (hasPending()) {
+                  <button
+                    type="button"
+                    (click)="retryPending()"
+                    [disabled]="sending() || !client.canWrite()"
+                  >
+                    Tentar o mesmo envio novamente
+                  </button>
+                }
+              </div>
+            }
+            <div class="composer-context">
+              <label
+                >Cena<select
+                  [value]="sceneId()"
+                  (change)="selectScene(readValue($event))"
+                  [disabled]="sending() || hasPending()"
+                >
+                  <option value="">Escolha a cena</option>
+                  @for (scene of current.scenes; track scene.id) {
+                    <option [value]="scene.id">{{ scene.title }}</option>
+                  }
+                </select></label
+              ><label
+                >Locutor<select
+                  [value]="speakerId()"
+                  (change)="speakerId.set(readValue($event))"
+                  [disabled]="sending() || hasPending()"
+                >
+                  <option value="">Escolha quem fala</option>
+                  @for (speaker of visibleSpeakers(); track speaker.id) {
+                    <option [value]="speaker.id">
+                      {{ speaker.revision.name }}
+                    </option>
+                  }
+                </select></label
+              ><button
+                type="button"
+                (click)="
+                  panel.set(panel() === 'locutors' ? 'none' : 'locutors')
+                "
+                [disabled]="!client.canWrite() || !sceneId()"
+              >
+                Locutores</button
+              ><button
+                type="button"
+                (click)="panel.set(panel() === 'roll' ? 'none' : 'roll')"
+                [disabled]="!speakerId()"
+              >
+                Ficha e rolagens
+              </button>
+            </div>
+            <div class="format-tools" aria-label="Formatação">
+              <button
+                type="button"
+                aria-label="Negrito"
+                (click)="format('**')"
+                [disabled]="hasPending()"
+              >
+                <strong>B</strong></button
+              ><button
+                type="button"
+                aria-label="Itálico"
+                (click)="format('*')"
+                [disabled]="hasPending()"
+              >
+                <em>I</em></button
+              ><button
+                type="button"
+                aria-label="Citação"
+                (click)="format('>')"
+                [disabled]="hasPending()"
+              >
+                <i class="fa-solid fa-quote-left" aria-hidden="true"></i>
+              </button>
+              <details class="text-preview">
+                <summary>Prévia</summary>
+                <div [innerHTML]="renderText(text.value)"></div>
+              </details>
+            </div>
+            <label class="sr-only" for="rp-message">Mensagem</label
+            ><textarea
+              #composer
+              id="rp-message"
+              [formControl]="text"
+              rows="3"
+              maxlength="20000"
+              placeholder="Escreva a próxima resposta da História…"
+              [readOnly]="sending() || hasPending()"
+              (keydown.control.enter)="keyboardSend($event)"
+            ></textarea>
+            @if (attachments().length) {
+              <ul class="attachment-list">
+                @for (attachment of attachments(); track attachment.id) {
+                  <li>
+                    {{ attachment.file.name
+                    }}<button
+                      type="button"
+                      (click)="removeAttachment(attachment.id)"
+                      [disabled]="sending() || hasPending()"
+                      [attr.aria-label]="'Remover ' + attachment.file.name"
+                    >
+                      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+            <footer>
+              <label class="file-button"
+                ><i class="fa-solid fa-image" aria-hidden="true"></i> Anexar
+                imagens<input
+                  type="file"
+                  multiple
+                  accept="image/png,image/jpeg,image/webp"
+                  (change)="files($event)"
+                  [disabled]="
+                    !client.canWrite() || sending() || hasPending()
+                  " /></label
+              ><span class="composer-hint">{{
+                client.canWrite()
+                  ? 'Até 4 imagens · 10 MiB cada · Ctrl+Enter para enviar'
+                  : 'Somente consulta. Reconecte para enviar.'
+              }}</span
+              ><button
+                type="button"
+                class="primary send-button"
+                (click)="send()"
+                [disabled]="
+                  sending() ||
+                  !client.canWrite() ||
+                  !sceneId() ||
+                  !speakerId() ||
+                  hasPending()
+                "
+              >
+                {{ sending() ? 'Enviando…' : 'Enviar' }}
+                <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+              </button>
+            </footer>
+          </section>
+        }
+      } @else {
+        <div class="empty-state">
+          <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+          <h1>
+            {{
+              requestedStory()
+                ? 'História indisponível'
+                : 'Escolha onde a próxima cena acontece'
+            }}
+          </h1>
+          <p>
+            {{
+              requestedStory()
+                ? 'Conecte para consultar esta História ou verifique seu acesso.'
+                : 'Abra uma História na lista, aceite um convite ou comece uma nova narrativa.'
+            }}
+          </p>
+          @if (!requestedStory()) {
+            <button
+              type="button"
+              class="primary"
+              (click)="newStory.set(true); sidebar.set(true)"
+              [disabled]="!client.canWrite()"
+            >
+              Criar História
+            </button>
+          }
+        </div>
+      }
+    }
+  </section>
+</div>

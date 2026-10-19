@@ -1,4 +1,5 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { effect, inject, Injectable, signal } from '@angular/core';
+import { DbProvider } from '../database/db-provider.service';
 import { EntityHistoryService } from './entity-history.service';
 import { BehaviorSubject } from 'rxjs';
 import {
@@ -26,6 +27,7 @@ const VIEW_SECTIONS: Record<string, { title: string; icon: string }> = {
   calendars: { title: 'Calendários', icon: 'fa-solid fa-calendar-days' },
   relations: { title: 'Relações', icon: 'fa-solid fa-share-nodes' },
   'content-manager': { title: 'Gerenciador de Conteúdo', icon: 'fa-solid fa-box-open' },
+  stories: { title: 'Histórias', icon: 'fa-solid fa-book-open' },
 };
 
 function newPaneId() {
@@ -48,6 +50,12 @@ function emptyLayout(): WorkspaceLayout {
 
 @Injectable({ providedIn: 'root' })
 export class TabManagerService {
+  private readonly database = inject(DbProvider, { optional: true });
+  private persistenceLoaded = false;
+  private restoring = false;
+  private deferredSave = false;
+  private restoration: Promise<void> = Promise.resolve();
+  get whenRestored(): Promise<void> { return this.restoration; }
   private readonly history = inject(EntityHistoryService);
   private readonly _layout$ = new BehaviorSubject<WorkspaceLayout>(emptyLayout());
   private transitionQueue: Promise<void> = Promise.resolve();
@@ -58,7 +66,13 @@ export class TabManagerService {
     private globalParamService: GlobalParameterService,
     private registry: ComponentRegistryService
   ) {
-    this.restoreLayout();
+    const restore = () => {
+      if (this.persistenceLoaded || (this.database && !this.database.ready())) return;
+      this.persistenceLoaded = true;
+      this.restoration = this.restoreLayout();
+    };
+    restore();
+    if (this.database) effect(restore);
     let historyTabKey = '';
     this.layout$.subscribe(layout => {
       const pane = layout.panes.find(item => item.id === layout.focusedPaneId);
@@ -507,6 +521,8 @@ export class TabManagerService {
   // ── Persistence ─────────────────────────────────────────────────────────────
 
   saveLayout(): void {
+    if (this.database && !this.database.ready()) return;
+    if (this.restoring) { this.deferredSave = true; return; }
     const l = this.snapshot;
     const serializable: SerializableLayout = {
       panes: l.panes.map(p => ({
@@ -541,6 +557,7 @@ export class TabManagerService {
 
       const saved: SerializableLayout = JSON.parse(raw);
       if (!saved?.panes?.length) return;
+      this.restoring = true;
 
       // Resolve components for all tabs
       const resolvedPanes = await Promise.all(
@@ -559,6 +576,19 @@ export class TabManagerService {
         resolvedPanes.find(p => p.id === saved.focusedPaneId)?.id ??
         resolvedPanes[0]?.id ?? '';
 
+      // A guest may open RP before their own workspace is loaded. Preserve that
+      // tab while restoring the workspace's existing editors and pane layout.
+      const pending = this.snapshot;
+      const extraTabs = pending.panes.flatMap(pane => pane.tabs).filter(tab =>
+        !resolvedPanes.some(pane => pane.tabs.some(saved => saved.entityType === tab.entityType && saved.entityId === tab.entityId)));
+      const targetPane = resolvedPanes.find(pane => pane.id === validFocusedPaneId);
+      if (targetPane && extraTabs.length) {
+        this.deferredSave = true;
+        targetPane.tabs.push(...extraTabs.map(tab => ({ ...tab, paneId: targetPane.id })));
+        const active = pending.panes.find(pane => pane.id === pending.focusedPaneId)?.activeTabId;
+        if (extraTabs.some(tab => tab.id === active)) targetPane.activeTabId = active!;
+      }
+
       this._layout$.next({
         panes: resolvedPanes,
         splitRatios: saved.splitRatios,
@@ -568,6 +598,9 @@ export class TabManagerService {
       });
     } catch (e) {
       console.warn('TabManagerService: could not restore layout, using default', e);
+    } finally {
+      this.restoring = false;
+      if (this.deferredSave) { this.deferredSave = false; this.saveLayout(); }
     }
   }
 

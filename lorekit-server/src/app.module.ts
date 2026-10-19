@@ -10,6 +10,7 @@ import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { SyncModule } from './sync/sync.module';
 import { VaultsModule } from './vaults/vaults.module';
+import { StoriesModule } from './stories/stories.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { VaultsModule } from './vaults/vaults.module';
     AdminModule,
     VaultsModule,
     SyncModule,
+    StoriesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

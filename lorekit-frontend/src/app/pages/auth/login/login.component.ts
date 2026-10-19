@@ -27,6 +27,7 @@ export class LoginComponent implements OnInit {
 
   private async navigateToApp(): Promise<void> {
     const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-    await this.router.navigateByUrl(returnUrl?.startsWith('/app') ? returnUrl : '/app/world');
+    const permitted = returnUrl?.startsWith('/app') || returnUrl === '/stories' || returnUrl?.startsWith('/stories/');
+    await this.router.navigateByUrl(permitted ? returnUrl! : '/app/world');
   }
 }

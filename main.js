@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, safeStorage, protocol, net } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, safeStorage, protocol, net, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { fileURLToPath, pathToFileURL } = require('url');
@@ -126,7 +126,72 @@ function requestRendererTransition(onSuccess, onFailure = () => {}) {
 }
 
 
+const storyNotificationIds = new Set();
+const storyIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function storyCachePath(accountId, assetId) {
+  if (!storyIdPattern.test(accountId) || (assetId !== null && !storyIdPattern.test(assetId))) throw new Error('Invalid story cache identifier.');
+  const root = path.resolve(app.getPath('userData'), 'stories');
+  const account = path.resolve(root, accountId);
+  if (!account.startsWith(root + path.sep)) throw new Error('Invalid story cache scope.');
+  return { root, account, file: path.join(account, assetId === null ? 'history.db' : `${assetId}.asset`) };
+}
+async function assertStoryAccount(accountId) {
+  const encrypted = await fs.promises.readFile(path.join(app.getPath('userData'), 'cloud-session.bin'));
+  if (!safeStorage.isEncryptionAvailable()) throw new Error('Secure storage is unavailable.');
+  const session = JSON.parse(safeStorage.decryptString(encrypted));
+  if (session.user?.id !== accountId) throw new Error('Story cache belongs to another account.');
+}
+async function writeStoryCacheAtomic(file, data) {
+  await fs.promises.mkdir(path.dirname(file), { recursive: true });
+  const temporary = `${file}.${process.pid}.${Date.now()}.tmp`;
+  let handle;
+  try {
+    handle = await fs.promises.open(temporary, 'wx');
+    await handle.writeFile(Buffer.from(data)); await handle.sync(); await handle.close(); handle = undefined;
+    await fs.promises.rename(temporary, file);
+  } finally {
+    if (handle) await handle.close();
+    await fs.promises.rm(temporary, { force: true });
+  }
+}
+
 function registerIpc() {
+  ipcMain.handle('story-cache:read', async (event, accountId, assetId) => {
+    if (!isTrustedRenderer(event)) throw new Error('Untrusted renderer.');
+    const { file } = storyCachePath(accountId, assetId); await assertStoryAccount(accountId);
+    try { return new Uint8Array(await fs.promises.readFile(file)); }
+    catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  });
+  ipcMain.handle('story-cache:write', async (event, accountId, assetId, bytes) => {
+    if (!isTrustedRenderer(event)) throw new Error('Untrusted renderer.');
+    const { file } = storyCachePath(accountId, assetId); await assertStoryAccount(accountId);
+    if (!(bytes instanceof Uint8Array) || bytes.byteLength > (assetId === null ? 128 * 1024 * 1024 : 10 * 1024 * 1024)) throw new Error('Story cache payload is too large or invalid.');
+    await writeStoryCacheAtomic(file, bytes); return true;
+  });
+  ipcMain.handle('story-cache:delete', async (event, accountId, assetId) => {
+    if (!isTrustedRenderer(event)) throw new Error('Untrusted renderer.');
+    const { root, account, file } = storyCachePath(accountId, assetId);
+    if (assetId === null) {
+      // Revalidate the resolved absolute account directory immediately before recursive removal.
+      if (path.dirname(account) !== root || !storyIdPattern.test(path.basename(account))) throw new Error('Invalid story cache scope.');
+      await fs.promises.rm(account, { recursive: true, force: true });
+    } else await fs.promises.rm(file, { force: true });
+    return true;
+  });
+  ipcMain.handle('story:notify', async (event, value) => {
+    if (!isTrustedRenderer(event)) throw new Error('Untrusted renderer.');
+    if (!value || !storyIdPattern.test(value.storyId) || !storyIdPattern.test(value.eventId) || typeof value.sound !== 'boolean') throw new Error('Invalid story notification.');
+    if (!Notification.isSupported() || storyNotificationIds.has(value.eventId)) return false;
+    if (storyNotificationIds.size >= 1000) storyNotificationIds.delete(storyNotificationIds.values().next().value);
+    storyNotificationIds.add(value.eventId);
+    const notification = new Notification({ title: 'Lorekit', body: 'Nova mensagem em uma História.', silent: !value.sound });
+    notification.on('click', () => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show(); mainWindow.focus(); mainWindow.webContents.send('story:open', value.storyId);
+    });
+    notification.show(); return true;
+  });
   ipcMain.handle('get-db-path', () => {
     return path.join(app.getPath('userData'), 'lorekit.db');
   });
@@ -570,6 +635,7 @@ function startUpdateFlow() {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === 'win32') app.setAppUserModelId('com.estevam.lorekit');
   registerAppProtocol();
   registerLocalImageProtocol();
   registerIpc();

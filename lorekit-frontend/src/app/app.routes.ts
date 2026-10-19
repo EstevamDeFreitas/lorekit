@@ -3,11 +3,17 @@ import { webAuthGuard } from './guards/auth.guard';
 import { workspaceGuard } from './guards/workspace.guard';
 import { LoginComponent } from './pages/auth/login/login.component';
 import { MainUiComponent } from './pages/shared/main-ui/main-ui.component';
+import { storyGuard } from './guards/story.guard';
 
 export const routes: Routes = [
   {path: '', redirectTo: 'app', pathMatch: 'full'},
   {path: 'login', component: LoginComponent},
-  {path: 'app', component: MainUiComponent, canActivate: [webAuthGuard, workspaceGuard], children: [
+  {path: '', component: MainUiComponent, children: [
+  {path: 'stories/invite/:token', canActivate: [storyGuard], loadComponent: () => import('./pages/stories/story-page/story-page.component').then(m => m.StoryPageComponent)},
+  {path: 'stories/:id/assets/:assetId', canActivate: [storyGuard], loadComponent: () => import('./pages/stories/story-page/story-page.component').then(m => m.StoryPageComponent)},
+  {path: 'stories/:id', canActivate: [storyGuard], loadComponent: () => import('./pages/stories/story-page/story-page.component').then(m => m.StoryPageComponent)},
+  {path: 'stories', canActivate: [storyGuard], loadComponent: () => import('./pages/stories/story-page/story-page.component').then(m => m.StoryPageComponent)},
+  {path: 'app', canActivate: [webAuthGuard, workspaceGuard], children: [
       { path: 'calendar', children: [
         { path: '', redirectTo: 'list', pathMatch: 'full' },
         { path: 'list', loadComponent: () => import('./pages/calendars/calendar-list/calendar-list.component').then(m => m.CalendarListComponent) },
@@ -181,4 +187,5 @@ export const routes: Routes = [
     ]
   }
 
+  ]}
 ];

@@ -15,6 +15,20 @@
       "when": 1786194718733,
       "tag": "0001_curved_madelyne_pryor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792183441037,
+      "tag": "0002_story-roleplay-chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792183692778,
+      "tag": "0003_story-push-session",
+      "breakpoints": true
     }
   ]
 }
