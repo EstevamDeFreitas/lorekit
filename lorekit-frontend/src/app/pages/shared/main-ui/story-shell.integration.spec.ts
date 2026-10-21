@@ -110,6 +110,7 @@ describe('Stories inside the Lorekit shell', () => {
       id: 'a-story',
       assetId: 'an-image',
       token: null,
+      sceneId: null,
     });
   });
 });

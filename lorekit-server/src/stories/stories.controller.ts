@@ -134,6 +134,21 @@ export class StoriesController {
   ) {
     return this.stories.send(id, auth.userId, body);
   }
+  @Patch('stories/:id/messages/:messageId') editMessage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('messageId', ParseUUIDPipe) messageId: string,
+    @CurrentAuth() auth: AuthenticatedRequest,
+    @Body() body: unknown,
+  ) {
+    return this.stories.editMessage(id, messageId, auth.userId, body);
+  }
+  @Get('stories/:id/messages/:messageId') message(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('messageId', ParseUUIDPipe) messageId: string,
+    @CurrentAuth() auth: AuthenticatedRequest,
+  ) {
+    return this.stories.message(id, messageId, auth.userId);
+  }
   @Get('stories/:id/messages') messages(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentAuth() auth: AuthenticatedRequest,

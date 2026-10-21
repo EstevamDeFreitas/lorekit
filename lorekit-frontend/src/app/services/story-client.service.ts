@@ -23,6 +23,34 @@ import { AuthService } from './auth.service';
 import { StoryApiService } from './story-api.service';
 import { StoryCacheService } from './story-cache.service';
 
+export interface StoryDraftAttachment {
+  id: string;
+  file: File;
+  uploaded: boolean;
+}
+
+export interface StoryDraftLine {
+  id: string;
+  sceneId: string;
+  sceneTitle: string;
+  speakerId: string;
+  revisionId: string;
+  speakerName: string;
+  speakerColor: string;
+  text: string;
+  attachments: StoryDraftAttachment[];
+}
+
+export interface StoryDraft {
+  accountId: string;
+  text: string;
+  sceneId: string;
+  speakerId: string;
+  queuedMessages: StoryDraftLine[];
+  editingDraftId?: string | null;
+  attachments?: StoryDraftAttachment[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class StoryClientService {
   readonly api = inject(StoryApiService);
@@ -79,10 +107,7 @@ export class StoryClientService {
   private requestedId: string | null = null;
   private readonly storyEpoch = new Map<string, number>();
   private readonly revokedStories = new Set<string>();
-  readonly drafts = new Map<
-    string,
-    { text: string; sceneId: string; speakerId: string }
-  >();
+  readonly drafts = new Map<string, StoryDraft>();
 
   constructor() {
     const removeCleanup = this.auth.onSessionCleanup(async (previous, next) => {
@@ -221,6 +246,8 @@ export class StoryClientService {
       socket.on('story.event', (event: StoryEvent) => {
         if (this.account !== userId || event.version !== 1) return;
         this.onMessage?.(event);
+        if (event.type === 'message.updated')
+          void this.refreshEditedMessage(event.storyId, event.entityId);
         if (this.eventTimer) return;
         this.eventTimer = setTimeout(() => {
           this.eventTimer = null;
@@ -469,6 +496,23 @@ export class StoryClientService {
       this.messages.set(this.merge(this.messages(), [message]).slice(-200));
     return message;
   }
+  async editMessage(messageId: string, text: string): Promise<StoryMessage> {
+    this.requireOnline();
+    const detail = this.current();
+    if (!detail) throw new Error('Abra uma História.');
+    const account = this.account;
+    const message = await this.api.editMessage(
+      detail.story.id,
+      messageId,
+      text,
+    );
+    if (account !== this.account)
+      throw new Error('A conta mudou durante a edição.');
+    await this.cached(() => this.cache.saveMessage(message));
+    if (this.current()?.story.id === detail.story.id)
+      this.messages.set(this.merge(this.messages(), [message]).slice(-200));
+    return message;
+  }
   async reconcile(storyId = this.current()?.story.id): Promise<void> {
     if (!storyId || !this.canWrite()) return;
     for (const operationId of this.cache.pending(storyId)) {
@@ -634,6 +678,26 @@ export class StoryClientService {
         [...first, ...second].map((message) => [message.id, message]),
       ).values(),
     ].sort((a, b) => (BigInt(a.sequence) < BigInt(b.sequence) ? -1 : 1));
+  }
+  private async refreshEditedMessage(
+    storyId: string,
+    messageId: string,
+  ): Promise<void> {
+    const account = this.account,
+      epoch = this.storyEpoch.get(storyId) ?? 0;
+    try {
+      const message = await this.api.message(storyId, messageId);
+      if (
+        account !== this.account ||
+        epoch !== (this.storyEpoch.get(storyId) ?? 0)
+      )
+        return;
+      await this.cached(() => this.cache.saveMessage(message));
+      if (this.current()?.story.id === storyId)
+        this.messages.set(this.merge(this.messages(), [message]).slice(-200));
+    } catch (error) {
+      if (account === this.account) this.fail(error);
+    }
   }
   private async cached(action: () => Promise<void>): Promise<void> {
     try {

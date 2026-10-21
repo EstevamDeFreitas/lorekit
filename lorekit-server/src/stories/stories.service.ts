@@ -32,6 +32,7 @@ import {
   executeRoll,
   IRONPAW_RULES_VERSION,
   parseCreateStoryInput,
+  parseStoryMessageEditInput,
   parseStoryMessageInput,
   parseStoryRollInput,
   parseStorySceneInput,
@@ -553,6 +554,76 @@ export class StoriesService {
     );
   }
 
+  async editMessage(
+    storyId: string,
+    messageId: string,
+    userId: string,
+    value: unknown,
+  ) {
+    storyContract(() => contractId(messageId));
+    const input = storyContract(() => parseStoryMessageEditInput(value));
+    return this.operation(
+      storyId,
+      userId,
+      input.operationId,
+      { type: 'message.edit', messageId, ...input },
+      async (tx) => {
+        const [message] = await tx
+          .select()
+          .from(storyMessages)
+          .where(
+            and(
+              eq(storyMessages.storyId, storyId),
+              eq(storyMessages.id, messageId),
+            ),
+          );
+        if (!message) throw new NotFoundException('Mensagem não encontrada.');
+        const member = await this.member(storyId, userId, tx);
+        if (message.authorUserId !== userId && member.role !== 'owner')
+          throw new ForbiddenException('Você não pode editar esta mensagem.');
+        if (message.roll)
+          throw new BadRequestException('Rolagens registradas são imutáveis.');
+        if (!input.text.trim()) {
+          const [attachment] = await tx
+            .select({ assetId: storyMessageAssets.assetId })
+            .from(storyMessageAssets)
+            .where(
+              and(
+                eq(storyMessageAssets.storyId, storyId),
+                eq(storyMessageAssets.messageId, messageId),
+              ),
+            )
+            .limit(1);
+          if (!attachment)
+            throw new BadRequestException('A mensagem não pode ficar vazia.');
+        }
+        await tx
+          .update(storyMessages)
+          .set({ text: input.text, editedAt: new Date() })
+          .where(
+            and(
+              eq(storyMessages.storyId, storyId),
+              eq(storyMessages.id, messageId),
+            ),
+          );
+        await this.event(tx, storyId, 'message.updated', messageId);
+        return (await this.messagesFrom(tx, storyId, [messageId]))[0]!;
+      },
+    );
+  }
+
+  async message(storyId: string, messageId: string, userId: string) {
+    await this.member(storyId, userId);
+    storyContract(() => contractId(messageId));
+    const [message] = await this.messagesFrom(
+      this.database.db,
+      storyId,
+      [messageId],
+    );
+    if (!message) throw new NotFoundException('Mensagem não encontrada.');
+    return message;
+  }
+
   async roll(storyId: string, userId: string, value: unknown) {
     const input = storyContract(() => parseStoryRollInput(value));
     return this.operation(
@@ -756,6 +827,7 @@ export class StoriesService {
       ...message,
       sequence: String(message.sequence),
       createdAt: message.createdAt.toISOString(),
+      editedAt: message.editedAt?.toISOString() ?? null,
       speaker: asRevision(revision),
       assets: attachments
         .filter((entry) => entry.messageId === message.id)

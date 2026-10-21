@@ -10,7 +10,7 @@
           <img src="assets/lorekit-logo.png" alt="Lorekit">
         </div>
         <div class="activity-navigation__sections">
-          <app-nav-button label="Histórias" [showLabel]="false" icon="fa-solid fa-book-open" size="xl" [fullWidth]="true" direction="right" (click)="tabManager.setActiveSidebarSection('stories')"></app-nav-button>
+          <app-nav-button label="Histórias" [showLabel]="false" icon="fa-solid fa-book-open" size="xl" [fullWidth]="true" direction="right" [active]="layout.activeSidebarSection === 'stories'" activeColor="yellow-400" (click)="tabManager.setActiveSidebarSection('stories')"></app-nav-button>
           @if (database.ready()) {
           <app-nav-button [label]="'Mundos'" [showLabel]="false" [icon]="'fa-solid fa-earth'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'world'"
@@ -77,7 +77,7 @@
     </div>
 
     <!-- Sidebar panel (entity list for active section) -->
-    @if (database.ready()) { <app-sidebar-panel /> }
+    @if (database.ready() || layout.activeSidebarSection === 'stories') { <app-sidebar-panel /> }
 
     <!-- Workspace (tabbed editor panes) -->
     <div class="flex-1 min-h-0 min-w-0 h-full overflow-hidden">

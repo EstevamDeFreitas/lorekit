@@ -27,7 +27,6 @@ const VIEW_SECTIONS: Record<string, { title: string; icon: string }> = {
   calendars: { title: 'Calendários', icon: 'fa-solid fa-calendar-days' },
   relations: { title: 'Relações', icon: 'fa-solid fa-share-nodes' },
   'content-manager': { title: 'Gerenciador de Conteúdo', icon: 'fa-solid fa-box-open' },
-  stories: { title: 'Histórias', icon: 'fa-solid fa-book-open' },
 };
 
 function newPaneId() {
@@ -93,6 +92,10 @@ export class TabManagerService {
 
   /** Opens a sidebar section. If the section is a direct-view (relations, etc.) opens a tab instead. */
   setActiveSidebarSection(section: string): void {
+    if (section === 'stories') {
+      this.openStoriesTab(true);
+      return;
+    }
     const viewMeta = VIEW_SECTIONS[section];
     if (viewMeta) {
       if (section === RELATIONS_VIEW_SECTION_ID) {
@@ -104,6 +107,15 @@ export class TabManagerService {
       return;
     }
     this.update(l => ({ ...l, activeSidebarSection: section, sidebarVisible: true }));
+  }
+
+  openStoriesTab(showSidebar = false): void {
+    this.openTab('view', 'stories', 'Histórias', 'fa-solid fa-book-open');
+    this.update(l => ({
+      ...l,
+      activeSidebarSection: 'stories',
+      sidebarVisible: showSidebar ? true : l.sidebarVisible,
+    }));
   }
 
   openRelationsTab(root?: RelationViewRoot & { label?: string }, targetPaneId?: string): void {

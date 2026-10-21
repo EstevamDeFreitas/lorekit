@@ -131,6 +131,7 @@ export interface StoryMessage {
   assets: StoryAsset[];
   roll: StoryRollRecord | null;
   createdAt: string;
+  editedAt: string | null;
 }
 export type StoryEventType =
   | 'story.updated'
@@ -138,6 +139,7 @@ export type StoryEventType =
   | 'scene.updated'
   | 'speaker.updated'
   | 'message.created'
+  | 'message.updated'
   | 'member.removed';
 export interface StoryEvent {
   version: 1;
@@ -185,6 +187,11 @@ export interface StoryMessageInput {
   revisionId: string;
   text: string;
   assetIds: string[];
+}
+export interface StoryMessageEditInput {
+  version: 1;
+  operationId: string;
+  text: string;
 }
 export interface StoryRollInput {
   version: 1;
@@ -326,6 +333,16 @@ export function parseStoryMessageInput(value: unknown): StoryMessageInput {
     revisionId: contractId(input['revisionId']),
     text,
     assetIds,
+  };
+}
+export function parseStoryMessageEditInput(
+  value: unknown,
+): StoryMessageEditInput {
+  const input = contractRecord(value, ['version', 'operationId', 'text']);
+  return {
+    version: contractVersion(input['version']),
+    operationId: contractId(input['operationId']),
+    text: contractString(input['text'], 'Texto', STORY_LIMITS.text, true),
   };
 }
 export function parseStoryRollInput(value: unknown): StoryRollInput {

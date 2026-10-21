@@ -7,6 +7,7 @@ export interface StoryNavigationTarget {
   id: string | null;
   token: string | null;
   assetId: string | null;
+  sceneId: string | null;
 }
 
 /** Direct links select the RP tab inside the shared application shell. */
@@ -29,11 +30,13 @@ export class StoryNavigationService {
       [];
     if (segments[0] !== 'stories') return null;
     if (segments[1] === 'invite')
-      return { id: null, token: segments[2] ?? null, assetId: null };
+      return { id: null, token: segments[2] ?? null, assetId: null, sceneId: null };
+    const parsed = this.router.parseUrl(url);
     return {
       id: segments[1] ?? null,
       token: null,
       assetId: segments[2] === 'assets' ? (segments[3] ?? null) : null,
+      sceneId: typeof parsed.queryParams['scene'] === 'string' ? parsed.queryParams['scene'] : null,
     };
   }
 }

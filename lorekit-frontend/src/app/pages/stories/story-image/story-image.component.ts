@@ -24,6 +24,7 @@ export class StoryImageComponent {
   readonly description = input('Imagem da cena');
   readonly avatar = input(false);
   readonly url = signal<string | null>(null);
+  readonly loadFailed = signal(false);
   readonly visible = signal(false);
   private readonly client = inject(StoryClientService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -53,15 +54,20 @@ export class StoryImageComponent {
         active = false;
         release();
       });
-      if (!visible) this.url.set(null);
+      if (!visible) {
+        this.url.set(null);
+        this.loadFailed.set(false);
+      }
       if (visible)
         void this.client.imageUrl(storyId, assetId).then((url) => {
           if (
             active &&
             storyId === this.storyId() &&
             assetId === this.assetId()
-          )
+          ) {
             this.url.set(url);
+            this.loadFailed.set(!url);
+          }
         });
     });
   }

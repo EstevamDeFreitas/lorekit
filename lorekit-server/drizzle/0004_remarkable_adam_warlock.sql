@@ -1,0 +1,1 @@
+ALTER TABLE "app"."story_messages" ADD COLUMN "edited_at" timestamp with time zone;

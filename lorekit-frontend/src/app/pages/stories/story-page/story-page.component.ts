@@ -4,6 +4,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  NgZone,
   computed,
   effect,
   inject,
@@ -33,7 +34,11 @@ import {
   type StoryRollInput,
   type StoryRollKind,
 } from '@lorekit/ironpaw';
-import { StoryClientService } from '../../../services/story-client.service';
+import {
+  StoryClientService,
+  type StoryDraftAttachment,
+  type StoryDraftLine,
+} from '../../../services/story-client.service';
 import { StoryNotificationsService } from '../../../services/story-notifications.service';
 import {
   StorySharingService,
@@ -43,11 +48,16 @@ import {
 import { AuthService } from '../../../services/auth.service';
 import { StoryImageComponent } from '../story-image/story-image.component';
 
-interface Attachment {
-  id: string;
-  file: File;
-  uploaded: boolean;
+type Attachment = StoryDraftAttachment;
+
+function normalizeSearch(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
+
 @Component({
   selector: 'app-story-page',
   imports: [ReactiveFormsModule, RouterLink, DatePipe, StoryImageComponent],
@@ -64,6 +74,7 @@ export class StoryPageComponent implements AfterViewInit {
   private readonly tab = inject(WORKSPACE_TAB_CONTEXT, { optional: true });
   readonly active = computed(() => this.tab?.active() ?? true);
   private readonly router = inject(Router);
+  private readonly zone = inject(NgZone);
   private readonly destroy = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
   private previousAccount = this.auth.user()?.id ?? null;
@@ -77,10 +88,13 @@ export class StoryPageComponent implements AfterViewInit {
   readonly panel = signal<
     'none' | 'scene' | 'locutors' | 'share' | 'members' | 'preferences' | 'roll'
   >('none');
-  readonly sidebar = signal(false);
-  readonly newStory = signal(false);
   readonly sceneId = signal('');
   readonly speakerId = signal('');
+  readonly speakerPickerOpen = signal(false);
+  readonly editingDraftId = signal<string | null>(null);
+  readonly editingMessageId = signal<string | null>(null);
+  readonly editingMessageText = signal('');
+  readonly savingMessageEdit = signal(false);
   readonly assetRoute = signal<string | null>(null);
   readonly requestedStory = signal<string | null>(null);
   readonly inviteToken = signal<string | null>(null);
@@ -89,15 +103,17 @@ export class StoryPageComponent implements AfterViewInit {
     Array<{ userId: string; name: string | null; role: string }>
   >([]);
   readonly sources = signal<StorySharingSource[]>([]);
+  readonly sourceSearch = signal('');
   readonly sharePreview = signal<StorySharingPreview | null>(null);
   readonly sharedActions = signal<Set<string>>(new Set());
   readonly sharePortrait = signal(true);
   readonly attachments = signal<Attachment[]>([]);
+  readonly queuedMessages = signal<StoryDraftLine[]>([]);
+  private draftEditOrigin: { sceneId: string; speakerId: string } | null = null;
   readonly incidentalPortrait = signal<File | null>(null);
   readonly atEnd = signal(true);
   readonly rollRevision = signal(0);
   readonly text = new FormControl('', { nonNullable: true });
-  readonly title = new FormControl('', { nonNullable: true });
   readonly sceneTitle = new FormControl('', { nonNullable: true });
   readonly speakerName = new FormControl('', { nonNullable: true });
   readonly speakerColor = new FormControl('#d4d4d8', { nonNullable: true });
@@ -132,6 +148,17 @@ export class StoryPageComponent implements AfterViewInit {
         (speaker) => speaker.id === this.speakerId(),
       ) ?? null,
   );
+  readonly filteredSources = computed(() => {
+    const query = normalizeSearch(this.sourceSearch());
+    if (!query) return [];
+    return this.sources()
+      .filter((source) =>
+        normalizeSearch(
+          `${source.name} ${source.kind === 'npc' ? 'PNJ' : 'Personagem'}`,
+        ).includes(query),
+      )
+      .slice(0, 8);
+  });
   readonly rollActions = computed(() => {
     const mechanics = this.selectedSpeaker()?.revision.mechanics;
     return mechanics?.kind === 'character'
@@ -221,11 +248,24 @@ export class StoryPageComponent implements AfterViewInit {
   private pending: {
     input: StoryMessageInput | StoryRollInput;
     roll: boolean;
+    draftId?: string;
   } | null = null;
   private readObserver: IntersectionObserver | null = null;
+  private readObserverRoot: HTMLElement | null = null;
+  private observedMessages = new WeakSet<Element>();
   private readonly seen = new Set<string>();
   private readTimer: ReturnType<typeof setTimeout> | null = null;
-  private createOperation = crypto.randomUUID();
+  private timelineFrame: number | null = null;
+  private timelineFollow = false;
+  private timelineForceEnd = false;
+  private messageScrollFrame: number | null = null;
+  private lastScrollPresence: boolean | null = null;
+  private lastTimelineStoryId: string | null = null;
+  private lastTimelineFirstMessageId: string | null = null;
+  private lastTimelineMessageId: string | null = null;
+  private lastTimelineMessageCount = 0;
+  private lastTimelineRoot: HTMLElement | null = null;
+  private readonly timelineScrollListener = () => this.onScroll();
 
   constructor() {
     effect(() => {
@@ -234,8 +274,12 @@ export class StoryPageComponent implements AfterViewInit {
       this.previousAccount = account;
       this.text.setValue('', { emitEvent: false });
       this.attachments.set([]);
+      this.queuedMessages.set([]);
       this.sceneId.set('');
       this.speakerId.set('');
+      this.speakerPickerOpen.set(false);
+      this.editingDraftId.set(null);
+      this.editingMessageId.set(null);
       this.pending = null;
       this.requestedStory.set(null);
     });
@@ -245,6 +289,18 @@ export class StoryPageComponent implements AfterViewInit {
     this.rollForm.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.rollRevision.update((value) => value + 1));
+    effect((onCleanup) => {
+      const root = this.timeline()?.nativeElement;
+      if (!root) return;
+      this.zone.runOutsideAngular(() =>
+        root.addEventListener('scroll', this.timelineScrollListener, {
+          passive: true,
+        }),
+      );
+      onCleanup(() =>
+        root.removeEventListener('scroll', this.timelineScrollListener),
+      );
+    });
     effect(() => {
       const target = this.navigation.target();
       if (!target) {
@@ -260,7 +316,20 @@ export class StoryPageComponent implements AfterViewInit {
       if (this.requestedStory() !== target.id) {
         this.rememberDraft(this.text.value);
         this.requestedStory.set(target.id);
-        if (target.id) void this.open(target.id);
+        if (target.id) void this.open(target.id, target.sceneId);
+      } else if (
+        target.id &&
+        target.sceneId &&
+        target.sceneId !== this.sceneId()
+      ) {
+        void this.browseScene(target.sceneId);
+      } else if (
+        target.id &&
+        !target.sceneId &&
+        this.client.scope() &&
+        this.client.current()?.story.id === target.id
+      ) {
+        void this.latest();
       }
     });
     effect(() => {
@@ -273,20 +342,39 @@ export class StoryPageComponent implements AfterViewInit {
         this.rollForm.controls.actionId.setValue(actions[0]?.id ?? '');
     });
     effect(() => {
-      this.client.messages();
-      this.client.current();
-      this.panel();
+      const messages = this.client.messages();
+      const storyId = this.client.current()?.story.id ?? null;
+      const root = this.timeline()?.nativeElement ?? null;
+      const firstMessageId = messages[0]?.id ?? null;
+      const latestMessageId = messages.at(-1)?.id ?? null;
+      const changed =
+        storyId !== this.lastTimelineStoryId ||
+        firstMessageId !== this.lastTimelineFirstMessageId ||
+        latestMessageId !== this.lastTimelineMessageId ||
+        messages.length !== this.lastTimelineMessageCount;
+      const newLatestMessage =
+        storyId !== null &&
+        storyId === this.lastTimelineStoryId &&
+        latestMessageId !== null &&
+        latestMessageId !== this.lastTimelineMessageId;
+      this.lastTimelineStoryId = storyId;
+      this.lastTimelineFirstMessageId = firstMessageId;
+      this.lastTimelineMessageId = latestMessageId;
+      this.lastTimelineMessageCount = messages.length;
       if (!this.active()) {
-        this.readObserver?.disconnect();
+        this.stopObservingMessages();
         this.client.heartbeat(false);
         return;
       }
+      const needsObservation = root !== null && this.readObserver === null;
+      if (!changed && root === this.lastTimelineRoot && !needsObservation) return;
+      this.lastTimelineRoot = root;
       const follow =
-        this.atEnd() && this.client.viewingLatest() && !this.client.scope();
-      setTimeout(() => {
-        this.observeMessages();
-        if (follow) this.scrollToEnd();
-      }, 0);
+        newLatestMessage &&
+        this.atEnd() &&
+        this.client.viewingLatest() &&
+        !this.client.scope();
+      this.scheduleTimelineUpdate(follow);
     });
     const heartbeat = setInterval(
       () =>
@@ -295,13 +383,16 @@ export class StoryPageComponent implements AfterViewInit {
             Boolean(this.timeline()) &&
             document.visibilityState === 'visible' &&
             this.atEnd() &&
-            this.client.viewingLatest(),
+            this.client.viewingLatest() &&
+            !this.client.scope(),
         ),
       5000,
     );
     this.destroy.onDestroy(() => {
       clearInterval(heartbeat);
-      this.readObserver?.disconnect();
+      this.stopObservingMessages();
+      if (this.timelineFrame !== null) cancelAnimationFrame(this.timelineFrame);
+      if (this.messageScrollFrame !== null) cancelAnimationFrame(this.messageScrollFrame);
       if (this.readTimer) clearTimeout(this.readTimer);
       this.client.heartbeat(false);
       this.rememberDraft(this.text.value);
@@ -310,44 +401,47 @@ export class StoryPageComponent implements AfterViewInit {
   ngAfterViewInit(): void {
     this.observeMessages();
   }
-  private async open(id: string): Promise<void> {
+  private async open(id: string, preferredSceneId: string | null = null): Promise<void> {
+    this.cancelMessageEdit();
     await this.client.open(id);
     if (this.requestedStory() !== id) return;
     this.restoreDraft(id);
-    this.sidebar.set(false);
+    const openScene = Boolean(preferredSceneId && this.client.current()?.scenes.some((scene) => scene.id === preferredSceneId));
+    if (openScene && preferredSceneId) {
+      this.sceneId.set(preferredSceneId);
+      await this.client.scene(preferredSceneId);
+    }
     this.pending = null;
     this.error.set('');
-    setTimeout(() => this.scrollToEnd(), 0);
+    this.atEnd.set(true);
+    this.scheduleTimelineUpdate(true, openScene);
   }
   private restoreDraft(id: string): void {
-    const draft = this.client.drafts.get(id),
+    const stored = this.client.drafts.get(id),
+      draft = stored?.accountId === this.auth.user()?.id ? stored : null,
       scenes = this.client.current()?.scenes ?? [];
     this.sceneId.set(draft?.sceneId || scenes.at(-1)?.id || '');
     this.speakerId.set(draft?.speakerId || '');
     this.text.setValue(draft?.text || '', { emitEvent: false });
+    this.attachments.set(
+      draft?.attachments?.map((attachment) => ({ ...attachment })) ?? [],
+    );
+    this.queuedMessages.set(draft?.queuedMessages ?? []);
+    this.editingDraftId.set(draft?.editingDraftId ?? null);
   }
   private rememberDraft(text: string): void {
-    const id = this.requestedStory();
-    if (id && this.auth.user()?.id && this.auth.user()?.id === this.previousAccount)
+    const id = this.requestedStory(),
+      accountId = this.auth.user()?.id;
+    if (id && accountId && accountId === this.previousAccount)
       this.client.drafts.set(id, {
+        accountId,
         text,
         sceneId: this.sceneId(),
         speakerId: this.speakerId(),
+        queuedMessages: this.queuedMessages(),
+        editingDraftId: this.editingDraftId(),
+        attachments: this.attachments().map((attachment) => ({ ...attachment })),
       });
-  }
-  async create(): Promise<void> {
-    await this.act(async () => {
-      this.client.requireOnline();
-      const story = await this.client.api.create(
-        this.title.value,
-        this.createOperation,
-      );
-      this.createOperation = crypto.randomUUID();
-      this.title.setValue('');
-      this.newStory.set(false);
-      await this.client.refreshList();
-      await this.router.navigate(['/stories', story.id]);
-    });
   }
   async acceptInvite(): Promise<void> {
     await this.act(async () => {
@@ -381,6 +475,10 @@ export class StoryPageComponent implements AfterViewInit {
       this.sceneId.set(scene.id);
       this.sceneTitle.setValue('');
       await this.client.refreshCurrent();
+      this.updateSceneRoute(scene.id);
+      await this.client.scene(scene.id);
+      this.atEnd.set(true);
+      this.scheduleTimelineUpdate(false, true);
       this.panel.set('none');
     });
   }
@@ -391,11 +489,174 @@ export class StoryPageComponent implements AfterViewInit {
     )
       this.speakerId.set('');
     this.rememberDraft(this.text.value);
+    this.updateSceneRoute(id);
+  }
+  selectComposerScene(id: string): void {
+    this.selectScene(id);
+    if (this.client.scope()) void this.client.latest();
+  }
+  chooseSpeaker(id: string): void {
+    this.speakerId.set(id);
+    this.speakerPickerOpen.set(false);
+    this.rememberDraft(this.text.value);
+  }
+  editQueuedMessage(id: string): void {
+    if (this.sending() || this.hasPending()) return;
+    if (this.hasComposerMessage() && this.editingDraftId() !== id) {
+      this.fail(new Error('Adicione ou descarte a fala atual antes de editar outra.'));
+      return;
+    }
+    const draft = this.queuedMessages().find((message) => message.id === id);
+    if (!draft) return;
+    if (!this.editingDraftId())
+      this.draftEditOrigin = {
+        sceneId: this.sceneId(),
+        speakerId: this.speakerId(),
+      };
+    this.editingDraftId.set(id);
+    this.sceneId.set(draft.sceneId);
+    this.speakerId.set(draft.speakerId);
+    this.text.setValue(draft.text, { emitEvent: false });
+    this.attachments.set(draft.attachments.map((attachment) => ({ ...attachment })));
+    this.updateSceneRoute(draft.sceneId);
+    this.rememberDraft(draft.text);
+  }
+  cancelQueuedEdit(): void {
+    if (!this.editingDraftId()) return;
+    const origin = this.draftEditOrigin;
+    this.editingDraftId.set(null);
+    this.draftEditOrigin = null;
+    this.text.setValue('', { emitEvent: false });
+    this.attachments.set([]);
+    if (origin) {
+      this.sceneId.set(origin.sceneId);
+      this.speakerId.set(origin.speakerId);
+      this.updateSceneRoute(origin.sceneId);
+    }
+    this.rememberDraft('');
+  }
+  addComposerMessage(): void {
+    try {
+      this.stageComposerMessage();
+    } catch (error) {
+      this.fail(error);
+    }
+  }
+  removeQueuedMessage(id: string): void {
+    if (this.sending() || this.hasPending()) return;
+    if (this.editingDraftId() === id) this.cancelQueuedEdit();
+    this.dropQueuedMessage(id);
+  }
+  messageCount(): number {
+    return (
+      this.queuedMessages().length +
+      Number(this.hasComposerMessage() && !this.editingDraftId())
+    );
+  }
+  sendLabel(): string {
+    if (this.sending()) return 'Enviando…';
+    if (!this.queuedMessages().length) return 'Enviar';
+    const count = this.messageCount();
+    return `Enviar ${count} ${count === 1 ? 'fala' : 'falas'}`;
+  }
+  hasComposerMessage(): boolean {
+    return Boolean(this.text.value.trim() || this.attachments().length);
+  }
+  private stageComposerMessage(): void {
+    const detail = this.client.current(),
+      speaker = this.selectedSpeaker(),
+      sceneId = this.sceneId();
+    if (!detail || !sceneId || !speaker)
+      throw new Error('Escolha a cena e o locutor antes de adicionar a fala.');
+    if (!this.hasComposerMessage())
+      throw new Error('Escreva uma fala ou anexe uma imagem.');
+    const scene = detail.scenes.find((candidate) => candidate.id === sceneId);
+    const editingId = this.editingDraftId();
+    const nextMessage: StoryDraftLine = {
+      id: editingId ?? crypto.randomUUID(),
+      sceneId,
+      sceneTitle: scene?.title ?? 'Cena',
+      speakerId: speaker.id,
+      revisionId: speaker.revision.id,
+      speakerName: speaker.revision.name,
+      speakerColor: speaker.revision.color,
+      text: this.text.value,
+      attachments: this.attachments().map((attachment) => ({ ...attachment })),
+    };
+    this.queuedMessages.update((messages) =>
+      editingId
+        ? messages.map((message) =>
+            message.id === editingId ? nextMessage : message,
+          )
+        : [...messages, nextMessage],
+    );
+    this.editingDraftId.set(null);
+    this.draftEditOrigin = null;
+    this.text.setValue('', { emitEvent: false });
+    this.attachments.set([]);
+    this.error.set('');
+    this.rememberDraft('');
+  }
+  private dropQueuedMessage(id: string): void {
+    this.queuedMessages.update((messages) =>
+      messages.filter((message) => message.id !== id),
+    );
+    this.rememberDraft(this.text.value);
+  }
+  canEditMessage(message: StoryMessage): boolean {
+    const userId = this.auth.user()?.id;
+    return (
+      !message.roll &&
+      Boolean(userId) &&
+      (message.authorUserId === userId ||
+        this.client.current()?.story.ownerUserId === userId)
+    );
+  }
+  startMessageEdit(message: StoryMessage): void {
+    if (!this.canEditMessage(message) || !this.client.canWrite()) return;
+    this.editingMessageId.set(message.id);
+    this.editingMessageText.set(message.text);
+  }
+  cancelMessageEdit(): void {
+    this.editingMessageId.set(null);
+    this.editingMessageText.set('');
+  }
+  async saveMessageEdit(message: StoryMessage): Promise<void> {
+    if (
+      this.savingMessageEdit() ||
+      this.editingMessageId() !== message.id ||
+      !this.canEditMessage(message)
+    )
+      return;
+    this.savingMessageEdit.set(true);
+    this.error.set('');
+    try {
+      await this.client.editMessage(message.id, this.editingMessageText());
+      this.cancelMessageEdit();
+      this.notice.set('Mensagem atualizada e marcada como editada.');
+    } catch (error) {
+      this.fail(error);
+    } finally {
+      this.savingMessageEdit.set(false);
+    }
+  }
+  private removeStoredQueuedMessage(
+    storyId: string,
+    id: string,
+    accountId: string | undefined,
+  ): void {
+    const draft = this.client.drafts.get(storyId);
+    if (!draft || !accountId || draft.accountId !== accountId) return;
+    this.client.drafts.set(storyId, {
+      ...draft,
+      queuedMessages: draft.queuedMessages.filter((message) => message.id !== id),
+    });
   }
   async browseScene(id: string): Promise<void> {
     this.selectScene(id);
     await this.client.scene(id);
-    this.sidebar.set(false);
+    this.atEnd.set(true);
+    this.scheduleTimelineUpdate(false, true);
   }
   async addSpeaker(): Promise<void> {
     await this.act(async () => {
@@ -423,8 +684,10 @@ export class StoryPageComponent implements AfterViewInit {
     });
   }
   async library(): Promise<void> {
+    this.speakerPickerOpen.set(false);
     await this.act(async () => {
       this.sources.set(await this.sharing.sources());
+      this.sourceSearch.set('');
       this.panel.set('share');
     });
   }
@@ -501,22 +764,31 @@ export class StoryPageComponent implements AfterViewInit {
         uploaded: false,
       })),
     ]);
+    this.rememberDraft(this.text.value);
   }
   removeAttachment(id: string): void {
     this.attachments.update((files) => files.filter((file) => file.id !== id));
+    this.rememberDraft(this.text.value);
   }
   async send(roll = false, retry = false): Promise<void> {
     if (this.sending()) return;
     this.sending.set(true);
     this.error.set('');
+    let lastSentMessageId: string | null = null;
     try {
       this.client.requireOnline();
-      const detail = this.client.current(),
-        speaker = this.selectedSpeaker();
-      if (!detail || !speaker || !this.sceneId())
-        throw new Error('Escolha a cena e o locutor antes de enviar.');
-      if (!retry) {
-        if (roll) {
+      if (this.pending && !retry)
+        throw new Error('Verifique ou reenvie a mensagem pendente primeiro.');
+      const detail = this.client.current();
+      if (!detail) throw new Error('Abra uma História.');
+      const accountId = this.auth.user()?.id;
+      if (roll && this.editingDraftId())
+        throw new Error('Salve ou cancele a edição da fala antes de rolar.');
+      if (roll) {
+        const speaker = this.selectedSpeaker();
+        if (!speaker || !this.sceneId())
+          throw new Error('Escolha a cena e o locutor antes de rolar.');
+        if (!retry) {
           const values = this.rollForm.getRawValue();
           this.pending = {
             roll: true,
@@ -536,73 +808,107 @@ export class StoryPageComponent implements AfterViewInit {
               conditionImpacts: this.conditionImpacts(),
             },
           };
-        } else {
-          if (!this.text.value.trim() && !this.attachments().length)
-            throw new Error('Escreva uma mensagem ou anexe uma imagem.');
-          const sceneId = this.sceneId(),
-            text = this.text.value,
-            attachments = [...this.attachments()],
-            accountId = this.auth.user()?.id;
-          for (const attachment of attachments) {
-            if (attachment.uploaded) continue;
-            const bytes = await attachment.file.arrayBuffer(),
-              digest = await crypto.subtle.digest('SHA-256', bytes);
-            const sha256 = [...new Uint8Array(digest)]
-              .map((byte) => byte.toString(16).padStart(2, '0'))
-              .join('');
-            await this.client.api.reserve(detail.story.id, {
-              id: attachment.id,
-              name: attachment.file.name,
-              mimeType: attachment.file.type,
-              sizeBytes: attachment.file.size,
-              sha256,
-            });
-            await this.client.api.upload(
+        }
+        if (!this.pending) return;
+        const pending = this.pending;
+        const message = await this.client.send(pending.input, pending.roll);
+        if (
+          this.client.current()?.story.id !== detail.story.id ||
+          this.pending !== pending
+        )
+          return;
+        this.pending = null;
+        this.notice.set('');
+        this.panel.set('none');
+        this.scrollToMessage(message.id);
+        return;
+      }
+
+      if (this.editingDraftId() && !this.hasComposerMessage())
+        throw new Error('A fala editada não pode ficar vazia.');
+      if (!retry && this.hasComposerMessage()) this.stageComposerMessage();
+      if (retry) {
+        const pending = this.pending;
+        if (!pending || pending.roll)
+          throw new Error('Não há uma mensagem pendente para reenviar.');
+        const message = await this.client.send(pending.input, false);
+        if (
+          this.client.current()?.story.id !== detail.story.id ||
+          this.auth.user()?.id !== accountId ||
+          this.pending !== pending
+        ) {
+          if (pending.draftId)
+            this.removeStoredQueuedMessage(
               detail.story.id,
-              attachment.id,
-              bytes,
-              attachment.file.type,
+              pending.draftId,
+              accountId,
             );
-            attachment.uploaded = true;
-          }
+          return;
+        }
+        this.pending = null;
+        if (pending.draftId) this.dropQueuedMessage(pending.draftId);
+        lastSentMessageId = message.id;
+      }
+
+      if (!this.queuedMessages().length && !lastSentMessageId)
+        throw new Error('Escreva uma fala ou adicione uma imagem.');
+
+      while (this.queuedMessages().length) {
+        const draft = this.queuedMessages()[0]!;
+        let pending = this.pending;
+        if (!pending) {
+          const assetIds = await this.uploadAttachments(
+            detail.story.id,
+            draft.attachments,
+          );
           if (
             this.client.current()?.story.id !== detail.story.id ||
             this.auth.user()?.id !== accountId
           )
             throw new Error(
-              'A História ou a conta mudou durante o upload. Revise o rascunho antes de enviar.',
+              'A História ou a conta mudou durante o envio. Revise a sequência antes de continuar.',
             );
-          this.pending = {
+          pending = {
             roll: false,
+            draftId: draft.id,
             input: {
               version: 1,
               operationId: crypto.randomUUID(),
-              sceneId,
-              speakerId: speaker.id,
-              revisionId: speaker.revision.id,
-              text,
-              assetIds: attachments.map((attachment) => attachment.id),
+              sceneId: draft.sceneId,
+              speakerId: draft.speakerId,
+              revisionId: draft.revisionId,
+              text: draft.text,
+              assetIds,
             },
           };
+          this.pending = pending;
         }
+        if (pending.roll)
+          throw new Error('Resolva a rolagem pendente antes de enviar as falas.');
+        const message = await this.client.send(pending.input, false);
+        if (
+          this.client.current()?.story.id !== detail.story.id ||
+          this.auth.user()?.id !== accountId ||
+          this.pending !== pending
+        ) {
+          this.removeStoredQueuedMessage(
+            detail.story.id,
+            pending.draftId ?? draft.id,
+            accountId,
+          );
+          return;
+        }
+        this.pending = null;
+        this.dropQueuedMessage(pending.draftId ?? draft.id);
+        lastSentMessageId = message.id;
       }
-      if (!this.pending) return;
-      const pending = this.pending;
-      const message = await this.client.send(pending.input, pending.roll);
-      if (
-        this.client.current()?.story.id !== detail.story.id ||
-        this.pending !== pending
-      )
-        return;
-      if (!pending.roll) {
-        this.text.setValue('');
-        this.attachments.set([]);
-        this.client.drafts.delete(detail.story.id);
-      }
-      this.pending = null;
+
+      this.text.setValue('', { emitEvent: false });
+      this.attachments.set([]);
+      this.client.drafts.delete(detail.story.id);
       this.notice.set('');
       this.panel.set('none');
-      this.scrollToMessage(message.id);
+      if (lastSentMessageId) this.scrollToMessage(lastSentMessageId);
     } catch (error) {
       if (
         error instanceof HttpErrorResponse &&
@@ -611,12 +917,41 @@ export class StoryPageComponent implements AfterViewInit {
       )
         this.pending = null;
       this.fail(error);
+      if (lastSentMessageId) this.scrollToMessage(lastSentMessageId);
     } finally {
       this.sending.set(false);
     }
   }
+  private async uploadAttachments(
+    storyId: string,
+    attachments: StoryDraftAttachment[],
+  ): Promise<string[]> {
+    for (const attachment of attachments) {
+      if (attachment.uploaded) continue;
+      const bytes = await attachment.file.arrayBuffer(),
+        digest = await crypto.subtle.digest('SHA-256', bytes);
+      const sha256 = [...new Uint8Array(digest)]
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('');
+      await this.client.api.reserve(storyId, {
+        id: attachment.id,
+        name: attachment.file.name,
+        mimeType: attachment.file.type,
+        sizeBytes: attachment.file.size,
+        sha256,
+      });
+      await this.client.api.upload(
+        storyId,
+        attachment.id,
+        bytes,
+        attachment.file.type,
+      );
+      attachment.uploaded = true;
+    }
+    return attachments.map((attachment) => attachment.id);
+  }
   retryPending(): void {
-    void this.send(false, true);
+    void this.send(this.pending?.roll ?? false, true);
   }
   hasPending(): boolean {
     return Boolean(this.pending);
@@ -634,9 +969,12 @@ export class StoryPageComponent implements AfterViewInit {
           .messages()
           .some((message) => message.operationId === pending.input.operationId)
       ) {
-        if (this.text.value === (pending.input as StoryMessageInput).text)
-          this.text.setValue('');
-        this.attachments.set([]);
+        if (pending.draftId) this.dropQueuedMessage(pending.draftId);
+        else {
+          if (this.text.value === (pending.input as StoryMessageInput).text)
+            this.text.setValue('');
+          this.attachments.set([]);
+        }
       }
       this.pending = null;
     }
@@ -745,19 +1083,30 @@ export class StoryPageComponent implements AfterViewInit {
   onScroll(): void {
     const element = this.timeline()?.nativeElement;
     if (element) {
-      this.atEnd.set(
-        element.scrollHeight - element.scrollTop - element.clientHeight < 120,
-      );
-      this.client.heartbeat(
-        this.atEnd() &&
-          document.visibilityState === 'visible' &&
-          this.client.viewingLatest(),
-      );
+      const atEnd =
+        element.scrollHeight - element.scrollTop - element.clientHeight < 32;
+      if (atEnd !== this.atEnd()) this.zone.run(() => this.atEnd.set(atEnd));
+      const visible =
+        atEnd &&
+        this.active() &&
+        document.visibilityState === 'visible' &&
+        this.client.viewingLatest() &&
+        !this.client.scope();
+      if (visible !== this.lastScrollPresence) {
+        this.lastScrollPresence = visible;
+        this.client.heartbeat(visible);
+      }
     }
+  }
+  async loadOlder(): Promise<void> {
+    // Chromium's native scroll anchoring preserves the reader's position when
+    // older messages are prepended to the timeline.
+    await this.client.older();
   }
   async latest(): Promise<void> {
     await this.client.latest();
-    setTimeout(() => this.scrollToEnd(), 0);
+    this.atEnd.set(true);
+    this.scheduleTimelineUpdate(true);
   }
   nameColor(color: string): string {
     let channels = [1, 3, 5].map((index) =>
@@ -824,30 +1173,44 @@ export class StoryPageComponent implements AfterViewInit {
     return id;
   }
   private observeMessages(): void {
-    this.readObserver?.disconnect();
     const root = this.timeline()?.nativeElement;
-    if (!root || !this.active()) return;
-    this.readObserver = new IntersectionObserver(
-      (entries) => {
-        if (!this.active() || document.visibilityState !== 'visible') return;
-        for (const entry of entries)
-          if (entry.isIntersecting) {
-            const seq = (entry.target as HTMLElement).dataset['sequence'];
-            if (seq) this.seen.add(seq);
-          }
-        if (!this.readTimer && this.seen.size)
-          this.readTimer = setTimeout(() => {
-            const sequences = [...this.seen];
-            this.seen.clear();
-            this.readTimer = null;
-            void this.client.markRead(sequences).catch(() => undefined);
-          }, 1000);
-      },
-      { root, threshold: 0.01 },
-    );
-    root
-      .querySelectorAll('[data-sequence]')
-      .forEach((element) => this.readObserver!.observe(element));
+    if (!root || !this.active()) {
+      this.stopObservingMessages();
+      return;
+    }
+    if (root !== this.readObserverRoot) {
+      this.stopObservingMessages();
+      this.readObserverRoot = root;
+      this.readObserver = new IntersectionObserver(
+        (entries) => {
+          if (!this.active() || document.visibilityState !== 'visible') return;
+          for (const entry of entries)
+            if (entry.isIntersecting) {
+              const seq = (entry.target as HTMLElement).dataset['sequence'];
+              if (seq) this.seen.add(seq);
+            }
+          if (!this.readTimer && this.seen.size)
+            this.readTimer = setTimeout(() => {
+              const sequences = [...this.seen];
+              this.seen.clear();
+              this.readTimer = null;
+              void this.client.markRead(sequences).catch(() => undefined);
+            }, 1000);
+        },
+        { root, threshold: 0.01 },
+      );
+    }
+    root.querySelectorAll('[data-sequence]').forEach((element) => {
+      if (this.observedMessages.has(element)) return;
+      this.observedMessages.add(element);
+      this.readObserver?.observe(element);
+    });
+  }
+  private stopObservingMessages(): void {
+    this.readObserver?.disconnect();
+    this.readObserver = null;
+    this.readObserverRoot = null;
+    this.observedMessages = new WeakSet<Element>();
   }
   private scrollToEnd(): void {
     const element = this.timeline()?.nativeElement;
@@ -856,14 +1219,51 @@ export class StoryPageComponent implements AfterViewInit {
       this.atEnd.set(true);
     }
   }
+  private scheduleTimelineUpdate(follow: boolean, forceEnd = false): void {
+    this.timelineFollow ||= follow;
+    this.timelineForceEnd ||= forceEnd;
+    if (this.timelineFrame !== null) return;
+    this.timelineFrame = requestAnimationFrame(() => {
+      this.timelineFrame = null;
+      const shouldFollow = this.timelineFollow;
+      const shouldForceEnd = this.timelineForceEnd;
+      this.timelineFollow = false;
+      this.timelineForceEnd = false;
+      if (!this.active()) return;
+      this.observeMessages();
+      if (shouldForceEnd || (
+        shouldFollow &&
+        this.atEnd() &&
+        this.client.viewingLatest() &&
+        !this.client.scope()
+      ))
+        this.scrollToEnd();
+    });
+  }
   private scrollToMessage(id: string): void {
-    setTimeout(
-      () =>
-        this.timeline()
-          ?.nativeElement.querySelector(`[data-message-id="${id}"]`)
-          ?.scrollIntoView({ block: 'nearest' }),
-      0,
-    );
+    if (this.messageScrollFrame !== null) cancelAnimationFrame(this.messageScrollFrame);
+    this.messageScrollFrame = requestAnimationFrame(() => {
+      this.messageScrollFrame = null;
+      const root = this.timeline()?.nativeElement;
+      const message = root?.querySelector<HTMLElement>(`[data-message-id="${id}"]`);
+      if (!root || !message) return;
+      const rootRect = root.getBoundingClientRect();
+      const messageRect = message.getBoundingClientRect();
+      if (messageRect.bottom > rootRect.bottom)
+        root.scrollTop += messageRect.bottom - rootRect.bottom;
+      else if (messageRect.top < rootRect.top)
+        root.scrollTop -= rootRect.top - messageRect.top;
+    });
+  }
+  private updateSceneRoute(id: string): void {
+    const storyId = this.client.current()?.story.id;
+    if (!storyId) return;
+    const target = this.navigation.target();
+    if (target?.id === storyId && target.sceneId === (id || null)) return;
+    void this.router.navigate(['/stories', storyId], {
+      queryParams: { scene: id || null },
+      replaceUrl: true,
+    });
   }
   private async act(action: () => Promise<void>): Promise<void> {
     this.busy.set(true);

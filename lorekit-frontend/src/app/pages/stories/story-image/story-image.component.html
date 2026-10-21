@@ -1,13 +1,25 @@
 @if (url(); as image) {
-  <button
-    type="button"
-    class="image-button"
-    [class.avatar]="avatar()"
-    (click)="open()"
-    [attr.aria-label]="'Ampliar: ' + description()"
-  >
-    <img [src]="image" [alt]="description()" loading="lazy" />
-  </button>
+  @if (avatar()) {
+    <button
+      type="button"
+      class="image-button avatar"
+      (click)="open()"
+      [attr.aria-label]="'Ampliar: ' + description()"
+    >
+      <img [src]="image" [alt]="description()" loading="lazy" />
+    </button>
+  } @else {
+    <div class="image-frame">
+      <button
+        type="button"
+        class="image-button"
+        (click)="open()"
+        [attr.aria-label]="'Ampliar: ' + description()"
+      >
+        <img [src]="image" [alt]="description()" loading="lazy" />
+      </button>
+    </div>
+  }
   <dialog #viewer (click)="backdrop($event)" [attr.aria-label]="description()">
     <button
       type="button"
@@ -19,15 +31,21 @@
     ><img [src]="image" [alt]="description()" />
   </dialog>
 } @else {
-  <span
-    class="image-unavailable"
-    [class.avatar]="avatar()"
-    [attr.title]="description()"
-  >
-    @if (avatar()) {
+  @if (avatar()) {
+    <span class="image-unavailable avatar" [attr.title]="description()">
       <i class="fa-solid fa-user" aria-hidden="true"></i>
-    } @else {
-      Imagem ainda não disponível neste dispositivo.
-    }
-  </span>
+    </span>
+  } @else {
+    <div class="image-frame" [attr.aria-busy]="visible() && !loadFailed()">
+      <span class="image-unavailable" [attr.title]="description()">
+        @if (loadFailed()) {
+          Imagem indisponível neste dispositivo.
+        } @else if (visible()) {
+          Carregando imagem…
+        } @else {
+          A imagem será carregada ao chegar aqui.
+        }
+      </span>
+    </div>
+  }
 }

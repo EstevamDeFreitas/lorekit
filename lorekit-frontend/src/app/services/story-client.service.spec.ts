@@ -71,6 +71,7 @@ describe('Online-only story client', () => {
     assets: [],
     roll: null,
     createdAt: '',
+    editedAt: null,
     speaker: {
       id: revisionId,
       storyId,

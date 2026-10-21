@@ -31,7 +31,7 @@ export class MainUiComponent {
       if (!target) return;
       void this.tabManager.whenRestored.then(() => {
         if (this.storyNavigation.target() === target)
-          return this.tabManager.openTab('view', 'stories', 'Histórias', 'fa-solid fa-book-open');
+          return this.tabManager.openStoriesTab();
         return false;
       });
     });

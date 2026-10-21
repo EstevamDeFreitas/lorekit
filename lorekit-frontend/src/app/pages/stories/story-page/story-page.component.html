@@ -1,121 +1,17 @@
-<div class="story-shell" [class.show-sidebar]="sidebar()">
+<div class="story-shell">
   <header class="story-topbar">
-    <div class="brand">
-      <button
-        type="button"
-        class="mobile-menu"
-        (click)="sidebar.set(!sidebar())"
-        aria-label="Abrir lista de Histórias"
-        [attr.aria-expanded]="sidebar()"
-      >
-        <i class="fa-solid fa-bars" aria-hidden="true"></i></button
-      ><span>Histórias</span
-      ><span
-        class="connection"
-        [class.connected]="client.canWrite()"
-        role="status"
-        >{{
-          client.status() === 'online'
-            ? 'Conectado'
-            : client.status() === 'degraded'
-              ? 'Conectado · atualizando por consulta'
-              : client.status() === 'connecting'
-                ? 'Conectando…'
-                : 'Consulta offline'
-        }}</span
-      >
-    </div>
-    <div class="top-actions">
-      <button
-        type="button"
-        (click)="client.connect()"
-        [disabled]="client.status() === 'connecting'"
-      >
-        Reconectar</button
-      >
-    </div>
-  </header>
-  <aside class="story-sidebar" aria-label="Histórias e cenas">
-    <div class="sidebar-title">
-      <h1>Suas Histórias</h1>
-      <button
-        type="button"
-        (click)="newStory.set(!newStory())"
-        [disabled]="!client.canWrite()"
-        aria-label="Criar História"
-      >
-        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+    <span class="story-product-title">Histórias</span>
+    <span class="connection" [class.connected]="client.canWrite()" role="status">
+      <span class="connection-indicator" aria-hidden="true"></span>
+      {{ client.status() === 'online' ? 'Conectado' : client.status() === 'degraded' ? 'Conectado · sincronização reduzida' : client.status() === 'connecting' ? 'Conectando…' : 'Somente consulta' }}
+    </span>
+    @if (client.status() !== 'online') {
+      <button type="button" class="reconnect-button" (click)="client.connect()" [disabled]="client.status() === 'connecting'">
+        <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+        <span>{{ client.status() === 'connecting' ? 'Conectando…' : 'Reconectar' }}</span>
       </button>
-    </div>
-    @if (newStory()) {
-      <form class="create-story" (submit)="$event.preventDefault(); create()">
-        <label
-          >Título da História<input
-            [formControl]="title"
-            maxlength="200"
-            required /></label
-        ><button
-          type="submit"
-          class="primary"
-          [disabled]="busy() || !client.canWrite()"
-        >
-          Criar História
-        </button>
-      </form>
     }
-    <nav aria-label="Histórias disponíveis">
-      @for (story of client.summaries(); track story.id) {
-        <a
-          class="story-link"
-          [class.active]="client.current()?.story?.id === story.id"
-          [routerLink]="['/stories', story.id]"
-          ><span>{{ story.title }}</span>
-          @if (story.unread) {
-            <span
-              class="unread"
-              [attr.aria-label]="story.unread + ' mensagens não lidas'"
-              >{{ story.unread }}</span
-            >
-          }
-        </a>
-      } @empty {
-        <p class="muted sidebar-empty">
-          As Histórias que você criar ou aceitar por convite aparecerão aqui.
-        </p>
-      }
-    </nav>
-    @if (client.current(); as current) {
-      <div class="scene-heading">
-        <h2>Cenas</h2>
-        <button
-          type="button"
-          (click)="panel.set('scene')"
-          [disabled]="!client.canWrite()"
-          aria-label="Criar cena"
-        >
-          <i class="fa-solid fa-plus" aria-hidden="true"></i>
-        </button>
-      </div>
-      <nav aria-label="Índice de cenas">
-        @for (scene of current.scenes; track scene.id) {
-          <button
-            type="button"
-            class="scene-link"
-            [class.active]="sceneId() === scene.id"
-            (click)="browseScene(scene.id)"
-          >
-            {{ scene.title }}
-          </button>
-        } @empty {
-          <p class="muted">Crie a primeira cena para começar o RP.</p>
-        }
-      </nav>
-    }
-    <p class="sidebar-footnote">
-      Envios exigem conexão. O conteúdo já baixado fica disponível para consulta
-      offline.
-    </p>
-  </aside>
+  </header>
   <section class="story-session">
     @if (error() || client.error()) {
       <p class="error banner" role="alert">{{ error() || client.error() }}</p>
@@ -146,9 +42,9 @@
     } @else {
       @if (client.current(); as current) {
         <header class="session-header">
-          <div>
+          <div class="session-title">
             <h1>{{ current.story.title }}</h1>
-            <p class="muted">
+            <p class="muted session-role">
               {{
                 current.member.role === 'owner'
                   ? 'Você administra esta História'
@@ -156,26 +52,25 @@
               }}
             </p>
           </div>
-          <div class="header-actions">
-            <button type="button" (click)="download()" [disabled]="busy()">
-              <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i>
-              Baixar .md</button
-            ><button
-              type="button"
-              (click)="participants()"
-              [disabled]="!client.canWrite()"
-            >
-              Participantes</button
-            ><button
-              type="button"
-              (click)="
-                panel.set(panel() === 'preferences' ? 'none' : 'preferences')
-              "
-              aria-label="Preferências de notificações"
-            >
-              <i class="fa-solid fa-bell" aria-hidden="true"></i>
-            </button>
-          </div>
+          <details class="header-menu">
+            <summary aria-label="Ações da História" title="Ações da História">
+              <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+            </summary>
+            <div class="header-menu-popover">
+              <button type="button" (click)="panel.set('scene')" [disabled]="!client.canWrite()">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i> Nova cena
+              </button>
+              <button type="button" (click)="download()" [disabled]="busy()">
+                <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> Baixar .md
+              </button>
+              <button type="button" (click)="participants()" [disabled]="!client.canWrite()">
+                <i class="fa-solid fa-user-group" aria-hidden="true"></i> Participantes
+              </button>
+              <button type="button" (click)="panel.set(panel() === 'preferences' ? 'none' : 'preferences')">
+                <i class="fa-solid fa-bell" aria-hidden="true"></i> Notificações
+              </button>
+            </div>
+          </details>
         </header>
         @if (assetRoute(); as assetId) {
           <section class="asset-view">
@@ -286,18 +181,46 @@
                   Os participantes verão os dados desta prévia. Biografia,
                   carteira e notas privadas do mundo ficam de fora.
                 </p>
-                <div class="source-list">
-                  @for (source of sources(); track source.kind + source.id) {
-                    <button type="button" (click)="chooseSource(source)">
-                      {{ source.name }}
-                      <small>{{
-                        source.kind === 'npc' ? 'PNJ' : 'Personagem'
-                      }}</small>
-                    </button>
-                  } @empty {
+                <label class="source-search">
+                  <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                  <input
+                    type="search"
+                    aria-label="Buscar personagem ou PNJ"
+                    placeholder="Buscar personagem ou PNJ…"
+                    [value]="sourceSearch()"
+                    (input)="sourceSearch.set(readValue($event))"
+                    autocomplete="off"
+                  />
+                </label>
+                <div
+                  class="source-list"
+                  role="listbox"
+                  aria-label="Personagens e PNJs disponíveis"
+                >
+                  @if (!sources().length) {
                     <p class="muted">
                       Nenhum personagem ou PNJ disponível no seu conteúdo local.
                     </p>
+                  } @else if (!sourceSearch().trim()) {
+                    <p class="speaker-search-hint">
+                      Digite para buscar um personagem ou PNJ.
+                    </p>
+                  } @else {
+                    @for (source of filteredSources(); track source.kind + source.id) {
+                      <button
+                        type="button"
+                        role="option"
+                        [attr.aria-selected]="sharePreview()?.source?.id === source.id && sharePreview()?.source?.kind === source.kind"
+                        (click)="chooseSource(source)"
+                      >
+                        <span>{{ source.name }}</span>
+                        <small>{{ source.kind === 'npc' ? 'PNJ' : 'Personagem' }}</small>
+                      </button>
+                    } @empty {
+                      <p class="speaker-search-empty">
+                        Nenhum personagem ou PNJ corresponde à busca.
+                      </p>
+                    }
                   }
                 </div>
                 @if (sharePreview(); as preview) {
@@ -656,7 +579,7 @@
                     type="button"
                     class="primary"
                     (click)="send(true)"
-                    [disabled]="sending() || !client.canWrite() || !preview()"
+                    [disabled]="sending() || hasPending() || !client.canWrite() || !preview()"
                   >
                     Rolar e registrar
                   </button>
@@ -672,7 +595,6 @@
           <div
             #timeline
             class="timeline"
-            (scroll)="onScroll()"
             aria-label="Histórico da História"
             tabindex="0"
           >
@@ -680,7 +602,7 @@
               <div class="history-actions">
                 <button
                   type="button"
-                  (click)="client.older()"
+                  (click)="loadOlder()"
                   [disabled]="client.loading()"
                 >
                   {{
@@ -736,8 +658,44 @@
                           ><time [attr.datetime]="message.createdAt">{{
                             message.createdAt | date: 'dd/MM HH:mm'
                           }}</time>
+                          @if (message.editedAt) {
+                            <span class="message-edited" title="Mensagem editada">editada</span>
+                          }
+                          @if (canEditMessage(message)) {
+                            <button
+                              type="button"
+                              class="message-edit-trigger"
+                              (click)="startMessageEdit(message)"
+                              [disabled]="!client.canWrite() || savingMessageEdit()"
+                              [attr.aria-label]="'Editar mensagem de ' + message.speaker.name"
+                            >Editar</button>
+                          }
                         </header>
-                        @if (message.text) {
+                        @if (editingMessageId() === message.id) {
+                          <div class="message-edit-form">
+                            <textarea
+                              rows="3"
+                              maxlength="20000"
+                              aria-label="Editar texto da mensagem"
+                              [value]="editingMessageText()"
+                              (input)="editingMessageText.set(readValue($event))"
+                              [disabled]="savingMessageEdit()"
+                            ></textarea>
+                            <div>
+                              <button
+                                type="button"
+                                class="primary"
+                                (click)="saveMessageEdit(message)"
+                                [disabled]="savingMessageEdit() || !client.canWrite()"
+                              >{{ savingMessageEdit() ? 'Salvando…' : 'Salvar edição' }}</button>
+                              <button
+                                type="button"
+                                (click)="cancelMessageEdit()"
+                                [disabled]="savingMessageEdit()"
+                              >Cancelar</button>
+                            </div>
+                          </div>
+                        } @else if (message.text) {
                           <div
                             class="message-text"
                             [innerHTML]="renderText(message.text)"
@@ -866,11 +824,59 @@
                 }
               </div>
             }
+            @if (queuedMessages().length) {
+              <details class="queued-message-list">
+                <summary>{{ queuedMessages().length }} falas na sequência</summary>
+                <ol>
+                  @for (draft of queuedMessages(); track draft.id; let index = $index) {
+                    <li>
+                      <span class="queued-message-order">{{ index + 1 }}</span>
+                      <span class="queued-message-color" [style.backgroundColor]="draft.speakerColor"></span>
+                      <div class="queued-message-copy">
+                        <strong>{{ draft.speakerName }}</strong>
+                        <small>{{ draft.sceneTitle }}</small>
+                        @if (draft.text.trim()) {
+                          <span>{{ draft.text }}</span>
+                        }
+                        @if (draft.attachments.length) {
+                          <small>{{ draft.attachments.length }} imagem(ns)</small>
+                        }
+                      </div>
+                      @if (editingDraftId() === draft.id) {
+                        <button
+                          type="button"
+                          class="queued-message-edit"
+                          [disabled]="sending() || hasPending()"
+                          (click)="cancelQueuedEdit()"
+                        >Cancelar</button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="queued-message-edit"
+                          [disabled]="sending() || hasPending()"
+                          (click)="editQueuedMessage(draft.id)"
+                          [attr.aria-label]="'Editar fala de ' + draft.speakerName"
+                        >Editar</button>
+                      }
+                      <button
+                        type="button"
+                        class="queued-message-remove"
+                        [attr.aria-label]="'Remover fala de ' + draft.speakerName"
+                        [disabled]="sending() || hasPending()"
+                        (click)="removeQueuedMessage(draft.id)"
+                      >
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                      </button>
+                    </li>
+                  }
+                </ol>
+              </details>
+            }
             <div class="composer-context">
-              <label
-                >Cena<select
+              <label class="scene-picker"
+                ><span>Cena</span><select aria-label="Cena da mensagem"
                   [value]="sceneId()"
-                  (change)="selectScene(readValue($event))"
+                  (change)="selectComposerScene(readValue($event))"
                   [disabled]="sending() || hasPending()"
                 >
                   <option value="">Escolha a cena</option>
@@ -878,36 +884,69 @@
                     <option [value]="scene.id">{{ scene.title }}</option>
                   }
                 </select></label
-              ><label
-                >Locutor<select
-                  [value]="speakerId()"
-                  (change)="speakerId.set(readValue($event))"
+              ><div class="speaker-picker">
+                @let chosenSpeaker = selectedSpeaker();
+                <button
+                  type="button"
+                  class="speaker-picker-trigger"
+                  [attr.aria-expanded]="speakerPickerOpen()"
+                  aria-haspopup="listbox"
+                  aria-controls="speaker-results"
+                  [attr.aria-label]="'Locutor: ' + (chosenSpeaker?.revision?.name || 'nenhum escolhido') + '. Selecionar locutor'"
                   [disabled]="sending() || hasPending()"
+                  (click)="speakerPickerOpen.set(!speakerPickerOpen())"
                 >
-                  <option value="">Escolha quem fala</option>
-                  @for (speaker of visibleSpeakers(); track speaker.id) {
-                    <option [value]="speaker.id">
-                      {{ speaker.revision.name }}
-                    </option>
-                  }
-                </select></label
-              ><button
+                  <span class="speaker-picker-color" [style.backgroundColor]="chosenSpeaker?.revision?.color || 'transparent'"></span>
+                  <span class="speaker-picker-label">{{ chosenSpeaker?.revision?.name || 'Escolher locutor' }}</span>
+                  <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                @if (speakerPickerOpen()) {
+                  <div class="speaker-picker-popover">
+
+                    <div class="speaker-picker-results" id="speaker-results" role="listbox" aria-label="Locutores desta cena">
+                      @for (speaker of visibleSpeakers(); track speaker.id) {
+                        <button type="button" role="option" [attr.aria-selected]="speakerId() === speaker.id" class="speaker-option" (click)="chooseSpeaker(speaker.id)">
+                          @if (speaker.revision.portraitAssetId; as portraitId) {
+                            <story-image [storyId]="current.story.id" [assetId]="portraitId" [description]="'Retrato de ' + speaker.revision.name" [avatar]="true" />
+                          } @else {
+                            <span class="speaker-option-avatar">{{ speaker.revision.name.slice(0, 1).toLocaleUpperCase() }}</span>
+                          }
+                          <span>{{ speaker.revision.name }}</span>
+                          <span class="speaker-option-color" [style.backgroundColor]="speaker.revision.color"></span>
+                        </button>
+                      } @empty {
+                        <p class="speaker-search-empty">Nenhum locutor nesta cena.</p>
+                      }
+                    </div>
+                    <button type="button" class="speaker-share-action" (click)="library()" [disabled]="!client.canWrite() || !sceneId()">
+                      <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+                      Usar personagem ou PNJ do meu Lorekit
+                    </button>
+                  </div>
+                }
+              </div><button
                 type="button"
+                class="composer-tool-button"
                 (click)="
                   panel.set(panel() === 'locutors' ? 'none' : 'locutors')
                 "
                 [disabled]="!client.canWrite() || !sceneId()"
+                aria-label="Gerenciar locutores da cena"
+                title="Gerenciar locutores"
               >
-                Locutores</button
+                <i class="fa-solid fa-user-pen" aria-hidden="true"></i></button
               ><button
                 type="button"
+                class="composer-tool-button"
                 (click)="panel.set(panel() === 'roll' ? 'none' : 'roll')"
                 [disabled]="!speakerId()"
+                aria-label="Ficha e rolagens"
+                title="Ficha e rolagens"
               >
-                Ficha e rolagens
-              </button>
+                <i class="fa-solid fa-dice-d10" aria-hidden="true"></i></button>
             </div>
-            <div class="format-tools" aria-label="Formatação">
+            <div class="composer-editor">
+              <div class="format-tools" aria-label="Formatação">
               <button
                 type="button"
                 aria-label="Negrito"
@@ -934,18 +973,19 @@
                 <summary>Prévia</summary>
                 <div [innerHTML]="renderText(text.value)"></div>
               </details>
-            </div>
+              </div>
             <label class="sr-only" for="rp-message">Mensagem</label
             ><textarea
               #composer
               id="rp-message"
               [formControl]="text"
-              rows="3"
+              rows="2"
               maxlength="20000"
-              placeholder="Escreva a próxima resposta da História…"
+              [placeholder]="editingDraftId() ? 'Edite esta fala…' : 'Escreva a próxima resposta da História…'"
               [readOnly]="sending() || hasPending()"
               (keydown.control.enter)="keyboardSend($event)"
             ></textarea>
+            </div>
             @if (attachments().length) {
               <ul class="attachment-list">
                 @for (attachment of attachments(); track attachment.id) {
@@ -976,22 +1016,48 @@
                   " /></label
               ><span class="composer-hint">{{
                 client.canWrite()
-                  ? 'Até 4 imagens · 10 MiB cada · Ctrl+Enter para enviar'
+                  ? 'Até 4 imagens por fala · 10 MiB cada · Ctrl+Enter envia a sequência'
                   : 'Somente consulta. Reconecte para enviar.'
               }}</span
               ><button
+                type="button"
+                class="queue-message-button"
+                [attr.aria-label]="editingDraftId() ? 'Salvar fala editada' : 'Adicionar fala à sequência'"
+                (click)="addComposerMessage()"
+                [disabled]="
+                  sending() ||
+                  hasPending() ||
+                  !client.canWrite() ||
+                  !sceneId() ||
+                  !speakerId() ||
+                  !hasComposerMessage()
+                "
+              >
+                <i [class]="editingDraftId() ? 'fa-solid fa-check' : 'fa-solid fa-plus'" aria-hidden="true"></i>
+                <span>{{ editingDraftId() ? 'Salvar fala' : 'Adicionar fala' }}</span>
+              </button>
+              @if (editingDraftId()) {
+                <button
+                  type="button"
+                  class="queue-message-button"
+                  (click)="cancelQueuedEdit()"
+                  [disabled]="sending() || hasPending()"
+                >Cancelar edição</button>
+              }
+              <button
                 type="button"
                 class="primary send-button"
                 (click)="send()"
                 [disabled]="
                   sending() ||
                   !client.canWrite() ||
-                  !sceneId() ||
-                  !speakerId() ||
-                  hasPending()
+                  hasPending() ||
+                  messageCount() === 0 ||
+                  (editingDraftId() && !hasComposerMessage()) ||
+                  (hasComposerMessage() && (!sceneId() || !speakerId()))
                 "
               >
-                {{ sending() ? 'Enviando…' : 'Enviar' }}
+                {{ sendLabel() }}
                 <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
               </button>
             </footer>
@@ -1015,14 +1081,7 @@
             }}
           </p>
           @if (!requestedStory()) {
-            <button
-              type="button"
-              class="primary"
-              (click)="newStory.set(true); sidebar.set(true)"
-              [disabled]="!client.canWrite()"
-            >
-              Criar História
-            </button>
+            <p>Abra uma História no índice lateral ou use o botão + para criar uma nova.</p>
           }
         </div>
       }

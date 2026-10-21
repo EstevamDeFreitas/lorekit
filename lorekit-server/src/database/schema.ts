@@ -353,6 +353,7 @@ export const storyMessages = appSchema.table('story_messages', {
   text: text('text').notNull().default(''),
   roll: jsonb('roll').$type<StoryRollRecord>(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  editedAt: timestamp('edited_at', { withTimezone: true }),
 }, table => [uniqueIndex('story_messages_sequence_uidx').on(table.storyId, table.sequence), unique('story_messages_scope_uidx').on(table.storyId, table.id),
   index('story_messages_scene_idx').on(table.storyId, table.sceneId, table.sequence),
   foreignKey({ columns: [table.storyId, table.sceneId], foreignColumns: [storyScenes.storyId, storyScenes.id] }),

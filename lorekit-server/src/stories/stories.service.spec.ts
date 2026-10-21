@@ -18,6 +18,7 @@ import { StorySettingsService } from './story-settings.service';
 import sharp from 'sharp';
 import { createHash } from 'node:crypto';
 import { StoryExportService } from './story-export.service';
+import { messageMarkdown } from '../shared/ironpaw';
 
 describe('Stories PostgreSQL integration', () => {
   let database: Awaited<ReturnType<typeof createStoryTestDatabase>>;
@@ -164,6 +165,49 @@ describe('Stories PostgreSQL integration', () => {
     expect((await service.messages(current.id, owner)).items[0]?.text).toBe(
       input.text,
     );
+  });
+  it('lets authors and story owners edit text while preserving an edited marker', async () => {
+    const { current, scene, speaker } = await setup();
+    for (const userId of [guest, stranger]) {
+      const invite = await service.invite(current.id, owner);
+      await service.acceptInvite(invite.token, userId);
+    }
+    const authored = await service.send(current.id, guest, {
+      ...operation(),
+      sceneId: scene.id,
+      speakerId: speaker.id,
+      revisionId: speaker.revision.id,
+      text: 'Texto inicial.',
+      assetIds: [],
+    });
+    await expect(
+      service.editMessage(current.id, authored.id, stranger, {
+        ...operation(),
+        text: 'Alteração de outro participante.',
+      }),
+    ).rejects.toThrow();
+    const editInput = { ...operation(), text: 'Texto revisado.' };
+    const [edited, repeated] = await Promise.all([
+      service.editMessage(current.id, authored.id, guest, editInput),
+      service.editMessage(current.id, authored.id, guest, editInput),
+    ]);
+    expect(edited.id).toBe(authored.id);
+    expect(edited.text).toBe('Texto revisado.');
+    expect(edited.editedAt).toEqual(expect.any(String));
+    expect(repeated.editedAt).toBe(edited.editedAt);
+    const ownerEdit = await service.editMessage(
+      current.id,
+      authored.id,
+      owner,
+      { ...operation(), text: 'Revisão do dono.' },
+    );
+    expect(ownerEdit.text).toBe('Revisão do dono.');
+    expect(messageMarkdown(ownerEdit, (assetId) => assetId)).toContain('editada');
+    expect(
+      (await service.events(current.id, stranger)).items.some(
+        (event) => event.type === 'message.updated',
+      ),
+    ).toBe(true);
   });
   it('consumes a shared invitation once under concurrent acceptance', async () => {
     const current = await story(),

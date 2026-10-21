@@ -49,7 +49,7 @@ export function messageMarkdown(
   message: StoryMessage,
   imageUrl: (assetId: string) => string,
 ): string {
-  let output = `**${escapeMarkdown(message.speaker.name)}** · ${escapeMarkdown(message.authorName)} · ${message.createdAt}\n\n`;
+  let output = `**${escapeMarkdown(message.speaker.name)}** · ${escapeMarkdown(message.authorName)} · ${message.createdAt}${message.editedAt ? ' · editada' : ''}\n\n`;
   if (message.text) output += `${storyTextMarkdown(message.text)}\n\n`;
   for (const asset of message.assets)
     output += `![${escapeMarkdown(asset.name)}](${imageUrl(asset.id)})\n\n`;

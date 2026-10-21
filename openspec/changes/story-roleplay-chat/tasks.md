@@ -46,6 +46,9 @@
 
 - [ ] 7.1 Implementar listagem/criação de Histórias e tela responsiva com índice de cenas, divisores e leitura por janelas; verificar navegação, posição preservada, teclado e apresentação desktop/móvel.
 - [ ] 7.2 Implementar seletor de locutores com nome/foto/cor, criação incidental e prévia de compartilhamento de personagens/PNJs; verificar autoria separada, cor com alternativa textual e cópia da cena independente do catálogo.
+- [ ] 7.6 Integrar Histórias ao painel lateral nativo do Lorekit com índice de continuidade para cenas; verificar abertura da aba, links diretos e seleção por cena em web/desktop.
+- [ ] 7.7 Compactar cabeçalho e compositor, ampliar a área de leitura e adicionar busca local de locutores com identidade visual; verificar estados responsivos, foco por teclado e uso com histórico extenso.
+- [ ] 7.8 Permitir ao convidado publicar como locutor uma projeção explícita de personagem/PNJ da própria biblioteca; verificar em conta convidada que a origem permanece privada e que a projeção fica disponível na História.
 - [x] 7.3 Implementar compositor com formatação permitida, prévia e anexos em destaque/ampliação; verificar rejeição de mensagem vazia, ausência de execução de HTML e limites visíveis antes de enviar.
 - [x] 7.4 Implementar estados enviando/confirmado/resultado incerto/erro, reconciliação por operação e tentativa manual online; verificar confirmação perdida sem duplicação e rascunho nunca publicado automaticamente após reconexão.
 - [x] 7.5 Implementar painel Ironpaw baseado na revisão do locutor e cartões persistentes de testes/ataques/defesas; verificar fórmula/fontes antes de executar, locutor sem ficha, competência única de PNJ e histórico estável após atualizar a projeção.

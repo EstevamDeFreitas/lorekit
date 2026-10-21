@@ -72,6 +72,7 @@ describe('TabManagerService persistence', () => {
 
   it('keeps the outgoing tab active when its scoped save flush fails, then retries successfully', async () => {
     const { service } = createService();
+    const errorLog = spyOn(console, 'error');
     await service.openTab('Document', 'document-1', 'Primeiro', 'fa-file');
     await service.openTab('Document', 'document-2', 'Segundo', 'fa-file');
     const pane = service.snapshot.panes[0];
@@ -88,6 +89,10 @@ describe('TabManagerService persistence', () => {
     expect(failed).toBeFalse();
     expect(service.snapshot.panes[0].activeTabId).toBe(outgoingId);
     expect(service.transitionError()).toBeTrue();
+    expect(errorLog).toHaveBeenCalledOnceWith(
+      'TabManagerService: could not flush pending tab saves',
+      jasmine.any(Error),
+    );
 
     window.removeEventListener('lorekit:flush-pending-saves', rejectFlush);
     const retried = await service.setActiveTab(pane.id, incomingId);

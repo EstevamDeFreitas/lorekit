@@ -56,6 +56,9 @@ export class StoryApiService {
     if (through) params = params.set('through', through);
     return this.get<StoryPage<StoryMessage>>(`stories/${id}/messages`, params);
   }
+  message(id: string, messageId: string) {
+    return this.get<StoryMessage>(`stories/${id}/messages/${messageId}`);
+  }
   events(id: string, after = '0') {
     return this.get<StoryPage<StoryEvent>>(
       `stories/${id}/events`,
@@ -101,6 +104,17 @@ export class StoryApiService {
   }
   send(id: string, input: StoryMessageInput) {
     return this.post<StoryMessage>(`stories/${id}/messages`, input);
+  }
+  editMessage(id: string, messageId: string, text: string) {
+    return firstValueFrom(
+      this.http
+        .patch<StoryMessage>(`${this.base}/stories/${id}/messages/${messageId}`, {
+          version: 1,
+          operationId: crypto.randomUUID(),
+          text,
+        })
+        .pipe(timeout(20_000)),
+    );
   }
   roll(id: string, input: StoryRollInput) {
     return this.post<StoryMessage>(`stories/${id}/rolls`, input);

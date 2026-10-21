@@ -1,0 +1,107 @@
+<section class="story-index" aria-label="Suas Histórias e cenas">
+  <header class="story-index-heading">
+    <div>
+      <h2>Suas Histórias</h2>
+      <p>{{ client.summaries().length }} disponíveis</p>
+    </div>
+    <app-icon-button
+      class="entity-list-create-button"
+      size="sm"
+      buttonType="secondaryActive"
+      icon="fa-solid fa-plus"
+      title="Criar História"
+      [disabled]="!client.canWrite()"
+      (click)="createOpen.set(!createOpen())"
+    ></app-icon-button>
+  </header>
+
+  @if (createOpen()) {
+    <form class="story-create" (submit)="$event.preventDefault(); create()">
+      <label for="story-title">Título da História</label>
+      <input id="story-title" [formControl]="title" maxlength="200" required />
+      @if (error()) { <p class="story-create-error" role="alert">{{ error() }}</p> }
+      <app-button
+        [label]="creating() ? 'Criando…' : 'Criar História'"
+        icon="fa-plus"
+        size="xs"
+        buttonType="primary"
+        [disabled]="creating() || !client.canWrite()"
+      ></app-button>
+    </form>
+  }
+
+  <nav class="story-index-list" aria-label="Histórias disponíveis">
+    @for (story of client.summaries(); track story.id) {
+      <div class="story-index-item" [class.story-index-item--selected]="activeStoryId() === story.id">
+        <a class="story-index-item-main" [routerLink]="['/stories', story.id]" (click)="closeMobileSidebar()">
+          <span class="story-index-glyph"><i class="fa-solid fa-book-open" aria-hidden="true"></i></span>
+          <span class="story-index-item-copy">
+            <span class="story-index-item-type">História principal</span>
+            <strong>{{ story.title }}</strong>
+          </span>
+          @if (story.unread) {
+            <span class="story-index-unread" [attr.aria-label]="story.unread + ' mensagens não lidas'">{{ story.unread }}</span>
+          }
+        </a>
+
+        @if (activeStoryId() === story.id) {
+          <div class="story-scene-list" aria-label="Continuações desta História">
+            @for (scene of client.current()?.scenes ?? []; track scene.id; let index = $index) {
+              <button
+                type="button"
+                class="story-scene-item"
+                [class.story-scene-item--selected]="activeSceneId() === scene.id"
+                (click)="openScene(story.id, scene.id)"
+              >
+                <span class="story-scene-glyph">{{ index + 1 }}</span>
+                <span>{{ scene.title }}</span>
+              </button>
+            } @empty {
+              <p class="story-index-empty-scene">Ainda não há cenas.</p>
+            }
+          </div>
+          <app-button
+            class="story-scene-add"
+            label="Nova cena"
+            icon="fa-plus"
+            size="xs"
+            buttonType="secondary"
+            [disabled]="creatingScene() || !client.canWrite() || !isCurrentStory(story.id)"
+            (click)="toggleSceneCreate(story.id)"
+          ></app-button>
+          @if (createSceneStoryId() === story.id) {
+            <form class="story-scene-create" (submit)="$event.preventDefault(); createScene(story.id)">
+              <label [for]="'scene-title-' + story.id">Título da cena</label>
+              <input
+                [id]="'scene-title-' + story.id"
+                [formControl]="sceneTitle"
+                maxlength="200"
+                required
+              />
+              @if (sceneError()) {
+                <p class="story-create-error" role="alert">{{ sceneError() }}</p>
+              }
+              <app-button
+                label="Criar cena"
+                icon="fa-plus"
+                size="xs"
+                buttonType="primary"
+                [disabled]="creatingScene() || !client.canWrite()"
+              ></app-button>
+            </form>
+          }
+        }
+      </div>
+    } @empty {
+      <div class="story-index-empty">
+        <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+        <strong>Nenhuma História por aqui</strong>
+        <span>As Histórias criadas ou aceitas por convite aparecem nesta lista.</span>
+      </div>
+    }
+  </nav>
+
+  @if (!client.canWrite()) {
+    <p class="story-index-footnote" role="status">Somente consulta. Conecte-se para criar e participar.</p>
+  }
+</section>

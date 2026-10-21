@@ -134,6 +134,12 @@ O despachante usa evento/instalação como chave de deduplicação, prioriza ses
 
 A entrega em serviços externos não é transacional com PostgreSQL: a deduplicação no dispositivo é necessária para evitar alertas repetidos após crash entre envio e gravação do recibo. A revogação é verificada imediatamente antes de cada envio; o servidor não consegue recolher um push já entregue ao serviço do navegador.
 
+### 9. Tela de RP integrada ao shell existente
+
+A tela de Histórias abre como aba de conteúdo no workspace atual e reaproveita o painel lateral compartilhado do Lorekit. A navegação da lateral representa a História como raiz e cada cena como uma continuação, permitindo endereços diretos a cenas sem criar uma segunda navegação paralela. O cabeçalho mantém o estado de conexão compacto e agrupa exportação, participantes, cenas e preferências em ações secundárias. O compositor concentra contexto, busca de locutor, formatação e texto em uma área curta, com expansão apenas quando a pessoa escreve mais. A busca de locutores é local à História e mostra a projeção visual compartilhada; a ação de publicar personagem parte da biblioteca autenticada do próprio participante e mantém a allowlist do contrato existente.
+
+Atualizações do histórico são agendadas em um único frame e reavaliam se o participante ainda está no fim antes de acompanhar mensagens novas. O carregamento de páginas anteriores preserva a mensagem de referência e o ajuste de rolagem atua somente na região do chat, sem rolar os ancestrais do workspace.
+
 ## Risks / Trade-offs
 
 - Cópias mecânicas ficam desatualizadas em relação à ficha -> revisão visível, atualização explícita com prévia e histórico imutável.

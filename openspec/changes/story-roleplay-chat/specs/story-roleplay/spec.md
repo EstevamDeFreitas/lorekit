@@ -30,6 +30,25 @@ Todos os participantes SHALL poder usar qualquer locutor disponível na Históri
 - **WHEN** o nome, a cor ou o retrato de um locutor muda
 - **THEN** as mensagens anteriores preservam sua representação original e novos envios usam a representação atualizada
 
+#### Scenario: Convidado disponibiliza seu próprio personagem
+- **WHEN** um participante convidado escolhe um locutor e disponibiliza um personagem ou PNJ da biblioteca da própria conta
+- **THEN** a História recebe somente a projeção aprovada para uso como locutor, sem conceder acesso ao cofre do convidado
+
+### Requirement: Navegação e composição integradas ao Lorekit
+A tela de RP SHALL usar o shell, a área de trabalho e o painel lateral existentes do Lorekit. O painel SHALL apresentar Histórias como raízes e suas cenas como continuações em um índice narrativo. A busca de locutores SHALL permitir localizar por nome e identificar cada resultado por retrato, nome e cor. O cabeçalho e o compositor SHALL preservar espaço para leitura, com ações secundárias agrupadas e formatação compacta. Atualizações de mensagens MUST NOT deslocar a leitura quando o participante está acima do fim; o carregamento de mensagens anteriores SHALL preservar a posição visível.
+
+#### Scenario: Navegar pelo índice do shell
+- **WHEN** um participante seleciona uma História ou uma de suas cenas na lateral existente do Lorekit
+- **THEN** a aba de Histórias abre no espaço de trabalho e a cena selecionada aparece como continuação ativa da História
+
+#### Scenario: Buscar locutor
+- **WHEN** há vários locutores disponíveis na cena e o participante digita uma busca
+- **THEN** o seletor mostra somente correspondências com retrato quando disponível, nome e cor
+
+#### Scenario: Receber mensagens enquanto lê conteúdo anterior
+- **WHEN** chegam mensagens novas enquanto o participante está lendo mensagens antigas ou carrega outra página do histórico
+- **THEN** a posição atual permanece estável e nenhuma área externa ao chat é rolada
+
 ### Requirement: Mensagens com texto simples e imagens em destaque
 O compositor SHALL aceitar texto com parágrafos, quebras de linha, negrito, itálico e citação, com prévia consistente com a leitura e exportação. SHALL aceitar uma ou mais imagens anexadas, inclusive junto com texto, apresentando-as em destaque no corpo da mensagem e permitindo ampliá-las. Conteúdo vazio sem imagem MUST ser recusado. HTML arbitrário e conteúdo executável MUST NOT ser executados. A interface SHALL informar limites de texto, quantidade, formato e tamanho de imagens antes de confirmar o envio.
 

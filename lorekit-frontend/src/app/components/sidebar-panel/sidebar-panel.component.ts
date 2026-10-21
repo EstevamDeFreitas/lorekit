@@ -12,6 +12,14 @@ interface SidebarSectionEntry {
 }
 
 const SIDEBAR_SECTIONS: Record<string, SidebarSectionEntry> = {
+  stories: {
+    label: 'Histórias',
+    icon: 'fa-solid fa-book-open',
+    loader: () =>
+      import('../../pages/stories/story-sidebar/story-sidebar.component').then(
+        m => m.StorySidebarComponent
+      ),
+  },
   world: {
     label: 'Mundos',
     icon: 'fa-solid fa-earth',

@@ -35,6 +35,7 @@ describe('Per-account story cache', () => {
     assets: [],
     roll: null,
     createdAt: new Date().toISOString(),
+    editedAt: null,
   };
   beforeEach(() => {
     original = window.electronAPI;
