@@ -219,7 +219,7 @@
               <app-combo-box label="Tipo" [items]="fieldTypeItems" compareProp="value" displayProp="label" [(comboValue)]="newFieldType"></app-combo-box>
 
               @if (newFieldType === 'options') {
-                <app-input label="Opções" [placeholder]="'Separe por ; (ex.: opção 1; opção 2)'" [(value)]="newFieldOptions"></app-input>
+                <app-options-editor [value]="newFieldOptions" (valueChange)="newFieldOptions = $event ?? ''"></app-options-editor>
               }
               @if (newFieldType === 'entity') {
                 <app-combo-box label="Entidade relacionada" [items]="entityTableOptions" [(comboValue)]="newFieldTargetEntityTable"></app-combo-box>
@@ -315,7 +315,7 @@
                       <app-input label="Nome do campo" [(value)]="field.name"></app-input>
                       <app-combo-box label="Tipo" [items]="fieldTypeItems" compareProp="value" displayProp="label" [comboValue]="field.fieldType || 'text'" (comboValueChange)="setDynamicFieldType(field, $event)"></app-combo-box>
                       @if (field.fieldType === 'options') {
-                        <app-input label="Opções" [placeholder]="'Separe por ;'" [(value)]="field.options"></app-input>
+                        <app-options-editor [(value)]="field.options"></app-options-editor>
                       }
                       @if (field.fieldType === 'entity') {
                         <app-combo-box label="Entidade relacionada" [items]="entityTableOptions" [comboValue]="field.targetEntityTable ?? ''" (comboValueChange)="field.targetEntityTable = $event"></app-combo-box>

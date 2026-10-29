@@ -3,6 +3,16 @@
   min-width: 0;
 }
 
+@media (min-width: 64rem) {
+  .editor-sidebar {
+    position: sticky;
+    top: 1rem;
+    align-self: start;
+    max-height: calc(100dvh - 8rem);
+    scrollbar-gutter: stable;
+  }
+}
+
 .grid-surface {
   position: relative;
   border: 1px solid var(--color-zinc-900);

@@ -19,6 +19,7 @@ import { ComboBoxComponent } from '../../../components/combo-box/combo-box.compo
 import { ConfirmService } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { InputComponent } from '../../../components/input/input.component';
 import { HexColorPickerComponent } from '../../../components/hex-color-picker/hex-color-picker.component';
+import { OptionsEditorComponent } from '../../../components/options-editor/options-editor.component';
 
 interface ParentScopeOption {
   parentEntityTable: string;
@@ -38,7 +39,7 @@ interface SelectOptionItem {
 
 @Component({
   selector: 'app-ui-field-config-editor',
-  imports: [CalendarFieldConfigComponent, NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent, InputComponent, HexColorPickerComponent],
+  imports: [CalendarFieldConfigComponent, NgStyle, ButtonComponent, IconButtonComponent, ComboBoxComponent, InputComponent, HexColorPickerComponent, OptionsEditorComponent],
   templateUrl: './ui-field-config-editor.component.html',
   styleUrl: './ui-field-config-editor.component.css',
 })
