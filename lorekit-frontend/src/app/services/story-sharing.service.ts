@@ -1,4 +1,5 @@
 import { Injectable, Injector, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   parseConditionImpact,
   parseStoryMechanics,
@@ -236,7 +237,16 @@ export class StorySharingService {
           description: ability.description || '',
         });
     }
-    result.mechanics = parseStoryMechanics({ kind: 'character', actions });
+    const life = object(sheet.lifepoints);
+    const point = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+    result.mechanics = parseStoryMechanics({ kind: 'character', actions, vitals: {
+      current: point(life['currentPoints']), maximum: point(life['maxPoints']),
+      temporary: point(life['temporaryCurrentPoints']),
+      conditions: conditions.map((condition) => {
+        const definition = definitions.find((entry) => entry.code === condition.code);
+        return `${definition?.label ?? condition.code} · ${CONDITION_SEVERITY_LABEL[condition.severity] ?? condition.severity}`;
+      }),
+    } });
     return result;
   }
 
@@ -278,6 +288,7 @@ export class StorySharingService {
       preview.mechanics?.kind === 'character'
         ? {
             kind: 'character' as const,
+            vitals: preview.mechanics.vitals,
             actions: preview.mechanics.actions.filter((action) =>
               actionIds.includes(action.id),
             ),
@@ -293,11 +304,22 @@ export class StorySharingService {
       portraitAssetId,
       mechanics,
     };
-    const published = await this.client.api.speaker(
-      storyId,
-      input,
-      existingSpeakerId,
-    );
+    let published;
+    try {
+      published = await this.client.api.speaker(storyId, input, existingSpeakerId);
+    } catch (error) {
+      if (mechanics?.kind === 'character' && mechanics.vitals &&
+          error instanceof HttpErrorResponse && error.status === 400 &&
+          error.error?.message === 'Campo não permitido.') {
+        throw new Error('O servidor recusou os dados da ficha. Ele pode estar em uma versão anterior; atualize e reinicie o servidor de Histórias antes de tentar novamente.');
+      }
+      throw error;
+    }
+    if (preview.source.kind === 'character') {
+      try {
+        localStorage.setItem(`story-sheet:${storyId}:${published.id}`, preview.source.id);
+      } catch { /* Sharing still succeeds if local storage is unavailable. */ }
+    }
     await this.client.refreshCurrent();
     return published;
   }

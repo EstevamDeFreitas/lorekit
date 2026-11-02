@@ -355,6 +355,36 @@ details > summary {
   padding: 0.4rem 0;
   color: var(--color-zinc-300, #d4d4d8);
 }
+.scene-workspace {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.combat-panel {
+  width: 15rem;
+  flex: 0 0 15rem;
+  overflow-y: auto;
+  padding: 1rem;
+  border-left: 1px solid var(--story-border);
+  background: var(--color-zinc-925, #141417);
+}
+.combat-panel h2 { margin: 0; font-size: 0.85rem; font-weight: 700; }
+.combat-caption, .combat-empty { color: var(--story-muted); font-size: 0.7rem; line-height: 1.5; }
+.combat-caption { margin: 0.25rem 0 0.8rem; }
+.combatant { padding: 0.75rem 0; border-top: 1px solid var(--story-border); }
+.combatant-heading, .combatant-life { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.combatant-heading strong { overflow-wrap: anywhere; font-size: 0.8rem; }
+.combatant-heading span, .combatant p, .combatant-life { color: var(--color-zinc-300, #d4d4d8); font-size: 0.7rem; }
+.combatant-heading span { white-space: nowrap; color: var(--story-muted); }
+.combatant-life { margin-top: 0.5rem; }
+.combatant-life strong { color: var(--color-zinc-100, #f4f4f5); font-variant-numeric: tabular-nums; }
+.combatant p { margin: 0.35rem 0 0; overflow-wrap: anywhere; line-height: 1.4; }
+.combat-sheet-link { margin-top: 0.5rem; padding: 0.25rem 0; border: 0; background: transparent; color: var(--color-yellow-300, #fde047); font-size: 0.7rem; }
+.combat-sheet-link:hover:not(:disabled) { background: transparent; text-decoration: underline; }
+@container (max-width: 700px) {
+  .scene-workspace { flex-direction: column-reverse; }
+  .combat-panel { width: auto; flex: 0 1 auto; max-height: 12rem; border-left: 0; border-bottom: 1px solid var(--story-border); }
+}
 .timeline {
   flex: 1;
   min-height: 0;

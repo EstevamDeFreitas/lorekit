@@ -72,8 +72,14 @@ export interface StoryCharacterAction {
   sourceValue: number;
   impacts: ConditionImpact[];
 }
+export interface StoryVitals {
+  current: number | null;
+  maximum: number | null;
+  temporary: number | null;
+  conditions: string[];
+}
 export type StoryMechanics =
-  | { kind: 'character'; actions: StoryCharacterAction[] }
+  | { kind: 'character'; actions: StoryCharacterAction[]; vitals?: StoryVitals }
   | { kind: 'npc'; definition: NpcDefinition };
 export interface StorySpeakerRevision {
   id: string;
@@ -435,7 +441,7 @@ export function parseConditionImpacts(value: unknown): ConditionImpact[] {
 
 export function parseStoryMechanics(value: unknown): StoryMechanics | null {
   if (value === null) return null;
-  const mechanics = contractRecord(value, ['kind', 'actions', 'definition']);
+  const mechanics = contractRecord(value, ['kind', 'actions', 'definition', 'vitals']);
   if (mechanics['kind'] === 'npc') {
     if ('actions' in mechanics)
       throw new StoryContractError('Ações de personagem não pertencem a PNJ.');
@@ -490,7 +496,23 @@ export function parseStoryMechanics(value: unknown): StoryMechanics | null {
       };
     },
   );
-  return { kind: 'character', actions };
+  let vitals: StoryVitals | undefined;
+  if (mechanics['vitals'] !== undefined) {
+    const raw = contractRecord(mechanics['vitals'], ['current', 'maximum', 'temporary', 'conditions']);
+    const point = (value: unknown): number | null => {
+      if (value === null) return null;
+      if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 10000)
+        throw new StoryContractError('Valor de vida inválido.');
+      return value;
+    };
+    if (!Array.isArray(raw['conditions']) || raw['conditions'].length > 100)
+      throw new StoryContractError('Lista de condições inválida.');
+    vitals = {
+      current: point(raw['current']), maximum: point(raw['maximum']), temporary: point(raw['temporary']),
+      conditions: raw['conditions'].map((condition: unknown) => contractString(condition, 'Condição', 200)),
+    };
+  }
+  return { kind: 'character', actions, ...(vitals ? { vitals } : {}) };
 }
 
 export function parseStorySpeakerInput(value: unknown): StorySpeakerInput {

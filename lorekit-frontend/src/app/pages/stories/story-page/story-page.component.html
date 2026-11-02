@@ -592,6 +592,7 @@
               }
             </section>
           }
+          <div class="scene-workspace">
           <div
             #timeline
             class="timeline"
@@ -804,6 +805,31 @@
                 </button>
               </div>
             }
+          </div>
+          @if (sceneId()) {
+            <aside class="combat-panel" aria-label="Vida e condições da cena">
+              <h2>Na cena</h2>
+              <p class="combat-caption">Última revisão compartilhada</p>
+              @for (entry of sceneCombatants(); track entry.speaker.id) {
+                <div class="combatant">
+                  <div class="combatant-heading">
+                    <strong>{{ entry.speaker.revision.name }}</strong>
+                    <span>{{ entry.speaker.kind === 'npc' ? 'PNJ' : 'Personagem' }}</span>
+                  </div>
+                  <div class="combatant-life"><span>Vida</span><strong>{{ entry.current ?? '—' }} / {{ entry.maximum ?? '—' }}</strong></div>
+                  @if (entry.temporary) { <p>Vida temporária: {{ entry.temporary }}</p> }
+                  <p>{{ entry.hasConditions ? (entry.conditions.length ? entry.conditions.join(', ') : 'Sem condições') : 'Condições não informadas' }}</p>
+                  @if (entry.speaker.kind === 'character') {
+                    <button type="button" class="combat-sheet-link" (click)="openCombatantSheet(entry.speaker.id, entry.speaker.revision.name)">
+                      <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> Abrir ficha
+                    </button>
+                  }
+                </div>
+              } @empty {
+                <p class="combat-empty">Os personagens e PNJs com ficha aparecem aqui ao participar da cena.</p>
+              }
+            </aside>
+          }
           </div>
           <section class="composer" aria-label="Escrever mensagem">
             @if (client.uncertain().length) {

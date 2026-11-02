@@ -26,6 +26,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   buildNpcRoll,
+  calculateNpc,
   buildRollFormula,
   buildRollPreview,
   npcRollActions,
@@ -49,6 +50,7 @@ import {
 } from '../../../services/story-sharing.service';
 import { AuthService } from '../../../services/auth.service';
 import { StoryImageComponent } from '../story-image/story-image.component';
+import { TabManagerService } from '../../../services/tab-manager.service';
 
 type Attachment = StoryDraftAttachment;
 
@@ -72,6 +74,7 @@ export class StoryPageComponent implements AfterViewInit {
   readonly notifications = inject(StoryNotificationsService);
   readonly auth = inject(AuthService);
   private readonly sharing = inject(StorySharingService);
+  private readonly tabs = inject(TabManagerService);
   private readonly navigation = inject(StoryNavigationService);
   private readonly tab = inject(WORKSPACE_TAB_CONTEXT, { optional: true });
   readonly active = computed(() => this.tab?.active() ?? true);
@@ -152,6 +155,29 @@ export class StoryPageComponent implements AfterViewInit {
           (speaker) => !speaker.sceneId || speaker.sceneId === this.sceneId(),
         ) ?? [],
   );
+  readonly sceneCombatants = computed(() => {
+    const scene = this.sceneId();
+    const messages = this.client.messages().filter((message) => message.sceneId === scene);
+    return this.visibleSpeakers().filter((speaker) =>
+      !!speaker.revision.mechanics && (speaker.sceneId === scene || speaker.id === this.speakerId() || messages.some((message) => message.speaker.speakerId === speaker.id)),
+    ).map((speaker) => {
+      const mechanics = speaker.revision.mechanics!;
+      const vitals = mechanics.kind === 'character' ? mechanics.vitals : undefined;
+      let npcMaximum: number | null = null;
+      if (mechanics.kind === 'npc') {
+        try { npcMaximum = calculateNpc(mechanics.definition)?.life ?? null; } catch { /* Invalid older revision. */ }
+      }
+      return { speaker, current: vitals?.current ?? null, maximum: vitals?.maximum ?? npcMaximum,
+        temporary: vitals?.temporary ?? null, conditions: vitals?.conditions ?? [], hasConditions: !!vitals };
+    });
+  });
+  openCombatantSheet(speakerId: string, name: string): void {
+    const storyId = this.client.current()?.story.id;
+    let characterId: string | null = null;
+    try { characterId = storyId ? localStorage.getItem(`story-sheet:${storyId}:${speakerId}`) : null; } catch { /* Fall back to the sheet list. */ }
+    if (characterId) this.tabs.openTab('CharacterSheet', characterId, name, 'fa-solid fa-user');
+    else void this.router.navigate(['/app/character-sheet']);
+  }
   readonly selectedSpeaker = computed(
     () =>
       this.visibleSpeakers().find(

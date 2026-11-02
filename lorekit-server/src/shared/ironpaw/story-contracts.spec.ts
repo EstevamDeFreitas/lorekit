@@ -18,6 +18,18 @@ const message = {
   assetIds: [],
 };
 describe('Story versioned contracts', () => {
+  it('accepts a character revision with sheet vitals and rejects unknown fields', () => {
+    const vitals = { current: 3.5, maximum: 6, temporary: 1, conditions: ['Ferido · Leve'] };
+    const input = {
+      version: 1, operationId: id, sceneId: null, kind: 'character',
+      name: 'Herói', color: '#ffffff', portraitAssetId: null,
+      mechanics: { kind: 'character', actions: [], vitals },
+    };
+    expect(parseStorySpeakerInput(input).mechanics).toEqual(input.mechanics);
+    expect(() => parseStorySpeakerInput({ ...input, mechanics: {
+      ...input.mechanics, vitals: { ...vitals, secret: true },
+    } })).toThrow('Campo não permitido.');
+  });
   it('validates locutor scope and refuses private character fields', () => {
     const speaker = {
       version: 1,

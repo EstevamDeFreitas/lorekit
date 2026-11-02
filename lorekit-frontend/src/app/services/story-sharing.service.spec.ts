@@ -11,6 +11,23 @@ import { IrpwCharacterSheetService } from './irpw-character-sheet.service';
 import { ImageService } from './image.service';
 
 describe('Explicit story projections', () => {
+  it('publishes the sheet vitals along with the selected actions', async () => {
+    const api = { speaker: jasmine.createSpy().and.resolveTo({ id: 'speaker' }) };
+    const client = { api, requireOnline: () => {}, current: () => ({ story: { id: 'story' } }), refreshCurrent: async () => {} };
+    TestBed.configureTestingModule({ providers: [
+      StorySharingService,
+      { provide: DbProvider, useValue: { ready: signal(true), readOnly: signal(false) } },
+      { provide: WorkspaceRuntimeService, useValue: {} },
+      { provide: StoryClientService, useValue: client },
+    ] });
+    const vitals = { current: 3, maximum: 6, temporary: 1, conditions: ['Ferido · Leve'] };
+    await TestBed.inject(StorySharingService).publish({
+      source: { id: 'hero', kind: 'character', name: 'Herói' }, color: '#ffffff', portrait: null,
+      mechanics: { kind: 'character', actions: [], vitals },
+    }, 'Herói', '#ffffff', false, [], null);
+    expect(api.speaker.calls.mostRecent().args[1].mechanics.vitals).toEqual(vitals);
+    localStorage.removeItem('story-sheet:story:speaker');
+  });
   it('omits private character fields and NPC notes without opening another workspace', () => {
     const definition = createNpcDefinition();
     definition.notes = 'PRIVATE NPC NOTES';
