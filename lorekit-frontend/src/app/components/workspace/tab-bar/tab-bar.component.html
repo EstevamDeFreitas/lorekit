@@ -1,6 +1,18 @@
 <div
   class="workspace-tab-bar flex h-9 w-full min-w-0 shrink-0 flex-row items-stretch overflow-hidden bg-zinc-925"
   (mousedown)="tabManager.setFocusedPane(pane().id)">
+  <div class="mobile-tab-header">
+    <span class="mobile-tab-current">
+      @for (tab of pane().tabs; track tab.id) {
+        @if (isActiveTab(tab)) { <i [class]="tab.icon" aria-hidden="true"></i> {{ tab.title }} }
+      }
+      @if (!pane().activeTabId) { Nenhuma guia aberta }
+    </span>
+    <button type="button" class="mobile-tab-switcher-button" (click)="tabSwitcherOpen.set(true)"
+      [attr.aria-label]="'Mostrar guias abertas: ' + pane().tabs.length" aria-haspopup="dialog">
+      <i class="fa-regular fa-clone" aria-hidden="true"></i><span>{{ pane().tabs.length }}</span>
+    </button>
+  </div>
   <div
     #tabScroll
     class="workspace-tab-scroll flex min-w-0 flex-1 flex-row items-stretch overflow-x-auto overflow-y-hidden"
@@ -55,6 +67,28 @@
     </button>
   </div>
 </div>
+
+@if (tabSwitcherOpen() && isMobileViewport()) {
+  <div class="mobile-tab-overlay" (click)="tabSwitcherOpen.set(false)">
+    <section class="mobile-tab-sheet" role="dialog" aria-modal="true" aria-label="Guias abertas" (click)="$event.stopPropagation()">
+      <header class="mobile-tab-sheet-header">
+        <div><h2>Guias abertas</h2><p>Escolha uma guia para continuar</p></div>
+        <button type="button" class="mobile-tab-dismiss" aria-label="Fechar lista de guias" (click)="tabSwitcherOpen.set(false)"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </header>
+      <div class="mobile-tab-grid">
+        @for (tab of pane().tabs; track tab.id) {
+          <div class="mobile-tab-card" [class.mobile-tab-card--active]="isActiveTab(tab)">
+            <button type="button" class="mobile-tab-card-select" [attr.aria-current]="isActiveTab(tab) ? 'page' : null" (click)="selectMobileTab(tab)">
+              <i [class]="tab.icon" aria-hidden="true"></i><span>{{ tab.title }}</span>
+              @if (tab.isDirty) { <small>Alterações não salvas</small> }
+            </button>
+            <button type="button" class="mobile-tab-card-close" [attr.aria-label]="'Fechar guia ' + tab.title" (click)="closeTab($event, tab.id)"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+          </div>
+        } @empty { <p class="mobile-tab-empty">Nenhuma guia aberta.</p> }
+      </div>
+    </section>
+  </div>
+}
 
 @if (contextMenu()) {
   <div

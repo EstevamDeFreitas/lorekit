@@ -1,7 +1,8 @@
-<div class="config-grid-scroll scrollbar-dark w-full p-1" appMobilePinchZoom>
+<div class="config-grid-scroll scrollbar-dark w-full p-1">
   <div class="config-grid" [style.grid-template-columns]="gridColumns()" [style.grid-auto-rows]="gridRows()" [style.min-height]="gridMinHeight()">
     @for (item of visibleItems(); track item.id) {
       <div class="config-grid-item"
+        [class.config-grid-item--large]="item.kind === 'field' && (getTokenMetadata(item.token)?.control === 'editor' || getTokenMetadata(item.token)?.control === 'image' || getTokenMetadata(item.token)?.control === 'list' || getTokenMetadata(item.token)?.control === 'chart')"
         [class.configured-field--colored]="item.kind === 'field' && !!item.color"
         [class.config-grid-item--separator-horizontal]="item.kind === 'separator' && item.orientation === 'horizontal' && item.row > 1"
         [class.config-grid-item--separator-vertical]="item.kind === 'separator' && item.orientation === 'vertical' && item.col > 1"

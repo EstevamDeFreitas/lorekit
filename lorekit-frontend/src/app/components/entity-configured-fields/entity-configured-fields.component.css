@@ -17,5 +17,12 @@
 :host-context(html[data-lorekit-glass]) .separator-line { opacity: 0.58; }
 :host-context(html[data-lorekit-glass]) .separator-label { opacity: 0.76; }
 @media (max-width: 767px) {
-  .config-grid { min-width: 1080px; zoom: var(--mobile-grid-zoom, 1); }
+  .config-grid-scroll { overflow-x: visible; }
+  .config-grid { display: flex; flex-direction: column; gap: 1rem; min-height: 0 !important; }
+  .config-grid-item { overflow: visible; }
+  .config-grid-item--large { min-height: 15rem; }
+  .config-grid-item--separator-horizontal, .config-grid-item--separator-vertical { transform: none; }
+  .separator, .separator--vertical { flex-direction: row; width: 100%; height: auto; min-height: 1.5rem; }
+  .separator--vertical .separator-line { width: auto; height: 1px; }
+  .separator--vertical .separator-label { transform: none; margin: 0; white-space: normal; }
 }

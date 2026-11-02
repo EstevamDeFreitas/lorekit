@@ -4,7 +4,7 @@
   <div class="relative flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden" (touchstart)="onLayoutTouchStart($event)" (touchend)="onLayoutTouchEnd($event)">
 
     <!-- Activity bar (icon strip) -->
-    <div role="navigation" aria-label="Navegação principal" class="activity-navigation">
+    <div role="navigation" aria-label="Navegação principal" class="activity-navigation" [class.activity-navigation--mobile-visible]="mobileNavigationVisible()">
       <div class="activity-navigation__main scrollbar-hide">
         <div class="activity-navigation__logo">
           <img src="assets/lorekit-logo.png" alt="Lorekit">
@@ -29,7 +29,7 @@
             [active]="layout.activeSidebarSection === 'timeline'"
             activeColor="mist-400"
             (click)="tabManager.setActiveSidebarSection('timeline')"></app-nav-button>
-          <app-nav-button [label]="'Moodboards'" [showLabel]="false" [icon]="'fa-solid fa-table-cells-large'" size="xl" [fullWidth]="true" [direction]="'right'"
+          <app-nav-button class="mobile-unavailable" [label]="'Moodboards'" [showLabel]="false" [icon]="'fa-solid fa-table-cells-large'" size="xl" [fullWidth]="true" [direction]="'right'"
             [active]="layout.activeSidebarSection === 'moodboard'"
             activeColor="pink-400"
             (click)="tabManager.setActiveSidebarSection('moodboard')"></app-nav-button>
@@ -53,7 +53,7 @@
             [active]="layout.activeSidebarSection === 'object'"
             activeColor="rose-400"
             (click)="tabManager.setActiveSidebarSection('object')"></app-nav-button>
-          <app-nav-button [label]="'Relações'" [showLabel]="false" [icon]="'fa-solid fa-share-nodes'" size="xl" [fullWidth]="true" [direction]="'right'"
+          <app-nav-button class="mobile-unavailable" [label]="'Relações'" [showLabel]="false" [icon]="'fa-solid fa-share-nodes'" size="xl" [fullWidth]="true" [direction]="'right'"
             activeColor="green-400"
             (click)="tabManager.setActiveSidebarSection('relations')"></app-nav-button>
           <div class="activity-navigation__divider" aria-hidden="true"></div>

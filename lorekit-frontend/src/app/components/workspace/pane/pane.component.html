@@ -31,6 +31,7 @@
     @let activeTab = getActiveTab();
     <div
       class="workspace-tab-viewport absolute inset-0 overflow-y-auto overflow-x-hidden scrollbar-dark"
+      [class.mobile-unsupported-content]="!!activeTab && isMobileUnsupported(activeTab)"
       [class.px-3]="!activeTab || !usesFullBleedEditor(activeTab.entityType, activeTab.entityId)"
       [class.workspace-tab-full-bleed]="!!activeTab && usesFullBleedEditor(activeTab.entityType, activeTab.entityId)">
       @if (activeTab && !activeTab.resolvedComponent) {
@@ -40,5 +41,12 @@
       }
       <ng-container #tabViewOutlet></ng-container>
     </div>
+    @if (activeTab && isMobileUnsupported(activeTab)) {
+      <div class="mobile-unsupported-notice" role="status">
+        <i class="fa-solid fa-display" aria-hidden="true"></i>
+        <p>Esta tela está disponível em telas maiores.</p>
+        <span>Abra outra aba para continuar no celular.</span>
+      </div>
+    }
   }
 </div>

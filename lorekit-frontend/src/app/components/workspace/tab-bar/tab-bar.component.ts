@@ -26,6 +26,7 @@ import { getEntityStyle } from '../../../models/entity-colors';
   selector: 'app-workspace-tab-bar',
   host: {
     '(window:resize)': 'syncMobileViewport()',
+    '(window:keydown.escape)': 'tabSwitcherOpen.set(false)',
   },
   standalone: true,
   imports: [CdkDrag, CdkDropList, CdkDragPlaceholder],
@@ -40,6 +41,7 @@ export class WorkspaceTabBarComponent implements AfterViewInit, OnChanges, OnDes
 
   contextMenu = signal<{ x: number; y: number; tab: WorkspaceTab } | null>(null);
   readonly isMobileViewport = signal(false);
+  readonly tabSwitcherOpen = signal(false);
 
   @ViewChild('tabScroll') private tabScroll?: ElementRef<HTMLElement>;
   private paneResizeObserver?: ResizeObserver;
@@ -67,7 +69,13 @@ export class WorkspaceTabBarComponent implements AfterViewInit, OnChanges, OnDes
 
   syncMobileViewport(): void {
     this.isMobileViewport.set(window.matchMedia('(max-width: 767px)').matches);
+    if (!this.isMobileViewport()) this.tabSwitcherOpen.set(false);
     this.scheduleActiveTabReveal();
+  }
+
+  selectMobileTab(tab: WorkspaceTab): void {
+    this.tabManager.setActiveTab(this.pane().id, tab.id);
+    this.tabSwitcherOpen.set(false);
   }
 
   updatePaneGlow(): void {

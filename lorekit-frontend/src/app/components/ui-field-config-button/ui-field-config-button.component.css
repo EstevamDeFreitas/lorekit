@@ -1,3 +1,6 @@
 :host {
   display: inline-flex;
 }
+@media (max-width: 767px) {
+  :host { display: none; }
+}

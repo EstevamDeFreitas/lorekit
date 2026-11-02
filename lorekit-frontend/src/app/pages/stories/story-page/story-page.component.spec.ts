@@ -7,6 +7,7 @@ import { StoryNotificationsService } from '../../../services/story-notifications
 import { StorySharingService } from '../../../services/story-sharing.service';
 import { AuthService } from '../../../services/auth.service';
 import { StoryNavigationService } from '../../../services/story-navigation.service';
+import { TabManagerService } from '../../../services/tab-manager.service';
 import {
   WORKSPACE_TAB_CONTEXT,
   WorkspaceTabContext,
@@ -102,6 +103,7 @@ describe('Story RP screen', () => {
       providers: [
         provideRouter([]),
         { provide: StoryNavigationService, useValue: { target: signal(null) } },
+        { provide: TabManagerService, useValue: { openTab: jasmine.createSpy('openTab') } },
         { provide: WORKSPACE_TAB_CONTEXT, useValue: tab },
         { provide: StoryClientService, useValue: client },
         { provide: StorySharingService, useValue: {} },

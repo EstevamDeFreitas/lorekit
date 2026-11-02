@@ -127,6 +127,10 @@
     position: static;
   }
 
+  .sidebar-panel-toggle--collapsed {
+    display: none;
+  }
+
   .sidebar-panel-drawer {
     border-inline-end: 0;
     border-radius: 0 1rem 1rem 0;

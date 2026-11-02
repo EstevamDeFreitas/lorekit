@@ -95,6 +95,10 @@ export class WorkspacePaneComponent implements AfterViewInit, OnChanges, OnDestr
     return pane.tabs.find(tab => tab.id === pane.activeTabId);
   }
 
+  isMobileUnsupported(tab: WorkspaceTab): boolean {
+    return tab.entityType === 'Moodboard' || (tab.entityType === 'view' && tab.entityId.startsWith('relations'));
+  }
+
   private syncActiveView(): void {
     const outlet = this.viewOutlet;
     if (!outlet) return;

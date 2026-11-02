@@ -6,7 +6,6 @@ import { DynamicImageFieldComponent } from '../dynamic-image-field/dynamic-image
 import { EditorComponent } from '../editor/editor.component';
 import { InputComponent } from '../input/input.component';
 import { TextAreaComponent } from '../text-area/text-area.component';
-import { MobilePinchZoomDirective } from '../../directives/mobile-pinch-zoom.directive';
 import { ChartFieldOptions, DynamicField, DynamicFieldValue, ListFieldOptions, parseDynamicFieldOptions, serializeSliderValue, SliderFieldOptions } from '../../models/dynamicfields.model';
 import { UiConfigPayload, UiFieldCatalogItem, UiFieldLayoutFieldItem, UiFieldLayoutItem } from '../../models/ui-field-config.model';
 import { DynamicFieldService } from '../../services/dynamic-field.service';
@@ -29,7 +28,7 @@ export interface NativeFieldChange {
 
 @Component({
   selector: 'app-entity-configured-fields',
-  imports: [FormsModule, MobilePinchZoomDirective, InputComponent, TextAreaComponent, EditorComponent, ComboBoxComponent, DynamicImageFieldComponent, DynamicSliderFieldComponent, DynamicListFieldComponent, DynamicChartFieldComponent, CalendarDateFieldComponent],
+  imports: [FormsModule, InputComponent, TextAreaComponent, EditorComponent, ComboBoxComponent, DynamicImageFieldComponent, DynamicSliderFieldComponent, DynamicListFieldComponent, DynamicChartFieldComponent, CalendarDateFieldComponent],
   templateUrl: './entity-configured-fields.component.html',
   styleUrl: './entity-configured-fields.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -70,7 +69,8 @@ export class EntityConfiguredFieldsComponent {
 
   visibleItems(): UiFieldLayoutItem[] {
     const tab = this.layout().tabs.find(candidate => candidate.id === this.activeTabId()) ?? this.layout().tabs[0];
-    return (tab?.items ?? []).filter(item => item.kind === 'separator' || !!this.catalogByToken[item.token]);
+    return (tab?.items ?? []).filter(item => item.kind === 'separator' || !!this.catalogByToken[item.token])
+      .sort((a, b) => a.row - b.row || a.col - b.col);
   }
 
   gridColumns(): string { return `repeat(${this.layout().columns}, minmax(0, 1fr))`; }

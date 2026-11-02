@@ -1,6 +1,6 @@
 import { AsyncPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { DbProvider } from '../../../database/db-provider.service';
 import { StoryNavigationService } from '../../../services/story-navigation.service';
 import { Dialog } from '@angular/cdk/dialog';
@@ -38,13 +38,17 @@ export class MainUiComponent {
   }
 
   private layoutTouchStartX: number | null = null;
+  private layoutTouchStartY: number | null = null;
+  readonly mobileNavigationVisible = signal(false);
 
   onLayoutTouchStart(event: TouchEvent): void {
     this.layoutTouchStartX = event.touches[0]?.clientX ?? null;
+    this.layoutTouchStartY = event.touches[0]?.clientY ?? null;
   }
 
   onLayoutTouchEnd(event: TouchEvent): void {
     const endX = event.changedTouches[0]?.clientX;
+    const endY = event.changedTouches[0]?.clientY;
     if (
       this.layoutTouchStartX !== null &&
       endX !== undefined &&
@@ -53,7 +57,13 @@ export class MainUiComponent {
     ) {
       this.tabManager.setSidebarVisible(true);
     }
+    if (window.matchMedia('(max-width: 767px)').matches && this.layoutTouchStartX !== null && this.layoutTouchStartY !== null && endX !== undefined && endY !== undefined) {
+      const dx = endX - this.layoutTouchStartX;
+      const dy = endY - this.layoutTouchStartY;
+      if (Math.abs(dy) > 55 && Math.abs(dy) > Math.abs(dx) * 1.4) this.mobileNavigationVisible.set(dy < 0);
+    }
     this.layoutTouchStartX = null;
+    this.layoutTouchStartY = null;
   }
 
   openSettings() {

@@ -28,7 +28,7 @@
         <button type="button" class="settings-nav-item" [class.settings-nav-item--active]="currentTab === 'event_types'" [attr.aria-current]="currentTab === 'event_types' ? 'page' : null" (click)="selectTab('event_types')">
           <i class="fa-solid fa-calendar-days"></i><span>Tipos de evento</span>
         </button>
-        <button type="button" class="settings-nav-item" [class.settings-nav-item--active]="currentTab === 'global_field_config'" [attr.aria-current]="currentTab === 'global_field_config' ? 'page' : null" (click)="selectTab('global_field_config')">
+        <button type="button" class="settings-nav-item hidden md:flex" [class.settings-nav-item--active]="currentTab === 'global_field_config'" [attr.aria-current]="currentTab === 'global_field_config' ? 'page' : null" (click)="selectTab('global_field_config')">
           <i class="fa-solid fa-table-cells-large"></i><span>Campos globais</span>
         </button>
       </nav>

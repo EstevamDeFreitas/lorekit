@@ -4,6 +4,8 @@
   flex: 0 0 auto;
 }
 
+.mobile-tab-header, .mobile-tab-overlay { display: none; }
+
 .workspace-tab-scroll {
   overscroll-behavior-inline: contain;
   scrollbar-color: rgb(113 113 122 / 58%) transparent;
@@ -110,14 +112,29 @@
 }
 
 @media (max-width: 767px) {
-  .workspace-tab-scroll {
-    scrollbar-width: none;
-  }
-
-  .workspace-tab--active .workspace-tab-close {
-    opacity: 1;
-    pointer-events: auto;
-  }
+  .workspace-tab-bar { height: 3.25rem; }
+  .workspace-tab-scroll { display: none; }
+  .mobile-tab-header { display: flex; width: 100%; min-width: 0; align-items: center; justify-content: space-between; gap: .75rem; padding: 0 .75rem; }
+  .mobile-tab-current { min-width: 0; overflow: hidden; color: #e4e4e7; font-size: .875rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-tab-current i { margin-right: .45rem; color: #facc15; }
+  .mobile-tab-switcher-button, .mobile-tab-dismiss, .mobile-tab-card-close { display: grid; flex: none; width: 2.75rem; height: 2.75rem; place-items: center; border: 0; border-radius: .625rem; background: transparent; color: #e4e4e7; }
+  .mobile-tab-switcher-button { position: relative; background: #27272a; }
+  .mobile-tab-switcher-button span { position: absolute; right: .2rem; bottom: .15rem; min-width: 1rem; border-radius: .3rem; background: #facc15; color: #18181b; font-size: .625rem; font-weight: 700; line-height: 1rem; text-align: center; }
+  .mobile-tab-overlay { position: fixed; z-index: 1000; inset: 0; display: flex; align-items: end; background: rgb(0 0 0 / 65%); }
+  .mobile-tab-sheet { display: flex; width: 100%; max-height: min(80dvh, 46rem); flex-direction: column; border-radius: 1rem 1rem 0 0; background: #18181b; box-shadow: 0 -12px 40px rgb(0 0 0 / 35%); padding: 1.25rem 1rem max(1rem, env(safe-area-inset-bottom)); }
+  .mobile-tab-sheet-header { display: flex; align-items: start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; }
+  .mobile-tab-sheet-header h2 { color: #fafafa; font-size: 1.125rem; font-weight: 650; }
+  .mobile-tab-sheet-header p { margin-top: .25rem; color: #a1a1aa; font-size: .8rem; }
+  .mobile-tab-grid { display: grid; min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; overflow-y: auto; }
+  .mobile-tab-card { position: relative; min-width: 0; aspect-ratio: 1; overflow: hidden; border: 1px solid #3f3f46; border-radius: .75rem; background: #27272a; }
+  .mobile-tab-card--active { border-color: #facc15; }
+  .mobile-tab-card-select { display: flex; width: 100%; height: 100%; flex-direction: column; align-items: start; justify-content: end; gap: .65rem; padding: 1rem; color: #f4f4f5; text-align: left; }
+  .mobile-tab-card-select i { color: #facc15; font-size: 1.3rem; }
+  .mobile-tab-card-select span { max-width: 100%; overflow-wrap: anywhere; font-size: .875rem; font-weight: 600; }
+  .mobile-tab-card-select small { color: #d4d4d8; font-size: .7rem; }
+  .mobile-tab-card-close { position: absolute; top: .15rem; right: .15rem; }
+  .mobile-tab-empty { grid-column: 1 / -1; padding: 2rem 0; color: #a1a1aa; text-align: center; }
+  .mobile-tab-header button:focus-visible, .mobile-tab-sheet button:focus-visible { outline: 2px solid #facc15; outline-offset: -2px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
