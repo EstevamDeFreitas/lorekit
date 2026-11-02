@@ -1,4 +1,6 @@
 ﻿import { buildRollPreview, buildRollFormula, executeRoll, parseRollFormula, parseConditionImpact, getRollStatus, normalizeRollInteger, signedValue, type RollModifier, type RollPreview, type RollResult, type RollStatus, type ConditionImpact as ParsedConditionImpact } from '@lorekit/ironpaw';
+import { HexColorPickerComponent } from '../../../components/hex-color-picker/hex-color-picker.component';
+import { IconSelectorComponent } from '../../../components/icon-selector/icon-selector.component';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { HistoryFieldDirective } from '../../../directives/history-field.directive';
@@ -85,6 +87,10 @@ interface IrpwCharacterMark {
   name?: string | null;
   description: string;
   narrativeType?: string | null;
+  color?: string | null;
+  icon?: string | null;
+  active?: boolean;
+  modifications?: string;
   weaknesses: IrpwVocationHability[];
   habilities: IrpwVocationHability[];
   attributes: IrpwVocationAttributes;
@@ -136,7 +142,7 @@ interface ResourceValueState {
 
 @Component({
   selector: 'irpw-character-sheet',
-  imports: [IconButtonComponent, EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, EditorComponent, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent, IrpwAbilityMechanicsComponent],
+  imports: [HexColorPickerComponent, IconSelectorComponent, IconButtonComponent, EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, EditorComponent, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent, IrpwAbilityMechanicsComponent],
   templateUrl: './irpw-character-sheet.component.html',
   styleUrl: './irpw-character-sheet.component.css',
 })
@@ -202,7 +208,13 @@ export class IrpwCharacterSheetComponent implements OnInit {
   showSidebar = true;
 
   currentTab = 'general';
+  markEditorTab: 'base' | 'effects' | 'attributes' = 'base';
   private abilityDialogRef: DialogRef | null = null;
+
+  openMarkDialog(template: TemplateRef<unknown>): void {
+    this.markEditorTab = 'base';
+    this.openAbilityDialog(template);
+  }
 
   openAbilityDialog(template: TemplateRef<unknown>): void {
     this.abilityDialogRef = this.dialog.open(template, { width: 'min(48rem, calc(100vw - 2rem))', maxWidth: 'calc(100vw - 2rem)', positionStrategy: this.overlay.position().global().centerHorizontally().centerVertically(), autoFocus: 'first-tabbable' });
@@ -1605,6 +1617,10 @@ export class IrpwCharacterSheetComponent implements OnInit {
       name: null,
       description: '',
       narrativeType: null,
+      color: null,
+      icon: null,
+      active: true,
+      modifications: '',
       weaknesses: [],
       habilities: [],
       attributes: this.createDefaultMarkAttributes(),
@@ -1645,6 +1661,10 @@ export class IrpwCharacterSheetComponent implements OnInit {
       name: this.normalizeOptionalText(source.name),
       description: typeof source.description === 'string' ? source.description : '',
       narrativeType: this.normalizeOptionalText(source.narrativeType),
+      color: typeof source.color === 'string' && /^#[0-9a-f]{6}$/i.test(source.color) ? source.color : null,
+      icon: this.normalizeOptionalText(source.icon),
+      active: source.active !== false,
+      modifications: typeof source.modifications === 'string' ? source.modifications : '',
       weaknesses: normalizedWeaknesses,
       habilities: Array.isArray(source.habilities)
         ? source.habilities.map(hability => this.normalizeHability(hability))

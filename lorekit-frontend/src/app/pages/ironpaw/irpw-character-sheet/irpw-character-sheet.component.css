@@ -1179,3 +1179,46 @@
 .ability-modal header h3 { font-weight: 600; }
 .sheet-notes { display: flex; flex-direction: column; gap: .5rem; color: #d4d4d8; font-size: .875rem; }
 .sheet-notes small { color: #a1a1aa; }
+
+.mark-card { background: rgba(24, 24, 27, .75); backdrop-filter: none; }
+.mark-card__summary { min-width: 0; border-radius: .4rem; }
+.mark-card__summary:focus-visible { outline: 2px solid var(--irpw-accent); outline-offset: 4px; }
+.mark-card__type { border: 1px solid rgba(161, 161, 170, .25); border-radius: 999px; padding: .15rem .5rem; color: #d4d4d8; font-size: .65rem; }
+@media (max-width: 600px) {
+  .mark-card > div:first-child { flex-wrap: wrap; }
+  .mark-card__summary { flex-basis: 100%; }
+}
+.mark-card[data-mark-type='Supera��o'] { --mark-default: #86efac; }
+.mark-card[data-mark-type='Tormento'] { --mark-default: #fda4af; }
+.mark-card[data-mark-type='Transforma��o'] { --mark-default: #c4b5fd; }
+.mark-card[data-mark-type='Passado'] { --mark-default: #fcd34d; }
+.mark-card__icon { color: var(--mark-color, var(--mark-default, #a1a1aa)); }
+.mark-card__features { display: flex; flex-wrap: wrap; gap: .4rem .9rem; margin-top: .65rem; color: #d4d4d8; font-size: .75rem; }
+.mark-card__features i { color: var(--mark-color, var(--mark-default, #a1a1aa)); margin-right: .2rem; }
+.mark-options { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; color: #d4d4d8; font-size: .75rem; }
+.mark-options label { display: flex; align-items: center; gap: .5rem; }
+.mark-options input[type='color'] { width: 2.5rem; height: 2rem; background: transparent; }
+
+/* Editor de marco: mesma estrutura de cabecalho, conteudo e rodape da vocacao. */
+.mark-modal.ability-modal { display: flex; flex-direction: column; max-height: min(85vh, 56rem); padding: 0; overflow: hidden; background: #18181b; }
+.mark-modal .mark-modal__header { flex: none; padding: 1.15rem 1.3rem; margin: 0; border-bottom: 1px solid #3f3f46; }
+.mark-modal__header h3 { font-size: 1rem; line-height: 1.4; }
+.mark-modal__header p { margin: .2rem 0 0; color: #a1a1aa; font-size: .75rem; }
+.mark-modal__header button { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: .4rem; color: #a1a1aa; }
+.mark-modal__header button:hover { background: #3f3f46; color: #fafafa; }
+.mark-modal__body { min-height: 0; overflow-y: auto; padding: 1.25rem; }
+.mark-modal__layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(12rem, 1fr); gap: 1rem; align-items: start; }
+.mark-modal__main { display: flex; min-width: 0; flex-direction: column; gap: 1rem; }
+.mark-modal__base, .mark-modal__section, .mark-modal__attributes { min-width: 0; border: 1px solid #3f3f46; border-radius: .65rem; background: #202023; padding: 1rem; }
+.mark-modal__base > h4 { margin: 0 0 .9rem; color: #f4f4f5; font-size: .875rem; font-weight: 600; }
+.mark-modal__section h4 { color: #f4f4f5; font-size: .8rem; letter-spacing: normal; text-transform: none; }
+.mark-modal__entry { border-top: 1px solid #3f3f46; padding: .9rem 0 0; }
+.mark-modal__entry + .mark-modal__entry { margin-top: .2rem; }
+.mark-modal .mark-options { align-items: flex-start; padding: 1rem; border: 1px solid #3f3f46; border-radius: .65rem; background: #202023; }
+.mark-modal input:focus-visible, .mark-modal textarea:focus-visible, .mark-modal select:focus-visible, .mark-modal button:focus-visible { outline: 2px solid var(--irpw-accent, #eab308); outline-offset: 2px; }
+.mark-modal__footer { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .85rem 1.3rem; border-top: 1px solid #3f3f46; color: #a1a1aa; font-size: .7rem; }
+@media (max-width: 640px) { .mark-modal__layout { grid-template-columns: minmax(0, 1fr); } .mark-modal__body { padding: .85rem; } }
+.mark-modal__tabs { display: flex; flex: none; gap: 1rem; padding: .4rem 1.25rem; border-bottom: 1px solid #3f3f46; overflow-x: auto; }
+.mark-modal__tabs app-nav-button { flex: none; }
+.mark-modal__layout { display: block; }
+.mark-modal__attributes { max-width: 42rem; }

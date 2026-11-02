@@ -681,7 +681,7 @@
                       </div>
                     </div>
                     <section class="sheet-attributes entity-properties-panel bg-zinc-925 mb-2" aria-label="Atributos e perícias">
-                      <div class="sheet-attributes-title"><h2>Atributos</h2><i class="fa-solid fa-dice-d10" aria-hidden="true"></i></div>
+                      <div class="sheet-attributes-title"><h2>Atributos</h2><i class="fa-solid fa-dice-d20" aria-hidden="true"></i></div>
                       <div class="flex flex-col gap-4">
                         @for (entry of attributeGroupEntries; track entry[0]) {
                           <div>
@@ -917,30 +917,39 @@
                             @case ('marks') {
                               <div class="flex items-center justify-between gap-3 mb-4">
                                 <div>
-                                  <h2 class="text-sm text-zinc-100">Marcos narrativos</h2>
+                                  <h2 class="text-sm font-semibold text-zinc-100">Marcos narrativos</h2>
                                   <p class="text-xs text-zinc-500">Cada marco usa JSON próprio com tipo, habilidades e atributos/perícias.</p>
                                 </div>
                                 <button
                                   type="button"
-                                  class="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs text-zinc-200 transition hover:border-zinc-500 hover:text-white"
+                                  class="ironpaw-action-button"
                                   (click)="addMark()">
-                                  Adicionar marco
+                                  <i class="fa-solid fa-plus" aria-hidden="true"></i> Adicionar marco
                                 </button>
                               </div>
 
-                              <div class="flex flex-col gap-4">
+                              <section class="ironpaw-skill-section mark-section">
+                                <header class="ironpaw-skill-section__header">
+                                  <div class="flex items-center gap-2"><i class="fa-solid fa-flag" aria-hidden="true"></i><h4>Marcos</h4></div>
+                                  <span>{{ marksData.length }}</span>
+                                </header>
+                                <div class="flex flex-col gap-3">
                                 @for (mark of marksData; track $index; let markIndex = $index) {
-                                  <div class="rounded-md border border-zinc-800 bg-zinc-925/80 p-4">
+                                  <article class="ironpaw-ability-row mark-card" [attr.data-mark-type]="mark.narrativeType" [style.--mark-color]="mark.color || null">
                                     <div class="flex items-start justify-between gap-3">
                                       <button
                                         type="button"
-                                        class="flex-1 text-left"
-                                        (click)="toggleMarkExpanded(markIndex)">
+                                        class="mark-card__summary flex-1 text-left"
+                                        (click)="openMarkDialog(markDialog)">
                                         <div class="flex items-center gap-2 mb-1 flex-wrap">
-                                          <h3 class="text-sm text-zinc-100">{{ mark.name || ('Marco ' + (markIndex + 1)) }}</h3>
-                                          <span class="text-[10px] uppercase tracking-wide text-zinc-500">{{ mark.narrativeType || 'Sem tipo' }}</span>
+                                          <i class="fa-solid mark-card__icon" [ngClass]="mark.icon || 'fa-flag'" aria-hidden="true"></i><h3 class="text-base font-semibold text-zinc-100">{{ mark.name || ('Marco ' + (markIndex + 1)) }}</h3>
+                                          <span class="mark-card__type">{{ mark.narrativeType || 'Sem tipo' }}</span><span class="mark-card__type">{{ mark.active === false ? 'Dormente' : 'Ativo' }}</span>
                                         </div>
                                         <p class="text-xs text-zinc-400 line-clamp-2">{{ mark.description || 'Sem descrição.' }}</p>
+                                        <div class="mark-card__features">
+                                          @for (ability of mark.habilities; track $index) { <span><i class="fa-solid fa-bolt" aria-hidden="true"></i> {{ ability.name || 'Habilidade sem nome' }}</span> }
+                                          @for (weakness of mark.weaknesses; track $index) { <span><i class="fa-solid fa-link-slash" aria-hidden="true"></i> {{ weakness.name || 'Fraqueza sem nome' }}</span> }
+                                        </div>
                                         <div class="mt-3 flex flex-wrap gap-2">
                                           @for (skillSummary of getMarkActiveSkillsSummary(mark); track skillSummary) {
                                             <span class="rounded-full border border-zinc-700 bg-zinc-900/70 px-2 py-1 text-[11px] text-zinc-300">
@@ -959,23 +968,32 @@
                                       <div class="flex items-center gap-2 shrink-0">
                                         <button
                                           type="button"
-                                          class="rounded-md border border-zinc-700 bg-zinc-900/70 px-2.5 py-1 text-xs text-zinc-200 transition hover:border-zinc-500 hover:text-white"
-                                          (click)="toggleMarkExpanded(markIndex)">
-                                          {{ isMarkExpanded(markIndex) ? 'Recolher' : 'Expandir' }}
+                                          class="ironpaw-action-button"
+                                          (click)="openMarkDialog(markDialog)">
+                                          Editar marco
                                         </button>
                                         <button
                                           type="button"
-                                          class="rounded-md border border-red-900/70 bg-red-950/40 px-2.5 py-1 text-xs text-red-200 transition hover:bg-red-950/70"
+                                          class="ironpaw-remove-button"
                                           (click)="removeMark(markIndex)">
                                           Remover
                                         </button>
                                       </div>
                                     </div>
 
-                                    @if (isMarkExpanded(markIndex)) {
-                                      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4 border-t border-zinc-800 pt-4">
-                                        <div class="xl:col-span-2 flex flex-col gap-4">
-                                          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <ng-template #markDialog>
+                                      <section class="ability-modal mark-modal" role="dialog" aria-modal="true" aria-label="Editar marco narrativo">
+                                      <header class="mark-modal__header"><div><h3>{{ mark.name || 'Editar marco' }}</h3><p>Detalhes, efeitos e atributos do marco narrativo.</p></div><button type="button" aria-label="Fechar" (click)="closeAbilityDialog()"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></header>
+                                      <nav class="mark-modal__tabs scrollbar-dark" aria-label="Seções do marco">
+                                        <app-nav-button label="Base" icon="fa-solid fa-sliders" size="sm" [active]="markEditorTab === 'base'" (click)="markEditorTab = 'base'"></app-nav-button>
+                                        <app-nav-button label="Habilidades e fraquezas" icon="fa-solid fa-book-open" size="sm" [active]="markEditorTab === 'effects'" (click)="markEditorTab = 'effects'"></app-nav-button>
+                                        <app-nav-button label="Atributos e perícias" icon="fa-solid fa-dice-d20" size="sm" [active]="markEditorTab === 'attributes'" (click)="markEditorTab = 'attributes'"></app-nav-button>
+                                      </nav>
+                                      <div class="mark-modal__body scrollbar-dark">
+                                      <div class="mark-modal__layout">
+                                        <div class="mark-modal__main">
+                                          @if (markEditorTab === 'base') {
+                                          <div class="mark-modal__base"><h4>Base do marco</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                             <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                               Nome
                                               <input [historyField]="{ column: 'marks', path: [markIndex, 'name'], trim: true, label: 'Marco: nome' }"
@@ -988,12 +1006,7 @@
 
                                             <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                               Tipo de marco narrativo
-                                              <input [historyField]="{ column: 'marks', path: [markIndex, 'narrativeType'], trim: true, label: 'Marco: tipo narrativo' }"
-                                                type="text"
-                                                class="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500"
-                                                [(ngModel)]="mark.narrativeType"
-                                                (ngModelChange)="onMarksChange()"
-                                                placeholder="Ex.: Revelação, Trauma, Ascensão">
+                                              <select class="rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white" [(ngModel)]="mark.narrativeType" (ngModelChange)="onMarksChange()"><option [ngValue]="null">Sem tipo</option>@if (mark.narrativeType && !['Superação', 'Tormento', 'Transformação', 'Passado'].includes(mark.narrativeType)) { <option [ngValue]="mark.narrativeType">{{ mark.narrativeType }} (anterior)</option> }<option>Superação</option><option>Tormento</option><option>Transformação</option><option>Passado</option></select>
                                             </label>
 
                                             <label class="md:col-span-2 flex flex-col gap-1 text-xs text-zinc-400">
@@ -1007,7 +1020,12 @@
 
                                           </div>
 
-                                          <div class="rounded-md border border-zinc-800 bg-zinc-950/40 p-3">
+                                          </div>
+                                          <div class="mark-options"><app-hex-color-picker label="Cor do marco" [value]="mark.color || undefined" (valueChange)="mark.color = $event || null; onMarksChange()"></app-hex-color-picker><label>Ícone <app-icon-selector [selectedIcon]="mark.icon || 'fa-flag'" (onIconSelected)="mark.icon = $event.iconCode; onMarksChange()"></app-icon-selector></label><label><input type="checkbox" [ngModel]="mark.active !== false" (ngModelChange)="mark.active = $event; onMarksChange()"> Marco ativo</label></div>
+                                          <label class="flex flex-col gap-1 text-xs text-zinc-400">Outras modificações na ficha<textarea class="min-h-24 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white" [(ngModel)]="mark.modifications" (ngModelChange)="onMarksChange()" placeholder="Registre alterações de vida, vigor, essência, cargas, resistências, poderes ou regras."></textarea><span>Registre as alterações e ajuste os valores correspondentes na ficha.</span></label>
+                                          }
+                                          @if (markEditorTab === 'effects') {
+                                          <div class="mark-modal__section">
                                             <div class="flex items-center justify-between gap-3 mb-3">
                                               <h4 class="text-xs font-semibold uppercase tracking-wide text-zinc-300">Habilidades</h4>
                                               <button
@@ -1020,7 +1038,7 @@
 
                                             <div class="flex flex-col gap-3">
                                               @for (hability of mark.habilities; track $index; let habilityIndex = $index) {
-                                                <div class="rounded-md border border-zinc-800 bg-zinc-900/80 p-3">
+                                                <div class="mark-modal__entry">
                                                   <div class="flex items-center justify-between gap-2 mb-3">
                                                     <span class="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">Habilidade {{ habilityIndex + 1 }}</span>
                                                     <button
@@ -1116,10 +1134,12 @@
                                               }
                                             </div>
                                           </div>
+                                          }
                                         </div>
 
-                                        <div class="rounded-md border border-zinc-800 bg-zinc-950/30 p-3 overflow-y-auto">
-                                          <h4 class="text-center mb-3 text-sm text-zinc-100">Atributos e perícias</h4>
+                                        @if (markEditorTab === 'attributes') {
+                                        <div class="mark-modal__attributes">
+                                          <h4 class="mb-3 text-sm font-semibold text-zinc-100">Atributos e perícias</h4>
                                           <div class="flex flex-col gap-4">
                                             @for (entry of attributeGroupEntries; track entry[0]) {
                                               <div>
@@ -1152,9 +1172,13 @@
                                             }
                                           </div>
                                         </div>
+                                        }
                                       </div>
-                                    }
-                                  </div>
+                                      </div>
+                                      <footer class="mark-modal__footer"><span>As alterações são salvas automaticamente.</span><button type="button" class="ironpaw-action-button" (click)="closeAbilityDialog()">Concluído</button></footer>
+                                      </section>
+                                    </ng-template>
+                                  </article>
                                 }
 
                                 @if (marksData.length === 0) {
@@ -1162,7 +1186,8 @@
                                     Nenhum marco cadastrado para este personagem.
                                   </div>
                                 }
-                              </div>
+                                </div>
+                              </section>
                             }
                             @case ('notes') {
                               @if (currentSheet; as sheet) {
