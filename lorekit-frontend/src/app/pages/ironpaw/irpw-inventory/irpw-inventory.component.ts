@@ -78,6 +78,7 @@ export class IrpwInventoryComponent {
   sheet: IrpwCharacterSheet | null = null;
   catalogItems: IrpwCatalogItem[] = [];
   selectedEntry: IrpwInventoryEntry | null = null;
+  itemDetailsTab: 'actions' | 'notes' | 'edit' = 'actions';
   selectedSlot: IrpwEquipmentSlot | null = null;
   draggedEntry: IrpwInventoryEntry | null = null;
   showAdd = false;

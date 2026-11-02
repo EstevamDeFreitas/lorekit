@@ -111,7 +111,7 @@
                   cdkOverlayOrigin #itemOrigin="cdkOverlayOrigin"
                   (mouseenter)="hoveredEntry = entry.instanceId" (mouseleave)="hoveredEntry = null"
                   (focus)="hoveredEntry = entry.instanceId" (blur)="hoveredEntry = null" (keydown.escape)="hoveredEntry = null"
-                  (click)="selectedEntry = entry; itemDetails.showPopover()"
+                  (click)="selectedEntry = entry; itemDetailsTab = 'actions'; itemDetails.showPopover()"
                   [attr.aria-label]="'Ações de ' + entry.snapshot.name"
                 >
                   <span class="equipped-icon" aria-hidden="true">
@@ -188,10 +188,10 @@
               (cdkDragEnded)="endDrag()"
               tabindex="0"
               [attr.aria-label]="'Selecionar item ' + entry.snapshot.name"
-              (keydown.enter)="selectedEntry = entry; itemDetails.showPopover()"
-              (keydown.space)="$event.preventDefault(); selectedEntry = entry; itemDetails.showPopover()"
+              (keydown.enter)="selectedEntry = entry; itemDetailsTab = 'actions'; itemDetails.showPopover()"
+              (keydown.space)="$event.preventDefault(); selectedEntry = entry; itemDetailsTab = 'actions'; itemDetails.showPopover()"
               [class.selected]="selectedEntry?.instanceId === entry.instanceId"
-              (click)="selectedEntry = entry; itemDetails.showPopover()"
+              (click)="selectedEntry = entry; itemDetailsTab = 'actions'; itemDetails.showPopover()"
             >
               <div class="item-card-icon" [style.background-color]="entry.snapshot.definition.backgroundColor || null"
               [style.border-color]="entry.snapshot.definition.color || null">
@@ -206,7 +206,7 @@
                 <span class="quantity">x{{ entry.quantity }}</span>
               }
               <div class="item-actions">
-                <button type="button" (click)="selectedEntry = entry; itemDetails.showPopover(); $event.stopPropagation()" [attr.aria-label]="'Ações de ' + entry.snapshot.name"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i> Ações</button>
+                <button type="button" (click)="selectedEntry = entry; itemDetailsTab = 'actions'; itemDetails.showPopover(); $event.stopPropagation()" [attr.aria-label]="'Ações de ' + entry.snapshot.name"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i> Ações</button>
               </div>
             </article>
           }
@@ -226,6 +226,12 @@
       @if (selectedEntry; as entry) {
         <div class="details">
           <div class="details-heading"><h4>{{ entry.snapshot.name }}</h4><button type="button" autofocus (click)="itemDetails.hidePopover()" aria-label="Fechar ações do item"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+          <nav class="item-detail-tabs" aria-label="Seções do item">
+            <app-nav-button label="Ações" icon="fa-solid fa-list" size="sm" [active]="itemDetailsTab === 'actions'" (click)="itemDetailsTab = 'actions'"></app-nav-button>
+            <app-nav-button label="Anotações" icon="fa-solid fa-note-sticky" size="sm" [active]="itemDetailsTab === 'notes'" (click)="itemDetailsTab = 'notes'"></app-nav-button>
+            <app-nav-button label="Editar item" icon="fa-solid fa-pen" size="sm" [active]="itemDetailsTab === 'edit'" (click)="itemDetailsTab = 'edit'"></app-nav-button>
+          </nav>
+          <div class="details-main" [hidden]="itemDetailsTab !== 'actions'">
           <small>{{ categoryLabel(entry) }} · {{ entry.sourceItemId ? 'Catálogo compartilhado' : 'Item local' }}</small>
           <p class="item-effect-description">{{ itemEffects(entry) }}</p>
           <label class="entry-quantity">Quantidade<input type="number" min="1" [max]="entry.snapshot.definition.stackable ? entry.snapshot.definition.stackLimit : 1" [disabled]="entry.location === 'equipment'" [(ngModel)]="entry.quantity" (change)="saveQuantity(entry)" /></label>
@@ -238,18 +244,23 @@
             @if (entry.snapshot.definition.category === 'consumable') { <button type="button" (click)="useEntry(entry); ifEmptyClose(itemDetails)">Usar uma unidade</button> }
             <button type="button" (click)="removeEntry(entry); itemDetails.hidePopover()">Remover da ficha</button>
           </div>
-          <details><summary>Anotações da ficha</summary><app-text-area label="Anotações" [(value)]="entry.notes" height="h-24"></app-text-area><button type="button" (click)="saveQuantity(entry)">Salvar anotações</button></details>
+
           @if (entry.location === 'backpack') {
-            <details><summary>Organizar pilhas</summary><div class="detail-actions"><button type="button" (click)="splitEntry(entry)" [disabled]="entry.quantity <= 1">Separar uma unidade</button><button type="button" (click)="combineEntry(entry)" [disabled]="!entry.snapshot.definition.stackable">Combinar equivalentes</button><button type="button" (click)="moveEntry(entry)">Mover para o fim</button></div></details>
+            <div class="stack-actions"><strong>Organizar pilhas</strong><div class="detail-actions"><button type="button" (click)="splitEntry(entry)" [disabled]="entry.quantity <= 1">Separar uma unidade</button><button type="button" (click)="combineEntry(entry)" [disabled]="!entry.snapshot.definition.stackable">Combinar equivalentes</button><button type="button" (click)="moveEntry(entry)">Mover para o fim</button></div></div>
           }
-          <details><summary>Editar definição do item</summary>
+          </div>
+          <div class="details-notes" [hidden]="itemDetailsTab !== 'notes'">
+            <app-text-area label="Anotações" [(value)]="entry.notes" height="h-24"></app-text-area>
+            <button type="button" (click)="saveQuantity(entry)">Salvar anotações</button>
+          </div>
+          <div class="details-editing" [hidden]="itemDetailsTab !== 'edit'">
             <p class="hint">{{ entry.sourceItemId ? 'As alterações de nome, descrição e efeito serão aplicadas ao catálogo e a todas as fichas que usam este item.' : 'Este item não tem uma origem disponível no catálogo.' }}</p>
             <app-input label="Nome" [(value)]="entry.snapshot.name"></app-input>
             <app-text-area label="Descrição" [(value)]="entry.snapshot.description" height="h-24"></app-text-area>
             <app-text-area label="Efeito" [(value)]="entry.snapshot.effects" height="h-24"></app-text-area>
             <button type="button" class="primary" (click)="saveEntry(entry)">Salvar definição</button>
             @if (quickError) { <p class="warning" role="alert">{{ quickError }}</p> }
-          </details>
+          </div>
         </div>
       }
     </div>

@@ -83,3 +83,11 @@ summary { cursor:pointer; font-size:.8rem; color:#d4d4d8; }
 .details app-input,.details app-text-area { display:block; margin-bottom:.75rem; }
 @container (max-width:700px) { .inventory-layout { grid-template-columns:1fr; } .equipment-panel { border-right:0; padding-right:0; padding-bottom:1.25rem; border-bottom:1px solid #27272a; } .backpack-header { flex-wrap:wrap; } .backpack-header app-input { max-width:100%; } }
 @media (max-width:540px) { .quick-create { grid-template-columns:1fr; } .inventory-header { flex-wrap:wrap; } }
+
+.item-details-popover { width:min(48rem,calc(100vw - 2rem)); }
+.item-detail-tabs { display:flex; flex-wrap:wrap; gap:1rem; border-bottom:1px solid #27272a; }
+.details-main, .details-notes, .details-editing { display:flex; flex-direction:column; align-items:stretch; gap:.75rem; min-width:0; }
+.details-main[hidden], .details-notes[hidden], .details-editing[hidden] { display:none; }
+.details-notes button, .details-editing button { align-self:flex-start; border:1px solid #3f3f46; background:#27272a; border-radius:.4rem; color:#fafafa; padding:.5rem .65rem; font-size:.75rem; cursor:pointer; }
+.stack-actions { display:grid; gap:.75rem; padding-top:.75rem; border-top:1px solid #27272a; font-size:.8rem; }
+.details-editing app-input, .details-editing app-text-area, .details-notes app-text-area { margin:0; }
