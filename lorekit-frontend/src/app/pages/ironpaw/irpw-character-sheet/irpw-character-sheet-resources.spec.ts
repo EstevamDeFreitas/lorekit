@@ -1,4 +1,5 @@
 import { ATTRIBUTE_GROUP, ATTRIBUTE_GROUP_SKILLS, SKILL } from '../../../models/irpw-attributes-skills.model';
+import { CONDITION, CONDITIONS, CONDITION_SEVERITY } from '../../../models/irpw-conditions.model';
 import { IrpwCharacterSheet } from '../../../models/irpw-character-sheet.model';
 import { IrpwCharacterSheetComponent } from './irpw-character-sheet.component';
 
@@ -12,6 +13,20 @@ describe('Ironpaw resource and conjuration persistence', () => {
     });
     return sheet;
   }
+  it('persists condition selection, severity and removal without a save button', () => {
+    const sheet = createSheet();
+    sheet.conditionDefinitions = Object.values(CONDITIONS);
+    sheet.pendingConditionsData = [];
+    sheet.seriousWoundCount = 0;
+    sheet.lifepointsData = { maxPoints: 4, currentPoints: 4, temporaryPoints: 0, temporaryCurrentPoints: 0 };
+    sheet.onPendingConditionToggle(CONDITION.CLUMSY, true);
+    expect(JSON.parse(sheet.currentSheet!.conditions!)).toEqual([{ code: CONDITION.CLUMSY, severity: CONDITION_SEVERITY.LIGHT }]);
+    sheet.onPendingConditionSeverityChange(CONDITION.CLUMSY, CONDITION_SEVERITY.MODERATE);
+    expect(JSON.parse(sheet.currentSheet!.conditions!)[0].severity).toBe(CONDITION_SEVERITY.MODERATE);
+    sheet.onPendingConditionToggle(CONDITION.CLUMSY, false);
+    expect(sheet.currentSheet!.conditions).toBeNull();
+    expect(sheet.scheduleAutoSave).toHaveBeenCalledTimes(3);
+  });
   it('loads legacy quarter values into half-box life states', () => {
     const sheet = createSheet();
     sheet.currentSheet!.lifepoints = JSON.stringify({ maxPoints: 4, currentPoints: 2.25 });

@@ -147,17 +147,17 @@
         </div>
         <div class="pr-card">
           <div>
-            <span>PR atual</span
+            <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> CR atual</span
             ><strong>{{ defense.currentPoints ?? "—" }}</strong>
           </div>
           <div>
-            <span>PR máximo</span><strong>{{ defenseMax }}</strong>
+            <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> CR máximo</span><strong>{{ defenseMax }}</strong>
           </div>
                     <small>Proteção equipada: +{{ protection }}</small>
           <small>Vocação: +{{ vocationContribution }}</small>
           <label class="manual-pr-control">
             Ajuste manual
-            <input type="number" [value]="manualAdjustment" (change)="setManualAdjustment($any($event.target).value)" aria-label="Ajuste manual do PR">
+            <input type="number" [value]="manualAdjustment" (change)="setManualAdjustment($any($event.target).value)" aria-label="Ajuste manual de CR">
           </label>
           @if (equippedEffects.length) {
             <div class="pr-effects">

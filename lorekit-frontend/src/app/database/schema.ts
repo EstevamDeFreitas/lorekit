@@ -398,6 +398,7 @@ export const schema: TableDef[] = [
       { name: "marks", def: `"marks" TEXT` },
       { name: "conditions", def: `"conditions" TEXT` },
       { name: "favoriteActions", def: `"favoriteActions" TEXT` },
+      { name: "notes", def: `"notes" TEXT` },
     ]
   },
   {

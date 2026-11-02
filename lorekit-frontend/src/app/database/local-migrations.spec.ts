@@ -50,6 +50,22 @@ describe('local database migrations', () => {
     ))).toBe(LOCAL_SCHEMA_VERSION);
   });
 
+  it('upgrades version 10 sheets with notes and captures subsequent edits', () => {
+    const db = new SQL.Database();
+    db.exec('CREATE TABLE "IRPWCharacterSheet" ("id" TEXT PRIMARY KEY, "inventory" TEXT)');
+    db.run('INSERT INTO "IRPWCharacterSheet" ("id", "inventory") VALUES (?, ?)', ['legacy', 'preservado']);
+    ensureSchema(db);
+    db.exec('CREATE TABLE "_SchemaMetadata" ("key" TEXT NOT NULL PRIMARY KEY, "value" TEXT NOT NULL)');
+    db.run('INSERT INTO "_SchemaMetadata" ("key", "value") VALUES (?, ?)', ['schemaVersion', '10']);
+    runLocalMigrations(db);
+    expect(columnNames(db, 'IRPWCharacterSheet')).toContain('notes');
+    db.run('UPDATE "IRPWCharacterSheet" SET "notes" = ? WHERE "id" = ?', ['anotação preservada', 'legacy']);
+    expect(scalar(db, `SELECT "notes" FROM "IRPWCharacterSheet" WHERE "id" = 'legacy'`)).toBe('anotação preservada');
+    expect(scalar(db, `SELECT "inventory" FROM "IRPWCharacterSheet" WHERE "id" = 'legacy'`)).toBe('preservado');
+    expect(Number(scalar(db, `SELECT COUNT(*) FROM "_SyncDirty" WHERE "entityType" = 'IRPWCharacterSheet' AND "entityId" = 'legacy'`))).toBe(1);
+    db.close();
+  });
+
   it('adds wallet storage to legacy sheets and captures money configurations', () => {
     const db = new SQL.Database();
     db.exec('CREATE TABLE "IRPWCharacterSheet" ("id" TEXT PRIMARY KEY, "inventory" TEXT)');

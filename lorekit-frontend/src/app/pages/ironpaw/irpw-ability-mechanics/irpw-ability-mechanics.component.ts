@@ -14,6 +14,9 @@ export class IrpwAbilityMechanicsComponent {
   readonly ability = input.required<IrpwVocationHability>();
   readonly readonly = input(false);
   readonly changed = output<void>();
+  readonly favoritePrefix = input('');
+  readonly favorites = input<string[]>([]);
+  readonly favoriteToggle = output<string>();
   readonly kinds = REMODELING_KINDS;
   readonly summary = abilitySummary;
   readonly cost = abilityCost;

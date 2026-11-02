@@ -1,15 +1,20 @@
-import { buildRollPreview, buildRollFormula, executeRoll, parseRollFormula, parseConditionImpact, getRollStatus, normalizeRollInteger, signedValue, type RollModifier, type RollPreview, type RollResult, type RollStatus, type ConditionImpact as ParsedConditionImpact } from '@lorekit/ironpaw';
+﻿import { buildRollPreview, buildRollFormula, executeRoll, parseRollFormula, parseConditionImpact, getRollStatus, normalizeRollInteger, signedValue, type RollModifier, type RollPreview, type RollResult, type RollStatus, type ConditionImpact as ParsedConditionImpact } from '@lorekit/ironpaw';
 import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { EntityHistoryContextDirective } from '../../../directives/entity-history-context.directive';
 import { HistoryFieldDirective } from '../../../directives/history-field.directive';
 import { EntityHistoryService } from '../../../services/entity-history.service';
 import { CommonModule, NgClass } from '@angular/common';
-import { Dialog } from '@angular/cdk/dialog';
+import { Dialog, DialogRef } from '@angular/cdk/dialog';
+import { TemplateRef } from '@angular/core';
+import { EditorComponent } from '../../../components/editor/editor.component';
+import { LorekitDocument } from '../../../models/lorekit-document.model';
+import { LorekitDocumentCodec } from '../../../components/editor/lorekit-document.codec';
 import { inject, DestroyRef, Component, effect, input, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FlushableDebounce } from '../../../utils/flushable-debounce';
 import { FormsModule } from '@angular/forms';
-import { OverlayModule } from '@angular/cdk/overlay';
+import { Overlay, OverlayModule } from '@angular/cdk/overlay';
+import { A11yModule } from '@angular/cdk/a11y';
 import { Character } from '../../../models/character.model';
 import { IrpwCharacterSheet } from '../../../models/irpw-character-sheet.model';
 import { World } from '../../../models/world.model';
@@ -131,7 +136,7 @@ interface ResourceValueState {
 
 @Component({
   selector: 'irpw-character-sheet',
-  imports: [IconButtonComponent, EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent, IrpwAbilityMechanicsComponent],
+  imports: [IconButtonComponent, EntityHistoryContextDirective, HistoryFieldDirective, CommonModule, NgClass, FormsModule, OverlayModule, EditorComponent, ComboBoxComponent, NavButtonComponent, AssetUrlPipe, IrpwInventoryComponent, IrpwAbilityMechanicsComponent],
   templateUrl: './irpw-character-sheet.component.html',
   styleUrl: './irpw-character-sheet.component.css',
 })
@@ -150,6 +155,7 @@ export class IrpwCharacterSheetComponent implements OnInit {
   }
   private readonly destroyRef = inject(DestroyRef);
   private dialog = inject(Dialog);
+  private readonly overlay = inject(Overlay);
   private characterService = inject(CharacterService);
   private specieService = inject(SpecieService);
   private irpwSpecieService = inject(IrpwSpecieService);
@@ -196,6 +202,19 @@ export class IrpwCharacterSheetComponent implements OnInit {
   showSidebar = true;
 
   currentTab = 'general';
+  private abilityDialogRef: DialogRef | null = null;
+
+  openAbilityDialog(template: TemplateRef<unknown>): void {
+    this.abilityDialogRef = this.dialog.open(template, { width: 'min(48rem, calc(100vw - 2rem))', maxWidth: 'calc(100vw - 2rem)', positionStrategy: this.overlay.position().global().centerHorizontally().centerVertically(), autoFocus: 'first-tabbable' });
+  }
+
+  closeAbilityDialog(): void { this.abilityDialogRef?.close(); this.abilityDialogRef = null; }
+
+  saveNotes(sheet: IrpwCharacterSheet, document: LorekitDocument): void {
+    sheet.notes = LorekitDocumentCodec.serialize(document);
+    if (sheet === this.currentSheet) this.scheduleAutoSave();
+    else this.sheetService.saveSheet(sheet.id, sheet);
+  }
 
   selectedCharacterId = '';
   selectedCharacter: Character | null = null;
@@ -1015,6 +1034,20 @@ export class IrpwCharacterSheetComponent implements OnInit {
     return [...own, ...this.inheritedHabilitiesData].filter(hability => this.isActionFavorite(hability.favoriteKey));
   }
 
+  getFavoriteRemodelings() {
+    const own = this.habilitiesData.map((ability, index) => ({ ...ability, favoriteKey: this.getOwnedAbilityFavoriteKey(ability, index), sourceLabel: 'Personagem' }));
+    return [...own, ...this.inheritedHabilitiesData].flatMap(ability => (ability.remodelings ?? []).map(remodeling => ({ ability, remodeling, favoriteKey: `${ability.favoriteKey}:remodeling:${remodeling.id}` }))).filter(item => this.isActionFavorite(item.favoriteKey));
+  }
+
+  activateRemodelingShortcut(item: ReturnType<IrpwCharacterSheetComponent['getFavoriteRemodelings']>[number]): void {
+    this.activateAbilityShortcut(item.ability);
+    if (this.activeAbilityDetail) {
+      this.activeAbilityDetail.name = item.remodeling.name || item.ability.name || 'Remodelação';
+      this.activeAbilityDetail.description = [item.remodeling.description, this.activeAbilityDetail.description].filter(Boolean).join('\n');
+      this.rollShortcutLabel = this.activeAbilityDetail.name;
+    }
+  }
+
   isActionFavorite(key: string): boolean {
     return this.favoriteActionsData.includes(key);
   }
@@ -1534,29 +1567,22 @@ export class IrpwCharacterSheetComponent implements OnInit {
 
   onPendingConditionToggle(code: ConditionCode, isActive: boolean) {
     if (isActive) {
-      if (this.isPendingConditionActive(code)) {
-        return;
-      }
-
+      if (this.isPendingConditionActive(code)) return;
       const severity = this.getAvailableConditionSeverities(this.getConditionDefinition(code))[0];
-      this.pendingConditionsData = this.normalizeActiveConditions([
-        ...this.pendingConditionsData,
-        { code, severity },
-      ]);
-      return;
+      this.pendingConditionsData = this.normalizeActiveConditions([...this.pendingConditionsData, { code, severity }]);
+    } else {
+      this.pendingConditionsData = this.pendingConditionsData.filter(condition => condition.code !== code);
     }
-
-    this.pendingConditionsData = this.pendingConditionsData.filter(condition => condition.code !== code);
+    this.activeConditionsData = this.pendingConditionsData;
+    this.onConditionsChange();
   }
 
   onPendingConditionSeverityChange(code: ConditionCode, severity: ConditionSeverityCode) {
-    this.pendingConditionsData = this.normalizeActiveConditions(
-      this.pendingConditionsData.map(condition =>
-        condition.code === code
-          ? { ...condition, severity }
-          : condition
-      )
-    );
+    this.pendingConditionsData = this.normalizeActiveConditions(this.pendingConditionsData.map(condition =>
+      condition.code === code ? { ...condition, severity } : condition
+    ));
+    this.activeConditionsData = this.pendingConditionsData;
+    this.onConditionsChange();
   }
 
   getAvailableConditionSeverities(definition: ConditionDefinition): ConditionSeverityCode[] {
@@ -2408,3 +2434,4 @@ export class IrpwCharacterSheetComponent implements OnInit {
     return Math.floor(Math.random() * sides) + 1;
   }
 }
+

@@ -1,4 +1,4 @@
-
+﻿
     <div [historyEntity]="{ table: 'IRPWCharacterSheet', id: selectedCharacterId }" [historyModel]="currentSheet" (historyRestored)="restoreSheetHistory()" class="irpw-sheet entity-edit-shell flex flex-col relative"
       [style.--entity-glass-color]="selectedCharacter ? (getPersonalizationValue(selectedCharacter, 'color') || '#a1a1aa') : '#a1a1aa'">
       <div class="irpw-sheet-row flex flex-row gap-2 relative">
@@ -416,21 +416,6 @@
                         </section>
                       }
                     </div>
-
-                    <div class="flex justify-end gap-2 mt-4">
-                      <button
-                        type="button"
-                        class="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 transition hover:border-zinc-500 hover:text-white"
-                        (click)="closeConditionSettingsOverlay()">
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        class="rounded-md border border-yellow-700 bg-yellow-500/10 px-2 py-1 text-xs text-yellow-200 transition hover:bg-yellow-500/20"
-                        (click)="saveConditions()">
-                        Salvar
-                      </button>
-                    </div>
                   </div>
                 </ng-template>
               </div>
@@ -762,6 +747,7 @@
                         <app-nav-button [label]="'Marcos'" icon="fa-solid fa-flag" [accentColor]="getPersonalizationValue(selectedCharacter, 'color') || '#eab308'" size="sm" [active]="currentTab === 'marks'" (click)="selectTab('marks')"></app-nav-button>
                         <app-nav-button [label]="'Inventário'" icon="fa-solid fa-bag-shopping" [accentColor]="getPersonalizationValue(selectedCharacter, 'color') || '#eab308'" size="sm" [active]="currentTab === 'inventory'" (click)="selectTab('inventory')"></app-nav-button>
                         <app-nav-button [label]="'Poderes'" icon="fa-solid fa-wand-magic-sparkles" [accentColor]="getPersonalizationValue(selectedCharacter, 'color') || '#eab308'" size="sm" [active]="currentTab === 'skills'" (click)="selectTab('skills')"></app-nav-button>
+                        <app-nav-button label="Anotações" icon="fa-solid fa-note-sticky" [accentColor]="getPersonalizationValue(selectedCharacter, 'color') || '#eab308'" size="sm" [active]="currentTab === 'notes'" (click)="selectTab('notes')"></app-nav-button>
                       </div>
                       <div class="character-tab-content entity-properties-panel p-4 pb-10 rounded-lg mt-2 flex-1 flex flex-col">
                           @switch (currentTab) {
@@ -803,7 +789,8 @@
                                         <small>{{ hability.sourceLabel }}</small>
                                       </button>
                                     }
-                                    @if (getFavoriteAttacks().length === 0 && getFavoriteHabilities().length === 0) {
+                                    @for (item of getFavoriteRemodelings(); track item.favoriteKey) { <button type="button" class="ironpaw-shortcut" (click)="activateRemodelingShortcut(item)" [title]="item.remodeling.description"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i><span>{{ item.remodeling.name || 'Remodelação' }}</span><small>{{ item.ability.name }}</small></button> }
+                                    @if (getFavoriteAttacks().length === 0 && getFavoriteHabilities().length === 0 && getFavoriteRemodelings().length === 0) {
                                       <p class="rounded-lg border border-dashed border-zinc-700 px-3 py-3 text-xs text-zinc-500">Use a estrela nos ataques e habilidades para montar seus atalhos.</p>
                                     }
                                   </div>
@@ -1177,6 +1164,11 @@
                                 }
                               </div>
                             }
+                            @case ('notes') {
+                              @if (currentSheet; as sheet) {
+                                <section class="sheet-notes"><h3>Anotações gerais</h3><app-editor [historyField]="{ column: 'notes', label: 'Anotações gerais' }" [entityId]="sheet.id" entityTable="IRPWCharacterSheet" [entityName]="selectedCharacter.name" docTitle="Anotações" [document]="sheet.notes || ''" (saveDocument)="saveNotes(sheet, $event)"></app-editor><small>As alterações são salvas automaticamente.</small></section>
+                              }
+                            }
                             @case ('inventory') {
                               <irpw-inventory [characterId]="selectedCharacterId" [accentColor]="getPersonalizationValue(selectedCharacter, 'color') || '#eab308'"></irpw-inventory>
                             }
@@ -1219,7 +1211,8 @@
                                               <div class="ability-card-title"><h5><i class="fa-solid" [class]="'fa-solid ' + getHabilityTypeIcon(hability.type || 'technical')" aria-hidden="true"></i>{{ hability.name || 'Nova habilidade' }}</h5><span class="ability-grade">{{ abilitySummary(hability) }}</span></div>
                                               <p class="ability-card-description">{{ hability.description || 'Adicione a descrição e o efeito desta habilidade.' }}</p>
                                             </div>
-                                            <details class="ability-editor" [open]="!hability.name"><summary>Editar habilidade e efeitos</summary>
+                                            <button type="button" class="ironpaw-action-button" (click)="openAbilityDialog(ownAbilityDialog)">Editar habilidade e efeitos</button>
+                                            <ng-template #ownAbilityDialog><section class="ability-modal" role="dialog" aria-modal="true" aria-label="Editar habilidade"><header><h3>{{ hability.name || 'Nova habilidade' }}</h3><button type="button" aria-label="Fechar" (click)="closeAbilityDialog()"><i class="fa-solid fa-xmark"></i></button></header>
                                             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                                               <label class="flex flex-col gap-1 text-xs text-zinc-400">
                                                 Nome
@@ -1243,8 +1236,7 @@
                                                 <textarea [historyField]="{ column: 'habilities', label: 'Habilidades' }" [historyRead]="readHabilitiesHistory" class="min-h-20 rounded-lg border border-zinc-700 bg-zinc-950/70 px-3 py-2 text-sm text-white outline-none transition focus:border-zinc-500" [(ngModel)]="hability.description" (ngModelChange)="onHabilitiesChange()" placeholder="Descreva o efeito da habilidade."></textarea>
                                               </label>
                                             </div>
-                                            <irpw-ability-mechanics [ability]="hability" (changed)="onHabilitiesChange()"></irpw-ability-mechanics>
-                                            </details>
+                                            <irpw-ability-mechanics [ability]="hability" [favoritePrefix]="getOwnedAbilityFavoriteKey(hability, habilityIndex)" [favorites]="favoriteActionsData" (favoriteToggle)="toggleActionFavorite($event)" (changed)="onHabilitiesChange()"></irpw-ability-mechanics></section></ng-template>
                                             <app-icon-button size="lg" buttonType="secondary" [title]="(hability.rollSkill ? 'Preparar rolagem de ' : 'Ver efeito de ') + hability.name" [icon]="hability.rollSkill ? 'fa-solid fa-dice' : 'fa-solid fa-eye'" (click)="activateAbilityShortcut(hability)"></app-icon-button>
                                           </article>
                                         }
@@ -1268,7 +1260,8 @@
                                             <div class="ability-card-title"><h5><i [class]="'fa-solid ' + getHabilityTypeIcon(hability.type || 'technical')" aria-hidden="true"></i>{{ hability.name || 'Habilidade sem nome' }}</h5><span class="ability-grade">{{ abilitySummary(hability) }}</span></div>
                                             <p class="ability-card-description">{{ hability.description || 'Sem descrição.' }}</p>
                                           </div>
-                                          <details class="ability-editor"><summary>Descrição completa e efeitos</summary><p>{{ hability.description || 'Sem descrição.' }}</p><irpw-ability-mechanics [ability]="hability" [readonly]="true"></irpw-ability-mechanics></details>
+                                          <button type="button" class="ironpaw-action-button" (click)="openAbilityDialog(inheritedAbilityDialog)">Descrição completa e efeitos</button>
+                                          <ng-template #inheritedAbilityDialog><section class="ability-modal" role="dialog" aria-modal="true" aria-label="Detalhes da habilidade"><header><h3>{{ hability.name }}</h3><button type="button" aria-label="Fechar" (click)="closeAbilityDialog()"><i class="fa-solid fa-xmark"></i></button></header><p>{{ hability.description || 'Sem descrição.' }}</p><irpw-ability-mechanics [ability]="hability" [readonly]="true" [favoritePrefix]="hability.favoriteKey" [favorites]="favoriteActionsData" (favoriteToggle)="toggleActionFavorite($event)"></irpw-ability-mechanics></section></ng-template>
                                           @if (hability.type === 'magic') { <button type="button" class="ironpaw-action-button ability-roll-button" (click)="personalizeAbility(hability)">Criar cópia na ficha para remodelar</button> }
                                         </article>
                                       }
@@ -1416,3 +1409,4 @@
       </section>
     }
     </div>
+

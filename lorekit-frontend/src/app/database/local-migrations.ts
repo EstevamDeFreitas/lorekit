@@ -2,7 +2,7 @@ import type { BindParams, SqlValue } from 'sql.js';
 import { schema, TableDef } from './schema';
 import { SYNC_ENTITIES } from './sync-entity-registry';
 
-export const LOCAL_SCHEMA_VERSION = 10;
+export const LOCAL_SCHEMA_VERSION = 11;
 
 interface SqlDatabase {
   exec(sql: string, params?: BindParams): Array<{
@@ -140,6 +140,16 @@ const migrations: readonly LocalMigration[] = [
         for (const index of table.indexes ?? []) db.exec(index);
       }
       for (const name of ['Timeline', 'Age', 'Event', 'GreatMark']) addMissingColumns(db, schema.find(t => t.name === name)!);
+      createSyncTables(db);
+      createSyncTriggers(db);
+    },
+  },
+  {
+    version: 11,
+    name: 'anotacoes-gerais-da-ficha-ironpaw',
+    up: db => {
+      const sheetTable = schema.find(table => table.name === 'IRPWCharacterSheet');
+      if (sheetTable) addMissingColumns(db, sheetTable);
       createSyncTables(db);
       createSyncTriggers(db);
     },

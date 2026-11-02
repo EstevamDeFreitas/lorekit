@@ -37,7 +37,7 @@
         <div class="subsection-heading"><h5>Remodelações</h5>@if (!readonly()) { <button type="button" (click)="addRemodeling()">Cadastrar remodelação</button> }</div>
         @for (remodeling of ability().remodelings; track remodeling.id; let index = $index) {
           <div class="mechanics-entry">
-            <div class="entry-heading"><strong>{{ remodeling.name || kindLabel(remodeling) }}</strong><span>{{ remodelingCost(remodeling) }} Essência no total</span></div>
+            <div class="entry-heading"><strong>{{ remodeling.name || kindLabel(remodeling) }}</strong><span>{{ remodelingCost(remodeling) }} Essência no total</span>@if (favoritePrefix()) { <button type="button" [attr.aria-pressed]="favorites().includes(favoritePrefix() + ':remodeling:' + remodeling.id)" [attr.aria-label]="favorites().includes(favoritePrefix() + ':remodeling:' + remodeling.id) ? 'Remover remodelação dos favoritos' : 'Favoritar remodelação'" (click)="favoriteToggle.emit(favoritePrefix() + ':remodeling:' + remodeling.id)"><i [class]="favorites().includes(favoritePrefix() + ':remodeling:' + remodeling.id) ? 'fa-solid fa-star' : 'fa-regular fa-star'"></i></button> }</div>
             @if (readonly()) { <p>{{ kindLabel(remodeling) }} · {{ remodeling.description }}</p> } @else {
               <div class="mechanics-fields">
                 <label>Nome<input type="text" [(ngModel)]="remodeling.name" (ngModelChange)="changed.emit()" placeholder="Nome desta remodelação"></label>

@@ -1173,3 +1173,9 @@
 .resistance-whole.is-temporary.is-active { background:#8b5cf6; }
 .resistance-whole:focus-visible { outline:2px solid #fafafa; outline-offset:3px; }
 .ability-roll-button { min-width:2rem; min-height:2rem; padding:.35rem; }
+
+.ability-modal { width: min(48rem, 100%); max-height: 85vh; overflow-y: auto; background: #18181b; border: 1px solid #52525b; border-radius: .75rem; padding: 1.25rem; box-shadow: 0 16px 48px rgb(0 0 0 / 45%); }
+.ability-modal header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; color: #fafafa; }
+.ability-modal header h3 { font-weight: 600; }
+.sheet-notes { display: flex; flex-direction: column; gap: .5rem; color: #d4d4d8; font-size: .875rem; }
+.sheet-notes small { color: #a1a1aa; }
