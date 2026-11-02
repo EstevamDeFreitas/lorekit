@@ -31,4 +31,11 @@ describe('Story formatting and read intervals', () => {
       ['10', '13'],
     ]);
   });
+  it('renders validated colors together with emphasis and keeps HTML escaped', () => {
+    const html = renderStoryText('[color=#ffcc00]**forte** e *itálico* <script>[/color]');
+    expect(html).toContain('<span style="color: #ffcc00"><strong>forte</strong> e <em>itálico</em> &lt;script&gt;</span>');
+    expect(renderStoryText('**[color=#aabbcc]texto[/color]**')).toContain('<strong><span style="color: #aabbcc">texto</span></strong>');
+    expect(renderStoryText('[color=red]texto[/color]')).not.toContain('<span');
+    expect(storyTextMarkdown('[color=#ffcc00]**texto**[/color]')).toBe('**texto**');
+  });
 });

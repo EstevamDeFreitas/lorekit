@@ -12,6 +12,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { MOODBOARD_ACCENT_PALETTE } from '../../../theme/moodboard-color-palette';
 import { StoryNavigationService } from '../../../services/story-navigation.service';
 import { WORKSPACE_TAB_CONTEXT } from '../../../models/workspace-tab-context';
 import { DatePipe } from '@angular/common';
@@ -77,6 +79,7 @@ export class StoryPageComponent implements AfterViewInit {
   private readonly zone = inject(NgZone);
   private readonly destroy = inject(DestroyRef);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly sanitizer = inject(DomSanitizer);
   private previousAccount = this.auth.user()?.id ?? null;
   private readonly timeline = viewChild<ElementRef<HTMLElement>>('timeline');
   private readonly composer =
@@ -112,6 +115,13 @@ export class StoryPageComponent implements AfterViewInit {
   private draftEditOrigin: { sceneId: string; speakerId: string } | null = null;
   readonly incidentalPortrait = signal<File | null>(null);
   readonly atEnd = signal(true);
+  readonly backgroundUrl = signal<string | null>(null);
+  readonly composerExpanded = signal(false);
+  readonly textColor = signal('#facc15');
+  readonly textColors = MOODBOARD_ACCENT_PALETTE;
+  readonly colorPickerOpen = signal(false);
+  private backgroundKey = '';
+  private releaseBackground: (() => void) | null = null;
   readonly rollRevision = signal(0);
   readonly text = new FormControl('', { nonNullable: true });
   readonly sceneTitle = new FormControl('', { nonNullable: true });
@@ -238,6 +248,10 @@ export class StoryPageComponent implements AfterViewInit {
     this.client.messages().filter((message) => message.roll),
   );
   readonly renderText = renderStoryText;
+  renderFormattedText(text: string): SafeHtml {
+    // The formatter escapes message content and only emits a validated hex color.
+    return this.sanitizer.bypassSecurityTrustHtml(renderStoryText(text));
+  }
   readonly formula = buildRollFormula;
   readonly statusLabels = {
     success: 'Sucesso',
@@ -285,7 +299,7 @@ export class StoryPageComponent implements AfterViewInit {
     });
     this.text.valueChanges
       .pipe(takeUntilDestroyed())
-      .subscribe((text) => this.rememberDraft(text));
+      .subscribe((text) => { this.rememberDraft(text); this.resizeComposer(); });
     this.rollForm.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.rollRevision.update((value) => value + 1));
@@ -391,6 +405,7 @@ export class StoryPageComponent implements AfterViewInit {
     this.destroy.onDestroy(() => {
       clearInterval(heartbeat);
       this.stopObservingMessages();
+      this.releaseBackground?.();
       if (this.timelineFrame !== null) cancelAnimationFrame(this.timelineFrame);
       if (this.messageScrollFrame !== null) cancelAnimationFrame(this.messageScrollFrame);
       if (this.readTimer) clearTimeout(this.readTimer);
@@ -423,6 +438,7 @@ export class StoryPageComponent implements AfterViewInit {
     this.sceneId.set(draft?.sceneId || scenes.at(-1)?.id || '');
     this.speakerId.set(draft?.speakerId || '');
     this.text.setValue(draft?.text || '', { emitEvent: false });
+    this.resizeComposer();
     this.attachments.set(
       draft?.attachments?.map((attachment) => ({ ...attachment })) ?? [],
     );
@@ -999,6 +1015,26 @@ export class StoryPageComponent implements AfterViewInit {
       );
     });
   }
+  applyTextColor(): void {
+    const input = this.composer()?.nativeElement;
+    const start = input?.selectionStart ?? this.text.value.length;
+    const end = input?.selectionEnd ?? start;
+    const selected = this.text.value.slice(start, end);
+    const open = `[color=${this.textColor()}]`;
+    const close = '[/color]';
+    const colored = selected.split('\n').map((line) => open + line + close).join('\n');
+    this.text.setValue(this.text.value.slice(0, start) + colored + this.text.value.slice(end));
+    queueMicrotask(() => {
+      input?.focus();
+      input?.setSelectionRange(start + open.length, selected.includes('\n') ? start + colored.length : start + open.length + selected.length);
+    });
+  }
+  chooseTextColor(color: string): void {
+    if (!/^#[0-9a-f]{6}$/i.test(color)) return;
+    this.textColor.set(color);
+    this.colorPickerOpen.set(false);
+    this.applyTextColor();
+  }
   readValue(event: Event): string {
     return (event.target as HTMLInputElement).value;
   }
@@ -1080,12 +1116,45 @@ export class StoryPageComponent implements AfterViewInit {
       await this.client.refreshList();
     });
   }
+  resizeComposer(): void {
+    const textarea = this.composer()?.nativeElement;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }
+  toggleComposer(): void {
+    this.composerExpanded.update((expanded) => !expanded);
+    requestAnimationFrame(() => this.resizeComposer());
+  }
+  private updateBackground(): void {
+    const root = this.timeline()?.nativeElement;
+    const storyId = this.client.current()?.story.id;
+    if (!root || !storyId) return;
+    const rect = root.getBoundingClientRect();
+    const threshold = this.atEnd() ? rect.bottom : rect.top + root.clientHeight * 0.5;
+    let assetId = '';
+    root.querySelectorAll<HTMLElement>('[data-background-marker]').forEach((marker) => {
+      if (marker.getBoundingClientRect().top <= threshold) assetId = marker.dataset['backgroundMarker'] ?? '';
+    });
+    const key = assetId ? `${storyId}:${assetId}` : '';
+    if (key === this.backgroundKey) return;
+    this.backgroundKey = key;
+    this.releaseBackground?.();
+    this.releaseBackground = null;
+    this.zone.run(() => this.backgroundUrl.set(null));
+    if (!assetId) return;
+    this.releaseBackground = this.client.retainImage(storyId, assetId);
+    void this.client.imageUrl(storyId, assetId).then((url) => {
+      if (this.backgroundKey === key) this.zone.run(() => this.backgroundUrl.set(url));
+    }).catch(() => undefined);
+  }
   onScroll(): void {
     const element = this.timeline()?.nativeElement;
     if (element) {
       const atEnd =
         element.scrollHeight - element.scrollTop - element.clientHeight < 32;
       if (atEnd !== this.atEnd()) this.zone.run(() => this.atEnd.set(atEnd));
+      this.updateBackground();
       const visible =
         atEnd &&
         this.active() &&
@@ -1238,6 +1307,8 @@ export class StoryPageComponent implements AfterViewInit {
         !this.client.scope()
       ))
         this.scrollToEnd();
+      this.updateBackground();
+      this.resizeComposer();
     });
   }
   private scrollToMessage(id: string): void {

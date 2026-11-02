@@ -179,6 +179,23 @@ describe('Story RP screen', () => {
     expect(component.error()).toContain('Escreva uma fala');
     fixture.destroy();
   });
+  it('applies a palette color to the selection and renders it safely in the preview', () => {
+    const fixture = TestBed.createComponent(StoryPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.text.setValue('**fala** <img src=x onerror=alert(1)>');
+    fixture.detectChanges();
+    const composer: HTMLTextAreaElement = fixture.nativeElement.querySelector('#rp-message');
+    composer.setSelectionRange(0, 8);
+    component.chooseTextColor('#ef4444');
+    fixture.detectChanges();
+    const preview: HTMLElement = fixture.nativeElement.querySelector('.text-preview > div');
+    const colored = preview.querySelector('span');
+    expect(colored?.style.color).toBe('rgb(239, 68, 68)');
+    expect(colored?.querySelector('strong')?.textContent).toBe('fala');
+    expect(preview.querySelector('img')).toBeNull();
+    fixture.destroy();
+  });
   it('sends staged dialogue in order with the locutor chosen for each line', async () => {
     const fixture = TestBed.createComponent(StoryPageComponent),
       component = fixture.componentInstance,

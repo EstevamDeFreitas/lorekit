@@ -10,6 +10,7 @@ export function escapeHtml(text: string): string {
 }
 function inline(text: string): string {
   return escapeHtml(text)
+    .replace(/\[color=(#[0-9a-fA-F]{6})\]([^\n]*?)\[\/color\]/g, '<span style="color: $1">$2</span>')
     .replace(/\*\*([^\n]+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
 }
@@ -40,6 +41,7 @@ export function escapeMarkdown(text: string): string {
 export function storyTextMarkdown(text: string): string {
   return text
     .replaceAll('\r\n', '\n')
+    .replace(/\[\/?color(?:=#[0-9a-fA-F]{6})?\]/g, '')
     .replace(/[\\`_{}[\]()#!|~]/g, '\\$&')
     .split('\n')
     .map((line) => line.replace(/^(\s*)([-+]|\d+\.)\s/, '$1\\$2 '))

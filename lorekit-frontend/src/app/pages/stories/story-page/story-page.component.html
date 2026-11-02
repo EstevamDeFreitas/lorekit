@@ -595,6 +595,7 @@
           <div
             #timeline
             class="timeline"
+            [style.background-image]="backgroundUrl() ? 'linear-gradient(rgba(9, 9, 11, .84), rgba(9, 9, 11, .92)), url(' + backgroundUrl() + ')' : null"
             aria-label="Histórico da História"
             tabindex="0"
           >
@@ -624,6 +625,7 @@
               @if (group.messages.length || group.scene.id === sceneId()) {
                 <section
                   class="scene-block"
+                  data-background-marker=""
                   [attr.aria-label]="group.scene.title"
                 >
                   <h2 class="scene-divider">{{ group.scene.title }}</h2>
@@ -632,6 +634,7 @@
                       class="message"
                       [attr.data-sequence]="message.sequence"
                       [attr.data-message-id]="message.id"
+                      [attr.data-background-marker]="message.assets.length ? message.assets[message.assets.length - 1].id : null"
                     >
                       <div class="message-avatar">
                         @if (message.speaker.portraitAssetId) {
@@ -698,7 +701,7 @@
                         } @else if (message.text) {
                           <div
                             class="message-text"
-                            [innerHTML]="renderText(message.text)"
+                            [innerHTML]="renderFormattedText(message.text)"
                           ></div>
                         }
                         @if (message.roll; as roll) {
@@ -969,15 +972,32 @@
               >
                 <i class="fa-solid fa-quote-left" aria-hidden="true"></i>
               </button>
+              <div class="text-color-menu">
+                <button type="button" class="apply-text-color" (click)="colorPickerOpen.set(!colorPickerOpen())" [disabled]="hasPending()" [attr.aria-expanded]="colorPickerOpen()" aria-label="Escolher cor do texto" title="Escolher cor do texto">
+                  <i class="fa-solid fa-font" aria-hidden="true"></i><span [style.background-color]="textColor()"></span>
+                </button>
+                @if (colorPickerOpen()) {
+                  <div class="text-color-popover" (keydown.escape)="colorPickerOpen.set(false)">
+                    <div class="text-color-heading"><span>Cor do texto</span><label class="text-color-picker" title="Cor personalizada"><span class="sr-only">Cor personalizada</span><input type="color" [value]="textColor()" (change)="chooseTextColor(readValue($event))" /></label></div>
+                    <div class="text-color-grid">
+                      @for (color of textColors; track color) {
+                        <button type="button" class="text-color-swatch" [class.selected]="textColor() === color" [style.background-color]="color" [attr.aria-label]="'Aplicar cor ' + color" (click)="chooseTextColor(color)"></button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
               <details class="text-preview">
                 <summary>Prévia</summary>
-                <div [innerHTML]="renderText(text.value)"></div>
+                <div [innerHTML]="renderFormattedText(text.value)"></div>
               </details>
               </div>
+            <button type="button" class="composer-expand" (click)="toggleComposer()" [attr.aria-expanded]="composerExpanded()" [attr.aria-label]="composerExpanded() ? 'Reduzir caixa de mensagem' : 'Expandir caixa de mensagem'" [title]="composerExpanded() ? 'Reduzir caixa de mensagem' : 'Expandir caixa de mensagem'"><i [class]="composerExpanded() ? 'fa-solid fa-compress' : 'fa-solid fa-expand'" aria-hidden="true"></i></button>
             <label class="sr-only" for="rp-message">Mensagem</label
             ><textarea
               #composer
               id="rp-message"
+              [class.expanded]="composerExpanded()"
               [formControl]="text"
               rows="2"
               maxlength="20000"
