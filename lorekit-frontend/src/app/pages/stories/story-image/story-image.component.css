@@ -91,6 +91,6 @@ dialog > img {
   cursor: pointer;
 }
 button:focus-visible {
-  outline: 2px solid var(--color-emerald-400, #34d399);
+  outline: 2px solid var(--color-yellow-400, #facc15);
   outline-offset: 3px;
 }

@@ -32,11 +32,17 @@ import {
 } from '../../../services/irpw-npc-catalog.service';
 import { ImageService } from '../../../services/image.service';
 import { ImageUploaderComponent } from '../../../components/ImageUploader/image-uploader.component';
+import { NavButtonComponent } from '../../../components/nav-button/nav-button.component';
+import { ButtonComponent } from '../../../components/button/button.component';
+import { InputComponent } from '../../../components/input/input.component';
+import { TextAreaComponent } from '../../../components/text-area/text-area.component';
+import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
+import { HexColorPickerComponent } from '../../../components/hex-color-picker/hex-color-picker.component';
 import { AssetUrlPipe } from '../../../pipes/asset-url.pipe';
 
 @Component({
   selector: 'irpw-npc-catalog',
-  imports: [ReactiveFormsModule, AssetUrlPipe],
+  imports: [ReactiveFormsModule, AssetUrlPipe, NavButtonComponent, ButtonComponent, InputComponent, TextAreaComponent, ComboBoxComponent, HexColorPickerComponent],
   templateUrl: './irpw-npc-catalog.component.html',
   styleUrl: './irpw-npc-catalog.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -49,6 +55,9 @@ export class IrpwNpcCatalogComponent {
   readonly all = signal(this.catalog.list());
   readonly selected = signal<IrpwCatalogNpc | null>(null);
   readonly search = signal('');
+  readonly editorSection = signal<'base' | 'tags' | 'actions'>('base');
+  readonly selectedTag = signal(0);
+  readonly selectedAction = signal<{ list: 'actions' | 'signatures'; index: number } | null>(null);
   readonly includeArchived = signal(false);
   readonly error = signal('');
   readonly notice = signal('');
@@ -75,6 +84,9 @@ export class IrpwNpcCatalogComponent {
     { value: 'trigger', label: 'Gatilho' },
     { value: 'limitation', label: 'Limitação' },
   ];
+  readonly threatOptions = [1, 2, 3, 4, 5, 6].map(value => ({ value, label: `NA ${value}` }));
+  readonly attributeOptions = this.attributes.map(value => ({ value, label: this.attributeLabels[value] }));
+  readonly damageOptions = this.damages.map(value => ({ value, label: this.damageLabels[value] }));
   readonly form = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     color: '#a1a1aa',
@@ -101,6 +113,12 @@ export class IrpwNpcCatalogComponent {
         .toLocaleLowerCase('pt-BR')
         .includes(search),
     );
+  });
+  readonly catalogPortraits = computed(() => {
+    return new Map(this.all().map((npc) => [
+      npc.id,
+      npc.portraitImageId ? this.images.getImage('IRPWNpc', npc.id, 'portrait') : null,
+    ]));
   });
   readonly ruleErrors = computed(() => {
     this.version();
@@ -134,6 +152,18 @@ export class IrpwNpcCatalogComponent {
     } catch (error) {
       this.fail(error);
     }
+  }
+
+  updateControl<T>(control: FormControl<T>, value: T): void {
+    if (control.value === value) return;
+    control.setValue(value);
+    control.markAsDirty();
+  }
+
+  updateTagType(index: number, value: NpcTagType | null): void {
+    if (value === null) return;
+    this.updateControl(this.form.controls.tags.at(index).controls.type, value);
+    this.tagTypeChanged(index);
   }
 
   select(npc: IrpwCatalogNpc): void {
@@ -248,6 +278,7 @@ export class IrpwNpcCatalogComponent {
 
   addTag(): void {
     this.form.controls.tags.push(this.tagForm());
+    this.selectedTag.set(this.form.controls.tags.length - 1);
     this.form.markAsDirty();
   }
   addAction(signature = false): void {
@@ -256,10 +287,13 @@ export class IrpwNpcCatalogComponent {
       : this.form.controls.actions;
     if (!signature && list.length >= 4) return;
     list.push(this.actionForm());
+    this.selectedAction.set({ list: signature ? 'signatures' : 'actions', index: list.length - 1 });
     this.form.markAsDirty();
   }
   remove(list: 'tags' | 'actions' | 'signatures', index: number): void {
     this.form.controls[list].removeAt(index);
+    if (list === 'tags') this.selectedTag.set(Math.max(0, Math.min(index, this.form.controls.tags.length - 1)));
+    else this.selectedAction.set(null);
     this.form.markAsDirty();
   }
   tagTypeChanged(index: number): void {
@@ -274,6 +308,9 @@ export class IrpwNpcCatalogComponent {
 
   private load(npc: IrpwCatalogNpc): void {
     this.selected.set(structuredClone(npc));
+    this.editorSection.set('base');
+    this.selectedTag.set(0);
+    this.selectedAction.set(null);
     this.form.controls.tags.clear();
     this.form.controls.actions.clear();
     this.form.controls.signatures.clear();

@@ -33,6 +33,7 @@ O uso principal acontece no desktop Windows, em um aplicativo Electron que execu
 - A interface e a documentação voltada ao usuário são em português.
 - As regras do Ironpaw fornecidas em `Sistema Ironpaw (1).md` são a referência de domínio para as funcionalidades desse módulo.
 - O padrão visual existente do Lorekit deve ser preservado e evoluído de forma consistente nas novas superfícies.
+- Ações primárias da interface usam o amarelo Tailwind do Lorekit; ações secundárias usam tons zinc. Reutilize os componentes `app-button` e `app-icon-button` para ações convencionais. Verde pode ser usado quando tiver significado específico, mas não como cor primária padrão.
 
 ## Brand Commitments
 

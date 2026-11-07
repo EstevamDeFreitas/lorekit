@@ -8,7 +8,7 @@ import { Params, Router, RouterLink, RouterLinkActive } from '@angular/router';
   imports: [NgClass, RouterLink, RouterLinkActive],
   template: `
     @if (this.route() == null){
-      <button [ngClass]="buttonClasses" [disabled]="disabled()">
+      <button [type]="nativeType()" [ngClass]="buttonClasses" [disabled]="disabled()">
         @if (icon()){
           <i class="fa-solid" ngClass="{{icon()}}"></i>
         }
@@ -44,6 +44,7 @@ export class ButtonComponent {
   useRouteActive = input<boolean>(false);
   icon = input<string>();
   size = input<string>('md');
+  nativeType = input<'button' | 'submit' | 'reset'>('submit');
 
   get buttonClasses():string {
     let buttonSize = this.size() == 'xs' ? 'px-3 py-1.5' : 'px-4 py-2';

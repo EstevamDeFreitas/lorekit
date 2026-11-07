@@ -30,14 +30,7 @@
           Aceitar este convite libera somente a História. Todos os participantes
           podem narrar com os locutores disponibilizados.
         </p>
-        <button
-          type="button"
-          class="primary"
-          (click)="acceptInvite()"
-          [disabled]="busy() || !auth.isAuthenticated()"
-        >
-          Aceitar convite
-        </button>
+        <app-button nativeType="button" size="xs" label="Aceitar convite" (click)="acceptInvite()" [disabled]="busy() || !auth.isAuthenticated()" />
       </div>
     } @else {
       @if (client.current(); as current) {
@@ -108,22 +101,9 @@
                     >Título<input
                       [formControl]="sceneTitle"
                       maxlength="200" /></label
-                  ><button
-                    type="button"
-                    class="primary"
-                    (click)="addScene()"
-                    [disabled]="busy() || !client.canWrite()"
-                  >
-                    Criar cena
-                  </button>
+                  ><app-button nativeType="button" size="xs" label="Criar cena" (click)="addScene()" [disabled]="busy() || !client.canWrite()" />
                   @if (sceneId()) {
-                    <button
-                      type="button"
-                      (click)="addScene(true)"
-                      [disabled]="busy() || !client.canWrite()"
-                    >
-                      Renomear cena selecionada
-                    </button>
+                    <app-button nativeType="button" size="xs" buttonType="secondary" label="Renomear cena selecionada" (click)="addScene(true)" [disabled]="busy() || !client.canWrite()" />
                   }
                 </div>
               }
@@ -147,33 +127,15 @@
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
                       (change)="portraitFile($event)" /></label
-                  ><button
-                    type="button"
-                    class="primary"
-                    (click)="addSpeaker()"
-                    [disabled]="busy() || !sceneId() || !client.canWrite()"
-                  >
-                    Criar locutor
-                  </button>
+                  ><app-button nativeType="button" size="xs" label="Criar locutor" (click)="addSpeaker()" [disabled]="busy() || !sceneId() || !client.canWrite()" />
                 </div>
                 @if (incidentalPortrait(); as file) {
-                  <p class="muted">
+                  <div class="inline-fields muted">
                     {{ file.name }}
-                    <button
-                      type="button"
-                      (click)="incidentalPortrait.set(null)"
-                    >
-                      Remover retrato
-                    </button>
-                  </p>
+                    <app-button nativeType="button" size="xs" buttonType="secondary" label="Remover retrato" (click)="incidentalPortrait.set(null)" />
+                  </div>
                 }
-                <button
-                  type="button"
-                  (click)="library()"
-                  [disabled]="busy() || !client.canWrite()"
-                >
-                  Disponibilizar personagem ou PNJ
-                </button>
+                <app-button nativeType="button" size="xs" buttonType="secondary" label="Disponibilizar personagem ou PNJ" (click)="library()" [disabled]="busy() || !client.canWrite()" />
               }
               @if (panel() === 'share') {
                 <h2>Disponibilizar um locutor</h2>
@@ -351,14 +313,7 @@
                       Atualizações valem para novos envios. Mensagens e rolagens
                       anteriores preservam a revisão usada.
                     </p>
-                    <button
-                      type="button"
-                      class="primary"
-                      (click)="publish()"
-                      [disabled]="busy() || !client.canWrite()"
-                    >
-                      Confirmar compartilhamento
-                    </button>
+                    <app-button nativeType="button" size="xs" label="Confirmar compartilhamento" (click)="publish()" [disabled]="busy() || !client.canWrite()" />
                   </div>
                 }
               }
@@ -379,21 +334,13 @@
                         current.member.role === 'owner' &&
                         member.role !== 'owner'
                       ) {
-                        <button
-                          type="button"
-                          (click)="removeMember(member.userId)"
-                          [disabled]="busy()"
-                        >
-                          Remover acesso
-                        </button>
+                        <app-button nativeType="button" size="xs" buttonType="danger" label="Remover acesso" (click)="removeMember(member.userId)" [disabled]="busy()" />
                       }
                     </li>
                   }
                 </ul>
                 @if (current.member.role === 'owner') {
-                  <button type="button" (click)="invite()" [disabled]="busy()">
-                    Gerar convite
-                  </button>
+                  <app-button nativeType="button" size="xs" buttonType="secondary" label="Gerar convite" (click)="invite()" [disabled]="busy()" />
                   @if (inviteLink()) {
                     <label
                       >Link de convite<input
@@ -440,15 +387,8 @@
                   Notificações fora da História</label
                 >
                 <div class="inline-fields">
-                  <button type="button" (click)="notifications.enableSound()">
-                    {{
-                      notifications.soundReady()
-                        ? 'Som ativado nesta guia'
-                        : 'Ativar som nesta guia'
-                    }}</button
-                  ><button type="button" (click)="notifications.enablePush()">
-                    Ativar notificações no navegador
-                  </button>
+                  <app-button nativeType="button" size="xs" buttonType="secondary" [label]="notifications.soundReady() ? 'Som ativado nesta guia' : 'Ativar som nesta guia'" (click)="notifications.enableSound()" />
+                  <app-button nativeType="button" size="xs" buttonType="secondary" label="Ativar notificações no navegador" (click)="notifications.enablePush()" />
                 </div>
                 <p class="muted" role="status">
                   {{ notifications.pushState() }}
@@ -575,14 +515,7 @@
                     O resultado será registrado no chat. Vida, condições, itens
                     e recursos da ficha não serão alterados.
                   </p>
-                  <button
-                    type="button"
-                    class="primary"
-                    (click)="send(true)"
-                    [disabled]="sending() || hasPending() || !client.canWrite() || !preview()"
-                  >
-                    Rolar e registrar
-                  </button>
+                  <app-button nativeType="button" size="xs" label="Rolar e registrar" (click)="send(true)" [disabled]="sending() || hasPending() || !client.canWrite() || !preview()" />
                 } @else {
                   <p class="muted">
                     Este locutor não possui ficha Ironpaw disponibilizada. Você
@@ -602,24 +535,12 @@
           >
             @if (client.hasOlder()) {
               <div class="history-actions">
-                <button
-                  type="button"
-                  (click)="loadOlder()"
-                  [disabled]="client.loading()"
-                >
-                  {{
-                    client.loading()
-                      ? 'Carregando…'
-                      : 'Carregar mensagens anteriores'
-                  }}
-                </button>
+                <app-button nativeType="button" size="xs" buttonType="secondary" [label]="client.loading() ? 'Carregando…' : 'Carregar mensagens anteriores'" (click)="loadOlder()" [disabled]="client.loading()" />
               </div>
             }
             @if (client.scope() || !client.viewingLatest()) {
               <div class="history-actions">
-                <button type="button" (click)="latest()">
-                  Voltar às mensagens recentes
-                </button>
+                <app-button nativeType="button" size="xs" buttonType="secondary" label="Voltar às mensagens recentes" (click)="latest()" />
               </div>
             }
             @for (group of groups(); track group.scene.id) {
@@ -686,17 +607,8 @@
                               [disabled]="savingMessageEdit()"
                             ></textarea>
                             <div>
-                              <button
-                                type="button"
-                                class="primary"
-                                (click)="saveMessageEdit(message)"
-                                [disabled]="savingMessageEdit() || !client.canWrite()"
-                              >{{ savingMessageEdit() ? 'Salvando…' : 'Salvar edição' }}</button>
-                              <button
-                                type="button"
-                                (click)="cancelMessageEdit()"
-                                [disabled]="savingMessageEdit()"
-                              >Cancelar</button>
+                              <app-button nativeType="button" size="xs" [label]="savingMessageEdit() ? 'Salvando…' : 'Salvar edição'" (click)="saveMessageEdit(message)" [disabled]="savingMessageEdit() || !client.canWrite()" />
+                              <app-button nativeType="button" size="xs" buttonType="secondary" label="Cancelar" (click)="cancelMessageEdit()" [disabled]="savingMessageEdit()" />
                             </div>
                           </div>
                         } @else if (message.text) {
@@ -795,14 +707,7 @@
                   Dê um título à cena e escolha os locutores para começar a
                   narrar.
                 </p>
-                <button
-                  type="button"
-                  class="primary"
-                  (click)="panel.set('scene')"
-                  [disabled]="!client.canWrite()"
-                >
-                  Criar primeira cena
-                </button>
+                <app-button nativeType="button" size="xs" label="Criar primeira cena" (click)="panel.set('scene')" [disabled]="!client.canWrite()" />
               </div>
             }
           </div>
@@ -834,22 +739,10 @@
           <section class="composer" aria-label="Escrever mensagem">
             @if (client.uncertain().length) {
               <div class="pending-notice" role="status">
-                <span>Há um envio aguardando confirmação.</span
-                ><button
-                  type="button"
-                  (click)="checkPending()"
-                  [disabled]="!client.canWrite()"
-                >
-                  Verificar entrega
-                </button>
+                <span>Há um envio aguardando confirmação.</span>
+                <app-button nativeType="button" size="xs" buttonType="secondary" label="Verificar entrega" (click)="checkPending()" [disabled]="!client.canWrite()" />
                 @if (hasPending()) {
-                  <button
-                    type="button"
-                    (click)="retryPending()"
-                    [disabled]="sending() || !client.canWrite()"
-                  >
-                    Tentar o mesmo envio novamente
-                  </button>
+                  <app-button nativeType="button" size="xs" buttonType="secondary" label="Tentar o mesmo envio novamente" (click)="retryPending()" [disabled]="sending() || !client.canWrite()" />
                 }
               </div>
             }
@@ -1090,9 +983,12 @@
                   [disabled]="sending() || hasPending()"
                 >Cancelar edição</button>
               }
-              <button
-                type="button"
-                class="primary send-button"
+              <app-button
+                nativeType="button"
+                size="xs"
+                class="send-button"
+                [label]="sendLabel()"
+                icon="fa-arrow-up"
                 (click)="send()"
                 [disabled]="
                   sending() ||
@@ -1102,10 +998,7 @@
                   (editingDraftId() && !hasComposerMessage()) ||
                   (hasComposerMessage() && (!sceneId() || !speakerId()))
                 "
-              >
-                {{ sendLabel() }}
-                <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
-              </button>
+              />
             </footer>
           </section>
         }

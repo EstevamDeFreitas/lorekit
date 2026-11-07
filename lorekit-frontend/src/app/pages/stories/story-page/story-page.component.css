@@ -77,14 +77,6 @@ button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.primary {
-  background: var(--color-yellow-500, #eab308);
-  border-color: transparent;
-  color: #27272a;
-}
-.primary:hover:not(:disabled) {
-  background: var(--color-yellow-600, #ca8a04);
-}
 a {
   color: inherit;
   text-decoration: none;
@@ -259,7 +251,7 @@ input[type='color'] {
 .check input {
   width: auto;
   margin-top: 0.2rem;
-  accent-color: var(--color-emerald-500, #10b981);
+  accent-color: var(--color-yellow-500, #eab308);
 }
 .check small,
 .source-list small {
@@ -476,7 +468,7 @@ time {
   color: var(--color-zinc-300, #d4d4d8);
   font-size: 0.62rem;
 }
-.message-edit-trigger:hover:not(:disabled) { color: var(--color-emerald-300, #6ee7b7); }
+.message-edit-trigger:hover:not(:disabled) { color: var(--color-yellow-300, #fde047); }
 .message-edit-trigger:disabled { cursor: not-allowed; opacity: 0.45; }
 time {
   font-variant-numeric: tabular-nums;
@@ -526,7 +518,7 @@ time {
   color: var(--story-muted);
 }
 .roll-record-heading > i {
-  color: var(--color-emerald-300, #6ee7b7);
+  color: var(--color-yellow-300, #fde047);
 }
 .roll-formula {
   font-size: 0.8rem;
@@ -650,7 +642,7 @@ time {
 .queued-message-remove:hover:not(:disabled) { background: var(--color-zinc-800, #27272a); color: var(--color-zinc-100, #f4f4f5); }
 .queued-message-remove:disabled { cursor: not-allowed; opacity: 0.45; }
 .queued-message-edit { min-height: 1.75rem; border: 0; background: transparent; padding: 0.2rem 0.4rem; color: var(--color-zinc-300, #d4d4d8); font-size: 0.62rem; }
-.queued-message-edit:hover:not(:disabled) { color: var(--color-emerald-300, #6ee7b7); }
+.queued-message-edit:hover:not(:disabled) { color: var(--color-yellow-300, #fde047); }
 .queued-message-edit:disabled { cursor: not-allowed; opacity: 0.45; }
 .composer-context {
   min-width: 0;
@@ -777,9 +769,7 @@ time {
   outline-offset: 3px;
 }
 .send-button {
-  min-height: 2rem;
-  padding: 0.35rem 0.8rem;
-  font-weight: 600;
+  display: block;
 }
 .queue-message-button {
   display: inline-flex;
@@ -879,8 +869,8 @@ textarea,
   scrollbar-color: var(--color-zinc-600, #52525b) transparent;
 }
 ::selection {
-  background: var(--color-emerald-800, #065f46);
-  color: #ecfdf5;
+  background: var(--color-yellow-500, #eab308);
+  color: #18181b;
 }
 @container (max-width: 850px) {
   .story-topbar {

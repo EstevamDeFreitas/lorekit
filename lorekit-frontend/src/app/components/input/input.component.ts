@@ -16,6 +16,10 @@ import { HistoryField } from '../../models/entity-history.model';
         [historyField]="historyField()"
         [historyRead]="historyRead()"
         [type]="type()"
+        [attr.maxlength]="maxLength()"
+        [attr.min]="min()"
+        [attr.max]="max()"
+        [attr.step]="step()"
         [(ngModel)]="value"
         (blur)="markAsTouched()"
         [placeholder]="placeholder()"
@@ -39,6 +43,10 @@ export class InputComponent {
   labelColor = input<string | null>(null);
   placeholder = input<string>('');
   type = input<string>('text');
+  maxLength = input<number | null>(null);
+  min = input<number | null>(null);
+  max = input<number | null>(null);
+  step = input<number | null>(null);
   value = model<any>('');
   required = input<boolean>(false);
   size = input<string>('sm')

@@ -1,23 +1,10 @@
 <div class="npc-manager">
-  <aside class="npc-catalog" aria-label="Catálogo de PNJs">
+  <aside class="npc-catalog entity-properties-panel" aria-label="Catálogo de PNJs">
     <div class="catalog-heading">
-      <h2>PNJs</h2>
-      <button
-        type="button"
-        class="primary"
-        (click)="create()"
-        [disabled]="form.dirty"
-      >
-        <i class="fa-solid fa-plus" aria-hidden="true"></i> Novo PNJ
-      </button>
+      <h2>PNJs do catálogo <span class="count">{{ filtered().length }}</span></h2>
+      <app-button nativeType="button" size="xs" label="Novo PNJ" icon="fa-plus" (click)="create()" [disabled]="form.dirty" />
     </div>
-    <label
-      >Buscar PNJs<input
-        type="search"
-        placeholder="Nome ou conceito"
-        [value]="search()"
-        (input)="search.set($any($event.target).value)"
-    /></label>
+    <app-input label="Buscar PNJs" type="search" placeholder="Nome ou conceito" [value]="search()" (valueChange)="search.set($event)" />
     <label class="check"
       ><input
         type="checkbox"
@@ -26,7 +13,7 @@
       />
       Mostrar arquivados</label
     >
-    <div class="catalog-list">
+    <div class="catalog-list scrollbar-dark">
       @for (npc of filtered(); track npc.id) {
         <button
           type="button"
@@ -35,28 +22,28 @@
           [attr.aria-current]="selected()?.id === npc.id ? 'true' : null"
           (click)="select(npc)"
         >
-          <strong>{{ npc.name }}</strong
-          ><span>{{ npc.definition.concept || "Sem conceito" }}</span
-          ><small
-            >{{
-              npc.definition.threatLevel
-                ? "NA " + npc.definition.threatLevel
-                : "Narrativo"
-            }}{{ npc.archived ? " · Arquivado" : "" }}</small
-          >
+          <span class="npc-icon" [style.color]="npc.color" aria-hidden="true">
+            @if (catalogPortraits().get(npc.id); as image) {
+              <img [src]="image | assetUrl" alt="" />
+            } @else {
+              <i class="fa-solid fa-masks-theater"></i>
+            }
+          </span>
+          <span class="npc-copy">
+            <strong>{{ npc.name || "Sem nome" }}</strong>
+            <small>{{ npc.definition.threatLevel ? "NA " + npc.definition.threatLevel : "Narrativo" }} · {{ npc.definition.concept || "Sem conceito" }}</small>
+          </span>
+          @if (npc.archived) { <span class="archived-badge">Arquivado</span> }
         </button>
       } @empty {
-        <p class="empty-list">
-          {{
-            search()
-              ? "Nenhum PNJ corresponde à busca."
-              : "Seu catálogo ainda está vazio. Crie um PNJ para começar."
-          }}
-        </p>
+        <div class="empty-list">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <p>{{ search() ? "Nenhum PNJ corresponde à busca." : "Seu catálogo ainda está vazio. Crie um PNJ para começar." }}</p>
+        </div>
       }
     </div>
   </aside>
-  <section class="npc-editor" aria-label="Construtor de PNJs">
+  <section class="npc-editor entity-properties-panel" aria-label="Construtor de PNJs">
     @if (notice()) {
       <p class="notice" role="status">{{ notice() }}</p>
     }
@@ -71,30 +58,22 @@
         </div>
         <div class="actions">
           @if (form.dirty) {
-            <button type="button" (click)="cancel()">
-              Descartar alterações
-            </button>
+            <app-button nativeType="button" size="xs" buttonType="secondary" label="Descartar alterações" (click)="cancel()" />
           }
-          <button type="button" class="primary" (click)="save()">
-            Salvar PNJ
-          </button>
+          <app-button nativeType="button" size="xs" label="Salvar PNJ" icon="fa-check" (click)="save()" />
         </div>
       </header>
+      <nav class="editor-tabs" aria-label="Seções do editor">
+        <app-nav-button label="Base" icon="fa-solid fa-sliders" size="sm" [active]="editorSection() === 'base'" (click)="editorSection.set('base')" />
+        <app-nav-button label="Tags" icon="fa-solid fa-tags" size="sm" [active]="editorSection() === 'tags'" (click)="editorSection.set('tags')" />
+        <app-nav-button label="Ações" icon="fa-solid fa-bolt" size="sm" [active]="editorSection() === 'actions'" (click)="editorSection.set('actions')" />
+      </nav>
       <form [formGroup]="form" (ngSubmit)="save()">
+        <div [hidden]="editorSection() !== 'base'">
         <div class="identity-grid">
           <div>
-            <label
-              >Nome<input
-                formControlName="name"
-                maxlength="120"
-                required /></label
-            ><label
-              >Conceito<textarea
-                formControlName="concept"
-                rows="2"
-                placeholder="Identidade, papel narrativo e comportamento"
-              ></textarea>
-            </label>
+            <app-input label="Nome" [required]="true" [maxLength]="120" [value]="form.controls.name.value" (valueChange)="updateControl(form.controls.name, $event)" />
+            <app-text-area label="Descrição / Conceito" height="h-24" placeholder="Identidade, papel narrativo e comportamento" [value]="form.controls.concept.value" (valueChange)="updateControl(form.controls.concept, $event)" />
           </div>
           <div class="portrait-block">
             @if (portrait(); as image) {
@@ -105,55 +84,23 @@
                 height="88"
               />
             }
-            <button
-              type="button"
-              (click)="uploadPortrait()"
-              [disabled]="!npc.id || form.dirty"
-            >
-              Retrato</button
-            ><small>{{
+            <app-button nativeType="button" size="xs" buttonType="secondary" label="Retrato" (click)="uploadPortrait()" [disabled]="!npc.id || form.dirty" />
+            <small>{{
               !npc.id
                 ? "Salve antes de adicionar um retrato."
                 : "Salve as alterações antes de trocar o retrato."
             }}</small
-            ><label class="color-field"
-              >Cor do nome<input type="color" formControlName="color"
-            /></label>
+            >
+            <app-hex-color-picker label="Cor do nome" [value]="form.controls.color.value" (valueChange)="updateControl(form.controls.color, $event ?? '#a1a1aa')" />
           </div>
         </div>
         <section class="form-section">
           <h3>Ameaça e resistência</h3>
           <div class="fields-grid">
-            <label
-              >Nível de Ameaça<select formControlName="threatLevel">
-                <option [ngValue]="null">Sem NA · apenas narrativa</option>
-                @for (level of [1, 2, 3, 4, 5, 6]; track level) {
-                  <option [ngValue]="level">NA {{ level }}</option>
-                }
-              </select></label
-            >
-            <label
-              >Proteção explícita<input
-                formControlName="protection"
-                (change)="clearProtectionAdjustment()"
-                placeholder="Ex.: carapaça, armadura"
-            /></label>
-            <label
-              >Ajuste de CV<input
-                type="number"
-                formControlName="lifeAdjustment"
-                min="-5"
-                max="5"
-                step="1"
-            /></label>
-            <label
-              >Ajuste de CR<input
-                type="number"
-                formControlName="resistanceAdjustment"
-                min="-5"
-                max="5"
-                step="1"
-            /></label>
+            <app-combo-box label="Nível de Ameaça" [items]="threatOptions" compareProp="value" displayProp="label" placeholder="Sem NA · apenas narrativa" [comboValue]="form.controls.threatLevel.value" (comboValueChange)="updateControl(form.controls.threatLevel, $event)" />
+            <app-input label="Proteção explícita" placeholder="Ex.: carapaça, armadura" [value]="form.controls.protection.value" (valueChange)="updateControl(form.controls.protection, $event); clearProtectionAdjustment()" />
+            <app-input label="Ajuste de CV" type="number" [min]="-5" [max]="5" [step]="1" [value]="form.controls.lifeAdjustment.value" (valueChange)="updateControl(form.controls.lifeAdjustment, $event)" />
+            <app-input label="Ajuste de CR" type="number" [min]="-5" [max]="5" [step]="1" [value]="form.controls.resistanceAdjustment.value" (valueChange)="updateControl(form.controls.resistanceAdjustment, $event)" />
           </div>
           @if (preview(); as values) {
             <dl class="rule-summary">
@@ -195,109 +142,62 @@
             </ul>
           }
         </section>
-        <section class="form-section">
+        </div>
+        <section class="form-section" [hidden]="editorSection() !== 'tags'">
           <div class="section-heading">
             <h3>Tags</h3>
-            <button type="button" (click)="addTag()">Adicionar Tag</button>
+            <app-button nativeType="button" size="xs" buttonType="secondary" label="Adicionar Tag" (click)="addTag()" />
           </div>
           <p class="hint">
             Descreva os efeitos. Em cada rolagem, escolha no máximo uma
             Competência numérica aplicável.
           </p>
+          <div class="entry-layout"><aside class="entry-list" aria-label="Lista de tags">
+            @for (tag of form.controls.tags.controls; track tag; let index = $index) {
+              <button type="button" class="entry-row" [class.selected]="selectedTag() === index" [attr.aria-current]="selectedTag() === index ? 'true' : null" (click)="selectedTag.set(index)">{{ tag.controls.name.value || 'Nova tag' }}</button>
+            } @empty { <p class="hint">Adicione uma tag para começar.</p> }
+          </aside><div class="entry-editor">
           @for (
             tag of form.controls.tags.controls;
             track tag;
             let index = $index
           ) {
-            <fieldset [formGroup]="tag">
+            <fieldset [formGroup]="tag" [hidden]="selectedTag() !== index">
               <legend>Tag {{ index + 1 }}</legend>
               <div class="fields-grid">
-                <label>Nome<input formControlName="name" /></label
-                ><label
-                  >Tipo<select
-                    formControlName="type"
-                    (change)="tagTypeChanged(index)"
-                  >
-                    @for (type of tagTypes; track type.value) {
-                      <option [value]="type.value">{{ type.label }}</option>
-                    }
-                  </select></label
-                >
+                <app-input label="Nome" [value]="tag.controls.name.value" (valueChange)="updateControl(tag.controls.name, $event)" />
+                <app-combo-box label="Tipo" [items]="tagTypes" compareProp="value" displayProp="label" [comboValue]="tag.controls.type.value" (comboValueChange)="updateTagType(index, $event)" />
               </div>
-              <label
-                >Efeito e condições de uso<textarea
-                  formControlName="description"
-                  rows="2"
-                ></textarea>
-              </label>
+              <app-text-area label="Efeito e condições de uso" height="h-24" [value]="tag.controls.description.value" (valueChange)="updateControl(tag.controls.description, $event)" />
               @if (tag.controls.type.value === "competence") {
                 <div class="fields-grid">
-                  <label
-                    >Atributo<select formControlName="attribute">
-                      <option [ngValue]="null">
-                        Conforme a ação e o contexto
-                      </option>
-                      @for (attr of attributes; track attr) {
-                        <option [value]="attr">
-                          {{ attributeLabels[attr] }}
-                        </option>
-                      }
-                    </select></label
-                  ><label
-                    >Alteração de dados<input
-                      type="number"
-                      formControlName="diceModifier"
-                      step="1" /></label
-                  ><label
-                    >Modificador fixo<input
-                      type="number"
-                      formControlName="modifier"
-                      step="1"
-                  /></label>
+                  <app-combo-box label="Atributo" [items]="attributeOptions" compareProp="value" displayProp="label" placeholder="Conforme a ação e o contexto" [comboValue]="tag.controls.attribute.value" (comboValueChange)="updateControl(tag.controls.attribute, $event)" />
+                  <app-input label="Alteração de dados" type="number" [step]="1" [value]="tag.controls.diceModifier.value" (valueChange)="updateControl(tag.controls.diceModifier, $event)" />
+                  <app-input label="Modificador fixo" type="number" [step]="1" [value]="tag.controls.modifier.value" (valueChange)="updateControl(tag.controls.modifier, $event)" />
                 </div>
-                <label
-                  >Contexto de aplicação<input
-                    formControlName="context"
-                    placeholder="Quando essa competência se aplica?"
-                /></label>
+                <app-input label="Contexto de aplicação" placeholder="Quando essa competência se aplica?" [value]="tag.controls.context.value" (valueChange)="updateControl(tag.controls.context, $event)" />
               }
-              <button
-                type="button"
-                class="remove"
-                (click)="remove('tags', index)"
-              >
-                Remover Tag
-              </button>
+              <app-button class="remove" nativeType="button" size="xs" buttonType="danger" label="Remover Tag" (click)="remove('tags', index)" />
             </fieldset>
           }
+          </div></div>
         </section>
+        <div class="form-section" [hidden]="editorSection() !== 'actions'">
+          <div class="section-heading"><h3>Ações e assinaturas</h3><div class="actions">
+            <app-button nativeType="button" size="xs" buttonType="secondary" label="Adicionar ação" (click)="addAction()" [disabled]="form.controls.actions.length >= 4" />
+            <app-button nativeType="button" size="xs" buttonType="secondary" label="Adicionar assinatura" (click)="addAction(true)" />
+          </div></div>
+          <div class="entry-layout"><aside class="entry-list" aria-label="Lista de ações e assinaturas">
+            @for (action of form.controls.actions.controls; track action; let index = $index) {
+              <button type="button" class="entry-row" [class.selected]="selectedAction()?.list === 'actions' && selectedAction()?.index === index" (click)="selectedAction.set({ list: 'actions', index: index })"><strong>{{ action.controls.name.value || 'Nova ação' }}</strong><small>Ação</small></button>
+            }
+            @for (action of form.controls.signatures.controls; track action; let index = $index) {
+              <button type="button" class="entry-row" [class.selected]="selectedAction()?.list === 'signatures' && selectedAction()?.index === index" (click)="selectedAction.set({ list: 'signatures', index: index })"><strong>{{ action.controls.name.value || 'Nova assinatura' }}</strong><small>Assinatura</small></button>
+            }
+            @if (!form.controls.actions.length && !form.controls.signatures.length) { <p class="hint">Adicione uma ação ou assinatura para começar.</p> }
+          </aside><div class="entry-editor">
         @for (section of ["actions", "signatures"]; track section) {
           <section class="form-section">
-            <div class="section-heading">
-              <h3>
-                {{ section === "actions" ? "Ações básicas" : "Assinaturas" }}
-              </h3>
-              <button
-                type="button"
-                [disabled]="
-                  section === 'actions' && form.controls.actions.length >= 4
-                "
-                (click)="addAction(section === 'signatures')"
-              >
-                {{
-                  section === "actions"
-                    ? "Adicionar ação"
-                    : "Adicionar assinatura"
-                }}
-              </button>
-            </div>
-            <p class="hint">
-              {{
-                section === "actions"
-                  ? "Até quatro ações recorrentes. Não é necessário preencher todas."
-                  : "Capacidades especiais com efeitos e condições explícitos. Não há recarga universal."
-              }}
-            </p>
             @for (
               action of section === "actions"
                 ? form.controls.actions.controls
@@ -305,93 +205,42 @@
               track action;
               let index = $index
             ) {
-              <fieldset [formGroup]="action">
+              <fieldset [formGroup]="action" [hidden]="selectedAction()?.list !== section || selectedAction()?.index !== index">
                 <legend>
                   {{ section === "actions" ? "Ação" : "Assinatura" }}
                   {{ index + 1 }}
                 </legend>
                 <div class="fields-grid">
-                  <label>Nome<input formControlName="name" /></label
-                  ><label
-                    >Atributo<select formControlName="attribute">
-                      @for (attr of attributes; track attr) {
-                        <option [value]="attr">
-                          {{ attributeLabels[attr] }}
-                        </option>
-                      }
-                    </select></label
-                  ><label
-                    >Severidade<select formControlName="damage">
-                      <option [ngValue]="null">Sem dano definido</option>
-                      @for (damage of damages; track damage) {
-                        <option [value]="damage">
-                          {{ damageLabels[damage] }}
-                        </option>
-                      }
-                    </select></label
-                  >
+                  <app-input label="Nome" [value]="action.controls.name.value" (valueChange)="updateControl(action.controls.name, $event)" />
+                  <app-combo-box label="Atributo" [items]="attributeOptions" compareProp="value" displayProp="label" [comboValue]="action.controls.attribute.value" (comboValueChange)="updateControl(action.controls.attribute, $event ?? action.controls.attribute.value)" />
+                  <app-combo-box label="Severidade" [items]="damageOptions" compareProp="value" displayProp="label" placeholder="Sem dano definido" [comboValue]="action.controls.damage.value" (comboValueChange)="updateControl(action.controls.damage, $event)" />
                 </div>
-                <label
-                  >Efeito<textarea
-                    formControlName="description"
-                    rows="2"
-                  ></textarea>
-                </label>
+                <app-text-area label="Efeito" height="h-24" [value]="action.controls.description.value" (valueChange)="updateControl(action.controls.description, $event)" />
                 <div class="fields-grid">
-                  <label>Alvo<input formControlName="target" /></label
-                  ><label
-                    >Resistência ou evasão<input formControlName="resistance"
-                  /></label>
+                  <app-input label="Alvo" [value]="action.controls.target.value" (valueChange)="updateControl(action.controls.target, $event)" />
+                  <app-input label="Resistência ou evasão" [value]="action.controls.resistance.value" (valueChange)="updateControl(action.controls.resistance, $event)" />
                 </div>
                 @if (section === "signatures") {
-                  <label
-                    >Condições de uso<textarea
-                      formControlName="usage"
-                      rows="2"
-                      placeholder="Ativação, aliados afetados, repetição e impedimentos"
-                    ></textarea>
-                  </label>
+                  <app-text-area label="Condições de uso" height="h-24" placeholder="Ativação, aliados afetados, repetição e impedimentos" [value]="action.controls.usage.value" (valueChange)="updateControl(action.controls.usage, $event)" />
                   <div class="fields-grid">
-                    <label>Custo<input formControlName="cost" /></label
-                    ><label
-                      >Recarga ou limite<input formControlName="cooldown"
-                    /></label>
+                    <app-input label="Custo" [value]="action.controls.cost.value" (valueChange)="updateControl(action.controls.cost, $event)" />
+                    <app-input label="Recarga ou limite" [value]="action.controls.cooldown.value" (valueChange)="updateControl(action.controls.cooldown, $event)" />
                   </div>
                 }
-                <button
-                  type="button"
-                  class="remove"
-                  (click)="
-                    remove(
-                      section === 'actions' ? 'actions' : 'signatures',
-                      index
-                    )
-                  "
-                >
-                  Remover {{ section === "actions" ? "ação" : "assinatura" }}
-                </button>
+                <app-button class="remove" nativeType="button" size="xs" buttonType="danger" [label]="section === 'actions' ? 'Remover ação' : 'Remover assinatura'" (click)="remove(section === 'actions' ? 'actions' : 'signatures', index)" />
               </fieldset>
             }
           </section>
         }
-        <section class="form-section">
+          </div></div>
+        </div>
+        <section class="form-section" [hidden]="editorSection() !== 'base'">
           <h3>Detalhes narrativos</h3>
           <div class="fields-grid">
-            <label
-              >Resistências<textarea
-                formControlName="resistances"
-                rows="3"
-              ></textarea></label
-            ><label
-              >Fraquezas<textarea
-                formControlName="weaknesses"
-                rows="3"
-              ></textarea>
-            </label>
+            <app-text-area label="Resistências" height="h-24" [value]="form.controls.resistances.value" (valueChange)="updateControl(form.controls.resistances, $event)" />
+            <app-text-area label="Fraquezas" height="h-24" [value]="form.controls.weaknesses.value" (valueChange)="updateControl(form.controls.weaknesses, $event)" />
           </div>
-          <label
-            >Observações<textarea formControlName="notes" rows="4"></textarea>
-          </label>
+          <app-text-area label="Observações" height="h-24" [value]="form.controls.notes.value" (valueChange)="updateControl(form.controls.notes, $event)" />
           <p class="hint">
             Gatilhos, resistências e fraquezas descrevem regras da cena. Não
             aplicam efeitos automaticamente.
@@ -400,15 +249,8 @@
       </form>
       @if (npc.id) {
         <footer class="editor-footer">
-          <button type="button" (click)="duplicate()" [disabled]="form.dirty">
-            Duplicar PNJ</button
-          ><button
-            type="button"
-            (click)="archive()"
-            [disabled]="form.dirty || npc.archived"
-          >
-            Arquivar
-          </button>
+          <app-button nativeType="button" size="xs" buttonType="secondary" label="Duplicar PNJ" (click)="duplicate()" [disabled]="form.dirty" />
+          <app-button nativeType="button" size="xs" buttonType="secondary" label="Arquivar" (click)="archive()" [disabled]="form.dirty || npc.archived" />
         </footer>
       }
     } @else {
@@ -419,9 +261,7 @@
           Selecione um PNJ ou crie um novo. Comece com nome e conceito;
           acrescente regras quando a narrativa precisar.
         </p>
-        <button type="button" class="primary" (click)="create()">
-          Criar PNJ
-        </button>
+        <app-button nativeType="button" size="xs" label="Criar PNJ" icon="fa-plus" (click)="create()" />
       </div>
     }
   </section>

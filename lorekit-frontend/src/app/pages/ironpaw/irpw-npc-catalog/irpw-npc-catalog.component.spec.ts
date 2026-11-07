@@ -1,5 +1,8 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
+import { By } from '@angular/platform-browser';
+import { InputComponent } from '../../../components/input/input.component';
+import { ComboBoxComponent } from '../../../components/combo-box/combo-box.component';
 import { createNpcDefinition } from '@lorekit/ironpaw';
 import { IrpwNpcCatalogComponent } from './irpw-npc-catalog.component';
 import {
@@ -83,4 +86,47 @@ describe('NPC constructor', () => {
       jasmine.objectContaining({ modifier: 0, diceModifier: 0 }),
     );
   });
+  it('keeps tag and action edits when switching sections and selections', () => {
+    const component = fixture.componentInstance;
+    component.create();
+    component.addTag();
+    component.form.controls.tags.at(0).controls.name.setValue('Astuto');
+    component.addTag();
+    component.form.controls.tags.at(1).controls.name.setValue('Ágil');
+    component.editorSection.set('actions');
+    component.addAction();
+    component.form.controls.actions.at(0).controls.name.setValue('Ataque');
+    component.addAction(true);
+    expect(component.selectedAction()).toEqual({ list: 'signatures', index: 0 });
+    component.editorSection.set('tags');
+    component.selectedTag.set(0);
+    fixture.detectChanges();
+    expect(component.form.controls.tags.at(0).controls.name.value).toBe('Astuto');
+    expect(component.form.controls.actions.at(0).controls.name.value).toBe('Ataque');
+    expect(fixture.nativeElement.querySelectorAll('.entry-list')[0].textContent).toContain('Ágil');
+    component.remove('tags', 0);
+    expect(component.selectedTag()).toBe(0);
+    expect(component.form.controls.tags.at(0).controls.name.value).toBe('Ágil');
+  });
+
+  it('updates reactive values and marks edits when shared controls change', () => {
+    const component = fixture.componentInstance;
+    component.create();
+    fixture.detectChanges();
+    const name = fixture.debugElement.queryAll(By.directive(InputComponent))
+      .map(element => element.componentInstance as InputComponent)
+      .find(input => input.label() === 'Nome')!;
+    name.value.set('Guarda');
+    const threat = fixture.debugElement.queryAll(By.directive(ComboBoxComponent))
+      .map(element => element.componentInstance as ComboBoxComponent)
+      .find(combo => combo.label() === 'Nível de Ameaça')!;
+    threat.selectItem({ value: 3, label: 'NA 3' });
+    fixture.detectChanges();
+    expect(component.form.dirty).toBeTrue();
+    expect(component.form.controls.name.value).toBe('Guarda');
+    expect(component.preview()?.life).toBe(6);
+    component.save();
+    expect(catalog.save.calls.mostRecent().args[0].definition.threatLevel).toBe(3);
+  });
+
 });

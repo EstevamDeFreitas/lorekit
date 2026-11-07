@@ -1,13 +1,13 @@
 <section class="currencies">
-  <aside>
-    <div class="heading"><h2>Dinheiro</h2><button type="button" (click)="create()"><i class="fa-solid fa-plus" aria-hidden="true"></i> Nova configuração</button></div>
+  <aside class="entity-properties-panel">
+    <div class="heading"><h2>Dinheiro</h2><app-button nativeType="button" size="xs" label="Nova configuração" icon="fa-plus" (click)="create()" /></div>
     @for (currency of currencies(); track currency.id) {
       <button type="button" class="currency-choice" [class.active]="draft()?.id === currency.id" (click)="select(currency)"><strong>{{ currency.name }}</strong><small>{{ currency.units.length }} unidade(s)</small></button>
     } @empty { <p>Crie uma configuração para usar dinheiro nas fichas.</p> }
   </aside>
-  <main>
+  <main class="entity-properties-panel">
     @if (draft(); as currency) {
-      <div class="heading"><h2>{{ currency.name || 'Nova configuração' }}</h2><button type="button" (click)="save()">Salvar configuração</button></div>
+      <div class="heading"><h2>{{ currency.name || 'Nova configuração' }}</h2><app-button nativeType="button" size="xs" label="Salvar configuração" icon="fa-check" (click)="save()" /></div>
       <label>Nome<input [(ngModel)]="currency.name" placeholder="Ex.: Moedas do reino" /></label>
       <label>Região ou descrição<textarea rows="2" [(ngModel)]="currency.description"></textarea></label>
       <h3>Unidades, da menor para a maior</h3>
@@ -21,7 +21,7 @@
           <button type="button" (click)="removeUnit(index)" [disabled]="currency.units.length === 1" [attr.aria-label]="'Remover unidade ' + unit.name"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button>
         </div>
       }
-      <button type="button" (click)="addUnit()">Adicionar unidade</button>
+      <app-button nativeType="button" size="xs" buttonType="secondary" label="Adicionar unidade" (click)="addUnit()" />
       <p class="hint">Exemplos: Cobre → 100 → Prata → 100 → Ouro; Centavos → 100 → Reais; ou apenas Créditos.</p>
       @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
     } @else { <p>Selecione uma configuração ou crie uma nova para definir unidades e conversões.</p> }

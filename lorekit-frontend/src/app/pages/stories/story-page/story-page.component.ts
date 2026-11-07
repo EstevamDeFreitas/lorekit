@@ -50,6 +50,7 @@ import {
 } from '../../../services/story-sharing.service';
 import { AuthService } from '../../../services/auth.service';
 import { StoryImageComponent } from '../story-image/story-image.component';
+import { ButtonComponent } from '../../../components/button/button.component';
 import { TabManagerService } from '../../../services/tab-manager.service';
 
 type Attachment = StoryDraftAttachment;
@@ -64,7 +65,7 @@ function normalizeSearch(value: string): string {
 
 @Component({
   selector: 'app-story-page',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, StoryImageComponent],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe, StoryImageComponent, ButtonComponent],
   templateUrl: './story-page.component.html',
   styleUrl: './story-page.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

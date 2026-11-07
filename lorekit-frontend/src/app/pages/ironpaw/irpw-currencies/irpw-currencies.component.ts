@@ -2,10 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { IrpwCurrency } from '../../../models/irpw-currency.model';
 import { IrpwCurrencyService } from '../../../services/irpw-currency.service';
+import { ButtonComponent } from '../../../components/button/button.component';
 
 @Component({
   selector: 'irpw-currencies',
-  imports: [FormsModule],
+  imports: [FormsModule, ButtonComponent],
   templateUrl: './irpw-currencies.component.html',
   styleUrl: './irpw-currencies.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
