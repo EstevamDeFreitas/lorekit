@@ -282,9 +282,10 @@ export class StoryCacheService {
       /* Memory identity is already cleared. */
     }
     if (account) {
-      if (isElectronRuntime())
+      if (isElectronRuntime()) {
         await window.electronAPI!.deleteStoryCache!(account, null);
-      else await this.storage.deleteWorkspace(account, CACHE_KEY);
+        await this.storage.deleteWorkspace(account, CACHE_KEY);
+      } else await this.storage.deleteWorkspace(account, CACHE_KEY);
     }
   }
 

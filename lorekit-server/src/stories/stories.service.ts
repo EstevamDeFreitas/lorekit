@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, desc, eq, gt, inArray, lt, lte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, lt, lte, sql } from 'drizzle-orm';
 import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto';
 import { DatabaseService } from '../database/database.service';
 import {
@@ -30,6 +30,7 @@ import {
   buildRollFormula,
   buildRollPreview,
   executeRoll,
+  parseRollFormula,
   IRONPAW_RULES_VERSION,
   parseCreateStoryInput,
   parseStoryMessageEditInput,
@@ -203,7 +204,7 @@ export class StoriesService {
           eq(storySpeakerRevisions.number, storySpeakers.revision),
         ),
       )
-      .where(eq(storySpeakers.storyId, storyId));
+      .where(and(eq(storySpeakers.storyId, storyId), isNull(storySpeakers.removedAt)));
     return {
       story: asStory(story),
       member: {
@@ -397,7 +398,7 @@ export class StoriesService {
                 eq(storySpeakers.id, speakerId),
               ),
             );
-          if (!existing) throw new NotFoundException('Locutor não encontrado.');
+          if (!existing || existing.removedAt) throw new NotFoundException('Locutor não encontrado.');
           if (
             existing.kind !== input.kind ||
             existing.sceneId !== input.sceneId
@@ -458,6 +459,21 @@ export class StoriesService {
     );
   }
 
+  async removeSpeaker(storyId: string, userId: string, speakerId: string) {
+    storyContract(() => contractId(speakerId));
+    return this.locked(storyId, userId, async (tx, _story, role) => {
+      const [speaker] = await tx.select().from(storySpeakers).where(and(
+        eq(storySpeakers.storyId, storyId), eq(storySpeakers.id, speakerId),
+      ));
+      if (!speaker || speaker.removedAt) throw new NotFoundException('Locutor não encontrado.');
+      if (speaker.publisherUserId !== userId && role !== 'owner')
+        throw new ForbiddenException('Somente quem disponibilizou o locutor ou o dono da História pode removê-lo.');
+      await tx.update(storySpeakers).set({ removedAt: new Date() }).where(eq(storySpeakers.id, speakerId));
+      await this.event(tx, storyId, 'speaker.updated', speakerId);
+      return { removed: true };
+    });
+  }
+
   private async requireScene(tx: Executor, storyId: string, sceneId: string) {
     const [scene] = await tx
       .select()
@@ -487,7 +503,7 @@ export class StoriesService {
           eq(storySpeakers.id, speakerId),
         ),
       );
-    if (!speaker || (speaker.sceneId && speaker.sceneId !== sceneId))
+    if (!speaker || speaker.removedAt || (speaker.sceneId && speaker.sceneId !== sceneId))
       throw new NotFoundException('Locutor indisponível nesta cena.');
     const [revision] = await tx
       .select()
@@ -632,6 +648,18 @@ export class StoriesService {
       input.operationId,
       { type: 'roll', ...input },
       async (tx) => {
+        if (input.kind === 'free') {
+          await this.requireScene(tx, storyId, input.sceneId);
+          const parsed = parseRollFormula(input.formula);
+          if (!parsed || Math.abs(parsed.modifier) > 1000)
+            throw new BadRequestException('Fórmula inválida. Use até 50 dados d4, d6, d10 ou d20 e ajuste entre -1000 e 1000.');
+          const speakerId = randomUUID();
+          await tx.insert(storySpeakers).values({ id: speakerId, storyId, sceneId: input.sceneId, kind: 'incidental', publisherUserId: userId, removedAt: new Date() });
+          const [revision] = await tx.insert(storySpeakerRevisions).values({ storyId, speakerId, number: 1, name: 'Rolagem avulsa', color: '#d4d4d8', portraitAssetId: null, mechanics: null }).returning();
+          const preview = { attempts: parsed.attempts, sides: parsed.sides, modifiers: parsed.modifier ? [{ key: 'manual', label: 'Ajuste', value: parsed.modifier, category: 'manual' as const }] : [], totalModifier: parsed.modifier, resolutionMode: 'normal' as const };
+          const record: StoryRollRecord = { version: 1, rulesVersion: IRONPAW_RULES_VERSION, kind: 'free', actionId: 'free', actionName: input.name, formula: buildRollFormula(preview), preview, results: executeRoll(preview, sides => randomInt(1, sides + 1)), target: null, targetSpeakerId: null, relatedRollMessageId: null };
+          return this.insertMessage(tx, storyId, userId, { ...input, speakerId, revisionId: revision!.id, text: '', assetIds: [] }, record);
+        }
         const revision = await this.revision(
           tx,
           storyId,
@@ -649,7 +677,7 @@ export class StoriesService {
                 eq(storySpeakers.id, input.targetSpeakerId),
               ),
             );
-          if (!target || (target.sceneId && target.sceneId !== input.sceneId))
+          if (!target || target.removedAt || (target.sceneId && target.sceneId !== input.sceneId))
             throw new NotFoundException('Alvo não disponível nesta cena.');
         }
         if (input.relatedRollMessageId) {

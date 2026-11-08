@@ -45,6 +45,30 @@ describe('TabManagerService persistence', () => {
     expect(persisted.panes[0].tabs.map((tab: { entityId: string }) => tab.entityId)).toEqual(['own-world', 'stories']);
   });
 
+  it('keeps the live story tab when a saved layout also contains stories', async () => {
+    const ready = signal(false);
+    TestBed.configureTestingModule({ providers: [{ provide: DbProvider, useValue: { ready } }] });
+    const { service, globalParameter } = createService();
+    await service.openTab('view', 'stories', 'Histórias', 'fa-book-open');
+    const liveTab = service.snapshot.panes[0].tabs[0];
+    globalParameter.getParameter.and.returnValue(JSON.stringify({ panes: [{ id: 'saved-pane', activeTabId: 'old-story', tabs: [{ id: 'old-story', title: 'Histórias', icon: 'fa-book-open', entityType: 'view', entityId: 'stories', paneId: 'saved-pane', isDirty: false }] }], splitRatios: [100], focusedPaneId: 'saved-pane', activeSidebarSection: 'stories', sidebarVisible: true }));
+    ready.set(true); TestBed.flushEffects(); await service.whenRestored;
+    expect(service.snapshot.panes[0].tabs.length).toBe(1);
+    expect(service.snapshot.panes[0].tabs[0].id).toBe(liveTab.id);
+    expect(service.snapshot.panes[0].tabs[0].resolvedComponent).toBe(liveTab.resolvedComponent);
+    expect(service.snapshot.panes[0].activeTabId).toBe(liveTab.id);
+  });
+
+  it('opens a selected entity in another tab instead of replacing the story composer', async () => {
+    const { service } = createService();
+    await service.openTab('view', 'stories', 'Histórias', 'fa-book-open');
+    const storyTab = service.snapshot.panes[0].tabs[0];
+    await service.substituteCurrentTab('Character', 'character-1', 'Personagem', 'fa-user');
+    const pane = service.snapshot.panes[0];
+    expect(pane.tabs.map(tab => tab.id)).toContain(storyTab.id);
+    expect(pane.tabs.find(tab => tab.id === pane.activeTabId)?.entityId).toBe('character-1');
+  });
+
   it('does not persist again when an asynchronously loaded component is attached', async () => {
     const { service, globalParameter } = createService();
 

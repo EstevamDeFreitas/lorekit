@@ -45,21 +45,21 @@
               }}
             </p>
           </div>
-          <details class="header-menu">
+          <details class="header-menu" #headerMenu>
             <summary aria-label="Ações da História" title="Ações da História">
               <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
             </summary>
             <div class="header-menu-popover">
-              <button type="button" (click)="panel.set('scene')" [disabled]="!client.canWrite()">
+              <button type="button" (click)="headerMenu.open = false; panel.set('scene')" [disabled]="!client.canWrite()">
                 <i class="fa-solid fa-plus" aria-hidden="true"></i> Nova cena
               </button>
               <button type="button" (click)="download()" [disabled]="busy()">
                 <i class="fa-solid fa-file-arrow-down" aria-hidden="true"></i> Baixar .md
               </button>
-              <button type="button" (click)="participants()" [disabled]="!client.canWrite()">
+              <button type="button" (click)="headerMenu.open = false; participants()" [disabled]="!client.canWrite()">
                 <i class="fa-solid fa-user-group" aria-hidden="true"></i> Participantes
               </button>
-              <button type="button" (click)="panel.set(panel() === 'preferences' ? 'none' : 'preferences')">
+              <button type="button" (click)="headerMenu.open = false; panel.set('preferences')">
                 <i class="fa-solid fa-bell" aria-hidden="true"></i> Notificações
               </button>
             </div>
@@ -77,22 +77,34 @@
           </section>
         } @else {
           @if (panel() !== 'none') {
+            <div class="panel-layer" [class.panel-layer--roll]="panel() === 'roll'" (click)="panel() !== 'roll' && panel.set('none')">
             <section
-              class="utility-panel"
+              class="utility-panel scrollbar-dark"
+              [class.utility-panel--roll]="panel() === 'roll'"
+              [attr.id]="panel() === 'roll' ? 'story-roll-panel' : null"
+              [attr.role]="panel() === 'roll' ? 'region' : 'dialog'"
+              [attr.aria-modal]="panel() === 'roll' ? null : 'true'"
+              [cdkTrapFocus]="panel() !== 'roll'"
+              [cdkTrapFocusAutoCapture]="panel() !== 'roll'"
+              (click)="$event.stopPropagation()"
+              (keydown.escape)="closePanel(); $event.stopPropagation()"
               [attr.aria-label]="
-                panel() === 'roll'
-                  ? 'Rolagem Ironpaw'
-                  : 'Configuração da História'
+                panel() === 'roll' ? 'Rolagem tática' :
+                panel() === 'scene' ? 'Cenas da História' :
+                panel() === 'locutors' ? 'Gerenciar locutores' :
+                panel() === 'share' ? 'Disponibilizar locutor' :
+                panel() === 'members' ? 'Participantes' : 'Notificações desta História'
               "
             >
               <button
                 type="button"
                 class="close-panel"
-                (click)="panel.set('none')"
+                (click)="closePanel()"
                 aria-label="Fechar painel"
               >
                 <i class="fa-solid fa-xmark" aria-hidden="true"></i>
               </button>
+              @if (error()) { <p class="error panel-error" role="alert">{{ error() }}</p> }
               @if (panel() === 'scene') {
                 <h2>Cenas da História</h2>
                 <p class="muted">Cada cena aparece como uma divisão no RP.</p>
@@ -136,6 +148,24 @@
                   </div>
                 }
                 <app-button nativeType="button" size="xs" buttonType="secondary" label="Disponibilizar personagem ou PNJ" (click)="library()" [disabled]="busy() || !client.canWrite()" />
+                <h3>Locutores disponíveis</h3>
+                @for (speaker of visibleSpeakers(); track speaker.id) {
+                  <div class="speaker-management">
+                    <span>{{ speaker.revision.name }} · {{ speaker.kind === 'npc' ? 'PNJ' : speaker.kind === 'character' ? 'Personagem' : 'Locutor' }}</span>
+                    @if (speaker.publisherUserId === auth.user()?.id && speaker.kind !== 'incidental') {
+                      <app-button nativeType="button" size="xs" buttonType="secondary" label="Recarregar" (click)="reloadSpeaker(speaker)" [disabled]="busy() || !client.canWrite()" />
+                    }
+                    @if (speaker.publisherUserId === auth.user()?.id || current.story.ownerUserId === auth.user()?.id) {
+                      @if (removingSpeakerId() === speaker.id) {
+                        <span>Preservar mensagens e remover locutor?</span>
+                        <app-button nativeType="button" size="xs" buttonType="danger" label="Confirmar" (click)="removeSpeaker(speaker)" [disabled]="busy()" />
+                        <app-button nativeType="button" size="xs" buttonType="secondary" label="Cancelar" (click)="removingSpeakerId.set('')" />
+                      } @else {
+                        <app-button nativeType="button" size="xs" buttonType="secondary" label="Remover" (click)="removingSpeakerId.set(speaker.id)" [disabled]="busy() || !client.canWrite()" />
+                      }
+                    }
+                  </div>
+                } @empty { <p class="muted">Nenhum locutor disponível nesta cena.</p> }
               }
               @if (panel() === 'share') {
                 <h2>Disponibilizar um locutor</h2>
@@ -399,8 +429,19 @@
                 </p>
               }
               @if (panel() === 'roll') {
-                <h2>Rolagem Ironpaw</h2>
-                @if (selectedSpeaker()?.revision?.mechanics) {
+                <header class="story-roll-heading">
+                  <h2><i class="fa-solid fa-dice" aria-hidden="true"></i> Rolagem tática</h2>
+                  <p>{{ rollSpeakerId() ? (rollSpeaker()?.revision?.name || 'Locutor indisponível') : 'Rolagem avulsa' }} · O resultado será registrado na História.</p>
+                </header>
+                <div class="story-roll-body">
+                @if (!rollSpeakerId()) {
+                  <form [formGroup]="freeRollForm" class="free-roll-form" (ngSubmit)="send(true)">
+                    <label>Nome da rolagem<input formControlName="name" maxlength="120" placeholder="Ex.: Dano da armadilha" /></label>
+                    <label>Fórmula<input class="story-roll-formula" formControlName="formula" autocomplete="off" spellcheck="false" placeholder="2d6+3" [attr.aria-invalid]="!validFreeFormula()" /></label>
+                    <p class="muted">Até 50 dados d4, d6, d10 ou d20. Ex.: 2d6+3</p>
+                    <app-button nativeType="submit" size="xs" label="Rolar e registrar" [disabled]="sending() || hasPending() || !client.canWrite() || !validFreeRoll()" />
+                  </form>
+                } @else if (rollSpeaker()?.revision?.mechanics) {
                   <form [formGroup]="rollForm" class="roll-form">
                     <div class="field-grid">
                       <label
@@ -431,7 +472,7 @@
                           step="1"
                       /></label>
                       @if (
-                        selectedSpeaker()?.revision?.mechanics?.kind === 'npc'
+                        rollSpeaker()?.revision?.mechanics?.kind === 'npc'
                       ) {
                         <label
                           >Competência aplicável<select
@@ -496,19 +537,19 @@
                   </form>
                   @if (preview(); as roll) {
                     <div class="roll-preview">
-                      <strong>{{ formula(roll) }}</strong>
-                      <ul>
+                      <span>Fórmula automática</span>
+                      <output class="story-roll-formula">{{ formula(roll) }}</output>
+                      <dl class="story-roll-modifiers">
                         @for (modifier of roll.modifiers; track $index) {
-                          <li>
-                            {{ modifier.label }}:
+                          <div><dt>{{ modifier.label }}</dt><dd>
                             {{ modifier.value >= 0 ? '+' : ''
                             }}{{ modifier.value }}
                             @if (modifier.displayValue) {
                               ({{ modifier.displayValue }})
                             }
-                          </li>
+                          </dd></div>
                         }
-                      </ul>
+                      </dl>
                     </div>
                   }
                   <p class="muted">
@@ -522,8 +563,10 @@
                     pode continuar narrando ou escolher outro locutor.
                   </p>
                 }
+                </div>
               }
             </section>
+            </div>
           }
           <div class="scene-workspace">
           <div
@@ -621,7 +664,7 @@
                           <div class="roll-record">
                             <div class="roll-record-heading">
                               <i
-                                class="fa-solid fa-dice-d10"
+                                class="fa-solid fa-dice"
                                 aria-hidden="true"
                               ></i
                               ><strong>{{ roll.actionName }}</strong
@@ -630,7 +673,7 @@
                                   ? 'Ataque'
                                   : roll.kind === 'defense'
                                     ? 'Defesa'
-                                    : 'Teste'
+                                  : roll.kind === 'free' ? 'Rolagem avulsa' : 'Teste'
                               }}</span>
                             </div>
                             <p class="roll-formula">{{ roll.formula }}</p>
@@ -720,6 +763,7 @@
                   <div class="combatant-heading">
                     <strong>{{ entry.speaker.revision.name }}</strong>
                     <span>{{ entry.speaker.kind === 'npc' ? 'PNJ' : 'Personagem' }}</span>
+                    <app-icon-button size="sm" buttonType="secondary" icon="fa-solid fa-dice" [title]="'Rolar por ' + entry.speaker.revision.name" [disabled]="!client.canWrite() || sending()" (click)="openRoll(entry.speaker.id, $event.currentTarget)" />
                   </div>
                   <div class="combatant-life"><span>Vida</span><strong>{{ entry.current ?? '—' }} / {{ entry.maximum ?? '—' }}</strong></div>
                   @if (entry.temporary) { <p>Vida temporária: {{ entry.temporary }}</p> }
@@ -731,8 +775,9 @@
                   }
                 </div>
               } @empty {
-                <p class="combat-empty">Os personagens e PNJs com ficha aparecem aqui ao participar da cena.</p>
+                <p class="combat-empty">Personagens e PNJs com ficha compartilhada aparecerão aqui.</p>
               }
+              <app-button nativeType="button" size="xs" buttonType="secondary" icon="fa-dice" label="Rolagem avulsa" (click)="openRoll(null, $event.currentTarget)" [disabled]="!client.canWrite() || sending()" />
             </aside>
           }
           </div>
@@ -857,15 +902,7 @@
                 title="Gerenciar locutores"
               >
                 <i class="fa-solid fa-user-pen" aria-hidden="true"></i></button
-              ><button
-                type="button"
-                class="composer-tool-button"
-                (click)="panel.set(panel() === 'roll' ? 'none' : 'roll')"
-                [disabled]="!speakerId()"
-                aria-label="Ficha e rolagens"
-                title="Ficha e rolagens"
               >
-                <i class="fa-solid fa-dice-d10" aria-hidden="true"></i></button>
             </div>
             <div class="composer-editor">
               <div class="format-tools" aria-label="Formatação">

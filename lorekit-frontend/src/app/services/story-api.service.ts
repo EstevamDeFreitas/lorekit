@@ -102,6 +102,9 @@ export class StoryApiService {
         )
       : this.post<StorySpeaker>(`stories/${id}/speakers`, input);
   }
+  removeSpeaker(id: string, speakerId: string) {
+    return firstValueFrom(this.http.delete<{ removed: boolean }>(`${this.base}/stories/${id}/speakers/${speakerId}`).pipe(timeout(15_000)));
+  }
   send(id: string, input: StoryMessageInput) {
     return this.post<StoryMessage>(`stories/${id}/messages`, input);
   }

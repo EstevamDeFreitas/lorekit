@@ -82,6 +82,19 @@ describe('Stories PostgreSQL integration', () => {
     });
     return { current, scene, speaker };
   }
+  it('records named free rolls without a speaker, validates formulas and remains idempotent', async () => {
+    const { current, scene } = await setup();
+    const input = { ...operation(), sceneId: scene.id, kind: 'free', name: 'Armadilha', formula: '2d6+3' };
+    const result = await service.roll(current.id, owner, input);
+    expect(result.roll).toMatchObject({ kind: 'free', actionName: 'Armadilha', formula: '2d6+3' });
+    expect(result.roll!.results).toHaveLength(2);
+    expect(result.roll!.results.every(entry => entry.dieValue >= 1 && entry.dieValue <= 6)).toBe(true);
+    expect((await service.roll(current.id, owner, input)).id).toBe(result.id);
+    expect((await service.detail(current.id, owner)).speakers).toHaveLength(1);
+    await expect(service.roll(current.id, owner, { ...input, operationId: randomUUID(), formula: '51d6' })).rejects.toThrow();
+    await expect(service.roll(current.id, owner, { ...input, operationId: randomUUID(), formula: '1d6+1001' })).rejects.toThrow();
+    await expect(service.roll(current.id, stranger, { ...input, operationId: randomUUID() })).rejects.toThrow();
+  });
   it('migrates an existing database without replacing users and accepts history-only invitations', async () => {
     expect(
       (await database.db.select().from(users).where(eq(users.id, owner)))[0]
@@ -336,6 +349,18 @@ describe('Stories PostgreSQL integration', () => {
         results: [10],
       }),
     ).rejects.toThrow();
+  });
+  it('removes a speaker from active use while preserving history and enforcing ownership', async () => {
+    const { current, scene, speaker } = await setup();
+    const invite = await service.invite(current.id, owner);
+    await service.acceptInvite(invite.token, guest);
+    const input = { sceneId: scene.id, speakerId: speaker.id, revisionId: speaker.revision.id, text: 'Antes', assetIds: [] };
+    await service.send(current.id, owner, { ...operation(), ...input });
+    await expect(service.removeSpeaker(current.id, guest, speaker.id)).rejects.toThrow();
+    await service.removeSpeaker(current.id, owner, speaker.id);
+    expect((await service.detail(current.id, owner)).speakers).toHaveLength(0);
+    expect((await service.messages(current.id, owner)).items[0]?.speaker.name).toBe('Guarda');
+    await expect(service.send(current.id, owner, { ...operation(), ...input })).rejects.toThrow();
   });
   it('keeps scene order and immutable speaker revisions while all members narrate', async () => {
     const { current, scene, speaker } = await setup();

@@ -315,11 +315,12 @@ export class StorySharingService {
       }
       throw error;
     }
-    if (preview.source.kind === 'character') {
-      try {
+    try {
+      localStorage.setItem(`story-source:${storyId}:${published.id}`, JSON.stringify(preview.source));
+      if (preview.source.kind === 'character') {
         localStorage.setItem(`story-sheet:${storyId}:${published.id}`, preview.source.id);
-      } catch { /* Sharing still succeeds if local storage is unavailable. */ }
-    }
+      }
+    } catch { /* Sharing still succeeds if local storage is unavailable. */ }
     await this.client.refreshCurrent();
     return published;
   }

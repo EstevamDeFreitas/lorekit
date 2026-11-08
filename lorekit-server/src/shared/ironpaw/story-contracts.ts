@@ -14,7 +14,7 @@ export const STORY_LIMITS = {
 } as const;
 export type StoryRole = 'owner' | 'participant';
 export type StorySpeakerKind = 'character' | 'npc' | 'incidental';
-export type StoryRollKind = 'test' | 'attack' | 'defense';
+export type StoryRollKind = 'test' | 'attack' | 'defense' | 'free';
 export type StorySequence = string;
 export interface Story {
   version: 1;
@@ -199,13 +199,13 @@ export interface StoryMessageEditInput {
   operationId: string;
   text: string;
 }
-export interface StoryRollInput {
+export interface StoryCharacterRollInput {
   version: 1;
   operationId: string;
   sceneId: string;
   speakerId: string;
   revisionId: string;
-  kind: StoryRollKind;
+  kind: Exclude<StoryRollKind, 'free'>;
   actionId: string;
   manualModifier: number;
   competenceId: string | null;
@@ -214,6 +214,15 @@ export interface StoryRollInput {
   targetSpeakerId: string | null;
   relatedRollMessageId: string | null;
 }
+export interface StoryFreeRollInput {
+  version: 1;
+  operationId: string;
+  sceneId: string;
+  kind: 'free';
+  name: string;
+  formula: string;
+}
+export type StoryRollInput = StoryCharacterRollInput | StoryFreeRollInput;
 export interface StorySpeakerInput {
   version: 1;
   operationId: string;
@@ -366,8 +375,19 @@ export function parseStoryRollInput(value: unknown): StoryRollInput {
     'targetSpeakerId',
     'relatedRollMessageId',
     'conditionImpacts',
+    'name',
+    'formula',
   ]);
   const kind = input['kind'];
+  if (kind === 'free') {
+    contractRecord(value, ['version', 'operationId', 'sceneId', 'kind', 'name', 'formula']);
+    return {
+      version: contractVersion(input['version']), operationId: contractId(input['operationId']),
+      sceneId: contractId(input['sceneId']), kind,
+      name: contractString(input['name'], 'Nome', 120).trim(),
+      formula: contractString(input['formula'], 'Fórmula', 80).trim(),
+    };
+  }
   if (kind !== 'test' && kind !== 'attack' && kind !== 'defense')
     throw new StoryContractError('Tipo de rolagem inválido.');
   const nullableId = (entry: unknown): string | null =>

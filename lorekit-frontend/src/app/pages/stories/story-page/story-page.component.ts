@@ -16,7 +16,9 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { MOODBOARD_ACCENT_PALETTE } from '../../../theme/moodboard-color-palette';
 import { StoryNavigationService } from '../../../services/story-navigation.service';
 import { WORKSPACE_TAB_CONTEXT } from '../../../models/workspace-tab-context';
+import { FLUSH_PENDING_SAVES_EVENT, pendingSaveEventMatchesTab, type PendingSaveEventDetail } from '../../../utils/pending-save-event';
 import { DatePipe } from '@angular/common';
+import { A11yModule } from '@angular/cdk/a11y';
 import {
   FormControl,
   NonNullableFormBuilder,
@@ -29,6 +31,7 @@ import {
   calculateNpc,
   buildRollFormula,
   buildRollPreview,
+  parseRollFormula,
   npcRollActions,
   renderStoryText,
   type ConditionImpact,
@@ -36,6 +39,7 @@ import {
   type StoryMessageInput,
   type StoryRollInput,
   type StoryRollKind,
+  type StorySpeaker,
 } from '@lorekit/ironpaw';
 import {
   StoryClientService,
@@ -51,6 +55,7 @@ import {
 import { AuthService } from '../../../services/auth.service';
 import { StoryImageComponent } from '../story-image/story-image.component';
 import { ButtonComponent } from '../../../components/button/button.component';
+import { IconButtonComponent } from '../../../components/icon-button/icon-button.component';
 import { TabManagerService } from '../../../services/tab-manager.service';
 
 type Attachment = StoryDraftAttachment;
@@ -65,7 +70,7 @@ function normalizeSearch(value: string): string {
 
 @Component({
   selector: 'app-story-page',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, StoryImageComponent, ButtonComponent],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe, A11yModule, StoryImageComponent, ButtonComponent, IconButtonComponent],
   templateUrl: './story-page.component.html',
   styleUrl: './story-page.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -86,6 +91,7 @@ export class StoryPageComponent implements AfterViewInit {
   private readonly sanitizer = inject(DomSanitizer);
   private previousAccount = this.auth.user()?.id ?? null;
   private readonly timeline = viewChild<ElementRef<HTMLElement>>('timeline');
+  private storyRollTrigger: HTMLElement | null = null;
   private readonly composer =
     viewChild<ElementRef<HTMLTextAreaElement>>('composer');
   readonly error = signal('');
@@ -117,6 +123,7 @@ export class StoryPageComponent implements AfterViewInit {
   readonly attachments = signal<Attachment[]>([]);
   readonly queuedMessages = signal<StoryDraftLine[]>([]);
   private draftEditOrigin: { sceneId: string; speakerId: string } | null = null;
+  private restoredDraftStoryId: string | null = null;
   readonly incidentalPortrait = signal<File | null>(null);
   readonly atEnd = signal(true);
   readonly backgroundUrl = signal<string | null>(null);
@@ -134,8 +141,9 @@ export class StoryPageComponent implements AfterViewInit {
   readonly sourceName = new FormControl('', { nonNullable: true });
   readonly sourceColor = new FormControl('#d4d4d8', { nonNullable: true });
   readonly existingSpeakerId = new FormControl('', { nonNullable: true });
+  readonly removingSpeakerId = signal('');
   readonly rollForm = this.fb.group({
-    kind: this.fb.control<StoryRollKind>('test'),
+    kind: this.fb.control<Exclude<StoryRollKind, 'free'>>('test'),
     actionId: '',
     manualModifier: 0,
     target: new FormControl<number | null>(null),
@@ -148,6 +156,19 @@ export class StoryPageComponent implements AfterViewInit {
     >('none'),
     conditionValue: 0,
   });
+  readonly rollSpeakerId = signal<string | null>(null);
+  readonly freeRollForm = this.fb.group({ name: '', formula: '1d10' });
+  readonly validFreeFormula = computed(() => {
+    this.rollRevision();
+    const { formula } = this.freeRollForm.getRawValue();
+    const parsed = parseRollFormula(formula);
+    return !!parsed && Math.abs(parsed.modifier) <= 1000;
+  });
+  readonly validFreeRoll = computed(() => {
+    this.rollRevision();
+    const { name } = this.freeRollForm.getRawValue();
+    return !!name.trim() && name.length <= 120 && this.validFreeFormula();
+  });
   readonly visibleSpeakers = computed(
     () =>
       this.client
@@ -157,15 +178,11 @@ export class StoryPageComponent implements AfterViewInit {
         ) ?? [],
   );
   readonly sceneCombatants = computed(() => {
-    const scene = this.sceneId();
-    const messages = this.client.messages().filter((message) => message.sceneId === scene);
-    return this.visibleSpeakers().filter((speaker) =>
-      !!speaker.revision.mechanics && (speaker.sceneId === scene || speaker.id === this.speakerId() || messages.some((message) => message.speaker.speakerId === speaker.id)),
-    ).map((speaker) => {
-      const mechanics = speaker.revision.mechanics!;
-      const vitals = mechanics.kind === 'character' ? mechanics.vitals : undefined;
+    return this.visibleSpeakers().filter(speaker => speaker.kind === 'character' || speaker.kind === 'npc').map((speaker) => {
+      const mechanics = speaker.revision.mechanics;
+      const vitals = mechanics?.kind === 'character' ? mechanics.vitals : undefined;
       let npcMaximum: number | null = null;
-      if (mechanics.kind === 'npc') {
+      if (mechanics?.kind === 'npc') {
         try { npcMaximum = calculateNpc(mechanics.definition)?.life ?? null; } catch { /* Invalid older revision. */ }
       }
       return { speaker, current: vitals?.current ?? null, maximum: vitals?.maximum ?? npcMaximum,
@@ -185,6 +202,7 @@ export class StoryPageComponent implements AfterViewInit {
         (speaker) => speaker.id === this.speakerId(),
       ) ?? null,
   );
+  readonly rollSpeaker = computed(() => this.visibleSpeakers().find(speaker => speaker.id === this.rollSpeakerId()) ?? null);
   readonly filteredSources = computed(() => {
     const query = normalizeSearch(this.sourceSearch());
     if (!query) return [];
@@ -197,7 +215,7 @@ export class StoryPageComponent implements AfterViewInit {
       .slice(0, 8);
   });
   readonly rollActions = computed(() => {
-    const mechanics = this.selectedSpeaker()?.revision.mechanics;
+    const mechanics = this.rollSpeaker()?.revision.mechanics;
     return mechanics?.kind === 'character'
       ? mechanics.actions
       : mechanics?.kind === 'npc'
@@ -206,7 +224,7 @@ export class StoryPageComponent implements AfterViewInit {
   });
   readonly competencies = computed(() => {
     this.rollRevision();
-    const mechanics = this.selectedSpeaker()?.revision.mechanics;
+    const mechanics = this.rollSpeaker()?.revision.mechanics;
     if (mechanics?.kind !== 'npc') return [];
     const action = this.rollActions().find(
       (action) => action.id === this.rollForm.controls.actionId.value,
@@ -219,7 +237,7 @@ export class StoryPageComponent implements AfterViewInit {
   });
   readonly preview = computed(() => {
     this.rollRevision();
-    const mechanics = this.selectedSpeaker()?.revision.mechanics,
+    const mechanics = this.rollSpeaker()?.revision.mechanics,
       input = this.rollForm.getRawValue();
     try {
       if (mechanics?.kind === 'npc')
@@ -309,6 +327,13 @@ export class StoryPageComponent implements AfterViewInit {
   private readonly timelineScrollListener = () => this.onScroll();
 
   constructor() {
+    const flushDraft = (event: Event) => {
+      const detail = (event as CustomEvent<PendingSaveEventDetail>).detail;
+      if (!pendingSaveEventMatchesTab(detail, this.tab?.tabId)) return;
+      this.rememberDraft(this.text.value);
+      detail?.flushes.push(this.client.flushDraftWrites());
+    };
+    window.addEventListener(FLUSH_PENDING_SAVES_EVENT, flushDraft);
     effect(() => {
       const account = this.auth.user()?.id ?? null;
       if (account === this.previousAccount) return;
@@ -323,6 +348,7 @@ export class StoryPageComponent implements AfterViewInit {
       this.editingMessageId.set(null);
       this.pending = null;
       this.requestedStory.set(null);
+      this.restoredDraftStoryId = null;
     });
     this.text.valueChanges
       .pipe(takeUntilDestroyed())
@@ -330,6 +356,8 @@ export class StoryPageComponent implements AfterViewInit {
     this.rollForm.valueChanges
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.rollRevision.update((value) => value + 1));
+    this.freeRollForm.valueChanges.pipe(takeUntilDestroyed())
+      .subscribe(() => this.rollRevision.update(value => value + 1));
     effect((onCleanup) => {
       const root = this.timeline()?.nativeElement;
       if (!root) return;
@@ -357,7 +385,11 @@ export class StoryPageComponent implements AfterViewInit {
       if (this.requestedStory() !== target.id) {
         this.rememberDraft(this.text.value);
         this.requestedStory.set(target.id);
-        if (target.id) void this.open(target.id, target.sceneId);
+        this.restoredDraftStoryId = null;
+        if (target.id) {
+          if (this.client.current()?.story.id === target.id && this.client.drafts.has(target.id)) this.restoreDraft(target.id);
+          void this.open(target.id, target.sceneId);
+        }
       } else if (
         target.id &&
         target.sceneId &&
@@ -430,6 +462,7 @@ export class StoryPageComponent implements AfterViewInit {
       5000,
     );
     this.destroy.onDestroy(() => {
+      window.removeEventListener(FLUSH_PENDING_SAVES_EVENT, flushDraft);
       clearInterval(heartbeat);
       this.stopObservingMessages();
       this.releaseBackground?.();
@@ -443,11 +476,25 @@ export class StoryPageComponent implements AfterViewInit {
   ngAfterViewInit(): void {
     this.observeMessages();
   }
+  closePanel(): void {
+    const rollWasOpen = this.panel() === 'roll';
+    this.panel.set('none');
+    if (rollWasOpen && this.storyRollTrigger?.isConnected) this.storyRollTrigger.focus();
+  }
+  openRoll(speakerId: string | null, target: EventTarget | null): void {
+    if (speakerId !== this.rollSpeakerId()) this.rollForm.reset();
+    this.rollSpeakerId.set(speakerId);
+    this.storyRollTrigger = target instanceof HTMLElement ? (target.querySelector('button') ?? target) : null;
+    this.panel.set('roll');
+  }
   private async open(id: string, preferredSceneId: string | null = null): Promise<void> {
     this.cancelMessageEdit();
+    await this.client.initialize();
+    if (this.destroy.destroyed || this.requestedStory() !== id) return;
+    if (this.restoredDraftStoryId !== id) this.restoreDraft(id);
     await this.client.open(id);
-    if (this.requestedStory() !== id) return;
-    this.restoreDraft(id);
+    if (this.destroy.destroyed || this.requestedStory() !== id) return;
+    if (!this.sceneId()) this.sceneId.set(this.client.current()?.scenes.at(-1)?.id || '');
     const openScene = Boolean(preferredSceneId && this.client.current()?.scenes.some((scene) => scene.id === preferredSceneId));
     if (openScene && preferredSceneId) {
       this.sceneId.set(preferredSceneId);
@@ -461,7 +508,7 @@ export class StoryPageComponent implements AfterViewInit {
   private restoreDraft(id: string): void {
     const stored = this.client.drafts.get(id),
       draft = stored?.accountId === this.auth.user()?.id ? stored : null,
-      scenes = this.client.current()?.scenes ?? [];
+      scenes = this.client.current()?.story.id === id ? this.client.current()?.scenes ?? [] : [];
     this.sceneId.set(draft?.sceneId || scenes.at(-1)?.id || '');
     this.speakerId.set(draft?.speakerId || '');
     this.text.setValue(draft?.text || '', { emitEvent: false });
@@ -471,18 +518,21 @@ export class StoryPageComponent implements AfterViewInit {
     );
     this.queuedMessages.set(draft?.queuedMessages ?? []);
     this.editingDraftId.set(draft?.editingDraftId ?? null);
+    this.draftEditOrigin = draft?.draftEditOrigin ?? null;
+    this.restoredDraftStoryId = id;
   }
   private rememberDraft(text: string): void {
     const id = this.requestedStory(),
       accountId = this.auth.user()?.id;
-    if (id && accountId && accountId === this.previousAccount)
-      this.client.drafts.set(id, {
+    if (id && this.restoredDraftStoryId === id && accountId && accountId === this.previousAccount)
+      this.client.saveDraft(id, {
         accountId,
         text,
         sceneId: this.sceneId(),
         speakerId: this.speakerId(),
         queuedMessages: this.queuedMessages(),
         editingDraftId: this.editingDraftId(),
+        draftEditOrigin: this.draftEditOrigin,
         attachments: this.attachments().map((attachment) => ({ ...attachment })),
       });
   }
@@ -690,7 +740,7 @@ export class StoryPageComponent implements AfterViewInit {
   ): void {
     const draft = this.client.drafts.get(storyId);
     if (!draft || !accountId || draft.accountId !== accountId) return;
-    this.client.drafts.set(storyId, {
+    this.client.saveDraft(storyId, {
       ...draft,
       queuedMessages: draft.queuedMessages.filter((message) => message.id !== id),
     });
@@ -781,6 +831,29 @@ export class StoryPageComponent implements AfterViewInit {
       );
     });
   }
+  async reloadSpeaker(speaker: StorySpeaker): Promise<void> {
+    await this.act(async () => {
+      const storyId = this.client.current()!.story.id;
+      const stored = localStorage.getItem(`story-source:${storyId}:${speaker.id}`);
+      const legacyId = localStorage.getItem(`story-sheet:${storyId}:${speaker.id}`);
+      const source = stored ? JSON.parse(stored) as StorySharingSource : legacyId ? { id: legacyId, kind: 'character' as const, name: speaker.revision.name } : null;
+      if (!source) throw new Error('A origem local não está vinculada. Disponibilize novamente este locutor pela biblioteca para criar o vínculo.');
+      await this.sharing.sources();
+      const preview = this.sharing.preview(source);
+      const actions = speaker.revision.mechanics?.kind === 'character' ? speaker.revision.mechanics.actions.map(action => action.id) : [];
+      await this.sharing.publish(preview, speaker.revision.name, speaker.revision.color, !!speaker.revision.portraitAssetId, actions, speaker.sceneId, speaker.id);
+      this.notice.set('Locutor atualizado. As mensagens anteriores preservam a revisão original.');
+    });
+  }
+  async removeSpeaker(speaker: StorySpeaker): Promise<void> {
+    await this.act(async () => {
+      await this.client.api.removeSpeaker(this.client.current()!.story.id, speaker.id);
+      await this.client.refreshCurrent();
+      if (this.speakerId() === speaker.id) this.speakerId.set('');
+      this.removingSpeakerId.set('');
+      this.notice.set('Locutor removido. As mensagens anteriores foram preservadas.');
+    });
+  }
   files(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
@@ -825,32 +898,36 @@ export class StoryPageComponent implements AfterViewInit {
       const detail = this.client.current();
       if (!detail) throw new Error('Abra uma História.');
       const accountId = this.auth.user()?.id;
-      if (roll && this.editingDraftId())
-        throw new Error('Salve ou cancele a edição da fala antes de rolar.');
       if (roll) {
-        const speaker = this.selectedSpeaker();
-        if (!speaker || !this.sceneId())
-          throw new Error('Escolha a cena e o locutor antes de rolar.');
         if (!retry) {
-          const values = this.rollForm.getRawValue();
-          this.pending = {
-            roll: true,
-            input: {
-              version: 1,
-              operationId: crypto.randomUUID(),
-              sceneId: this.sceneId(),
-              speakerId: speaker.id,
-              revisionId: speaker.revision.id,
-              kind: values.kind,
-              actionId: values.actionId,
-              manualModifier: values.manualModifier,
-              target: values.target,
-              competenceId: values.competenceId || null,
-              targetSpeakerId: values.targetSpeakerId || null,
-              relatedRollMessageId: values.relatedRollMessageId || null,
-              conditionImpacts: this.conditionImpacts(),
-            },
-          };
+          if (!this.sceneId()) throw new Error('Escolha a cena antes de rolar.');
+          const speaker = this.rollSpeaker();
+          if (!this.rollSpeakerId()) {
+            if (!this.validFreeRoll()) throw new Error('Informe um nome e uma fórmula válida.');
+            const values = this.freeRollForm.getRawValue();
+            this.pending = { roll: true, input: { version: 1, operationId: crypto.randomUUID(), sceneId: this.sceneId(), kind: 'free', name: values.name.trim(), formula: values.formula.trim() } };
+          } else {
+            if (!speaker) throw new Error('Locutor indisponível nesta cena.');
+            const values = this.rollForm.getRawValue();
+            this.pending = {
+              roll: true,
+              input: {
+                version: 1,
+                operationId: crypto.randomUUID(),
+                sceneId: this.sceneId(),
+                speakerId: speaker.id,
+                revisionId: speaker.revision.id,
+                kind: values.kind,
+                actionId: values.actionId,
+                manualModifier: values.manualModifier,
+                target: values.target,
+                competenceId: values.competenceId || null,
+                targetSpeakerId: values.targetSpeakerId || null,
+                relatedRollMessageId: values.relatedRollMessageId || null,
+                conditionImpacts: this.conditionImpacts(),
+              },
+            };
+          }
         }
         if (!this.pending) return;
         const pending = this.pending;
@@ -948,7 +1025,7 @@ export class StoryPageComponent implements AfterViewInit {
 
       this.text.setValue('', { emitEvent: false });
       this.attachments.set([]);
-      this.client.drafts.delete(detail.story.id);
+      this.client.deleteDraft(detail.story.id, accountId);
       this.notice.set('');
       this.panel.set('none');
       if (lastSentMessageId) this.scrollToMessage(lastSentMessageId);

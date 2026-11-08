@@ -70,7 +70,7 @@ export function buildRollFormula(preview: RollPreview): string {
     preview.totalModifier === 0 ? '' : signedValue(preview.totalModifier);
   return preview.resolutionMode === 'disadvantage'
     ? `2d10${modifier} (desvantagem)`
-    : `${preview.attempts}d10${modifier}`;
+    : `${preview.attempts}d${preview.sides}${modifier}`;
 }
 
 export function buildRollPreview(

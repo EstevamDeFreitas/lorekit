@@ -1,0 +1,1 @@
+ALTER TABLE "app"."story_speakers" ADD COLUMN "removed_at" timestamp with time zone;

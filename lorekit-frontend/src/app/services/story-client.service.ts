@@ -22,39 +22,18 @@ import {
 import { AuthService } from './auth.service';
 import { StoryApiService } from './story-api.service';
 import { StoryCacheService } from './story-cache.service';
+import { BrowserDatabaseStorageService } from '../database/browser-database-storage.service';
+import type { StoryDraft } from '../models/story-draft.model';
+export type { StoryDraft, StoryDraftAttachment, StoryDraftLine } from '../models/story-draft.model';
 
-export interface StoryDraftAttachment {
-  id: string;
-  file: File;
-  uploaded: boolean;
-}
-
-export interface StoryDraftLine {
-  id: string;
-  sceneId: string;
-  sceneTitle: string;
-  speakerId: string;
-  revisionId: string;
-  speakerName: string;
-  speakerColor: string;
-  text: string;
-  attachments: StoryDraftAttachment[];
-}
-
-export interface StoryDraft {
-  accountId: string;
-  text: string;
-  sceneId: string;
-  speakerId: string;
-  queuedMessages: StoryDraftLine[];
-  editingDraftId?: string | null;
-  attachments?: StoryDraftAttachment[];
-}
+const DRAFT_CACHE_KEY = 'stories-v1';
 
 @Injectable({ providedIn: 'root' })
 export class StoryClientService {
   readonly api = inject(StoryApiService);
   readonly cache = inject(StoryCacheService);
+  private readonly draftStorage = inject(BrowserDatabaseStorageService);
+  private draftWrites: Promise<void> = Promise.resolve();
   private readonly auth = inject(AuthService);
   private readonly destroy = inject(DestroyRef);
   readonly summaries = signal<StorySummary[]>([]);
@@ -123,6 +102,7 @@ export class StoryClientService {
       this.messages.set([]);
       this.summaries.set([]);
       this.status.set('offline');
+      await this.draftWrites.catch(() => undefined);
       await this.cache.transition(previous, next);
     });
     effect(() => {
@@ -163,14 +143,45 @@ export class StoryClientService {
       return;
     }
     this.account = userId;
-    this.initialization = this.cache.open(userId).then(() => {
-      if (this.account === userId) this.summaries.set(this.cache.summaries());
+    this.initialization = this.cache.open(userId).then(async () => {
+      if (this.account !== userId) return;
+      this.summaries.set(this.cache.summaries());
+      try {
+        const drafts = await this.draftStorage.readStoryDrafts(userId, DRAFT_CACHE_KEY);
+        if (this.account !== userId) return;
+        for (const { storyId, draft } of drafts)
+          if (draft.accountId === userId && !this.drafts.has(storyId)) this.drafts.set(storyId, draft);
+      } catch {
+        this.cache.warning.set('Não foi possível recuperar os rascunhos locais. Verifique o armazenamento do dispositivo.');
+      }
     });
     try {
       await this.initialization;
     } finally {
       this.initialization = null;
     }
+  }
+
+  saveDraft(storyId: string, draft: StoryDraft): void {
+    this.drafts.set(storyId, draft);
+    const snapshot = structuredClone(draft);
+    this.queueDraftWrite(() => this.draftStorage.writeStoryDraft(draft.accountId, DRAFT_CACHE_KEY, storyId, snapshot));
+  }
+
+  deleteDraft(storyId: string, accountId = this.auth.user()?.id): void {
+    this.drafts.delete(storyId);
+    if (accountId) this.queueDraftWrite(() => this.draftStorage.deleteStoryDraft(accountId, DRAFT_CACHE_KEY, storyId));
+  }
+
+  private queueDraftWrite(write: () => Promise<void>): void {
+    this.draftWrites = this.draftWrites.catch(() => undefined).then(write);
+    void this.draftWrites.catch(() => {
+      this.cache.warning.set('Não foi possível salvar o rascunho neste dispositivo. Verifique o armazenamento antes de fechar o aplicativo.');
+    });
+  }
+
+  flushDraftWrites(): Promise<void> {
+    return this.draftWrites;
   }
 
   async connect(): Promise<void> {
@@ -640,7 +651,8 @@ export class StoryClientService {
     this.storyEpoch.set(id, (this.storyEpoch.get(id) ?? 0) + 1);
     this.revokedStories.add(id);
     this.revokeUrls(id);
-    this.drafts.delete(id);
+    this.deleteDraft(id, this.account ?? undefined);
+    await this.draftWrites.catch(() => undefined);
     this.summaries.update((stories) =>
       stories.filter((story) => story.id !== id),
     );

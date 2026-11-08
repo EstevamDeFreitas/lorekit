@@ -14,6 +14,7 @@ import type {
 import { StoryClientService } from './story-client.service';
 import { StoryApiService } from './story-api.service';
 import { StoryCacheService } from './story-cache.service';
+import { BrowserDatabaseStorageService } from '../database/browser-database-storage.service';
 import { AuthService } from './auth.service';
 
 describe('Online-only story client', () => {
@@ -25,6 +26,7 @@ describe('Online-only story client', () => {
   let client: StoryClientService,
     api: jasmine.SpyObj<StoryApiService>,
     cache: jasmine.SpyObj<StoryCacheService>,
+    draftStorage: jasmine.SpyObj<BrowserDatabaseStorageService>,
     online: jasmine.Spy,
     pending: string[];
   const detail: StoryDetail = {
@@ -110,7 +112,11 @@ describe('Online-only story client', () => {
       'saveSummaries',
       'removeStory',
     ]);
-    Object.assign(cache, { knownAccount: signal(account) });
+    draftStorage = jasmine.createSpyObj('draftStorage', ['readStoryDrafts', 'writeStoryDraft', 'deleteStoryDraft']);
+    draftStorage.readStoryDrafts.and.resolveTo([]);
+    draftStorage.writeStoryDraft.and.resolveTo();
+    draftStorage.deleteStoryDraft.and.resolveTo();
+    Object.assign(cache, { knownAccount: signal(account), warning: signal('') });
     cache.open.and.resolveTo();
     cache.summaries.and.returnValue([]);
     cache.rememberPending.and.callFake(async (_story, id) => {
@@ -127,6 +133,7 @@ describe('Online-only story client', () => {
         StoryClientService,
         { provide: StoryApiService, useValue: api },
         { provide: StoryCacheService, useValue: cache },
+        { provide: BrowserDatabaseStorageService, useValue: draftStorage },
         {
           provide: AuthService,
           useValue: {
@@ -140,6 +147,29 @@ describe('Online-only story client', () => {
     await client.initialize();
     client.current.set(detail);
   });
+  it('loads a previously saved draft into a new client without sending it', async () => {
+    const draft = { accountId: account, text: 'Resposta ainda não enviada', sceneId, speakerId, queuedMessages: [], attachments: [] };
+    draftStorage.readStoryDrafts.and.resolveTo([{ storyId, draft }]);
+    const reopened = TestBed.runInInjectionContext(() => new StoryClientService());
+    await reopened.initialize();
+    expect(reopened.drafts.get(storyId)).toEqual(draft);
+    expect(api.send).not.toHaveBeenCalled();
+  });
+  it('writes drafts in order and removes them only after a confirmed send', fakeAsync(() => {
+    const draft = { accountId: account, text: 'Fala', sceneId, speakerId, queuedMessages: [], attachments: [] };
+    client.saveDraft(storyId, draft);
+    client.deleteDraft(storyId, account);
+    flushMicrotasks();
+    expect(draftStorage.writeStoryDraft).toHaveBeenCalledWith(account, 'stories-v1', storyId, draft);
+    expect(draftStorage.deleteStoryDraft).toHaveBeenCalledWith(account, 'stories-v1', storyId);
+    expect(draftStorage.writeStoryDraft).toHaveBeenCalledBefore(draftStorage.deleteStoryDraft);
+  }));
+  it('warns when a draft cannot be saved', fakeAsync(() => {
+    draftStorage.writeStoryDraft.and.rejectWith(new Error('sem espaço'));
+    client.saveDraft(storyId, { accountId: account, text: 'Fala', sceneId, speakerId, queuedMessages: [] });
+    flushMicrotasks();
+    expect(cache.warning()).toContain('Não foi possível salvar o rascunho');
+  }));
   it('continues by HTTP when the realtime ticket fails and never sends a draft on retry', fakeAsync(() => {
     online.and.returnValue(true);
     client.current.set(null);

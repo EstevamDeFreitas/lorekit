@@ -1,12 +1,14 @@
 import { Injectable } from '@angular/core';
+import type { StoryDraft } from '../models/story-draft.model';
 
 const DATABASE_NAME = 'lorekit-workspaces';
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const DATABASE_STORE = 'databases';
 const STORAGE_RESERVE_RATIO = 0.15;
 const MINIMUM_STORAGE_RESERVE_BYTES = 5 * 1024 * 1024;
 
 const BLOB_STORE = 'blobs';
+const DRAFT_STORE = 'story-drafts';
 
 export interface BrowserBlobCacheEntry {
   readonly key: string;
@@ -95,6 +97,7 @@ export class BrowserDatabaseStorageService {
         store => store.delete(this.workspaceKey(userId, vaultId)),
       ),
       this.deleteByPrefix(database, BLOB_STORE, prefix),
+      this.deleteByPrefix(database, DRAFT_STORE, prefix),
     ]);
   }
 
@@ -104,7 +107,30 @@ export class BrowserDatabaseStorageService {
     await Promise.all([
       this.deleteByPrefix(database, DATABASE_STORE, prefix),
       this.deleteByPrefix(database, BLOB_STORE, prefix),
+      this.deleteByPrefix(database, DRAFT_STORE, prefix),
     ]);
+  }
+
+  async readStoryDrafts(userId: string, vaultId: string): Promise<Array<{ storyId: string; draft: StoryDraft }>> {
+    const database = await this.open();
+    const prefix = `${this.workspaceKey(userId, vaultId)}:`;
+    const entries = await requestAsPromise<Array<{ key: string; storyId: string; draft: StoryDraft }>>(
+      database.transaction(DRAFT_STORE, 'readonly').objectStore(DRAFT_STORE)
+        .getAll(IDBKeyRange.bound(prefix, `${prefix}\uffff`)),
+    );
+    return entries.map(({ storyId, draft }) => ({ storyId, draft }));
+  }
+
+  async writeStoryDraft(userId: string, vaultId: string, storyId: string, draft: StoryDraft): Promise<void> {
+    const database = await this.open();
+    await transactionAsPromise(database, DRAFT_STORE, 'readwrite', store =>
+      store.put({ key: `${this.workspaceKey(userId, vaultId)}:${storyId}`, storyId, draft }));
+  }
+
+  async deleteStoryDraft(userId: string, vaultId: string, storyId: string): Promise<void> {
+    const database = await this.open();
+    await transactionAsPromise(database, DRAFT_STORE, 'readwrite', store =>
+      store.delete(`${this.workspaceKey(userId, vaultId)}:${storyId}`));
   }
 
   async readBlob(userId: string, vaultId: string, blobId: string): Promise<BrowserBlobCacheEntry | null> {
@@ -214,6 +240,9 @@ export class BrowserDatabaseStorageService {
           }
           if (!database.objectStoreNames.contains(BLOB_STORE)) {
             database.createObjectStore(BLOB_STORE, { keyPath: 'key' });
+          }
+          if (!database.objectStoreNames.contains(DRAFT_STORE)) {
+            database.createObjectStore(DRAFT_STORE, { keyPath: 'key' });
           }
         };
         request.onsuccess = () => resolve(request.result);

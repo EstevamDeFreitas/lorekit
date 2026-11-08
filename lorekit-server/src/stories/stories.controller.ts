@@ -119,6 +119,13 @@ export class StoriesController {
   ) {
     return this.stories.speaker(id, auth.userId, body);
   }
+  @Delete('stories/:id/speakers/:speakerId') removeSpeaker(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('speakerId', ParseUUIDPipe) speakerId: string,
+    @CurrentAuth() auth: AuthenticatedRequest,
+  ) {
+    return this.stories.removeSpeaker(id, auth.userId, speakerId);
+  }
   @Patch('stories/:id/speakers/:speakerId') revise(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('speakerId', ParseUUIDPipe) speakerId: string,

@@ -32,6 +32,21 @@ describe('BrowserDatabaseStorageService', () => {
     expect(await storage.read(userA, `${vault}-other`)).toBeNull();
   });
 
+  it('persists private drafts and attached files across storage instances', async () => {
+    const file = new File(['imagem'], 'mapa.png', { type: 'image/png', lastModified: 123 });
+    const draft = { accountId: userA, text: 'Ainda escrevendo', sceneId: 'cena', speakerId: 'locutor', queuedMessages: [], attachments: [{ id: 'anexo', file, uploaded: false }] };
+    await storage.writeStoryDraft(userA, vault, 'historia', draft);
+    const reopened = new BrowserDatabaseStorageService();
+    const restored = await reopened.readStoryDrafts(userA, vault);
+    expect(restored.length).toBe(1);
+    expect(restored[0].draft.text).toBe('Ainda escrevendo');
+    expect(restored[0].draft.attachments![0].file.name).toBe('mapa.png');
+    expect(await restored[0].draft.attachments![0].file.text()).toBe('imagem');
+    expect(await reopened.readStoryDrafts(userB, vault)).toEqual([]);
+    await reopened.deleteStoryDraft(userA, vault, 'historia');
+    expect(await reopened.readStoryDrafts(userA, vault)).toEqual([]);
+  });
+
   it('deletes only the explicit user cache on logout', async () => {
     await storage.write(userA, vault, new Uint8Array([10]));
     await storage.write(userB, vault, new Uint8Array([20]));

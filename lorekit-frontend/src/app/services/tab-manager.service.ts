@@ -216,7 +216,8 @@ export class TabManagerService {
       const pane = layout.panes.find(item => item.id === layout.focusedPaneId);
       if (!pane) return layout;
       const activeTab = pane.tabs.find(tab => tab.id === pane.activeTabId);
-      if (!activeTab) {
+      // A list selection must not replace the running story composer.
+      if (!activeTab || (activeTab.entityType === 'view' && activeTab.entityId === 'stories')) {
         const tab: WorkspaceTab = {
           id: replacementTabId,
           title,
@@ -584,13 +585,30 @@ export class TabManagerService {
         })
       );
 
-      const validFocusedPaneId =
+      let validFocusedPaneId =
         resolvedPanes.find(p => p.id === saved.focusedPaneId)?.id ??
         resolvedPanes[0]?.id ?? '';
 
       // A guest may open RP before their own workspace is loaded. Preserve that
       // tab while restoring the workspace's existing editors and pane layout.
       const pending = this.snapshot;
+      const pendingStory = pending.panes.flatMap(pane => pane.tabs)
+        .find(tab => tab.entityType === 'view' && tab.entityId === 'stories');
+      const pendingFocusedPane = pending.panes.find(pane => pane.id === pending.focusedPaneId);
+      if (pendingStory) {
+        for (const pane of resolvedPanes) {
+          const index = pane.tabs.findIndex(tab => tab.entityType === 'view' && tab.entityId === 'stories');
+          if (index < 0) continue;
+          const savedId = pane.tabs[index].id;
+          pane.tabs[index] = { ...pendingStory, paneId: pane.id };
+          if (pane.activeTabId === savedId) pane.activeTabId = pendingStory.id;
+          if (pendingFocusedPane?.activeTabId === pendingStory.id) {
+            pane.activeTabId = pendingStory.id;
+            validFocusedPaneId = pane.id;
+          }
+          this.deferredSave = true;
+        }
+      }
       const extraTabs = pending.panes.flatMap(pane => pane.tabs).filter(tab =>
         !resolvedPanes.some(pane => pane.tabs.some(saved => saved.entityType === tab.entityType && saved.entityId === tab.entityId)));
       const targetPane = resolvedPanes.find(pane => pane.id === validFocusedPaneId);

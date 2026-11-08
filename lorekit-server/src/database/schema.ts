@@ -319,6 +319,7 @@ export const storySpeakers = appSchema.table('story_speakers', {
   kind: text('kind').$type<'character' | 'npc' | 'incidental'>().notNull(),
   publisherUserId: uuid('publisher_user_id').notNull().references(() => users.id, { onDelete: 'restrict' }),
   revision: integer('revision').notNull().default(1),
+  removedAt: timestamp('removed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 }, table => [unique('story_speakers_scope_uidx').on(table.storyId, table.id),
   foreignKey({ columns: [table.storyId, table.sceneId], foreignColumns: [storyScenes.storyId, storyScenes.id] }),
